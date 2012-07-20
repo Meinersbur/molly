@@ -61,11 +61,11 @@ char MollyFunc::ID = 0;
 
 
 
-INITIALIZE_PASS(MollyFunc, "molly",  "Molly Pass 2", false, false);
+//INITIALIZE_PASS(MollyFunc, "molly",  "Molly Pass 2", false, false);
 
-RegisterPass<MollyFunc> X("molly", "Molly Pass",
-							 false /* Only looks at CFG */,
-							 false /* Analysis Pass */);
+//,<MollyFunc> X("molly", "Molly Pass",
+//							 false /* Only looks at CFG */,
+//							 false /* Analysis Pass */);
 			   
 extern "C" {
 int teststatic() {

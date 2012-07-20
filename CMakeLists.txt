@@ -17,9 +17,18 @@ INCLUDE_DIRECTORIES( ${CLOOG_INCLUDE_DIR} )
 
 FIND_PACKAGE(Libgcc REQUIRED)
 
+include_directories(
+  $(MOLLY_SOURCE_DIR)/include 
+  )
 
 add_llvm_library(LLVMMolly
   Pass.cpp
+  include/molly/LinkAllPasses.h
+  include/molly/RegisterPasses.h
+  include/molly/FieldDetection.h
+  lib/RegisterPasses.cpp
+  lib/FieldDetection.cpp
+  lib/dummy.cpp
   )
   
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )

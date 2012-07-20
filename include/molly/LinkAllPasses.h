@@ -1,13 +1,21 @@
 #ifndef MOLLY_LINKALLPASSES_H
 #define MOLLY_LINKALLPASSES_H
 
+#include <cstdlib>
 
-namespace molly {
-	void initializeMollyPasses();
+namespace llvm {
+  class Pass;
+  class PassInfo;
+  class PassRegistry;
+  class RegionPass;
+  class ModulePass;
 }
 
-using namespace molly;
+using namespace llvm;
 
+namespace molly {
+	ModulePass *createFieldDetectionAnalysisPass();
+}
 
 namespace {
   struct MollyForcePassLinking {
@@ -20,11 +28,14 @@ namespace {
 		return;
 
 	   //createAffSCEVItTesterPass();
-
+	  molly::createFieldDetectionAnalysisPass();
 	}
   } MollyForcePassLinking; // Force link by creating a global definition.
 }
 
-
+namespace llvm {
+  class PassRegistry;
+  void initializeFieldDetectionAnalysisPass(llvm::PassRegistry &);
+}
 
 #endif /* MOLLY_LINKALLPASSES_H */
