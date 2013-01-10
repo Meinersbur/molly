@@ -4,7 +4,7 @@
 #define MOLLY_FIELD_DETECTION_H
 
 #include "llvm/Pass.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Module.h"
 //#include "llvm\Analysis\Loo
 
 using namespace llvm;

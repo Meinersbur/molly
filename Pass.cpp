@@ -1,7 +1,7 @@
 #include "llvm/Pass.h"
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/CallGraphSCCPass.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 
 #include <gmp.h>
 #include <isl/ctx.h>
@@ -44,7 +44,7 @@ struct MollyFunc : public FunctionPass {
 	  errs().write_escaped(F.getName()) << "\n";
 	  return false;
 	}
-  };  // end of struct Hello
+};  // end of struct Hello
 
 
 class P: public CallGraphSCCPass {
