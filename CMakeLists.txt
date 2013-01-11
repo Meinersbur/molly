@@ -21,6 +21,8 @@ include_directories(
   ${MOLLY_SOURCE_DIR}/include
   ${MOLLY_SOURCE_DIR}/../clang/include  #TODO: Make Clang dir configurable
   ${MOLLY_BINARY_DIR}/../clang/include  #TODO: Make Clang dir configurable
+  ${MOLLY_SOURCE_DIR}/../polly/include  #TODO: Make Polly dir configurable
+  ${MOLLY_BINARY_DIR}/../polly/include  #TODO: Make Polly dir configurable
 )
 
 macro(add_molly_executable name)

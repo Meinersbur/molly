@@ -1,3 +1,9 @@
+#include "molly/LinkAllPasses.h"
+#include "molly/RegisterPasses.h"
+
+#include "polly/LinkAllPasses.h"
+#include "polly/RegisterPasses.h"
+
 //===-- cc1as_main.cpp - Clang Assembler  ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

@@ -1,6 +1,8 @@
 
 add_molly_executable(molly molly.cpp)
 
+set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} polly clang LLVMMolly)
+
 target_link_libraries( molly 
   clangFrontendTool
   clangAST
@@ -21,4 +23,8 @@ target_link_libraries( molly
   clangStaticAnalyzerFrontend
   clangStaticAnalyzerCheckers
   clangStaticAnalyzerCore
+  LLVMPolly
+  LLVMMolly
 )
+
+

@@ -48,9 +48,9 @@ struct MollyFunc : public FunctionPass {
 
 
 class P: public CallGraphSCCPass {
-	 virtual bool doInitialization(CallGraph &CG) {
-	return true;
-  }
+	virtual bool doInitialization(CallGraph &CG) {
+		return true;
+	}
 };
 
 void initializeMollyFuncPass(PassRegistry &reg);
