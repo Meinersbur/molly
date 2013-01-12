@@ -4,7 +4,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "molly/FieldDetection.h"
-#include "molly\LinkAllPasses.h"
+#include "molly/LinkAllPasses.h"
 
 using namespace llvm;
 using namespace molly;
@@ -14,7 +14,7 @@ static cl::opt<bool> EnableFieldDetection("molly-field", cl::desc("Enabke field 
 STATISTIC(NumGlobalFields, "Number of detected global fields");
 
 char FieldDetectionAnalysis::ID = 0;
-
+char &molly::FieldDetectionAnalysisID = FieldDetectionAnalysis::ID;
 
 
 INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect",
@@ -26,4 +26,3 @@ INITIALIZE_PASS_END(FieldDetectionAnalysis, "molly-detect",
 ModulePass *molly::createFieldDetectionAnalysisPass() {
 	return new FieldDetectionAnalysis();
 }
-

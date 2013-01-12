@@ -31,18 +31,28 @@ macro(add_molly_executable name)
 endmacro(add_molly_executable)
 
 macro(add_molly_library name)
-  add_llvm_library( ${name} ${ARGN} )
+  llvm_process_sources(srcs ${ARGN})
+  if(MSVC_IDE OR XCODE)
+    # Add public headers
+    file( GLOB_RECURSE headers
+      ${MOLLY_SOURCE_DIR}/include/molly/*.h
+      ${MOLLY_SOURCE_DIR}/lib/*.h
+    )
+    set_source_files_properties(${headers} PROPERTIES HEADER_FILE_ONLY ON)
+    set(srcs ${srcs} ${headers})
+  endif(MSVC_IDE OR XCODE)
+  
+  add_llvm_library( ${name} ${srcs} )
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_library)
 
+
 add_molly_library(LLVMMolly
   Pass.cpp
-  include/molly/LinkAllPasses.h
-  include/molly/RegisterPasses.h
-  include/molly/FieldDetection.h
   lib/RegisterPasses.cpp
   lib/FieldDetection.cpp
   lib/dummy.cpp
+  lib/IslSet.cpp
 )
   
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )

@@ -14,7 +14,7 @@ namespace molly {
 	class FieldDetectionAnalysis : public ModulePass {
 	public:
 		static char ID;
-		FieldDetectionAnalysis() : ModulePass( ID) {
+		FieldDetectionAnalysis() : ModulePass(ID) {
 		}
 
 		//virtual Pass *createPrinterPass(raw_ostream &O,

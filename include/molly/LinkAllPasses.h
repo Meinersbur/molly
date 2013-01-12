@@ -15,7 +15,11 @@ using namespace llvm;
 
 namespace molly {
 	ModulePass *createFieldDetectionAnalysisPass();
+
+	extern char &FieldDetectionAnalysisID;
 }
+
+using namespace molly;
 
 namespace {
   struct MollyForcePassLinking {
