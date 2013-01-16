@@ -21,9 +21,7 @@ namespace molly {
 		//                        const std::string &Banner) {
 		//}
 
-		virtual bool runOnModule(Module &M) {
-			return false;
-		}
+		virtual bool runOnModule(Module &M);
 
 	private:
 		Pass *createFieldDetectionAnalysisPass();

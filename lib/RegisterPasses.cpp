@@ -32,6 +32,7 @@ static StaticInitializer InitializeErverything;
 #endif
 static void registerMollyPasses(llvm::PassManagerBase &PM) {
 	PM.add(molly::createFieldDetectionAnalysisPass());
+	PM.add(molly::c );
 }
 
 
@@ -59,7 +60,7 @@ namespace molly {
 }
 
 
-static llvm::RegisterStandardPasses PassRegister(llvm::PassManagerBuilder::EP_EarlyAsPossible, registerMollyEarlyAsPossiblePasses);
+static llvm::RegisterStandardPasses PassRegister(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly, registerMollyEarlyAsPossiblePasses);
 
 namespace molly {
 	void forceLinkPassRegistration() {
