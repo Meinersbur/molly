@@ -14,16 +14,14 @@ namespace molly {
 	class FieldDetectionAnalysis : public ModulePass {
 	public:
 		static char ID;
-		FieldDetectionAnalysis() : ModulePass( ID) {
+		FieldDetectionAnalysis() : ModulePass(ID) {
 		}
 
 		//virtual Pass *createPrinterPass(raw_ostream &O,
 		//                        const std::string &Banner) {
 		//}
 
-		virtual bool runOnModule(Module &M) {
-			return false;
-		}
+		virtual bool runOnModule(Module &M);
 
 	private:
 		Pass *createFieldDetectionAnalysisPass();
