@@ -12,7 +12,7 @@ using namespace llvm;
 using namespace molly;
 
 static cl::opt<bool> EnableFieldDetection("molly-field", cl::desc("Enable field detection"), cl::Hidden, cl::init(true));
-static RegisterPass<FieldDetectionAnalysis> FieldAnalysisRegistration("molly-fieldanalysis", "Molly - Field detection");
+static RegisterPass<FieldDetectionAnalysis> FieldAnalysisRegistration("molly-fieldanalysis", "Molly - Field detection", false, true);
 
 STATISTIC(NumGlobalFields, "Number of detected global fields");
 
@@ -48,7 +48,7 @@ bool FieldDetectionAnalysis::runOnModule(Module &M) {
 				if (name == "class.Array1D") {
 					// Found a field!
 					int a = 0;
-					glob.setM
+					//glob.setM
 				}
 				}
 			}

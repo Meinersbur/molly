@@ -55,7 +55,7 @@ add_molly_library(LLVMMolly
   lib/IslSet.cpp
   lib/Field.cpp
   lib/Nodegrid.cpp
-  lib/DistributeField.cpp
+  lib/FieldDistribution.cpp
 )
   
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )

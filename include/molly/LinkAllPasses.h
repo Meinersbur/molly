@@ -15,6 +15,7 @@ using namespace llvm;
 
 namespace molly {
 	ModulePass *createFieldDetectionAnalysisPass();
+	ModulePass *createFieldDistributionPass();
 
 	extern char &FieldDetectionAnalysisID;
 }

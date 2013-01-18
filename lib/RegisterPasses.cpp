@@ -31,8 +31,8 @@ namespace {
 static StaticInitializer InitializeErverything;
 #endif
 static void registerMollyPasses(llvm::PassManagerBase &PM) {
-	PM.add(molly::createFieldDetectionAnalysisPass());
-	PM.add(molly::c );
+	//PM.add(molly::createFieldDetectionAnalysisPass());
+	PM.add(molly::createFieldDistributionPass());
 }
 
 
