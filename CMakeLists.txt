@@ -51,11 +51,17 @@ add_molly_library(LLVMMolly
   Pass.cpp
   lib/RegisterPasses.cpp
   lib/FieldDetection.cpp
+  lib/FieldDistribution.cpp
   lib/dummy.cpp
   lib/IslSet.cpp
-  lib/Field.cpp
+  lib/IslSpace.cpp
+  lib/IslCtx.cpp
+  lib/IslBasicSet.cpp
+  lib/FieldType.cpp
+  lib/FieldVariable.cpp
   lib/Nodegrid.cpp
-  lib/FieldDistribution.cpp
+  lib/MollyContext.cpp
+  lib/MollyContextPass.cpp
 )
   
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )

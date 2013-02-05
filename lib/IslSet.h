@@ -1,6 +1,9 @@
-#pragma once
+#ifndef MOLLY_ISLSET_H
+#define MOLLY_ISLSET_H 1
 
 #include <isl/set.h>
+
+namespace molly {
 
 class IslSet
 {
@@ -12,3 +15,6 @@ public:
 	~IslSet(void);
 };
 
+}
+
+#endif /* MOLLY_ISLSET_H */

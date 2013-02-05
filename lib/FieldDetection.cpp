@@ -8,6 +8,11 @@
 
 #include <llvm\IR\DerivedTypes.h>
 
+#include "FieldVariable.h"
+#include "FieldType.h"
+#include "MollyContextPass.h"
+#include "MollyContext.h"
+
 using namespace llvm;
 using namespace molly;
 
@@ -24,62 +29,68 @@ INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Detect fi
 
 INITIALIZE_PASS_END(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
 
+
+
+
+
 bool FieldDetectionAnalysis::runOnModule(Module &M) {
-	std::string test("xyz");
+  auto mollyContext = getAnalysis<MollyContextPass>().getMollyContext();
 
-	M.dump();
+  std::string test("xyz");
 
-	auto &glist = M.getGlobalList();
-	auto &flist = M.getFunctionList();
-	auto &alist = M.getAliasList();
-	auto &mlist = M.getNamedMDList();
-	auto &vlist = M.getValueSymbolTable();
+  M.dump();
 
-	{
-		auto end = M.global_end();
-		for (auto it = M.global_begin(); it != end; ++it) {
-			auto &glob = *it;
-			PointerType *pty = glob.getType();
-			Type *ty = pty->getElementType();
-			if (isa<llvm::StructType>(ty)) {
-				StructType *sty = cast<StructType>(ty);
-				if (!sty->isLiteral()) { sty->dump();
-				auto name = sty->getName();
-				if (name == "class.Array1D") {
-					// Found a field!
-					int a = 0;
-					//glob.setM
-				}
-				}
-			}
-		}
-	}
+  auto &glist = M.getGlobalList();
+  auto &flist = M.getFunctionList();
+  auto &alist = M.getAliasList();
+  auto &mlist = M.getNamedMDList();
+  auto &vlist = M.getValueSymbolTable();
 
-	{
-	auto end = M.end();
-	for (auto it = M.begin(); it != end; ++it) {
-	}
-	}
+  auto fieldsMD = M.getNamedMetadata("molly.fields");
+  auto numFields = fieldsMD->getNumOperands();
 
-	{
-	auto end = M.alias_end();
-	for (auto it = M.alias_begin(); it != end; ++it) {
-	}
-	}
-
-		{
-	auto end = M.named_metadata_end();
-	for (auto it = M.named_metadata_begin(); it != end; ++it) {
-	}
-	}
+  for (unsigned i = 0; i < numFields; i+=1) {
+    auto fieldMD = fieldsMD->getOperand(i);
+    FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
+    fieldTypes[field->getType()] = field;
+  }
 
 
+#if 0
+  {
+    auto end = M.global_end();
+    for (auto it = M.global_begin(); it != end; ++it) {
+      auto &glob = *it;
+      PointerType *pty = glob.getType();
+      Type *ty = pty->getElementType();
+      if (isa<llvm::StructType>(ty)) {
+        StructType *sty = cast<StructType>(ty);
+        if (!sty->isLiteral()) { sty->dump();
+        auto name = sty->getName();
+        if (name == "class.Array1D") {
+          auto &field = fields[&glob];
+          if (!field) {
+            // Field not known yet
+           // field = Field::create (&glob);
+          }
 
-	return false;
+          auto useEnd = glob.use_end();
+          for (auto useIt = glob.use_begin(); useIt != useEnd; ++useIt) {
+            User *user = *useIt;
+            //user->dump();
+          }
+        }
+        }
+      }
+    }
+  }
+#endif
+
+  return false;
 }
 
 ModulePass *molly::createFieldDetectionAnalysisPass() {
-	return new FieldDetectionAnalysis();
+  return new FieldDetectionAnalysis();
 }
 
 

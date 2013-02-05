@@ -1,22 +1,29 @@
-#pragma once
+#ifndef MOLLY_ISLCTX_H
+#define MOLLY_ISLCTX_H 1
 
-#include <isl/ctx.h>
+#include <llvm/Support/Compiler.h>
 
-class IslCtx {
-private:
-	isl_ctx *ctx;
 
-public:
-	IslCtx() {
-		ctx = isl_ctx_alloc();
-	}
+struct isl_ctx;
 
-	//int isl_options_set_on_error(isl_ctx *ctx, int val); // ISL_ON_ERROR_WARN, ISL_ON_ERROR_CONTINUE and ISL_ON_ERROR_ABORT
-	// int isl_options_get_on_error(isl_ctx *ctx);
-	//enum isl_error isl_ctx_last_error(isl_ctx *ctx);
-	//void isl_ctx_reset_error(isl_ctx *ctx);
+namespace molly {
+  class IslSet;
+  class IslSpace;
 
-	~IslCtx() {
-		isl_ctx_free(ctx);
-	}
-};
+  class IslCtx {
+    IslCtx(const IslCtx &) LLVM_DELETED_FUNCTION;
+    const IslCtx &operator=(const IslCtx &) LLVM_DELETED_FUNCTION;
+
+  private:
+    isl_ctx *ctx;
+
+  public:
+    IslCtx();
+    ~IslCtx();
+
+    IslSpace createSpace(unsigned nparam, unsigned dim);
+  };
+
+}
+
+#endif /* MOLLY_ISLCTX_H */

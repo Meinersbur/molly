@@ -1,5 +1,5 @@
 
-add_molly_executable(molly molly.cpp)
+add_molly_executable(molly driver.cpp cc1as_main.cpp cc1_main.cpp)
 
 set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} polly clang LLVMMolly)
 

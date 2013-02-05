@@ -2,6 +2,8 @@
 
 #include <isl/set.h>
 
+namespace molly {
+
 class IslBasicSet {
 private:
 	isl_basic_set *set;
@@ -15,3 +17,5 @@ public:
 		isl_basic_set_free(set);
 	}
 };
+
+}

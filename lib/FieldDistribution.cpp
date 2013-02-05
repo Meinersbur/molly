@@ -7,90 +7,126 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "molly\FieldDetection.h"
+#include "FieldVariable.h"
+#include "FieldType.h"
+#include "MollyContextPass.h"
 
 using namespace llvm;
 using namespace molly;
 
 namespace molly {
-	ModulePass *createFieldDistributionPass();
+  ModulePass *createFieldDistributionPass();
 }
 
 namespace {
 
-	class FieldDistribution : public ModulePass {
-	public:
-		static char ID;
-		FieldDistribution() : ModulePass(ID) {
-		}
+  class FieldDistribution : public ModulePass {
+  private:
+    FieldDetectionAnalysis *fa;
 
-		virtual const char *getPassName() const {
-			return ModulePass::getPassName();
-		}
+    FieldVariable *getFieldVariable(GlobalVariable *var);
+    FieldType *getFieldType(StructType *ty);
+  public:
+    static char ID;
+    FieldDistribution() : ModulePass(ID) {
+    }
 
-		virtual bool doInitialization(Module &M)  { 
-			return ModulePass::doInitialization(M);
-		}
+    virtual const char *getPassName() const {
+      return ModulePass::getPassName();
+    }
 
-		virtual bool doFinalization(Module &M) { 
-			return ModulePass::doFinalization(M);
-		}
+    virtual bool doInitialization(Module &M)  { 
+      return ModulePass::doInitialization(M);
+    }
 
-		virtual void print(raw_ostream &O, const Module *M) const {
-			ModulePass::print(O, M);
-		}
+    virtual bool doFinalization(Module &M) { 
+      return ModulePass::doFinalization(M);
+    }
 
-		virtual bool runOnModule(Module &M);
+    virtual void print(raw_ostream &O, const Module *M) const {
+      ModulePass::print(O, M);
+    }
 
-		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-			AU.addRequired<FieldDetectionAnalysis>();
-		}
+    virtual bool runOnModule(Module &M);
 
-		virtual void preparePassManager(PMStack &PMS) {
-			ModulePass::preparePassManager(PMS);
-		}
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.addRequired<MollyContextPass>();
+      AU.addRequired<FieldDetectionAnalysis>();
+    }
 
-		virtual void assignPassManager(PMStack &PMS, PassManagerType T) {
-			ModulePass::assignPassManager(PMS, T);
-		}
+    virtual void preparePassManager(PMStack &PMS) {
+      ModulePass::preparePassManager(PMS);
+    }
 
-		virtual PassManagerType getPotentialPassManagerType() const {
-			return ModulePass::getPotentialPassManagerType();
-		}
+    virtual void assignPassManager(PMStack &PMS, PassManagerType T) {
+      ModulePass::assignPassManager(PMS, T);
+    }
 
-		virtual Pass *createPrinterPass(raw_ostream &O, const std::string &Banner) const  {
-			return ModulePass::createPrinterPass(O, Banner);
-		}
+    virtual PassManagerType getPotentialPassManagerType() const {
+      return ModulePass::getPotentialPassManagerType();
+    }
 
-		virtual void releaseMemory() {
-			ModulePass::releaseMemory();
-		}
+    virtual Pass *createPrinterPass(raw_ostream &O, const std::string &Banner) const  {
+      return ModulePass::createPrinterPass(O, Banner);
+    }
 
-		virtual void *getAdjustedAnalysisPointer(AnalysisID ID) {
-			return ModulePass::getAdjustedAnalysisPointer(ID);
-		}
+    virtual void releaseMemory() {
+      ModulePass::releaseMemory();
+    }
 
-		virtual ImmutablePass *getAsImmutablePass() {
-			return ModulePass::getAsImmutablePass();
-		}
+    virtual void *getAdjustedAnalysisPointer(AnalysisID ID) {
+      return ModulePass::getAdjustedAnalysisPointer(ID);
+    }
 
-		virtual PMDataManager *getAsPMDataManager() {
-			return ModulePass::getAsPMDataManager();
-		}
+    virtual ImmutablePass *getAsImmutablePass() {
+      return ModulePass::getAsImmutablePass();
+    }
 
-		virtual void verifyAnalysis() const {
-			return ModulePass::verifyAnalysis();
-		}
+    virtual PMDataManager *getAsPMDataManager() {
+      return ModulePass::getAsPMDataManager();
+    }
 
-		virtual void dumpPassStructure(unsigned Offset = 0) {
-			return ModulePass::dumpPassStructure(Offset);
-		}
-	};
+    virtual void verifyAnalysis() const {
+      return ModulePass::verifyAnalysis();
+    }
+
+    virtual void dumpPassStructure(unsigned Offset = 0) {
+      return ModulePass::dumpPassStructure(Offset);
+    }
+  };
 }
 
 
+FieldVariable *FieldDistribution::getFieldVariable(GlobalVariable *var) {
+  FieldVariable *result = fa->getFieldVariables()[var];
+  assert(result);
+  return result;
+}
+
+
+FieldType *FieldDistribution::getFieldType(StructType *ty) {
+  FieldType *result = fa->getFieldTypes()[ty];
+  assert(result);
+  return result;
+}
+
 bool FieldDistribution::runOnModule(Module &M) {
-	M.dump();
-	return false;
+  fa = &getAnalysis<FieldDetectionAnalysis>();
+
+  auto fieldVars = fa->getFieldVariables();
+  for (auto it = fieldVars.begin(), end = fieldVars.end(); it != end; ++it) {
+    FieldVariable *field = it->second;
+    field->dump();
+  }
+
+  auto fieldTys = fa->getFieldTypes();
+  for (auto it = fieldTys.begin(), end = fieldTys.end(); it != end; ++it) {
+    FieldType *field = it->second;
+    field->dump();
+  }
+
+  //M.dump();
+  return false;
 }
 
 
@@ -100,5 +136,5 @@ static RegisterPass<FieldDistribution> FieldDistributionRegistration("moly-distr
 
 // Declaration in LinkAllPasses.h
 ModulePass *molly::createFieldDistributionPass() {
-	return new FieldDistribution();
+  return new FieldDistribution();
 }

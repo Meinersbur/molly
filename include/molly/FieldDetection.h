@@ -5,34 +5,51 @@
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
-//#include "llvm\Analysis\Loo
+
+namespace llvm {
+  class GlobalVariable;
+  class StructType;
+}
+
+namespace molly {
+  class FieldVariable;
+  class FieldType;
+}
 
 using namespace llvm;
 
 namespace molly {
+  class MollyContextPass;
 
-	class FieldDetectionAnalysis : public ModulePass {
-	public:
-		static char ID;
-		FieldDetectionAnalysis() : ModulePass(ID) {
-		}
+  class FieldDetectionAnalysis : public ModulePass {
+  private:
+    DenseMap<GlobalVariable*, FieldVariable*> fieldVars;
+    DenseMap<StructType*, FieldType*> fieldTypes;
 
-		//virtual Pass *createPrinterPass(raw_ostream &O,
-		//                        const std::string &Banner) {
-		//}
+  public:
+    static char ID;
+    FieldDetectionAnalysis() : ModulePass(ID) {
+    }
 
-		virtual bool runOnModule(Module &M);
+        virtual void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+          AU.addRequired<molly::MollyContextPass>();
+      AU.setPreservesAll();
+    }
 
-	private:
-		Pass *createFieldDetectionAnalysisPass();
+    virtual bool runOnModule(Module &M);
 
-	};
+    DenseMap<GlobalVariable*, FieldVariable*> &getFieldVariables() { return fieldVars; }
+    DenseMap<StructType*, FieldType*> &getFieldTypes() { return fieldTypes; }
+  private:
+    Pass *createFieldDetectionAnalysisPass();
+
+  };
 
 }
 
 namespace llvm {
-	class PassRegistry;
-	void initializeScopDetectionPass(llvm::PassRegistry&);
+  class PassRegistry;
+  void initializeScopDetectionPass(llvm::PassRegistry&);
 }
 
 

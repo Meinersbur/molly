@@ -4,21 +4,21 @@
 
 class IslLocalSpace {
 private:
-	isl_local_space *space;
+  isl_local_space *space;
 
 public:
-	IslLocalSpace() {
-	}
+  IslLocalSpace() {
+  }
 
-	~IslLocalSpace() {
-	}
+  ~IslLocalSpace() {
+  }
 
 #if 0
-	 #include <isl/local_space.h>
+   #include <isl/local_space.h>
         __isl_give isl_local_space *isl_local_space_from_space(
                 __isl_take isl_space *space);
 
-		        isl_ctx *isl_local_space_get_ctx(
+            isl_ctx *isl_local_space_get_ctx(
                 __isl_keep isl_local_space *ls);
         int isl_local_space_is_set(__isl_keep isl_local_space *ls);
         int isl_local_space_dim(__isl_keep isl_local_space *ls,
@@ -50,10 +50,10 @@ public:
                 __isl_keep isl_local_space *ls);
         void *isl_local_space_free(__isl_take isl_local_space *ls);
 
-		 int isl_local_space_is_equal(__isl_keep isl_local_space *ls1,
+     int isl_local_space_is_equal(__isl_keep isl_local_space *ls1,
                 __isl_keep isl_local_space *ls2);
 
-		         __isl_give isl_local_space *isl_local_space_domain(
+             __isl_give isl_local_space *isl_local_space_domain(
                 __isl_take isl_local_space *ls);
         __isl_give isl_local_space *isl_local_space_range(
                 __isl_take isl_local_space *ls);
