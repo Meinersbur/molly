@@ -1,9 +1,9 @@
 #ifndef MOLLY_MOLLYCONTEXT_H
 #define MOLLY_MOLLYCONTEXT_H 1
 
-#include "IslCtx.h"
+#include "islpp/Ctx.h"
 
-#include <assert.h>
+#include <cassert>
 
 
 namespace llvm {
@@ -16,7 +16,7 @@ namespace molly {
   class MollyContext {
   private:
     llvm::LLVMContext *llvmContext;
-    IslCtx islContext;
+    isl::Ctx islCtx;
 
   protected:
     MollyContext(llvm::LLVMContext *llvmContext) {
@@ -28,11 +28,10 @@ namespace molly {
       return new MollyContext(llvmContext);
     }
 
+    void setLLVMContext(llvm::LLVMContext *llvmContext) { assert(!this->llvmContext ||  this->llvmContext == llvmContext); this->llvmContext = llvmContext; }
     llvm::LLVMContext *getLLVMContext() { return llvmContext; }
-    IslCtx *getIslContext() { return &islContext; }
+    isl::Ctx *getIslContext() { return &islCtx; }
 
-  };
-
-}
-
+  }; // class MollyContext
+} // namespace molly
 #endif /* MOLLY_MOLLYCONTEXT_H */

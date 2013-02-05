@@ -10,11 +10,18 @@ namespace llvm {
   class LLVMContext;
 }
 
+namespace isl {
+class Ctx;
+  class Set;
+  class BasicSet;
+}
+
 namespace molly {
-  class IslSet;
   class MollyContext;
+}
 
 
+namespace molly {
   class FieldType {
   private:
     molly::MollyContext *mollyContext;
@@ -30,6 +37,7 @@ namespace molly {
       assert(module);
       assert(metadata);
 
+      this->mollyContext = mollyContext;
       this->module = module;
       this->metadata = metadata;
       
@@ -39,28 +47,26 @@ namespace molly {
 
     void readMetadata();
 
+    isl::Ctx *getIslContext();
+
   public:
     static FieldType *createFromMetadata(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       return new FieldType(mollyContext, module, metadata);
     }
 
-    void dump() {
-      // Nothing yet
-    }
+    void dump();
 
     uint32_t getDimensions() { 
       return lengths.size(); 
     }
 
-    IslSet &getIndexset();
+    isl::BasicSet getIndexset();
 
     llvm::StructType *getType() { 
       assert(ty);
       return ty;
     }
 
-  }; /* class FieldType */
-
-} /* namespace molly */
-
+  }; // class FieldType
+} // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

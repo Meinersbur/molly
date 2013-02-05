@@ -1,5 +1,3 @@
-
-
 #ifndef MOLLY_FIELD_DETECTION_H
 #define MOLLY_FIELD_DETECTION_H
 
@@ -31,8 +29,8 @@ namespace molly {
     FieldDetectionAnalysis() : ModulePass(ID) {
     }
 
-        virtual void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-          AU.addRequired<molly::MollyContextPass>();
+    virtual void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+      AU.addRequired<molly::MollyContextPass>();
       AU.setPreservesAll();
     }
 

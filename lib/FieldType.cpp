@@ -2,8 +2,12 @@
 #include "FieldType.h"
 
 #include "MollyContext.h"
-#include "IslCtx.h"
-#include "IslSet.h"
+#include "islpp/Ctx.h"
+#include "islpp/Set.h"
+#include "islpp/Space.h"
+#include "islpp/LocalSpace.h"
+#include "islpp/BasicSet.h"
+#include "islpp/Constraint.h"
 
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -15,10 +19,11 @@
 
 using namespace llvm;
 using namespace molly;
+using std::move;
 
 
 
-void molly::FieldType::readMetadata() {
+void FieldType::readMetadata() {
   assert(metadata);
 
   auto magic = dyn_cast<MDString>(metadata->getOperand(0));
@@ -44,11 +49,37 @@ void molly::FieldType::readMetadata() {
   }
 
   ty = module->getTypeByName(llvmName);
-
 }
 
-IslSet &molly::FieldType::getIndexset() {
-  
-  //mollyContext->getIslContext()->
 
+isl::Ctx *FieldType::getIslContext() {
+  return mollyContext->getIslContext();
+}
+
+
+isl::BasicSet FieldType::getIndexset() {
+  auto ctx = getIslContext();
+
+  auto dims = getDimensions();
+  auto space = ctx->createSpace(0, dims);
+  auto set = isl::BasicSet::create(space.copy());
+
+  for (auto d = dims-dims; d < dims; d+=1) {
+    auto ge = isl::Constraint::createInequality(space.copy());
+    ge.setConstant(0);
+    ge.setCoefficient(isl_dim_set, 0, 1);
+    set.addConstraint(move(ge));
+
+    auto lt = isl::Constraint::createInequality(move(space));
+    lt.setConstant(lengths[d]);
+    lt.setCoefficient(isl_dim_set, 0, -1);
+    set.addConstraint(move(lt));
+  }
+
+  return set;
+}
+
+
+void FieldType::dump() {
+  getIndexset().dump();
 }

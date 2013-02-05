@@ -26,6 +26,9 @@ namespace {
 
     FieldVariable *getFieldVariable(GlobalVariable *var);
     FieldType *getFieldType(StructType *ty);
+
+    bool runOnField(FieldVariable *field);
+
   public:
     static char ID;
     FieldDistribution() : ModulePass(ID) {
@@ -110,6 +113,17 @@ FieldType *FieldDistribution::getFieldType(StructType *ty) {
   return result;
 }
 
+
+
+bool FieldDistribution::runOnField(FieldVariable *field) {
+  auto fieldTy = field->getFieldType();
+  auto &contextPass = getAnalysis<MollyContextPass>();
+  auto &clusterShape = contextPass.getClusterShape();
+  auto &clusterLengths = contextPass.getClusterShape();
+
+  return false;
+}
+
 bool FieldDistribution::runOnModule(Module &M) {
   fa = &getAnalysis<FieldDetectionAnalysis>();
 
@@ -126,7 +140,16 @@ bool FieldDistribution::runOnModule(Module &M) {
   }
 
   //M.dump();
-  return false;
+
+
+  auto changed = false;
+    for (auto it = fieldVars.begin(), end = fieldVars.end(); it != end; ++it) {
+    FieldVariable *field = it->second;
+    bool fieldChanged = runOnField(field);
+    changed = changed || fieldChanged;
+  }
+
+  return changed;
 }
 
 

@@ -11,8 +11,9 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
+using namespace std;
 
-static cl::opt<bool> MollyEnabled("molly", cl::desc("Enable Molly by default in -O3"), cl::init(false), cl::Optional);
+static cl::opt<bool> MollyEnabled("molly", cl::desc("Molly - Enable by default in -O3"), cl::init(false), cl::Optional);
 
 
 static void initializeMollyPasses(PassRegistry &Registry) {

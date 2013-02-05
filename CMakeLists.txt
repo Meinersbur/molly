@@ -36,7 +36,9 @@ macro(add_molly_library name)
     # Add public headers
     file( GLOB_RECURSE headers
       ${MOLLY_SOURCE_DIR}/include/molly/*.h
+      ${MOLLY_SOURCE_DIR}/include/molly/islpp/*.h
       ${MOLLY_SOURCE_DIR}/lib/*.h
+      ${MOLLY_SOURCE_DIR}/lib/islpp/*.h
     )
     set_source_files_properties(${headers} PROPERTIES HEADER_FILE_ONLY ON)
     set(srcs ${srcs} ${headers})
@@ -46,28 +48,5 @@ macro(add_molly_library name)
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_library)
 
-
-add_molly_library(LLVMMolly
-  Pass.cpp
-  lib/RegisterPasses.cpp
-  lib/FieldDetection.cpp
-  lib/FieldDistribution.cpp
-  lib/dummy.cpp
-  lib/IslSet.cpp
-  lib/IslSpace.cpp
-  lib/IslCtx.cpp
-  lib/IslBasicSet.cpp
-  lib/FieldType.cpp
-  lib/FieldVariable.cpp
-  lib/Nodegrid.cpp
-  lib/MollyContext.cpp
-  lib/MollyContextPass.cpp
-)
-  
-target_link_libraries( LLVMMolly ${GMP_LIBRARY} )
-target_link_libraries( LLVMMolly ${ISL_LIBRARY} )
-target_link_libraries( LLVMMolly ${CLOOG_LIBRARY} )
-target_link_libraries( LLVMMolly ${LIBGCC_LIBRARY} )
-
-
+add_subdirectory(lib)
 add_subdirectory(tools)
