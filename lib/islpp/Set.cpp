@@ -17,14 +17,14 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-extern "C" {
+
 #include <isl/set.h>
 #include <isl/lp.h>
 #include <isl/union_map.h>
 #include <isl/map.h>
 #include <isl/aff.h>
 #include <isl/polynomial.h>
-}
+
 
 using namespace isl;
 using namespace std;

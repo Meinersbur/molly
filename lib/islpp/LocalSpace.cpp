@@ -42,8 +42,7 @@ LocalSpace::LocalSpace(Space &&that) {
 
 const LocalSpace &LocalSpace::operator=(Space &&that) {
   isl_local_space_free(this->space);
-  this->space = isl_local_space_from_space(that.space);
-  that.space = NULL;
+  this->space = isl_local_space_from_space(that.take());
   return *this;
 }
 

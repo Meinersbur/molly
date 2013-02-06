@@ -34,8 +34,8 @@ namespace isl {
 
   public:
         Aff(void) : aff(nullptr) {}
-    Aff(const Aff &that) : aff(that.takeCopy()) {}
-    Aff(Aff &&that) : aff(that.take()) { }
+     /* implicit */ Aff(const Aff &that) : aff(that.takeCopy()) {}
+     /* implicit */ Aff(Aff &&that) : aff(that.take()) { }
     ~Aff(void);
 
         const Aff &operator=(const Aff &that) { give(that.takeCopy()); return *this; }

@@ -41,10 +41,12 @@ namespace isl {
     Ctx(const Ctx &) LLVM_DELETED_FUNCTION;
     const Ctx &operator=(const Ctx &) LLVM_DELETED_FUNCTION;
 
-  protected:
+#pragma region Low-Level
+  public:
     isl_ctx *take() { assert(ctx); isl_ctx *result = ctx; ctx = nullptr; return result; }
     isl_ctx *keep() const { assert(ctx); return ctx; }
     void give(isl_ctx *ctx) { assert(!this->ctx); this->ctx = ctx; }
+#pragma endregion
 
   public:
     /// @brief Creates a new ISL context

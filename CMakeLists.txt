@@ -36,7 +36,7 @@ macro(add_molly_library name)
     # Add public headers
     file( GLOB_RECURSE headers
       ${MOLLY_SOURCE_DIR}/include/molly/*.h
-      ${MOLLY_SOURCE_DIR}/include/molly/islpp/*.h
+      ${MOLLY_SOURCE_DIR}/include/islpp/*.h
       ${MOLLY_SOURCE_DIR}/lib/*.h
       ${MOLLY_SOURCE_DIR}/lib/islpp/*.h
     )
