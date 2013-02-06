@@ -1,7 +1,6 @@
 #ifndef ISLPP_SPACE_H
 #define ISLPP_SPACE_H
 
-#include <llvm/Support/Compiler.h>
 #include <assert.h>
 
 struct isl_space;

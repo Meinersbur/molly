@@ -3,6 +3,7 @@
 
 #include "islpp/Ctx.h"
 
+#include <llvm/ADT/OwningPtr.h>
 #include <cassert>
 
 
@@ -16,11 +17,12 @@ namespace molly {
   class MollyContext {
   private:
     llvm::LLVMContext *llvmContext;
-    isl::Ctx islCtx;
+    llvm::OwningPtr<isl::Ctx> islCtx;
 
   protected:
     MollyContext(llvm::LLVMContext *llvmContext) {
       this->llvmContext = llvmContext;
+      islCtx.reset(isl::Ctx::create());
     }
 
   public:
@@ -30,7 +32,7 @@ namespace molly {
 
     void setLLVMContext(llvm::LLVMContext *llvmContext) { assert(!this->llvmContext ||  this->llvmContext == llvmContext); this->llvmContext = llvmContext; }
     llvm::LLVMContext *getLLVMContext() { return llvmContext; }
-    isl::Ctx *getIslContext() { return &islCtx; }
+    isl::Ctx *getIslContext() { return islCtx.get(); }
 
   }; // class MollyContext
 } // namespace molly
