@@ -27,6 +27,8 @@ add_molly_library(LLVMMolly
   islpp/MultiAff.cpp
   islpp/Point.cpp
   islpp/PwQPolynomialFold.cpp
+  islpp/Mat.cpp
+  islpp/Vertices.cpp
   FieldType.cpp
   FieldVariable.cpp
   Nodegrid.cpp
