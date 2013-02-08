@@ -32,8 +32,8 @@ namespace isl {
 
   public:
     UnionPwQPolynomial(void) : poly(nullptr) {}
-    UnionPwQPolynomial(const UnionPwQPolynomial &that) : poly(that.takeCopy()) {}
-    UnionPwQPolynomial(UnionPwQPolynomial &&that) : poly(that.take()) { }
+    /* implicit */ UnionPwQPolynomial(const UnionPwQPolynomial &that) : poly(that.takeCopy()) {}
+    /* implicit */ UnionPwQPolynomial(UnionPwQPolynomial &&that) : poly(that.take()) { }
     ~UnionPwQPolynomial(void);
 
     const UnionPwQPolynomial &operator=(const UnionPwQPolynomial &that) { give(that.takeCopy()); return *this; }

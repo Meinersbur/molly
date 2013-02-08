@@ -1,52 +1,66 @@
 #ifndef ISLPP_CONSTRAINT_H
 #define ISLPP_CONSTRAINT_H
 
-#include <isl/constraint.h>
-
-#include <llvm/Support/Compiler.h>
-#include <assert.h>
+#include <cassert>
 
 struct isl_constraint;
+enum isl_dim_type; 
 
 namespace isl {
   class Set;
   class LocalSpace;
-} // naespace isl
+  class Int;
+  class Aff;
+} // namespace isl
 
 
 namespace isl {
   class Constraint {
-    friend class BasicSet;
-    //friend Set addContraint(Set &&, Constraint &&);
-
+#pragma region Low-level
   private:
-     isl_constraint *constraint;
+    isl_constraint *constraint;
 
-    Constraint(const Constraint &) LLVM_DELETED_FUNCTION;
-    const Constraint &operator=(const Constraint &) LLVM_DELETED_FUNCTION;
-
-
-
+  public: // Public because otherwise we had to add a lot of friends
+    isl_constraint *take() { assert(constraint); isl_constraint *result = constraint; constraint = nullptr; return result; }
+    isl_constraint *takeCopy() const;
+    isl_constraint *keep() const { return constraint; }
   protected:
-    explicit Constraint(isl_constraint *constraint);
-
-    static Constraint wrap(isl_constraint *constraint);
+    void give(isl_constraint *constraint);
 
   public:
-        isl_constraint *take() { assert(constraint); isl_constraint *result = constraint; constraint = nullptr; return result; }
-    isl_constraint *keep() { return constraint; }
-    void give(isl_constraint *constraint) { assert(!this->constraint); this->constraint = constraint; }
+    static Constraint wrap(isl_constraint *constraint) { Constraint result; result.give(constraint); return result; }
+#pragma endregion
 
   public:
-        Constraint(Constraint &&that) { this->constraint = that.take(); }
-        ~Constraint();
+    Constraint(void) : constraint(nullptr) {}
+    Constraint(const Constraint &that) : constraint(that.takeCopy()) {}
+    Constraint(Constraint &&that) : constraint(that.take()) { }
+    ~Constraint(void);
 
+    const Constraint &operator=(const Constraint &that) { give(that.takeCopy()); return *this; }
+    const Constraint &operator=(Constraint &&that) { give(that.take()); return *this; }
+
+#pragma region Creational
     static Constraint createEquality(LocalSpace &&);
     static Constraint createInequality(LocalSpace &&);
+#pragma endregion
 
-    void setCoefficient(enum isl_dim_type type, int pos, int v);
+    LocalSpace getLocalSpace() const;
+    void  setConstant(const Int &v);
     void setConstant(int v);
-  };
+    void setCoefficient(isl_dim_type type, int pos, const Int & v);
+    void setCoefficient(isl_dim_type type, int pos, int v);
 
+    bool isEquality() const;
+    bool isLowerBound(isl_dim_type type, unsigned pos) const;
+    bool isUpperBound(isl_dim_type type, unsigned pos) const;
+    Int getConstant() const;
+    Int getCoefficient(isl_dim_type type, int pos) const;
+    bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const;
+    Aff getDiv(int pos) const;
+    const char *getDimName(isl_dim_type type, unsigned pos) const;
+    Aff getBound(isl_dim_type type, int pos) const;
+    Aff getAff() const;
+  }; // class Constraint
 } // namespace isl
 #endif /* ISLPP_CONSTRAINT_H */

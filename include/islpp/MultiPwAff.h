@@ -32,8 +32,8 @@ namespace isl {
 
   public:
     MultiPwAff(void) : aff(nullptr) {}
-    MultiPwAff(const MultiPwAff &that) : aff(that.takeCopy()) {}
-    MultiPwAff(MultiPwAff &&that) : aff(that.take()) { }
+    /* implicit */ MultiPwAff(const MultiPwAff &that) : aff(that.takeCopy()) {}
+    /* implicit */ MultiPwAff(MultiPwAff &&that) : aff(that.take()) { }
     ~MultiPwAff(void);
 
     const MultiPwAff &operator=(const MultiPwAff &that) { give(that.takeCopy()); return *this; }

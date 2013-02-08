@@ -9,6 +9,8 @@
 #include "islpp/BasicSet.h"
 #include "islpp/Constraint.h"
 
+#include <isl/space.h>
+
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"

@@ -32,8 +32,8 @@ namespace isl {
 
   public:
     PwQPolynomial(void) : poly(nullptr) {}
-    PwQPolynomial(const PwQPolynomial &that) : poly(that.takeCopy()) {}
-    PwQPolynomial(PwQPolynomial &&that) : poly(that.take()) { }
+    /* implicit */ PwQPolynomial(const PwQPolynomial &that) : poly(that.takeCopy()) {}
+    /* implicit */ PwQPolynomial(PwQPolynomial &&that) : poly(that.take()) { }
     ~PwQPolynomial(void);
 
     const PwQPolynomial &operator=(const PwQPolynomial &that) { give(that.takeCopy()); return *this; }

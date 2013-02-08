@@ -32,8 +32,8 @@ namespace isl {
 
   public:
     QPolynomial(void) : poly(nullptr) {}
-    QPolynomial(const QPolynomial &that) : poly(that.takeCopy()) {}
-    QPolynomial(QPolynomial &&that) : poly(that.take()) { }
+    /* implicit */ QPolynomial(const QPolynomial &that) : poly(that.takeCopy()) {}
+    /* implicit */ QPolynomial(QPolynomial &&that) : poly(that.take()) { }
     ~QPolynomial(void);
 
     const QPolynomial &operator=(const QPolynomial &that) { give(that.takeCopy()); return *this; }

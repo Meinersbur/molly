@@ -33,8 +33,8 @@ namespace isl {
 
   public:
     PwAff(void) : aff(nullptr) {}
-    PwAff(const PwAff &that) : aff(that.takeCopy()) {}
-    PwAff(PwAff &&that) : aff(that.take()) { }
+    /* implicit */ PwAff(const PwAff &that) : aff(that.takeCopy()) {}
+    /* implicit */ PwAff(PwAff &&that) : aff(that.take()) { }
     ~PwAff(void);
 
     const PwAff &operator=(const PwAff &that) { give(that.takeCopy()); return *this; }

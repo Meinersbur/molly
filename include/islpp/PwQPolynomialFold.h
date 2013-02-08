@@ -15,7 +15,7 @@ namespace isl {
 namespace isl {
   class PwQPolynomialFold {
 #pragma region Low-level
-      private:
+  private:
     isl_pw_qpolynomial_fold *poly;
 
   public: // Public because otherwise we had to add a lot of friends
@@ -31,12 +31,12 @@ namespace isl {
 #pragma endregion
 
   public:
-        PwQPolynomialFold(void) : poly(nullptr) {}
-    PwQPolynomialFold(const PwQPolynomialFold &that) : poly(that.takeCopy()) {}
-    PwQPolynomialFold(PwQPolynomialFold &&that) : poly(that.take()) { }
+    PwQPolynomialFold(void) : poly(nullptr) {}
+    /* implicit */ PwQPolynomialFold(const PwQPolynomialFold &that) : poly(that.takeCopy()) {}
+    /* implicit */ PwQPolynomialFold(PwQPolynomialFold &&that) : poly(that.take()) { }
     ~PwQPolynomialFold(void);
 
-        const PwQPolynomialFold &operator=(const PwQPolynomialFold &that) { give(that.takeCopy()); return *this; }
+    const PwQPolynomialFold &operator=(const PwQPolynomialFold &that) { give(that.takeCopy()); return *this; }
     const PwQPolynomialFold &operator=(PwQPolynomialFold &&that) { give(that.take()); return *this; }
 
   }; // class PwQPolynomialFold
