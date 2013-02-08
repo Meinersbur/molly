@@ -1,8 +1,6 @@
 
 add_molly_executable(molly driver.cpp cc1as_main.cpp cc1_main.cpp)
 
-set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} polly clang LLVMMolly)
-
 target_link_libraries( molly 
   clangFrontendTool
   clangAST
@@ -26,5 +24,3 @@ target_link_libraries( molly
   LLVMPolly
   LLVMMolly
 )
-
-
