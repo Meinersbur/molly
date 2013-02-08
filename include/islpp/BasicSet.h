@@ -36,7 +36,7 @@ namespace isl {
 
   class BasicSet {
 #pragma region Low-level
-      private:
+  private:
     isl_basic_set *set;
 
   public: // Public because otherwise we had to add a lot of friends
@@ -90,7 +90,7 @@ namespace isl {
     bool foreachConstraint(ConstraintCallback fn, void *user)const;
 
     Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4 ) const;
-     Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4 ) const;
+    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4 ) const;
 #pragma endregion
 
     void projectOut(isl_dim_type type, unsigned first, unsigned n);
@@ -115,35 +115,35 @@ namespace isl {
 
     const char *getTupleName() const;
     void setTupleName(const char *s);
-    
+
     Id getDimId(isl_dim_type type, unsigned pos) const;
     const char *getDimName(isl_dim_type type, unsigned pos) const;
 
-   bool plainIsEmpty() const;
-   bool isEmpty() const;
-   bool isUniverse() const;
-   bool isWrapping() const;
+    bool plainIsEmpty() const;
+    bool isEmpty() const;
+    bool isUniverse() const;
+    bool isWrapping() const;
 
-   void dropConstraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
-   void dropConstraintsNotInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
+    void dropConstraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
+    void dropConstraintsNotInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
 
-   /// If the input (basic) set or relation is non-empty, then return a singleton subset of the input. Otherwise, return an empty set.
-   void sample();
-   void coefficients();
-   void solutions();
-   void flatten();
-   void lift();
-   void alignParams(Space &&model);
+    /// If the input (basic) set or relation is non-empty, then return a singleton subset of the input. Otherwise, return an empty set.
+    void sample();
+    void coefficients();
+    void solutions();
+    void flatten();
+    void lift();
+    void alignParams(Space &&model);
 
-   void addDims(isl_dim_type type, unsigned n);
-   void insertDims(isl_dim_type type, unsigned pos,  unsigned n);
-   void moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n);
-   
-   void apply(BasicMap &&bmap);
-   void preimage(MultiAff &&ma);
+    void addDims(isl_dim_type type, unsigned n);
+    void insertDims(isl_dim_type type, unsigned pos,  unsigned n);
+    void moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n);
 
-   void gist(BasicSet &&context);
-   Vertices computeVertices() const;
+    void apply(BasicMap &&bmap);
+    void preimage(MultiAff &&ma);
+
+    void gist(BasicSet &&context);
+    Vertices computeVertices() const;
   }; // class BasicSet
 
 
@@ -154,18 +154,18 @@ namespace isl {
   BasicMap unwrap(BasicSet &&bset);
 
   BasicSet intersectParams(BasicSet &&bset1, BasicSet &&bset2);
-   BasicSet intersect(BasicSet &&bset1, BasicSet &&bset2);
-   Set union_(BasicSet &&bset1, BasicSet &&bset2);
-   BasicSet flatProduct(BasicSet &&bset1, BasicSet &&bset2);
+  BasicSet intersect(BasicSet &&bset1, BasicSet &&bset2);
+  Set union_(BasicSet &&bset1, BasicSet &&bset2);
+  BasicSet flatProduct(BasicSet &&bset1, BasicSet &&bset2);
 
-   Set partialLexmin(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
-    Set partialLexmax(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
-   PwMultiAff partialLexminPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
-    PwMultiAff partialLexmaxPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
+  Set partialLexmin(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
+  Set partialLexmax(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
+  PwMultiAff partialLexminPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
+  PwMultiAff partialLexmaxPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);
 
-    Set lexmin(BasicSet &&bset);
-    Set lexmax(BasicSet &&bset);
+  Set lexmin(BasicSet &&bset);
+  Set lexmax(BasicSet &&bset);
 
-    Point samplePoint(BasicSet &&bset);
+  Point samplePoint(BasicSet &&bset);
 } // namespace isl
 #endif /* ISLPP_BASICSET_H */

@@ -16,7 +16,7 @@ namespace isl {
 
   class MultiAff {
 #pragma region Low-level
-      private:
+  private:
     isl_multi_aff *aff;
 
   public: // Public because otherwise we had to add a lot of friends
@@ -32,12 +32,12 @@ namespace isl {
 #pragma endregion
 
   public:
-        MultiAff(void) : aff(nullptr) {}
+    MultiAff(void) : aff(nullptr) {}
     MultiAff(const MultiAff &that) : aff(that.takeCopy()) {}
     MultiAff(MultiAff &&that) : aff(that.take()) { }
     ~MultiAff(void);
 
-        const MultiAff &operator=(const MultiAff &that) { give(that.takeCopy()); return *this; }
+    const MultiAff &operator=(const MultiAff &that) { give(that.takeCopy()); return *this; }
     const MultiAff &operator=(MultiAff &&that) { give(that.take()); return *this; }
 
   }; // class MultiAff

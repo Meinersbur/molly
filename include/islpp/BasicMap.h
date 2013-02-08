@@ -15,7 +15,7 @@ namespace isl {
 namespace isl {
   class BasicMap {
 #pragma region Low-level
-      private:
+  private:
     isl_basic_map *map;
 
   public: // Public because otherwise we had to add a lot of friends
@@ -30,12 +30,12 @@ namespace isl {
 #pragma endregion
 
   public:
-        BasicMap(void) : map(nullptr) {}
-     /* implicit */ BasicMap(const BasicMap &that) : map(that.takeCopy()) {}
-     /* implicit */ BasicMap(BasicMap &&that) : map(that.take()) { }
+    BasicMap(void) : map(nullptr) {}
+    /* implicit */ BasicMap(const BasicMap &that) : map(that.takeCopy()) {}
+    /* implicit */ BasicMap(BasicMap &&that) : map(that.take()) { }
     ~BasicMap(void);
 
-        const BasicMap &operator=(const BasicMap &that) { give(that.takeCopy()); return *this; }
+    const BasicMap &operator=(const BasicMap &that) { give(that.takeCopy()); return *this; }
     const BasicMap &operator=(BasicMap &&that) { give(that.take()); return *this; }
 
   }; // class BasicMap
