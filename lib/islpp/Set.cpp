@@ -15,6 +15,7 @@
 #include "islpp/Map.h"
 #include "islpp/Point.h"
 #include "islpp/PwQPolynomialFold.h"
+#include "islpp/Dim.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -397,10 +398,11 @@ int Set::getBasicSetCount() const {
   return isl_set_n_basic_set(keep());
 }
 
-unsigned Set::getDim(isl_dim_type type) const {
+unsigned Set::dim(isl_dim_type type) const {
   return isl_set_dim(keep(), type);
 }
 
+ unsigned Set::getSetDimCount() const { return dim(isl_dim_set); }
 
 int Set::getInvolvedDims(isl_dim_type type,unsigned first, unsigned n) const {
   return isl_set_involves_dims(keep(), type, first, n);
@@ -609,6 +611,28 @@ Map isl::flattenMap(Set &&set) {
 void Set::lift() {
   give(isl_set_lift(take()));
 }
+
+    PwAff Set::dimMin(int pos) const {
+return PwAff::wrap(isl_set_dim_min(takeCopy(), pos));   
+}
+  
+
+    PwAff Set::dimMin(const Dim &dim) const {
+      assert(dim.getType() == isl_dim_set);
+      dim.assertOwner(isl_set_get_space(keep()));
+      return PwAff::wrap(isl_set_dim_min(takeCopy(), dim.getPos()));
+    }
+        PwAff Set::dimMax(int pos) const {
+return PwAff::wrap(isl_set_dim_max(takeCopy(), pos));   
+}
+  
+    PwAff Set::dimMax(const Dim &dim) const {
+       assert(dim.getType() == isl_dim_set);
+       dim.assertOwner(isl_set_get_space(keep()));
+       return PwAff::wrap(isl_set_dim_max(takeCopy(), dim.getPos()));
+    }
+
+
 
 Set isl::alignParams(Set &&set, Space &&model) {
   return Set::wrap(isl_set_align_params(set.take(), model.take()));

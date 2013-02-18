@@ -35,6 +35,8 @@ namespace isl {
   class Point;
   class MultiPwAff;
   class PwQPolynomialFold;
+  class PwAff;
+  class Dim;
 } // namespace isl
 
 
@@ -75,6 +77,7 @@ namespace isl {
      /* implicit */ Set(const BasicSet &set);
     const Set &operator=(const BasicSet &that);
 
+#pragma region Creational
     static Set createEmpty(Space &&space);
     /// @brief Contains all integers
     static Set createUniverse(Space &&space);
@@ -90,6 +93,9 @@ namespace isl {
     static Set readFrom(const Ctx &, FILE *);
     static Set readFrom(const Ctx &, const char *);
 
+    Set copy() const { return Set::wrap(takeCopy()); }
+#pragma endregion
+
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;
     void printPovray(llvm::raw_ostream &out) const;
@@ -98,8 +104,6 @@ namespace isl {
 #pragma endregion
 
     Space getSpace() const;
-
-    Set copy() const { return Set::wrap(takeCopy()); }
 
     Set addContraint(Constraint &&) const;
 
@@ -117,8 +121,9 @@ namespace isl {
 
     int getBasicSetCount() const;
 
-    unsigned getDim(isl_dim_type) const;
-    int getInvolvedDims(isl_dim_type,unsigned first, unsigned n) const;
+    unsigned dim(isl_dim_type) const;
+    unsigned getSetDimCount() const;
+    int getInvolvedDims(isl_dim_type, unsigned first, unsigned n) const;
     bool dimHasAnyLowerBound(isl_dim_type, unsigned pos) const;
     bool dimHasAnyUpperBound(isl_dim_type, unsigned pos) const;
     bool dimHasLowerBound(isl_dim_type, unsigned pos) const;
@@ -137,7 +142,7 @@ namespace isl {
     int findDimById(isl_dim_type type, const Id &id) const;
     int findDimByName(isl_dim_type type, const char *name) const;
     bool dimHasName(isl_dim_type type, unsigned pos) const;
-    const char *getDimName(enum isl_dim_type type, unsigned pos) const;
+    const char *getDimName(isl_dim_type type, unsigned pos) const;
 
     bool plainIsEmpty() const;
     bool isEmpty() const;
@@ -146,7 +151,7 @@ namespace isl {
     bool plainIsFixed(isl_dim_type type, unsigned pos, Int &val) const;
 
     /// Eliminate the coefficients for the given dimensions from the constraints, without removing the dimensions.
-    void eliminate( isl_dim_type type, unsigned first, unsigned n);
+    void eliminate(isl_dim_type type, unsigned first, unsigned n);
 
     void fix(isl_dim_type type, unsigned pos, const Int &value);
     void fix(isl_dim_type type, unsigned pos, int value);
@@ -174,9 +179,14 @@ namespace isl {
 
     /// Remove any internal structure of domain (and range) of the given set or relation. If there is any such internal structure in the input, then the name of the space is also removed.
     void flatten();
-
+    
     /// Lift the input set to a space with extra dimensions corresponding to the existentially quantified variables in the input. In particular, the result lives in a wrapped map where the domain is the original space and the range corresponds to the original existentially quantified variables.
     void lift();
+
+    PwAff dimMin(int pos) const;
+    PwAff dimMin(const Dim &dim) const;
+    PwAff dimMax(int pos) const;
+    PwAff dimMax(const Dim &dim) const;
   }; // class Set
 
 

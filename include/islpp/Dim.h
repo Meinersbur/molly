@@ -14,12 +14,20 @@ namespace isl {
     isl_dim_type type;
     int pos;
 
+  public:
+    void assertOwner(isl_space *space) const { assert(this->ownerSpace); assert(this->ownerSpace == space); }
+     void assertOwner(isl_local_space *space) const { assert(this->ownerLocalSpace); assert(this->ownerLocalSpace == space); }
+
   protected:
     explicit Dim(isl_space *ownerSpace, isl_local_space *ownerLocalSpace, isl_dim_type type, int pos) : ownerSpace(ownerSpace), ownerLocalSpace(ownerLocalSpace), type(type), pos(pos) {}
 
   public:
     static Dim wrap(isl_space *ownerSpace, isl_dim_type type, int pos) { return Dim(ownerSpace, NULL, type, pos); }
     static Dim wrap(isl_local_space *ownerSpace, isl_dim_type type, int pos) { return Dim(NULL, ownerSpace, type, pos); }
+
+
+    isl_dim_type getType() const { return type; }
+    int getPos() const { return pos; }
 
   }; // class Dim
 

@@ -59,7 +59,7 @@ isl::Ctx *FieldType::getIslContext() {
 }
 
 
-isl::BasicSet FieldType::getIndexset() {
+isl::Set FieldType::getIndexset() {
   auto ctx = getIslContext();
 
   auto dims = getDimensions();

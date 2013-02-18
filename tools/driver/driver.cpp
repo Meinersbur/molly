@@ -18,6 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/ArgList.h"
 #include "clang/Driver/Compilation.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/system_error.h"
-#include <cctype>
 using namespace clang;
 using namespace clang::driver;
 
@@ -208,7 +208,7 @@ static void ExpandArgsFromBuf(const char *Arg,
   std::string CurArg;
 
   for (const char *P = Buf; ; ++P) {
-    if (*P == '\0' || (isspace(*P) && InQuote == ' ')) {
+    if (*P == '\0' || (isWhitespace(*P) && InQuote == ' ')) {
       if (!CurArg.empty()) {
 
         if (CurArg[0] != '@') {
@@ -225,7 +225,7 @@ static void ExpandArgsFromBuf(const char *Arg,
         continue;
     }
 
-    if (isspace(*P)) {
+    if (isWhitespace(*P)) {
       if (InQuote != ' ')
         CurArg.push_back(*P);
       continue;

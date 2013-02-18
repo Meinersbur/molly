@@ -3,6 +3,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Module.h"
+#include <llvm/ADT/DenseMap.h>
 
 namespace llvm {
   class GlobalVariable;

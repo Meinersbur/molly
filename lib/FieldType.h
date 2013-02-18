@@ -60,7 +60,7 @@ namespace molly {
       return lengths.size(); 
     }
 
-    isl::BasicSet getIndexset();
+    isl::Set getIndexset();
 
     llvm::StructType *getType() { 
       assert(ty);

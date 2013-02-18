@@ -6,6 +6,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "islpp/Isl.h"
+
 #include "molly\FieldDetection.h"
 #include "FieldVariable.h"
 #include "FieldType.h"
@@ -114,15 +116,25 @@ FieldType *FieldDistribution::getFieldType(StructType *ty) {
 }
 
 
-
 bool FieldDistribution::runOnField(FieldVariable *field) {
   auto fieldTy = field->getFieldType();
   auto &contextPass = getAnalysis<MollyContextPass>();
   auto &clusterShape = contextPass.getClusterShape();
-  auto &clusterLengths = contextPass.getClusterShape();
+  auto &clusterLengths = contextPass.getClusterLengths();
+
+  auto indexset = fieldTy->getIndexset();
+  auto indexdims = indexset.getSetDimCount();
+  auto clusterdims = clusterLengths.size();
+  assert(indexdims == clusterdims); //TODO: Currently they have to match exactly
+  auto dims = clusterdims;
+  
+  for (auto d = dims-dims; d<dims; d+=1) {
+    auto clusterlen = clusterLengths[d];
+  }
 
   return false;
 }
+
 
 bool FieldDistribution::runOnModule(Module &M) {
   fa = &getAnalysis<FieldDetectionAnalysis>();
