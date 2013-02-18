@@ -2,15 +2,21 @@
 #define ISLPP_CONSTRAINT_H
 
 #include <cassert>
+#include <string>
 
 struct isl_constraint;
 enum isl_dim_type; 
+
+namespace llvm {
+  class raw_ostream;
+} // namespace llvm
 
 namespace isl {
   class Set;
   class LocalSpace;
   class Int;
   class Aff;
+  class Ctx;
 } // namespace isl
 
 
@@ -45,8 +51,16 @@ namespace isl {
     static Constraint createInequality(LocalSpace &&);
 #pragma endregion
 
+#pragma region Printing
+    void print(llvm::raw_ostream &out) const;
+    std::string toString() const;
+    void dump() const;
+    void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
+#pragma endregion
+
+    Ctx *getCtx() const;
     LocalSpace getLocalSpace() const;
-    void  setConstant(const Int &v);
+    void setConstant(const Int &v);
     void setConstant(int v);
     void setCoefficient(isl_dim_type type, int pos, const Int & v);
     void setCoefficient(isl_dim_type type, int pos, int v);

@@ -5,10 +5,52 @@
 #include "islpp/Id.h"
 #include "islpp/Aff.h"
 #include "islpp/BasicMap.h"
+#include "islpp/Dim.h"
 
 #include <isl/local_space.h>
 
 using namespace isl;
+
+
+LocalSpaceDimtypeIter::iterator &LocalSpaceDimtypeIter::operator++/*preincrement*/() {
+  while (true) {
+    current = (isl_dim_type)((unsigned)current+1);
+    if (current >= isl_dim_all) 
+      break;
+    auto len = owner->dim(current);
+    if (len > 0)
+      break;
+  }
+  return *this;
+}
+
+
+LocalSpaceDimIter::value_type LocalSpaceDimIter::operator*() const {
+  return Dim::wrap(owner->keep(), currentType, currentPos);
+}
+
+
+LocalSpaceDimIter &LocalSpaceDimIter::operator++/*preincrement*/() {
+  currentPos += 1;
+  if (currentPos < currentTypeSize) {
+    return *this;
+  } else {
+    currentPos = 0;
+    while (true) {
+      while (true) {
+        currentType = (isl_dim_type)((int)currentType+1);
+        if (currentType == isl_dim_all)
+          return *this;
+        if ((1 << currentType) & typeFilter) 
+          break;
+      }
+      currentTypeSize = owner->dim(currentType);
+      if (currentTypeSize > 0)
+        return *this;
+    }
+  }
+}
+
 
 isl_local_space *LocalSpace::takeCopy() const {
   return isl_local_space_copy(space);

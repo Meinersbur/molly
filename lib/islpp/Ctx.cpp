@@ -4,16 +4,26 @@
 #include "islpp/Space.h"
 #include "islpp/LocalSpace.h"
 #include "islpp/Constraint.h"
+#include "islpp/Printer.h"
 
 #include <isl/ctx.h>
 #include <isl/options.h>
 #include <isl/space.h>
+#include <isl/set.h>
+#include <isl/printer.h>
 
 using namespace isl;
 using namespace std;
 
 
+void Ctx:: operator delete(void* ptr) {
+  isl_ctx *ctx = reinterpret_cast<isl_ctx*>(ptr); 
+  if (ctx)
+    isl_ctx_free(ctx);
+}
+
 Ctx::~Ctx() {
+  return;
   isl_ctx *ctx = reinterpret_cast<isl_ctx*>(this); 
   if (ctx)
     isl_ctx_free(ctx);
@@ -22,7 +32,7 @@ Ctx::~Ctx() {
 Ctx *Ctx::create() {
   auto result = wrap(isl_ctx_alloc());
 #ifndef NDEBUG
-    result->setOnError(OnError::Abort);
+  result->setOnError(OnError::Abort);
 #endif
   return result;
 }
@@ -46,6 +56,21 @@ void Ctx::setOnError(OnErrorEnum val){
 
 OnErrorEnum Ctx::getOnError() const {
   return static_cast<OnErrorEnum>(isl_options_get_on_error(keep()));
+}
+
+Printer Ctx::createPrinterToFile(FILE *file) {
+  return Printer::wrap(isl_printer_to_file(keep(), file), false);
+}
+
+Printer Ctx:: createPrinterToFile(const char *filename) {
+  FILE *file = fopen(filename, "w");
+  assert(file);
+  Printer result = Printer::wrap(isl_printer_to_file(keep(), file), true);
+  return result;
+}
+
+Printer Ctx::createPrinterToStr(){
+  return Printer::wrap(isl_printer_to_str(keep()), false);
 }
 
 
@@ -75,35 +100,6 @@ BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &length
 }
 
 
-
- #if 0
-    void *Ctx::operator new(size_t size) {
-      if (size != sizeof(Ctx))
-        throw exception("Cannot allocate derived types");
-
-      return isl_ctx_alloc();
-    }
-
-    void Ctx::operator delete(void * ctx, size_t size) {
-         if (size != sizeof(Ctx))
-        throw exception("Cannot deallocate derived types");
-
-         isl_ctx_free(static_cast<isl_ctx*>(ctx));
-    }
-
-
-
-
-void Ctx::free() {
-  if (ctx)
-    isl_ctx_free(ctx);
-  ctx = nullptr;
+BasicSet Ctx::readBasicSet(const char *str) {
+  return BasicSet::wrap(isl_basic_set_read_from_str(keep(), str));
 }
-
-
-static Owning<Ctx> Ctx::create() {
-  Owning<Ctx> result;
-  result.ctx = isl_ctx_alloc();
-}
-#endif
-

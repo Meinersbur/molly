@@ -3,6 +3,7 @@
 #include "islpp/BasicSet.h"
 #include "islpp/cstdiofile.h"
 #include "islpp/Space.h"
+#include "islpp/LocalSpace.h"
 #include "islpp/Ctx.h"
 #include "islpp/Constraint.h"
 #include "islpp/Id.h"
@@ -24,6 +25,8 @@
 #include <isl/map.h>
 #include <isl/aff.h>
 #include <isl/polynomial.h>
+
+#include <utility>
 
 
 using namespace isl;
@@ -48,8 +51,24 @@ Set::~Set() {
     isl_set_free(set);
 }
 
-Set::Set(BasicSet &&set) {
-  this->set = isl_set_from_basic_set(set.take());
+
+Set::Set(BasicSet &&that) : set(isl_set_from_basic_set(that.take())) {
+}
+
+
+const Set &Set::operator=(BasicSet &&that) {
+  give(isl_set_from_basic_set(that.take()));
+  return *this;
+}
+
+
+Set::Set(const BasicSet &that) : set(isl_set_from_basic_set(that.takeCopy())) {
+}
+
+
+const Set &Set::operator=(const BasicSet &that){
+  give(isl_set_from_basic_set(that.takeCopy()));
+  return *this;
 }
 
 
@@ -81,16 +100,249 @@ void Set::print(llvm::raw_ostream &out) const {
 }
 
 
+static const char *povray_prologue = 
+  "// Generated from an Integer Set Library set\n"
+  "#include \"colors.inc\"\n"
+  "#include \"screen.inc\"\n"
+  "\n"
+  "#macro Point3D(xx,yy,zz)\n"
+  "#ifndef (Min_X) #declare Min_X = xx; #elseif (xx < Min_X) #declare Min_X = xx; #end\n"
+  "#ifndef (Max_X) #declare Max_X = xx; #elseif (xx > Max_X) #declare Max_X = xx; #end\n"
+  "#ifndef (Min_Y) #declare Min_Y = yy; #elseif (xx < Min_Y) #declare Min_Y = yy; #end\n"
+  "#ifndef (Max_Y) #declare Max_Y = yy; #elseif (xx > Max_Y) #declare Max_Y = yy; #end\n"
+  "#ifndef (Min_Z) #declare Min_Z = zz; #elseif (zz < Min_Y) #declare Min_Z = zz; #end\n"
+  "#ifndef (Max_Z) #declare Max_Z = zz; #elseif (zz > Max_Y) #declare Max_Z = zz; #end\n"
+  "object {\n"
+  "  sphere { <0,0,0>, 0.25\n"
+  "    pigment { color Black }\n"
+  "    finish { specular 0.3 }\n"
+  "  }\n"
+  "  translate<xx,yy,zz>\n"
+  "}\n"
+  "#end\n"
+  "\n"
+  "#macro Point2D(xx,yy)\n"
+  "  Point3D(xx,yy,0)\n"
+  "#end\n"
+  "\n"
+  "#macro Point1D(xx)\n"
+  "  Point2D(xx,0)\n"
+  "#end\n"
+  "\n"
+  "#macro Space1D()\n"
+  "  plane { <0,1,0,>, 0.5  }\n"
+  "  plane { <0,-1,0>, 0.5 }\n"
+  "  plane { <0,0,1>, 0.5 }\n"
+  "  plane { <0,0,-1>, 0.5  }\n"
+  "#end \n"
+  "\n" 
+  "#macro CondIneq1D(c, xx)\n"
+  "  #local vec = <xx,0,0>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro CondEq1D(c, xx)\n"
+  "#local vec = <xx,0,0>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro Space2D()\n"
+  "  plane { <0,0,1>, 0.5 }\n"
+  "  plane { <0,0,-1>, 0.5  }\n"
+  "#end\n"
+  "\n"
+  "#macro CondIneq2D(c, xx, yy)\n"
+  "  #local vec = <xx,yy,0>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro CondEq2D(c, xx, yy)\n"
+  "#local vec = <xx,yy,0>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro Space3D()\n"
+  "#end\n"
+  "\n"
+  "#macro CondIneq3D(c, xx, yy, zz)\n"
+  "  #local vec = <xx,yy,0>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro CondEq3D(c, xx, yy, zz)\n"
+  "#local vec = <xx,yy,zz>;\n"
+  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+  "#end\n"
+  "\n"
+  "#macro Polytope()\n"
+  "  texture { pigment { color Red transmit 0.5 } }\n"
+  "  finish { diffuse 0.9 phong 0.5 }\n"
+  "#end\n"
+  "\n"
+  ;
+
+static const char *povray_epilogue = 
+  "\n"
+  "\n"            
+  "#declare Midpoint = <(Min_X+Max_X)/2,(Min_Y+Max_Y)/2(Min_Y+Max_Y)/2>;\n"
+  "\n"
+  "Set_Camera_Location(<1,1,1>*vlength(Midpoint)*1.1)\n"
+  "Set_Camera_Look_At(Midpoint)\n"
+  "Set_Camera_Aspect(image_width,image_height)\n"
+  "\n"
+  "background {\n"
+  "  color White\n"
+  "}\n"
+  "\n"
+  "light_source {\n"
+  "  Camera_Location*0.7\n"
+  "  color 1.5\n"
+  "}\n"
+  "\n"
+  "#macro Arrow(dst,c)\n"
+  "union {\n"
+  "  union {\n"
+  "    cylinder{<0,0,0>, dst, 0.1 }\n"
+  "    cone { dst,0.4,dst+vnormalize(dst)*1.5,0 }\n"
+  "    pigment { c }\n"
+  "  }\n"
+  "  #declare K = 0;\n"
+  "  #while (K <= vlength(dst))\n"
+  "        cylinder{ vnormalize(dst)*K, vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.3 , 0.05 }\n"
+  "        text { ttf \"crystal.ttf\", str(K,0,0), 0.01, 0\n"
+  "          translate <0,-0.5,0>\n"
+  "          scale 0.8\n"
+  "          transform { Camera_Transform }\n"
+  "          translate -Camera_Location\n"
+  "          translate vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.5\n"
+  "        }\n"
+  "        #declare K = K + 1;\n"
+  "   #end \n"
+  "   pigment { Black }\n"
+  "}\n"
+  "#end\n"
+  "\n"
+  "Arrow(<7,0,0>, rgb<1,0,0>)\n"
+  "Arrow(<0,5,0>, rgb<0,1,0>)\n"
+  "Arrow(<0,0,3>, rgb<0,0,1>)\n"
+  ;
+
+void Set::printPovray(llvm::raw_ostream &out) const {
+  out << povray_prologue;
+
+  // Find what we take a X,Y,Z coordinates
+  auto space = getSpace();
+  auto params = space.getParamDims();
+  assert(params == 0);
+  auto dims = space.getSetDims();
+  assert(0 < dims && dims <= 3);
+  //Int min[3] = { Int(0), Int(0), Int(0) };
+  //Int max[3] = {0,0,0};
+  bool firstCoord = true;
+
+  foreachPoint([&,dims] (Point point) -> bool {
+    out << "Point" << dims << "D(";
+
+    bool first = true;
+    for (auto d = dims-dims; d < dims; d+=1) {
+      if (!first) {
+        out<<", ";
+      }
+      auto coord = point.getCoordinate(isl_dim_set, d);
+      if (d < 3) {
+        if (firstCoord) {
+          //min[d] = coord;
+          //max[d] = coord;
+        } else {
+          //if (coord < min[d]) {
+          //min[d] = coord;
+          //}
+          //if (coord > max[d]) {
+          // max[d] = coord;
+          //}
+        }
+      }
+      out << coord;
+      first = false;
+    }
+
+    out << ")\n";
+    firstCoord = false;
+    return false;
+  });
+
+  assert(!firstCoord); // firstCoord means empty set 
+  //Int len[3];
+  //for (auto d = dims-dims; d < std::min(dims,3u); d+=1) {
+  //  len[d] = (max[d] - min[d])/2;
+  //}
+  out << "\n\n";
+
+  foreachBasicSet([&] (BasicSet bset) -> bool {
+    out << "intersection {\n";
+    auto lspace = bset.getLocalSpace();
+    auto dims = lspace.dim(isl_dim_set);
+    out << "  Space" << dims << "D()\n";
+
+    bset.foreachConstraint([&] (Constraint constraint) -> bool {
+      //constraint.printProperties(out, 2);
+
+      auto space = constraint.getLocalSpace();
+      auto dims = space.dim(isl_dim_set);
+
+      auto offset = constraint.getConstant();
+      bool anyNonzero = false;
+      for (auto i = dims-dims; i < dims;i+=1) {
+        auto coeff = constraint.getCoefficient(isl_dim_set, i);
+        if (!coeff.isZero()) {
+          anyNonzero = true;
+          break;
+        }
+      }
+      if (!anyNonzero)
+        return false;
+
+      anyNonzero = false;
+      auto divdims = space.dim(isl_dim_div);
+      for (auto i = divdims-divdims; i < divdims;i+=1) {
+        auto coeff = constraint.getCoefficient(isl_dim_div, i);
+        if (!coeff.isZero()) {
+          return false; // Div dimensionsions do not appear in diagram
+        }
+      }
+
+      out << (constraint.isEquality() ? "  CondEq" : "  CondIneq") << dims << "D(" << offset;
+      for (auto i = dims-dims; i < dims;i+=1) {
+        out << ", ";
+        auto coeff = constraint.getCoefficient(isl_dim_set, i);
+        out << coeff;
+      }
+      out << ")\n";
+
+      return false;
+    });
+
+    out << "  Polytope()\n}\n";
+    return false;
+  });
+
+  out << povray_epilogue;
+}
+
+
 std::string Set::toString() const { 
   std::string buf;
   llvm::raw_string_ostream stream(buf);
   return stream.str();
 }
 
+
 void Set::dump() const { 
   print(llvm::errs());
 }
-
 
 
 Space Set::getSpace() const {
@@ -102,10 +354,44 @@ bool Set::foreachBasicSet(BasicSetCallback fn, void *user) const {
   return isl_set_foreach_basic_set(keep(), fn, user);
 }
 
+static int basicsetcallback(__isl_take isl_basic_set *bset, void *user) {
+  auto fn = *static_cast<std::function<bool(BasicSet)>*>(user);
+  auto result = fn(BasicSet::wrap(bset));
+  return result ? -1 : 0;
+}
+bool Set::foreachBasicSet(std::function<bool(BasicSet/*rvalue ref?*/)> fn) const {
+  auto retval = isl_set_foreach_basic_set(keep(), basicsetcallback, &fn);
+  return retval!=0;
+}
+
 
 bool Set::foreachPoint(PointCallback fn, void *user) const {
   return isl_set_foreach_point(keep(), fn, user);
 }
+
+
+
+
+static int pointcallback(__isl_take isl_point *pnt, void *user) {
+  auto fn = *static_cast<std::function<bool(Point)>*>(user);
+  auto result = fn(Point::wrap(pnt));
+  return result ? -1 : 0;
+}
+bool Set::foreachPoint(std::function<bool(Point)> fn) const {
+  auto retval = isl_set_foreach_point(keep(), pointcallback, &fn);
+  return retval!=0;
+}
+
+
+std::vector<Point> Set::getPoints() const {
+  std::vector<Point> result;
+  foreachPoint([&] (Point point) -> bool { 
+    result.push_back(std::move(point));  
+    return false;
+  });
+  return result;
+}
+
 
 int Set::getBasicSetCount() const {
   return isl_set_n_basic_set(keep());
@@ -473,9 +759,12 @@ bool isl::isEqual(const Set &left, const Set &right) {
   return isl_set_is_equal(left.keep(), right.keep());
 }
 
+
 bool isl::plainIsDisjoint(const Set &lhs, const Set &rhs) {
   return isl_set_plain_is_disjoint(lhs.keep(), rhs.keep());
 }
+
+
 bool isl::isDisjoint(const Set &lhs, const Set &rhs) {
   return isl_set_is_disjoint(lhs.keep(), rhs.keep());
 }
@@ -484,11 +773,13 @@ bool isl::isDisjoint(const Set &lhs, const Set &rhs) {
 bool isl::isSubset(const Set &lhs, const Set &rhs) {
   return isl_set_is_subset(lhs.keep(), rhs.keep());
 }
+
+
 bool isl::isStrictSubset(const Set &lhs, const Set &rhs) {
   return isl_set_is_strict_subset(lhs.keep(), rhs.keep());
 }
 
+
 int isl::plainCmp(const Set &lhs, const Set &rhs) {
   return isl_set_plain_cmp(lhs.keep(), rhs.keep());
 }
-

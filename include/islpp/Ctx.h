@@ -18,6 +18,7 @@ namespace isl {
   class Set;
   class Space;
   class BasicSet;
+  class Printer;
 } // namespace isl
 
 
@@ -56,6 +57,7 @@ namespace isl {
 #pragma endregion
 
   public:
+    void operator delete(void*);
     ~Ctx();
 
    static Ctx *create();
@@ -67,57 +69,20 @@ namespace isl {
     OnErrorEnum getOnError() const;
 #pragma endregion
 
+#pragma region Create printers
+    Printer createPrinterToFile(FILE *file);
+    Printer createPrinterToFile(const char *filename);
+    Printer createPrinterToStr();
+#pragma endregion
+
 #pragma region Create spaces
         Space createSpace(unsigned nparam, unsigned dim);
-          BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
 #pragma endregion
 
-#if 0
-#pragma region Low-Level
-  public:
-    isl_ctx *take() { assert(ctx); isl_ctx *result = ctx; ctx = nullptr; return result; }
-    isl_ctx *keep() const { assert(ctx); return ctx; }
-    void give(isl_ctx *ctx) { assert(!this->ctx); this->ctx = ctx; }
-
-    static Ctx wrap(isl_ctx *ctx) { Ctx result; result.ctx = ctx; return result; }
+#pragma region Create BasicSets
+         BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
+          BasicSet readBasicSet(const char *str);
 #pragma endregion
-
-  protected:
-    void free();
-
-  public:
-    static Owning<Ctx> create();
-
-    /// @brief Creates a new ISL context
-    /* implicit */ Ctx();
-    ~Ctx();
-
-
-#endif
   }; // class Ctx
-
-  
-#if 0
-  template <typename T>
-  class Owning : public T {
-  public:
-    ~Owning() { T::free() }
-  };
-
-  typedef Owning<Ctx> OwningCtx;
-
-  class OwningCtx : public Ctx {
-  public:
-    OwningCtx();
-    ~OwningCtx();
-
-  }; // class OwningCtx
-
-
-  class ForeignCtx : public Ctx {
-  public:
-  }; // class ForeignCtx
-#endif
-
 } // namespace isl
 #endif /* ISLPP_CTX_H */

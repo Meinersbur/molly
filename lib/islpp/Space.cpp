@@ -39,14 +39,39 @@ Space Space::createMapFromDomainAndRange(Space &&domain, Space &&range) {
 }
 
 
-Space Space::copy() const {
-  return Space::wrap(isl_space_copy(this->keep()));
-}
-
-
-unsigned Space::getDim(isl_dim_type type) const {
+unsigned Space::dim(isl_dim_type type) const {
   return isl_space_dim(keep(), type);
 }
+
+
+    unsigned Space::getParamDims() const {
+      return dim(isl_dim_param);
+    }
+
+
+        unsigned Space::getSetDims() const {
+          assert(isSetSpace());
+             return dim(isl_dim_set);
+        }
+
+
+    unsigned Space::getInDims() const{
+      assert(isMapSpace());
+      return dim(isl_dim_in);
+    }
+
+
+    unsigned Space::getOutDims() const{
+      assert(isMapSpace());
+      return dim(isl_dim_out);
+    }
+
+
+    unsigned Space::getTotalDims() const {
+   return dim(isl_dim_all);
+    }
+
+
 bool Space::isParamsSpace() const{
   return isl_space_is_params(keep());
 }

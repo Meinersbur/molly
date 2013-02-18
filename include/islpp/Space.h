@@ -47,11 +47,16 @@ namespace isl {
     static Space createSetSpace(const Ctx &ctx, unsigned nparam, unsigned dim);
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
 
-    Space copy() const;
+    Space copy() const { return Space::wrap(takeCopy()); }
 #pragma endregion
 
 
-    unsigned getDim(isl_dim_type type) const;
+    unsigned dim(isl_dim_type type) const;
+    unsigned getParamDims() const;
+     unsigned getSetDims() const;
+    unsigned getInDims() const;
+    unsigned getOutDims() const;
+    unsigned getTotalDims() const;
     bool isParamsSpace() const;
     bool isSetSpace() const;
     bool isMapSpace() const;

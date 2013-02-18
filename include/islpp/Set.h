@@ -4,6 +4,8 @@
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
+#include <functional>
+#include <vector>
 
 #include "islpp/Int.h"
 
@@ -69,6 +71,8 @@ namespace isl {
     const Set &operator=(Set &&that) { give(that.take()); return *this; }
 
     /* implicit */ Set(BasicSet &&set);
+    const Set &operator=(BasicSet &&that);
+     /* implicit */ Set(const BasicSet &set);
     const Set &operator=(const BasicSet &that);
 
     static Set createEmpty(Space &&space);
@@ -86,9 +90,12 @@ namespace isl {
     static Set readFrom(const Ctx &, FILE *);
     static Set readFrom(const Ctx &, const char *);
 
+#pragma region Printing
     void print(llvm::raw_ostream &out) const;
+    void printPovray(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
+#pragma endregion
 
     Space getSpace() const;
 
@@ -103,7 +110,10 @@ namespace isl {
     /// Return false on success of true in case of any error
     /// The callback function fn should return 0 if successful and -1 if an error occurs. In the latter case, or if any other error occurs, the above functions will return -1.
     bool foreachBasicSet(BasicSetCallback, void *user) const;
+    bool foreachBasicSet(std::function<bool(BasicSet/*rvalue ref?*/)>) const;
     bool foreachPoint(PointCallback, void *user) const;
+    bool foreachPoint(std::function<bool(Point/*rvalue ref?*/)> fn) const;
+    std::vector<Point> getPoints() const;
 
     int getBasicSetCount() const;
 

@@ -4,6 +4,7 @@
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
+#include <functional>
 
 struct isl_basic_set;
 enum isl_dim_type;
@@ -87,10 +88,11 @@ namespace isl {
     void dropContraint(Constraint &&constraint);
 
     int getCountConstraints() const;
-    bool foreachConstraint(ConstraintCallback fn, void *user)const;
+    bool foreachConstraint(ConstraintCallback fn, void *user) const;
+    bool foreachConstraint(std::function<bool(Constraint)>) const;
 
-    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4 ) const;
-    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4 ) const;
+    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4) const;
+    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4) const;
 #pragma endregion
 
     void projectOut(isl_dim_type type, unsigned first, unsigned n);

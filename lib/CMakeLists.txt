@@ -35,6 +35,7 @@ add_molly_library(LLVMMolly
   islpp/PwQPolynomial.cpp
   islpp/UnionPwQPolynomial.cpp
   islpp/UnionPwQPolynomialFold.cpp
+  islpp/Dim.cpp
   FieldType.cpp
   FieldVariable.cpp
   Nodegrid.cpp
@@ -45,7 +46,10 @@ add_molly_library(LLVMMolly
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )
 target_link_libraries( LLVMMolly ${ISL_LIBRARY} )
 target_link_libraries( LLVMMolly ${CLOOG_LIBRARY} )
+target_link_libraries( LLVMMolly ${BARVINOK_LIBRARY} )
+target_link_libraries( LLVMMolly ${POLYLIB_LIBRARY} )
 target_link_libraries( LLVMMolly ${LIBGCC_LIBRARY} )
+target_link_libraries( LLVMMolly ${NTL_LIBRARY} )
 
 #set_target_properties(LLVMMolly
 #  PROPERTIES
