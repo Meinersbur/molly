@@ -127,10 +127,14 @@ bool FieldDistribution::runOnField(FieldVariable *field) {
   auto clusterdims = clusterLengths.size();
   assert(indexdims == clusterdims); //TODO: Currently they have to match exactly
   auto dims = clusterdims;
-  
-  for (auto d = dims-dims; d<dims; d+=1) {
-    auto clusterlen = clusterLengths[d];
-  }
+  assert(dims == 1);
+
+  auto min = indexset.dimMin(0);
+  auto max = indexset.dimMax(0);
+  auto len = max-min;
+  auto len2 = indexset.dimMax(0) - indexset.dimMin(0);
+  auto len3 = max - indexset.dimMin(0);
+  auto len4 = indexset.dimMax(0) - indexset.dimMax(0);
 
   return false;
 }

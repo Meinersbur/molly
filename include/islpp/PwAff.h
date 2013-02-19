@@ -149,5 +149,48 @@ namespace isl {
   Set geSet(PwAff &&pwaff1, PwAff &&pwaff2);
   Set gtSet(PwAff &&pwaff1, PwAff &&pwaff2);
 
+#if 0
+  static inline &&PwAff cow(OwAff &&obj) {
+    return ob;
+  }
+   static inline PwAff cow(OwAff &obj) {
+     return obj; // .copy() is implicit
+    return obj.copy();
+  }
+#endif
+
+   // Move if movable (mim) implementation
+   template<typename S>
+   struct mimhelper {
+     // Same as S&& because S && collapses to S&&
+     typedef S &&rettype;
+     static rettype &&mim(S &s) { return std::move(s); }
+   };
+   template<typename S>
+   struct mimhelper<const S&> {
+     typedef S rettype;
+     static rettype mim(const S &s) { return s; /* .copy() implicit */ }
+   };
+   template<typename S>
+   struct mimhelper<S&> {
+     typedef S rettype;
+     static rettype mim(S &s) { return s; /* .copy() implicit */ }
+   };
+   template<typename S>
+   struct mimhelper<S&&> {
+     typedef S &&rettype;
+     static rettype &&mim(S &s) { return std::move(s); }
+   };
+
+   template<typename T>
+   static inline typename mimhelper<T>::rettype mim(typename std::remove_reference<T>::type &obj) {
+     return mimhelper<T>::mim(obj);
+   }
+
+  template<typename T, typename U>
+  static inline PwAff operator-(T &&lhs, U &&rhs) {
+    return sub(mim<T>(lhs), mim<U>(rhs));
+  }
+
 } // namespace isl
 #endif /* ISLPP_PWAFF_H */

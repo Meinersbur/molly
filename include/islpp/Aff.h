@@ -123,7 +123,7 @@ namespace isl {
   Aff mul( Aff &&aff1, Aff &&aff2);
   Aff div( Aff &&aff1, Aff &&aff2);
   Aff add( Aff &&aff1, Aff &&aff2);
-  Aff sub( Aff &&aff1, Aff &&aff2);
+  //Aff sub( Aff &&aff1, Aff &&aff2);
 
 
   BasicSet zeroBasicSet(Aff &&aff);

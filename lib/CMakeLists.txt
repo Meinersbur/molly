@@ -56,3 +56,5 @@ target_link_libraries( LLVMMolly ${NTL_LIBRARY} )
 #  PROPERTIES
 #  LINKER_LANGUAGE CXX
 #  PREFIX "")
+
+add_subdirectory(mollyrt)
