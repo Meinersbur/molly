@@ -344,8 +344,8 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
     ArgVector.insert(it,
       SaveStringInSet(SavedStrings, std::string("-target")));
   }
-}
-
+}  
+  
 int main(int argc_, const char **argv_) {
   llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram X(argc_, argv_);

@@ -56,35 +56,6 @@ bool FieldDetectionAnalysis::runOnModule(Module &M) {
   }
 
 
-#if 0
-  {
-    auto end = M.global_end();
-    for (auto it = M.global_begin(); it != end; ++it) {
-      auto &glob = *it;
-      PointerType *pty = glob.getType();
-      Type *ty = pty->getElementType();
-      if (isa<llvm::StructType>(ty)) {
-        StructType *sty = cast<StructType>(ty);
-        if (!sty->isLiteral()) { sty->dump();
-        auto name = sty->getName();
-        if (name == "class.Array1D") {
-          auto &field = fields[&glob];
-          if (!field) {
-            // Field not known yet
-           // field = Field::create (&glob);
-          }
-
-          auto useEnd = glob.use_end();
-          for (auto useIt = glob.use_begin(); useIt != useEnd; ++useIt) {
-            User *user = *useIt;
-            //user->dump();
-          }
-        }
-        }
-      }
-    }
-  }
-#endif
 
   return false;
 }

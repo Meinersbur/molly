@@ -15,6 +15,16 @@ using namespace isl;
 void test() {
   OwningPtr<isl::Ctx> ctx(isl::Ctx::create());
   {
+    //auto field = ctx->readBasicSet("[N] -> {[i] : 0 <= i and i < N}");
+    //auto nodes = ctx->readBasicSet("[P] -> {[p] : 0 <= i and i < N}");
+
+    // TODO: bugreport "[N,P] -> {[p,l] : exists (i,l : l=3*i)}" access violation
+
+    // L = [N/p]+P-1
+     auto localFields = ctx->readBasicSet("[N,P] -> {[p,l] : exists (i,L : L=[N/P]+P-1 )}"); 
+    //auto localFields = ctx->readBasicSet("[N,P] -> {[p,l] : exists (i,L : i=p*P)}"); 
+   
+
     auto set = ctx->readBasicSet("{[i] : exists (a : i = 3a and i >= 10 and i <= 42)}");
     std::string str; 
 

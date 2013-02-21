@@ -1,7 +1,7 @@
 #include "islpp/Set.h"
 
 #include "islpp/BasicSet.h"
-#include "islpp/cstdiofile.h"
+#include "cstdiofile.h"
 #include "islpp/Space.h"
 #include "islpp/LocalSpace.h"
 #include "islpp/Ctx.h"
