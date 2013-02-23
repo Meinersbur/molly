@@ -71,9 +71,19 @@ Printer Printer::createToStr(Ctx *ctx) {
   return Printer::wrap(isl_printer_to_str(ctx->keep()), false);
 }
 
+
+ void Printer::print(llvm::raw_ostream &out) const { 
+   //TODO: Can we somwhow avoid that isl makes an extra copy?
+   char *pchar = isl_printer_get_str(printer);
+   out << pchar;
+   free(pchar);
+ }
+
+
 std::string Printer::toString() const { 
   std::string buf;
   llvm::raw_string_ostream stream(buf);
+  print(stream);
   return stream.str();
 }
 
@@ -83,9 +93,15 @@ void Printer::dump() const {
 }
 
 
-char * Printer::getString() const {
-  return isl_printer_get_str(keep());
+/// same as toString
+std::string Printer::getString() const {
+  // This does one unnecessary copy
+  char *pchar = isl_printer_get_str(keep());
+  std::string result(pchar); // Does a copy
+  free(pchar);
+  return result;
 }
+
 
 FILE *Printer::getFile() const{
   return isl_printer_get_file(keep());

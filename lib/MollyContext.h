@@ -9,11 +9,14 @@
 
 namespace llvm {
   class LLVMContext;
-}
+} // namespace llvm
 
 namespace molly {
-  class IslCtx;
+ class IslCtx;
+} // namespace molly
 
+
+namespace molly {
   class MollyContext {
   private:
     llvm::LLVMContext *llvmContext;
@@ -22,7 +25,7 @@ namespace molly {
   protected:
     MollyContext(llvm::LLVMContext *llvmContext) {
       this->llvmContext = llvmContext;
-      islCtx.reset(isl::Ctx::create());
+      islCtx.reset(isl::Ctx::create()); //TODO: We really should get the same isl_ctx from Polly, stored in the polly::ScopInfo pass
     }
 
   public:

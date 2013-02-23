@@ -1,6 +1,5 @@
 
 file( GLOB_RECURSE mollyfiles
-  ${MOLLY_SOURCE_DIR}/lib/*.cpp
   ${MOLLY_SOURCE_DIR}/lib/islpp/*.cpp
 )
 
@@ -17,3 +16,7 @@ target_link_libraries( playground
 #  LLVMMolly
   LLVMSupport
 )
+
+target_link_libraries( playground ${LIBGCC_LIBRARY} )
+target_link_libraries( playground ${GMP_LIBRARY} )
+target_link_libraries( playground ${ISL_LIBRARY} )

@@ -15,7 +15,7 @@ namespace molly {
   class MollyContext;
   class IslCtx;
 
-    class MollyContextPass : public llvm::ModulePass {
+  class MollyContextPass : public llvm::ModulePass {
   private:
     MollyContext *context;
     llvm::SmallVector<unsigned,4> clusterLengths;
@@ -32,10 +32,10 @@ namespace molly {
     virtual bool runOnModule(llvm::Module &M);
 
     MollyContext *getMollyContext() { return context; }
-    isl::Ctx *getIslContext() ;
+    isl::Ctx *getIslContext();
 
-        isl::BasicSet &getClusterShape() { return clusterShape; }
-        const llvm::SmallVectorImpl<unsigned> &getClusterLengths() { return clusterLengths; }
+    isl::BasicSet &getClusterShape() { return clusterShape; }
+    const llvm::SmallVectorImpl<unsigned> &getClusterLengths() { return clusterLengths; }
   };
 }
 

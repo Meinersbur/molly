@@ -58,16 +58,15 @@ namespace isl {
   protected:
     void give(isl_set *set);
 
-    explicit Set(isl_set *set) : set(set) { }
   public:
-    static Set wrap(isl_set *set) { return Set(set); }
+    static Set wrap(isl_set *set) { Set result; result.give(set); return result; }
 #pragma endregion
 
   public:
-    Set(void) : set(nullptr) {}
+    Set() : set(nullptr) {}
     Set(const Set &that) : set(that.takeCopy()) {}
     Set(Set &&that) : set(that.take()) { }
-    ~Set(void);
+    ~Set() { give(nullptr); }
 
     const Set &operator=(const Set &that) { give(that.takeCopy()); return *this; }
     const Set &operator=(Set &&that) { give(that.take()); return *this; }
@@ -90,8 +89,8 @@ namespace isl {
     static Set createFromPoint(Point &&);
     static Set createBocFromPoints(Point &&pnt1, Point &&pnt2);
 
-    static Set readFrom(const Ctx &, FILE *);
-    static Set readFrom(const Ctx &, const char *);
+    static Set readFrom(Ctx *, FILE *);
+    static Set readFrom(Ctx *, const char *);
 
     Set copy() const { return Set::wrap(takeCopy()); }
 #pragma endregion

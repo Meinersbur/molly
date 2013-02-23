@@ -38,10 +38,10 @@ namespace isl {
 #pragma endregion
 
   public:
-    Constraint(void) : constraint(nullptr) {}
+    Constraint() : constraint(nullptr) {}
     Constraint(const Constraint &that) : constraint(that.takeCopy()) {}
     Constraint(Constraint &&that) : constraint(that.take()) { }
-    ~Constraint(void);
+    ~Constraint();
 
     const Constraint &operator=(const Constraint &that) { give(that.takeCopy()); return *this; }
     const Constraint &operator=(Constraint &&that) { give(that.take()); return *this; }

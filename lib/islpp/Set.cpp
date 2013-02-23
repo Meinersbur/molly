@@ -41,15 +41,9 @@ isl_set *Set::takeCopy() const {
 
 
 void Set::give(isl_set *set) { 
-  if (set)
-    isl_set_free(set);
+  if (this->set)
+    isl_set_free(this->set);
   this->set = set; 
-}
-
-
-Set::~Set() { 
-  if (set) 
-    isl_set_free(set);
 }
 
 
@@ -85,12 +79,12 @@ Set Set:: createBocFromPoints(Point &&pnt1, Point &&pnt2) {
   return Set::wrap(isl_set_box_from_points(pnt1.take(), pnt2.take()));
 }
 
-Set Set::readFrom(const Ctx &ctx, FILE *input) {
-  return Set::wrap(isl_set_read_from_file(ctx.keep(), input));
+Set Set::readFrom(Ctx *ctx, FILE *input) {
+  return Set::wrap(isl_set_read_from_file(ctx->keep(), input));
 }
 
-Set Set::readFrom(const Ctx &ctx, const char *str) {
-  return Set::wrap(isl_set_read_from_str(ctx.keep(), str));
+Set Set::readFrom(Ctx *ctx, const char *str) {
+  return Set::wrap(isl_set_read_from_str(ctx->keep(), str));
 }
 
 
@@ -669,10 +663,10 @@ Set isl::subtract(Set &&set1, Set &&set2){
   return Set::wrap(isl_set_subtract (set1.take(), set2.take()));
 }
 Set isl::apply(Set &&set, Map &&map){
-  return Set::wrap(isl_set_apply (set.take(), map.take()));
+  return Set::wrap(isl_set_apply(set.take(), map.take()));
 }
 Set isl::preimage(Set &&set, MultiAff &&ma){
-  return Set::wrap(isl_set_preimage_multi_aff (set.take(), ma.take()));
+  return Set::wrap(isl_set_preimage_multi_aff(set.take(), ma.take()));
 }
 Set isl::preimage(Set &&set, PwMultiAff &&ma){
   return Set::wrap(isl_set_preimage_pw_multi_aff(set.take(), ma.take()));

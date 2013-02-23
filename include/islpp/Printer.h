@@ -87,13 +87,15 @@ namespace isl {
 #pragma region Creational
     static Printer createToFile(Ctx *ctx, FILE *file);
     static Printer createToStr(Ctx *ctx);
+    //TODO: This would be better if we had a Printer that prints to an llvm::raw_ostream or std::ostream
+    // But we'd to modify ISL such that it calls some callback if new chars arrive 
 #pragma endregion
 
-    void print(llvm::raw_ostream &out) const { }
+    void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
 
-    char*getString() const;
+    std::string getString() const;
     FILE *getFile() const;
     int getOutputFormat() const;
 
@@ -103,6 +105,8 @@ namespace isl {
     void setPrefix(const char *prefix);
     void setSuffix(const char *suffix);
 
+    //TODO: The overloading of print(llvm::raw_ostream) is not good
+    // Maybe rename to write()
     void print(double d);
     void print(const BasicSet &bset);
     void print(const Map &map);
