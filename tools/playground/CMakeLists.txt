@@ -17,6 +17,6 @@ target_link_libraries( playground
   LLVMSupport
 )
 
-target_link_libraries( playground ${LIBGCC_LIBRARY} )
+#target_link_libraries( playground ${LIBGCC_LIBRARY} )
 target_link_libraries( playground ${GMP_LIBRARY} )
 target_link_libraries( playground ${ISL_LIBRARY} )

@@ -2,7 +2,7 @@
 #define ISLPP_INT_H
 
 #include <isl/int.h>
-#include <gmpxx.h>
+//#include <gmpxx.h>
 #include <llvm/Support/raw_ostream.h>
 #include <ostream>
 #include <llvm/Support/raw_os_ostream.h>

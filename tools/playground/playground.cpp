@@ -7,7 +7,7 @@
 #include "islpp/Set.h"
 #include "islpp/Printer.h"
 #include "islpp/Map.h"
-#include <barvinok/barvinok.h>
+//#include <barvinok/barvinok.h>
 #include <llvm/Support/raw_os_ostream.h>
 
 using namespace llvm;
