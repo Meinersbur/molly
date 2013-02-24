@@ -2,8 +2,11 @@
 set(MOLLY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(MOLLY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+set(POLLY_SOURCE_DIR ${MOLLY_SOURCE_DIR}/../polly) #TODO: Make Polly dir configurable
+set(POLLY_BINARY_DIR ${MOLLY_BINARY_DIR}/../polly) #TODO: Make Polly dir configurable
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MOLLY_SOURCE_DIR}/cmake" "${MOLLY_SOURCE_DIR}/../polly/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MOLLY_SOURCE_DIR}/cmake" "${POLLY_SOURCE_DIR}/cmake")
 
 
 FIND_PACKAGE(Gmp REQUIRED)
@@ -30,9 +33,10 @@ include_directories(
   ${MOLLY_SOURCE_DIR}/include
   ${MOLLY_SOURCE_DIR}/../clang/include  #TODO: Make Clang dir configurable
   ${MOLLY_BINARY_DIR}/../clang/include  #TODO: Make Clang dir configurable
-  ${MOLLY_SOURCE_DIR}/../polly/include  #TODO: Make Polly dir configurable
-  ${MOLLY_BINARY_DIR}/../polly/include  #TODO: Make Polly dir configurable
+  ${POLLY_SOURCE_DIR}/include  
+  ${POLLY_BINARY_DIR}/include 
 )
+
 
 macro(add_molly_executable name)
   add_llvm_executable( ${name} ${ARGN} )

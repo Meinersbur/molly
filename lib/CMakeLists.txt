@@ -42,6 +42,7 @@ add_molly_library(LLVMMolly
   Nodegrid.cpp
   MollyContext.cpp
   MollyContextPass.cpp
+  FieldCodeGen.cpp
 )
   
 target_link_libraries( LLVMMolly ${GMP_LIBRARY} )
