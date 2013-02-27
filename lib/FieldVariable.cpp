@@ -1,12 +1,14 @@
-#ifndef MOLLY_FIELDVARIABLE_H
-#define MOLLY_FIELDVARIABLE_H
-
 #include "FieldVariable.h"
 
-//using namespace llvm;
-//using namespace molly;
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Function.h>
+#include <polly/MollyMeta.h>
+
+using namespace llvm;
+using namespace molly;
 
 
 
 
-#endif /* MOLLY_FIELDVARIABLE_H */
+
+

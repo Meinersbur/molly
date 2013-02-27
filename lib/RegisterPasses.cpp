@@ -1,6 +1,7 @@
 
 #include "molly/RegisterPasses.h"
 #include "molly/LinkAllPasses.h"
+#include "molly/FieldCodeGen.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Analysis/Passes.h"
@@ -34,6 +35,7 @@ static StaticInitializer InitializeErverything;
 static void registerMollyPasses(llvm::PassManagerBase &PM) {
 	//PM.add(molly::createFieldDetectionAnalysisPass());
 	PM.add(molly::createFieldDistributionPass());
+  PM.add(molly::createFieldCodeGenPass());
 }
 
 

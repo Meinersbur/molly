@@ -1,13 +1,14 @@
 #ifndef MOLLY_FIELDTYPE_H
 #define MOLLY_FIELDTYPE_H
 
-#include "llvm/ADT/SmallVector.h"
+#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
 
 namespace llvm {
   class Module;
   class MDNode;
   class StructType;
   class LLVMContext;
+  class Function;
 }
 
 namespace isl {
@@ -31,6 +32,9 @@ namespace molly {
     llvm::StructType *ty;
     llvm::SmallVector<uint32_t, 4> lengths;
 
+    llvm::Function *reffunc;
+     llvm::Function *islocalfunc;
+
   protected:
     FieldType(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       assert(mollyContext);
@@ -48,10 +52,16 @@ namespace molly {
     void readMetadata();
 
     isl::Ctx *getIslContext();
+    llvm::LLVMContext *getLLVMContext();
+    llvm::Module *getModule();
 
   public:
     static FieldType *createFromMetadata(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       return new FieldType(mollyContext, module, metadata);
+    }
+
+    static FieldType *create(molly::MollyContext *mollyContext, llvm::StructType *ty, llvm::MDNode *metadata = NULL) {
+    return new FieldType(mollyContext, NULL, metadata);
     }
 
     void dump();
@@ -66,6 +76,9 @@ namespace molly {
       assert(ty);
       return ty;
     }
+
+    llvm::Function *getRefFunc();
+    llvm::Function *getIsLocalFunc() ;
 
   }; // class FieldType
 } // namespace molly

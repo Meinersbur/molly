@@ -27,7 +27,7 @@ namespace isl {
     isl_space *take() { assert(space); isl_space *result = space; space = nullptr; return result; }
     isl_space *takeCopy() const;
     isl_space *keep() const { return space; }
-    void give(isl_space *set) { assert(!this->space); this->space = space; }
+    void give(isl_space *space) { assert(!this->space); this->space = space; }
 
     static Space wrap(isl_space *space) { return Space(space); }
 #pragma endregion

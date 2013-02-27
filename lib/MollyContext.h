@@ -9,6 +9,7 @@
 
 namespace llvm {
   class LLVMContext;
+  class Module;
 } // namespace llvm
 
 namespace molly {
@@ -21,6 +22,7 @@ namespace molly {
   private:
     llvm::LLVMContext *llvmContext;
     llvm::OwningPtr<isl::Ctx> islCtx;
+    //llvm::Module *module; 
 
   protected:
     MollyContext(llvm::LLVMContext *llvmContext) {
@@ -36,6 +38,7 @@ namespace molly {
     void setLLVMContext(llvm::LLVMContext *llvmContext) { assert(!this->llvmContext ||  this->llvmContext == llvmContext); this->llvmContext = llvmContext; }
     llvm::LLVMContext *getLLVMContext() { return llvmContext; }
     isl::Ctx *getIslContext() { return islCtx.get(); }
+    //llvm::Module *getModule() { return module; }
 
   }; // class MollyContext
 } // namespace molly

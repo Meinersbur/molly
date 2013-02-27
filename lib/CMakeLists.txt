@@ -39,6 +39,7 @@ add_molly_library(LLVMMolly
   islpp/PwAff.cpp
   FieldType.cpp
   FieldVariable.cpp
+  FieldAccess.cpp
   Nodegrid.cpp
   MollyContext.cpp
   MollyContextPass.cpp

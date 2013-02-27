@@ -12,6 +12,7 @@
 #include "FieldVariable.h"
 #include "FieldType.h"
 #include "MollyContextPass.h"
+#include "molly\FieldDistribution.h"
 
 using namespace llvm;
 using namespace molly;
@@ -57,6 +58,8 @@ namespace {
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<MollyContextPass>();
       AU.addRequired<FieldDetectionAnalysis>();
+
+      AU.setPreservesAll(); // This pass does not change the code itself
     }
 
     virtual void preparePassManager(PMStack &PMS) {
@@ -170,6 +173,7 @@ bool FieldDistribution::runOnModule(Module &M) {
 
 
 char FieldDistribution::ID = 0;
+char &molly::FieldDistributionPassID = FieldDistribution::ID;
 static RegisterPass<FieldDistribution> FieldDistributionRegistration("moly-distr", "Molly - Field Distribution");
 
 

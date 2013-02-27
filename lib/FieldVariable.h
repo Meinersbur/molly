@@ -8,6 +8,9 @@ namespace llvm {
   class Module;
   class GlobalVariable;
   class MDNode;
+  class CallInst;
+  class Value;
+  class Instruction;
 }
 
 namespace molly {
@@ -33,6 +36,8 @@ namespace molly {
     static FieldVariable *create(llvm::GlobalVariable *variable, FieldType *fieldTy) {
       return new FieldVariable(variable, fieldTy);
     }
+
+  
 
     void dump() {
       // Nothing to dump yet

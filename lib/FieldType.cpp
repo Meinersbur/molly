@@ -17,6 +17,9 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/ADT/ArrayRef.h>
+
 #include <assert.h>
 
 using namespace llvm;
@@ -24,13 +27,21 @@ using namespace molly;
 using std::move;
 
 
-
+/// NamedMDNode "molly.fields": List of MDNodes describing a FieldType
+/// element MDNode:
+/// [0] magic constant string "field"
+/// [1] clang type name string
+/// [2] llvm type name string
+/// [3] int64 llvm unique typeid
+/// [4] MDNode of dimension lengths
+/// [5] ref function
+/// [6] isLocal function
 void FieldType::readMetadata() {
   assert(metadata);
 
   auto magic = dyn_cast<MDString>(metadata->getOperand(0));
   assert(magic->getString() == "field");
-   
+
   auto clangNameMD = dyn_cast<MDString>(metadata->getOperand(1));
   auto clangName = clangNameMD->getString();
 
@@ -51,11 +62,23 @@ void FieldType::readMetadata() {
   }
 
   ty = module->getTypeByName(llvmName);
+
+
+  this->reffunc = cast_or_null<Function>(metadata->getOperand(5));
+  this->islocalfunc = cast_or_null<Function>(metadata->getOperand(6));
 }
 
 
 isl::Ctx *FieldType::getIslContext() {
   return mollyContext->getIslContext();
+}
+
+llvm::LLVMContext *FieldType::getLLVMContext() {
+  return mollyContext->getLLVMContext();
+}
+
+llvm::Module *FieldType::getModule() {
+  return module;
 }
 
 
@@ -84,4 +107,26 @@ isl::Set FieldType::getIndexset() {
 
 void FieldType::dump() {
   getIndexset().dump();
+}
+
+
+llvm::Function *FieldType::getRefFunc() {
+  return reffunc;
+}
+
+
+llvm::Function *FieldType::getIsLocalFunc() {
+  if (!islocalfunc) {
+    // function has been optimized away; We simply create a new one
+    auto llvmContext = getLLVMContext();
+
+    // Prototype
+    Type *params[] = {
+      Type::getInt32Ty(*llvmContext) //TODO: Clang may have "int" int to some other type
+    };
+    auto functy = FunctionType::get(Type::getInt1Ty(*llvmContext), params, false);
+
+    islocalfunc = Function::Create(functy, GlobalValue::ExternalLinkage, "isLocal", getModule());
+  }
+  return islocalfunc;
 }
