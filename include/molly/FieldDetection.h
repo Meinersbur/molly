@@ -51,7 +51,7 @@ namespace molly {
     virtual bool runOnModule(llvm::Module &M);
 
     llvm::DenseMap<llvm::GlobalVariable*, FieldVariable*> &getFieldVariables() { return fieldVars; }
-    llvm::DenseMap<llvm::StructType*, FieldType*> &getFieldTypes() { return fieldTypes; }
+    llvm::DenseMap<llvm::StructType*, FieldType*> &getFieldTypes() { return fieldTypes; } // TODO: return a list of FieldType*, not a map
   private:
     Pass *createFieldDetectionAnalysisPass();
 

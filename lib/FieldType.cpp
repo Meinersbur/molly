@@ -11,14 +11,14 @@
 
 #include <isl/space.h>
 
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
-
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Metadata.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/ADT/ArrayRef.h>
+#include <llvm/IR/IRBuilder.h>
 
 #include <assert.h>
 
@@ -60,6 +60,8 @@ void FieldType::readMetadata() {
     auto len = lenMD->getLimitedValue();
     lengths.push_back(len);
   }
+  localLengths = lengths;
+  isdistributed = false;
 
   ty = module->getTypeByName(llvmName);
 
@@ -73,9 +75,11 @@ isl::Ctx *FieldType::getIslContext() {
   return mollyContext->getIslContext();
 }
 
+
 llvm::LLVMContext *FieldType::getLLVMContext() {
   return mollyContext->getLLVMContext();
 }
+
 
 llvm::Module *FieldType::getModule() {
   return module;
@@ -129,4 +133,59 @@ llvm::Function *FieldType::getIsLocalFunc() {
     islocalfunc = Function::Create(functy, GlobalValue::ExternalLinkage, "isLocal", getModule());
   }
   return islocalfunc;
+}
+
+
+static Value *emit(IRBuilderBase &builder, Value *value) {
+  return value;
+}
+
+
+static Value *emit(IRBuilderBase &builder, uint32_t value) {
+  return Constant::getIntegerValue(Type::getInt32Ty(builder.getContext()), APInt(32, (uint64_t)value, false)) ;
+}
+
+
+static Value *emit(IRBuilderBase &builder, bool value) {
+  return Constant::getIntegerValue(Type::getInt32Ty(builder.getContext()), APInt(1, (uint64_t)value, false)) ;
+}
+
+template<typename T>
+SmallVector<T*,4> iplistToSmallVector(iplist<T> &list) {
+  SmallVector<T*,4> result;
+  for (auto it = list.begin(), end = list.end(); it!=end;++it) {
+    result.push_back(&*it);
+  }
+  return result;
+}
+
+
+void FieldType::emitIsLocalFunc() {
+  auto &llvmContext = module->getContext();
+  auto func = getIsLocalFunc();
+  func->getBasicBlockList().clear(); // Remove any existing implementation; Alternative: Delete old one, create new one
+
+  auto entryBB = BasicBlock::Create(llvmContext, "Entry", func);
+  IRBuilder<> builder(entryBB);
+
+  if (!isdistributed) {
+    auto trueConst = emit(builder, true);
+    builder.CreateRet(trueConst);
+    return;
+  }
+
+  auto args = iplistToSmallVector(func->getArgumentList());
+  GlobalVariable *coordVar = module->getGlobalVariable("_cart_local_coord");
+  //auto coordAddr = builder.CreateInBoundsGEP(coordVar, emit(builder, (uint32_t)0));
+  auto coordAddr = builder.CreateConstInBoundsGEP2_32(coordVar, 0, 0);
+  auto coord = builder.CreateLoad(coordAddr, "coord");
+  auto localLength = emit(builder, localLengths[0]);
+  auto origin = builder.CreateNSWMul(coord, localLength);
+  auto end = builder.CreateAdd(origin, localLength);
+
+  auto lower = builder.CreateICmpUGE(origin, args[1]);
+  auto higher = builder.CreateICmpUGT(args[1], end);
+  auto inregion = builder.CreateAnd(lower, higher);
+
+  builder.CreateRet(inregion);
 }

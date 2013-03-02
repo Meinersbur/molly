@@ -12,18 +12,15 @@
 #include <polly/MollyMeta.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
-
+//#include <llvm/Transforms/Utils/ModuleUtils.h> // appendToGlobalCtors
 
 
 using namespace llvm;
 using namespace polly;
 using namespace molly;
 
+
 namespace molly {
-
-
-
-
   class FieldScopCodeGen : public ScopPass {
 
   public:
@@ -65,6 +62,10 @@ namespace molly {
 
 
     virtual bool runOnFunction(Function &func);
+
+  protected:
+    bool emitFieldFunctions();
+
   }; // FieldCodeGen
 
 
@@ -73,7 +74,7 @@ namespace molly {
 
 /// Convenience function to get a list if instructions so we can modify the function without invalidating iterators
 /// Should be more effective if we filter useful instructions first (lambda?)
-void collectInstructionList(Function *func, SmallVectorImpl<Instruction*> &list) {
+static void collectInstructionList(Function *func, SmallVectorImpl<Instruction*> &list) {
   auto bbList = &func->getBasicBlockList();
   for (auto it = bbList->begin(), end = bbList->end(); it!=end; ++it) {
     auto bb = &*it;
@@ -93,6 +94,8 @@ bool FieldCodeGen::runOnFunction(Function &func) {
 
   MollyContextPass &MollyContext = getAnalysis<MollyContextPass>();
   auto &fields = getAnalysis<FieldDetectionAnalysis>();
+
+  
   //getAnalysis<FieldDetectionAnalysis>();
   bool changed = false;
   SmallVector<Instruction*, 16> instrs;
@@ -124,12 +127,31 @@ bool FieldCodeGen::runOnFunction(Function &func) {
     builder.CreateCondBr(isLocalResult, bbConditional, bbAfter);
     changed = true;
   }
-  return changed;
+
+  bool funcEmitted = emitFieldFunctions();
+
+  return changed || funcEmitted;
 }
 
 
 
+bool FieldCodeGen::emitFieldFunctions() {
+  auto &fields = getAnalysis<FieldDetectionAnalysis>();
+ auto &fieldTypes = fields.getFieldTypes();
+ bool changed = false;
 
+ for (auto it = fieldTypes.begin(), end = fieldTypes.end(); it!=end; ++it) {
+   auto fieldTy = it->second;
+
+   auto *isLocalFunc = fieldTy->getIsLocalFunc();
+   if (isLocalFunc->empty()) {
+     fieldTy->emitIsLocalFunc();
+     return true;
+   }
+ }
+
+ return changed;
+}
 
 
 

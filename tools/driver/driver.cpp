@@ -347,8 +347,10 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
 }  
   
 int main(int argc_, const char **argv_) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
-  llvm::PrettyStackTraceProgram X(argc_, argv_);
+  //__debugbreak();//("c");
+  llvm::DisablePrettyStackTrace = true;
+  //llvm::sys::PrintStackTraceOnErrorSignal();
+  //llvm::PrettyStackTraceProgram X(argc_, argv_);
 
   std::set<std::string> SavedStrings;
   SmallVector<const char*, 256> argv;

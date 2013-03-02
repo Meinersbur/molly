@@ -30,6 +30,7 @@ namespace {
     FieldVariable *getFieldVariable(GlobalVariable *var);
     FieldType *getFieldType(StructType *ty);
 
+    bool runOnFieldType(FieldType *fieldTy);
     bool runOnField(FieldVariable *field);
 
   public:
@@ -119,6 +120,27 @@ FieldType *FieldDistribution::getFieldType(StructType *ty) {
 }
 
 
+bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
+  auto &contextPass = getAnalysis<MollyContextPass>();
+  auto &lengths = fieldTy->getLengths();
+  auto &cluster = contextPass.getClusterLengths();
+
+  assert(lengths.size()==1);
+  assert(cluster.size()==1);
+  auto length0 = lengths[0];
+  auto cluster0 = cluster[0];
+
+  assert(length0 % cluster0 == 0);
+  auto local0 = length0 / cluster0;
+
+  fieldTy->setDistributed(true);
+  SmallVector<uint32_t,1> locallengths;
+  locallengths.push_back(local0);
+  fieldTy->setLocalLength(locallengths);
+  return true;
+}
+
+
 bool FieldDistribution::runOnField(FieldVariable *field) {
   auto fieldTy = field->getFieldType();
   auto &contextPass = getAnalysis<MollyContextPass>();
@@ -149,26 +171,31 @@ bool FieldDistribution::runOnModule(Module &M) {
   auto fieldVars = fa->getFieldVariables();
   for (auto it = fieldVars.begin(), end = fieldVars.end(); it != end; ++it) {
     FieldVariable *field = it->second;
-    field->dump();
+    //field->dump();
   }
 
   auto fieldTys = fa->getFieldTypes();
   for (auto it = fieldTys.begin(), end = fieldTys.end(); it != end; ++it) {
     FieldType *field = it->second;
-    field->dump();
+    //field->dump();
   }
 
   //M.dump();
 
 
   auto changed = false;
-    for (auto it = fieldVars.begin(), end = fieldVars.end(); it != end; ++it) {
-    FieldVariable *field = it->second;
-    bool fieldChanged = runOnField(field);
-    changed = changed || fieldChanged;
+  for (auto it = fieldTys.begin(), end = fieldTys.end(); it != end; ++it) {
+    FieldType *field = it->second;
+       runOnFieldType(field);
   }
 
-  return changed;
+  for (auto it = fieldVars.begin(), end = fieldVars.end(); it != end; ++it) {
+    FieldVariable *field = it->second;
+    //bool fieldChanged = runOnField(field);
+    //changed = changed || fieldChanged;
+  }
+
+  return false;
 }
 
 

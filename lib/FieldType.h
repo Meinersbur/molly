@@ -12,7 +12,7 @@ namespace llvm {
 }
 
 namespace isl {
-class Ctx;
+  class Ctx;
   class Set;
   class BasicSet;
 }
@@ -24,16 +24,26 @@ namespace molly {
 
 namespace molly {
   class FieldType {
+    typedef llvm::SmallVector<uint32_t, 4> LengthsType;
   private:
     molly::MollyContext *mollyContext;
     llvm::Module *module;
-    llvm::MDNode *metadata;
+    llvm::MDNode *metadata; //TODO: Only used during construction
 
+    // The LLVM type that represents this field
     llvm::StructType *ty;
-    llvm::SmallVector<uint32_t, 4> lengths;
+
+    /// Logical (global) shape
+    LengthsType lengths;
+    //isl::Set shape;
+
+    // Local shape(s)
+    bool isdistributed;
+    LengthsType localLengths;
+    //isl::Set localShape
 
     llvm::Function *reffunc;
-     llvm::Function *islocalfunc;
+    llvm::Function *islocalfunc;
 
   protected:
     FieldType(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
@@ -44,7 +54,11 @@ namespace molly {
       this->mollyContext = mollyContext;
       this->module = module;
       this->metadata = metadata;
-      
+
+      isdistributed = false;
+      reffunc = NULL;
+      islocalfunc = NULL;
+
       if (metadata)
         readMetadata();
     }
@@ -61,7 +75,7 @@ namespace molly {
     }
 
     static FieldType *create(molly::MollyContext *mollyContext, llvm::StructType *ty, llvm::MDNode *metadata = NULL) {
-    return new FieldType(mollyContext, NULL, metadata);
+      return new FieldType(mollyContext, NULL, metadata);
     }
 
     void dump();
@@ -78,7 +92,24 @@ namespace molly {
     }
 
     llvm::Function *getRefFunc();
-    llvm::Function *getIsLocalFunc() ;
+    llvm::Function *getIsLocalFunc();
+    void emitIsLocalFunc();
+
+
+    bool isDistributed() {
+      return isdistributed;
+    }
+    LengthsType &getLengths() {
+      return lengths;
+    }
+
+    void setDistributed(bool val = true) {
+      isdistributed = val;
+    }
+    void setLocalLength(const llvm::SmallVectorImpl<uint32_t> &lengths) {
+      this->localLengths.clear();
+      this->localLengths.append(lengths.begin(), lengths.end());
+    }
 
   }; // class FieldType
 } // namespace molly

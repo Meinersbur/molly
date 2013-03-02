@@ -87,8 +87,8 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  //llvm::install_fatal_error_handler(LLVMErrorHandler,
+  //                                static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)
