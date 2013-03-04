@@ -32,6 +32,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include <cstdio>
 using namespace clang;
 
@@ -90,6 +91,9 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   //llvm::install_fatal_error_handler(LLVMErrorHandler,
   //                                static_cast<void*>(&Clang->getDiagnostics()));
 
+  if (Clang->getLangOpts().CPlusPlus) {
+    Clang->getHeaderSearchOpts().AddPath("C:/Users/Meinersbur/src/molly/molly/include/mollyrt/", frontend::CXXSystem, false, false);
+  }
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)
     return 1;

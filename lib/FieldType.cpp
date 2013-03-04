@@ -176,6 +176,7 @@ void FieldType::emitIsLocalFunc() {
 
   auto args = iplistToSmallVector(func->getArgumentList());
   GlobalVariable *coordVar = module->getGlobalVariable("_cart_local_coord");
+  assert(coordVar);
   //auto coordAddr = builder.CreateInBoundsGEP(coordVar, emit(builder, (uint32_t)0));
   auto coordAddr = builder.CreateConstInBoundsGEP2_32(coordVar, 0, 0);
   auto coord = builder.CreateLoad(coordAddr, "coord");

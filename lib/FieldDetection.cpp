@@ -30,7 +30,6 @@ char &molly::FieldDetectionAnalysisID = FieldDetectionAnalysis::ID;
 
 
 INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Detect fields", false, false)
-
   INITIALIZE_PASS_END(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
 
 
@@ -51,17 +50,16 @@ INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Detect fi
     auto &mlist = M.getNamedMDList();
     auto &vlist = M.getValueSymbolTable();
 
-    auto fieldsMD = M.getNamedMetadata("molly.fields"); if (fieldsMD) {
-    auto numFields = fieldsMD->getNumOperands();
+    auto fieldsMD = M.getNamedMetadata("molly.fields"); 
+    if (fieldsMD) {
+      auto numFields = fieldsMD->getNumOperands();
 
-    for (unsigned i = 0; i < numFields; i+=1) {
-      auto fieldMD = fieldsMD->getOperand(i);
-      FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
-      fieldTypes[field->getType()] = field;
+      for (unsigned i = 0; i < numFields; i+=1) {
+        auto fieldMD = fieldsMD->getOperand(i);
+        FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
+        fieldTypes[field->getType()] = field;
+      }
     }
-    }
-
-
     return false;
 }
 
@@ -119,6 +117,7 @@ FieldType *FieldDetectionAnalysis::getFromFunction(Function *func) {
   return NULL;
 }
 
+
 FieldVariable *FieldDetectionAnalysis::getFromCall(CallInst *callInst) {
   Function *func = callInst->getCalledFunction();
   if (!func) {
@@ -171,9 +170,9 @@ FieldAccess FieldDetectionAnalysis::getFieldAccess(llvm::Instruction *instr) {
     assert(func);
     if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_get")) {
     }
-     if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_set")) {
+    if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_set")) {
     }
-     return FieldAccess(); // Not yet supported
+    return FieldAccess(); // Not yet supported
   }
 
   Value *ptr;

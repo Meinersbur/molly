@@ -349,8 +349,8 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
 int main(int argc_, const char **argv_) {
   //__debugbreak();//("c");
   llvm::DisablePrettyStackTrace = true;
-  //llvm::sys::PrintStackTraceOnErrorSignal();
-  //llvm::PrettyStackTraceProgram X(argc_, argv_);
+  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::PrettyStackTraceProgram X(argc_, argv_);
 
   std::set<std::string> SavedStrings;
   SmallVector<const char*, 256> argv;
@@ -472,6 +472,9 @@ int main(int argc_, const char **argv_) {
     argv.insert(&argv[1], ExtraArgs.begin(), ExtraArgs.end());
   }
 
+  // Molly: The simple way, only works for mingw
+  argv.push_back("-L/c/Users/Meinersbur/src/molly/build64_vc11/lib/Debug/");
+  argv.push_back("-lMollyRT");
   OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;
   SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
