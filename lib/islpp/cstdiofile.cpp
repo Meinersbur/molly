@@ -13,19 +13,36 @@ using namespace molly;
 
 
 CstdioFile::CstdioFile() { 
+//#ifdef WIN32
+ 
 #ifdef WIN32
-  auto tmpfilename = _tempnam( NULL, "tmp" );
+  //TODO: createTemporaryFileOnDisk
+   auto tmpfilename = _tempnam( NULL, "tmp" );
+#else
+ auto tmpfilename = tmpnam("tmp");
+#endif
   assert(tmpfilename);
-  auto retval = fopen_s(&fd, tmpfilename, "w+bTD");
-  assert(retval == NULL);
+  #ifdef WIN32
+  auto retval = fopen_s(&fd, tmpfilename, "w+bTD");  
+   assert(retval == NULL);
+#else
+   fd = fopen(tmpfilename, "w+");//TODO: Use open_memstream() on unices
+#endif
+ 
   //_get_errno( &err );
   //printf( _strerror(NULL) );
   free(tmpfilename);
-#else
-  fd = tmpfile();
-  open_memstream();
-#endif
+//#else
+  //fd = tmpfile();
+  //open_memstream();
+//#endif
+}
 
+
+void CstdioFile::close() {
+      if (fd)
+        fclose(fd);
+      fd = NULL;
 }
 
 

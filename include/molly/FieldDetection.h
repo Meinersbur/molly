@@ -43,7 +43,7 @@ namespace molly {
       return ModulePass::getPassName();
     }
 
-    virtual void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
       AU.addRequiredTransitive<molly::MollyContextPass>();
       AU.setPreservesAll();
     }

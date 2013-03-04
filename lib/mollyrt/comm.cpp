@@ -1,5 +1,6 @@
 
 #include <cstdint>
+#include <cstddef>
 #include "mollyrt/molly.h"
 
 
@@ -12,12 +13,12 @@ namespace molly {
 
   class Communicator {
   public:
-    virtual ~Communicator() {}
+    virtual ~Communicator()  {}
 
 
-    #pragma region Distributed memory setup
+#pragma region Distributed memory setup
     //TODO: Make own class?
-    virtual  void startDistributed() { }
+    virtual void startDistributed() { }
     virtual void stopDistributed() { }
     //TODO: rank type configurable
     virtual uint32_t getMyRank() {}
@@ -25,8 +26,8 @@ namespace molly {
 #pragma endregion
 
 #pragma region Communication buffers
-    // TODO: refine
-    virtual void *createSendBuffer( size_t length, uint32_t destRank) {}
+
+    virtual void *createSendBuffer(size_t length, uint32_t destRank) { }
     virtual void freeSendBuffer(void  *buf) {}
     virtual void sendAll() {}
     virtual void waitSend() {}
@@ -34,7 +35,7 @@ namespace molly {
     virtual void *createRecvBuffer(size_t length, uint32_t senderRank) {}
     virtual void freeRecvBuffer(void  *buf) {}
     virtual void waitRecv() {}
-#pragma endregion
+//#pragma endregion
   }; // class Communicator
 
 

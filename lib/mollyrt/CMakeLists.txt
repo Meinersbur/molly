@@ -27,9 +27,10 @@ macro(clang_compile object_file source)
     DEPENDS clang ${SOURCE_DEPS})
 endmacro()
 
-add_custom_command( 
-  OUTPUT comm.o
-  COMMAND clang -c -o comm.o comm.c -I${MOLLY_SOURCE_DIR}/include
-  MAIN_DEPENDENCY comm.c
-  DEPENDS clang
-  )
+#get_filename_component(source_rpath ${source} REALPATH)
+#add_custom_command( 
+#  OUTPUT comm.o
+#  COMMAND clang ${source_rpath} -I${MOLLY_SOURCE_DIR}/include -target "i686-pc-mingw32" -o comm.o
+#  MAIN_DEPENDENCY ${source_rpath}
+#  DEPENDS clang
+#  )

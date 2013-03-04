@@ -473,7 +473,8 @@ int main(int argc_, const char **argv_) {
   }
 
   // Molly: The simple way, only works for mingw
-  argv.push_back("-L/c/Users/Meinersbur/src/molly/build64_vc11/lib/Debug/");
+  // TODO: LIBPATH? Or just let the user handle it all by himself?
+  argv.push_back("-L/c/Users/Meinersbur/src/molly/build32_mingw/lib");
   argv.push_back("-lMollyRT");
   OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;

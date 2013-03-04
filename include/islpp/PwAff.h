@@ -4,6 +4,7 @@
 #include <cassert>
 #include <string>
 #include <functional>
+#include <isl/space.h> // enum isl_dim_type;
 
 struct isl_pw_aff;
 enum isl_dim_type;

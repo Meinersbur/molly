@@ -17,9 +17,14 @@ namespace molly {
   private:
     FILE *fd;
 
-    CstdioFile(const CstdioFile &) LLVM_DELETED_FUNCTION;
+    CstdioFile(CstdioFile &&that) {
+    if (this==&that)
+      return;
+    this->fd = that.fd;
+    that.fd = NULL;
+    }
     const CstdioFile &operator=(const CstdioFile &) LLVM_DELETED_FUNCTION;
-
+    CstdioFile(const CstdioFile &) LLVM_DELETED_FUNCTION;
 
   public:
     CstdioFile();
@@ -37,15 +42,13 @@ namespace molly {
       return fd;
     }
 
-    void close() {
-      if (fd)
-        fclose(fd);
-      fd = NULL;
-    }
+    void close() ;
 
     std::string readAsStringAndClose(); // Deprecated; use operator<<
      
 
   }; // class TmpFile
+
+  llvm::raw_ostream &operator<<(llvm::raw_ostream &, CstdioFile &);
 } // namespace molly
 #endif /* MOLLY_CSTDIOFILE */

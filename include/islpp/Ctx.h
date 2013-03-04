@@ -32,7 +32,7 @@ namespace isl {
     static const OnErrorEnum Warn =  OnErrorWarn;
     static const OnErrorEnum Continue =  OnErrorContinue;
     static const OnErrorEnum Abort =  OnErrorAbort;
-  };
+  }
 
   template <typename T>
   class Owning;

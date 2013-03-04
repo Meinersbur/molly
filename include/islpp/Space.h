@@ -2,6 +2,7 @@
 #define ISLPP_SPACE_H
 
 #include <assert.h>
+#include <isl/space.h> // enum isl_dim_type;
 
 struct isl_space;
 enum isl_dim_type;

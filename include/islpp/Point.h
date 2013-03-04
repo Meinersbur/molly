@@ -2,6 +2,7 @@
 #define ISLPP_POINT_H
 
 #include <cassert>
+#include <isl/space.h> // enum isl_dim_type;
 
 struct isl_point;
 enum isl_dim_type;

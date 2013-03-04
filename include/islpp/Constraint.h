@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <string>
+#include <isl/space.h> // enum isl_dim_type;
 
 struct isl_constraint;
 enum isl_dim_type; 

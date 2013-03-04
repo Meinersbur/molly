@@ -6,6 +6,8 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <isl/space.h> // enum isl_dim_type;
+#include <isl/lp.h> // enum isl_lp_result;
 
 #include "islpp/Int.h"
 

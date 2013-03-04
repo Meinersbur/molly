@@ -44,9 +44,10 @@ class Array2D {
 
 
 
-class MollyInit {
+static class MollyInit {
 public:
   MollyInit() {
+    // This will be called multiple times
     int x = _cart_lengths[0]; // To avoid that early optimizers throw it away 
     int y = _cart_local_coord[0];
   }
