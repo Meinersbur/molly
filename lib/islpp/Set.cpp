@@ -350,7 +350,7 @@ bool Set::foreachBasicSet(BasicSetCallback fn, void *user) const {
 }
 
 static int basicsetcallback(__isl_take isl_basic_set *bset, void *user) {
-  auto fn = *static_cast<std::function<bool(BasicSet)>*>(user);
+  auto &fn = *static_cast<std::function<bool(BasicSet)>*>(user);
   auto result = fn(BasicSet::wrap(bset));
   return result ? -1 : 0;
 }

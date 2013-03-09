@@ -54,3 +54,14 @@ Ctx *Map::getCtx() const {
 bool Map::isEmpty() const {
   return isl_map_is_empty(keep());
 }
+
+static int foearchBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
+  assert(user);
+  auto &func = *static_cast<std::function<bool(BasicMap&&)>*>(user);
+  auto retval = func( BasicMap::wrap(bmap) );
+  return retval ? -1 : 0;
+}
+bool Map::foreachBasicMap(std::function<bool(BasicMap&&)> func) const {
+  auto retval = isl_map_foreach_basic_map(keep(), foearchBasicMapCallback, &func);
+  return retval!=0;
+}
