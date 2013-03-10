@@ -16,6 +16,8 @@
 #include "MultiAff.h"
 #include "PwAff.h"
 #include "Tribool.h"
+#include "Dim.h"
+#include <llvm/Support/ErrorHandling.h>
 
 struct isl_map;
 
@@ -62,6 +64,49 @@ namespace isl {
     isl_map *keep() const { return map; }
   protected:
     void give(isl_map *map);
+
+    bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
+      type = dim.getType();
+
+      // Fast path
+      if (dim.getOwnerMap().map == this->map) {
+          pos = dim.getPos();
+          return true;
+      }
+
+      switch (type) {
+      case isl_dim_param: {
+          // Param dims are identified by id
+        if (!dim.hasId())
+          return false;
+         auto retval = isl_map_find_dim_by_id(keep(), type, dim.getId().keep());
+          if (retval<0) 
+            return false;
+            pos = retval;
+            return true;
+                          } break;
+      case isl_dim_in:
+      case isl_dim_out: {
+        // Are identified by position
+        pos = dim.getPos();
+
+        // Some consistency checks
+        if (this->dim(type) != dim.getTypeDimCount()) {
+          return false; // spaces do not match
+        }
+
+#ifndef NDEBUG
+        auto thatName = dim.getName();
+        auto thisName = isl_map_get_dim_name(keep(), type, pos);
+        assert(strcmp(thatName, thisName) == 0 && "We should talk about the same dimension");
+#endif
+
+        return true;
+        }  break;
+      default:
+        llvm_unreachable("Unsupported dimension type");
+      }
+    }
 
   public:
     static Map wrap(isl_map *map) { Map result; result.give(map);  return result; }
@@ -175,8 +220,11 @@ namespace isl {
     void substractRange(Set &&dom) { give(isl_map_subtract_range(take(), dom.take())); }
     void complement() { give(isl_map_complement(take())); }
 
-    void fix( isl_dim_type type, unsigned pos, const Int &value) { give(isl_map_fix(take(), type, pos, value.keep()));  }
-    void fix( isl_dim_type type, unsigned pos, int value) { give(isl_map_fix_si(take(), type, pos, value));  }
+    void fix(isl_dim_type type, unsigned pos, const Int &value) { give(isl_map_fix(take(), type, pos, value.keep())); }
+    void fix(isl_dim_type type, unsigned pos, int value) { give(isl_map_fix_si(take(), type, pos, value)); }
+    void fix(const Dim &dim, const Int &value) {
+    }
+
     void lowerBound(isl_dim_type type, unsigned pos, int value) { give(isl_map_lower_bound_si(take(), type, pos, value));}
     void upperBound(isl_dim_type type, unsigned pos, int value) { give(isl_map_upper_bound_si(take(), type, pos, value));}
 
@@ -184,6 +232,13 @@ namespace isl {
     void detectEqualities() { give(isl_map_detect_equalities(take())); }
 
     void addDims(isl_dim_type type, unsigned n) { give(isl_map_add_dims(take(), type, n)); }
+    Dim addParamDim() {  }
+    Dim addInDim() {  }
+    Dim addOutDim() {
+      give(isl_map_add_dims(take(), isl_dim_out, 1));
+      return Dim::wrap(keep(), isl_dim_out, isl_map_dim(keep(), isl_dim_out)-1);
+    }
+
     void insertDims(isl_dim_type type, unsigned pos, unsigned n) { give(isl_map_insert_dims(take(), type, pos, n)); }
     void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
 
