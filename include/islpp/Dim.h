@@ -3,6 +3,7 @@
 
 //#include <cassert>
 #include <isl/space.h> // enum isl_dim_type
+#include "islpp/Id.h" // class Id, member of isl::Dim
 
 struct isl_space;
 struct isl_local_space;
@@ -11,23 +12,50 @@ struct isl_basic_map;
 struct isl_set;
 struct isl_basic_set;
 
+
 namespace isl {
-  class Map;
-  class Id;
+  class Dim {
+  private:
+    isl_dim_type type;
+    unsigned pos;
+    Id id;
+
+    unsigned typeDims;
+
+  public:
+    Dim(): type(isl_dim_cst/*Constant dim not valid*/) {}
+
+    static Dim wrap(isl_space *space, isl_dim_type type, unsigned pos);
+    static Dim wrap(isl_map *map, isl_dim_type type, unsigned pos);
+
+    bool isNull() const { return type==isl_dim_cst; }
+    bool isValid() const { return type!=isl_dim_cst; }
+
+    isl_dim_type getType() const { return type; }
+    unsigned getPos() const { return pos; }
+
+    bool hasId() const { return id.isValid(); }
+    Id getId() const { return id; }
+    const char *getName() const { return id.getName(); } 
+
+    unsigned getTypeDims() const { return typeDims; }
+
+  }; // class Dim
 } // namespace isl
 
 
+#if 0
 namespace isl {
   class DimImpl1;
   class DimImpl2;
 
   typedef union {
-      isl_space *space;
-      isl_local_space *lspace;
-      isl_map *map;
-      isl_basic_map *bmap;
-      isl_set *set;
-      isl_basic_set *bset;
+    isl_space *space;
+    isl_local_space *lspace;
+    isl_map *map;
+    isl_basic_map *bmap;
+    isl_set *set;
+    isl_basic_set *bset;
   } dim_owner_t;
 
   class Dim {
@@ -58,7 +86,7 @@ namespace isl {
     ~Dim();
 
     isl_dim_type getType() const { return type; }
-    int getPos() const { return pos; }
+    unsigned getPos() const { return pos; }
 
     Map getOwnerMap() const;
 
@@ -72,3 +100,5 @@ namespace isl {
   }; // class Dim
 } // namespace isl
 #endif
+
+#endif /* ISLPP_DIM_H */

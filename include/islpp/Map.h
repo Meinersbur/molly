@@ -65,48 +65,7 @@ namespace isl {
   protected:
     void give(isl_map *map);
 
-    bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
-      type = dim.getType();
-
-      // Fast path
-      if (dim.getOwnerMap().map == this->map) {
-          pos = dim.getPos();
-          return true;
-      }
-
-      switch (type) {
-      case isl_dim_param: {
-          // Param dims are identified by id
-        if (!dim.hasId())
-          return false;
-         auto retval = isl_map_find_dim_by_id(keep(), type, dim.getId().keep());
-          if (retval<0) 
-            return false;
-            pos = retval;
-            return true;
-                          } break;
-      case isl_dim_in:
-      case isl_dim_out: {
-        // Are identified by position
-        pos = dim.getPos();
-
-        // Some consistency checks
-        if (this->dim(type) != dim.getTypeDimCount()) {
-          return false; // spaces do not match
-        }
-
-#ifndef NDEBUG
-        auto thatName = dim.getName();
-        auto thisName = isl_map_get_dim_name(keep(), type, pos);
-        assert(strcmp(thatName, thisName) == 0 && "We should talk about the same dimension");
-#endif
-
-        return true;
-        }  break;
-      default:
-        llvm_unreachable("Unsupported dimension type");
-      }
-    }
+    bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos);
 
   public:
     static Map wrap(isl_map *map) { Map result; result.give(map);  return result; }

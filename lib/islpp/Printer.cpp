@@ -18,6 +18,7 @@
 #include "islpp/PwQPolynomialFold.h"
 #include "islpp/UnionPwQPolynomialFold.h"
 #include "islpp/Constraint.h"
+#include "islpp/Id.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -184,7 +185,11 @@ void Printer::print(const UnionPwQPolynomialFold &upwf) {
 void Printer::print(const Constraint &constraint) {
   give(isl_printer_print_constraint(take(), constraint.keep()));
 }
+void Printer::print(const Id &id) {
+  give(isl_printer_print_id(take(), id.keep()));
+}
 
 void Printer::flush(){
   give(isl_printer_flush(take()));
 }
+
