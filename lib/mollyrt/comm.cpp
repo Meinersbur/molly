@@ -6,11 +6,10 @@
 
 int _cart_lengths[1];
 int _cart_local_coord[1];
+int _rank_local;
 
 
 namespace molly {
-
-
   class Communicator {
   public:
     virtual ~Communicator()  {}

@@ -2,7 +2,7 @@
 #define MOLLY_FIELD_DETECTION_H
 
 #include <llvm/Pass.h>
-#include "llvm/IR/Module.h"
+#include <llvm/IR/Module.h>
 #include <llvm/ADT/DenseMap.h>
 
 namespace llvm {
@@ -12,14 +12,18 @@ namespace llvm {
   class CallInst;
   class Instruction;
   class Module;
-}
+} // namespace llvm
+
+namespace polly {
+  class MemoryAccess;
+} // namespace polly
 
 namespace molly {
   class FieldVariable;
   class FieldType;
   class MollyContext;
   class FieldAccess;
-}
+} // namespace molly
 
 
 
@@ -43,17 +47,14 @@ namespace molly {
       return ModulePass::getPassName();
     }
 
-    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-      AU.addRequiredTransitive<molly::MollyContextPass>();
-      AU.setPreservesAll();
-    }
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     virtual bool runOnModule(llvm::Module &M);
 
     llvm::DenseMap<llvm::GlobalVariable*, FieldVariable*> &getFieldVariables() { return fieldVars; }
     llvm::DenseMap<llvm::StructType*, FieldType*> &getFieldTypes() { return fieldTypes; } // TODO: return a list of FieldType*, not a map
   private:
-    Pass *createFieldDetectionAnalysisPass();
+    static Pass *createFieldDetectionAnalysisPass();
 
 
   public:
@@ -64,10 +65,11 @@ namespace molly {
     FieldVariable *getFieldVariable(llvm::GlobalVariable *gvar);
 
      FieldType *getFromFunction(llvm::Function *func);
-     FieldVariable *getFromCall(llvm::CallInst *inst);
+     FieldVariable *getFromCall(const llvm::CallInst *inst);
      FieldVariable *getFromAccess(llvm::Instruction *inst);
 
-     FieldAccess getFieldAccess(llvm::Instruction *inst);
+     FieldAccess getFieldAccess(const llvm::Instruction *inst);
+     FieldAccess getFieldAccess(polly::MemoryAccess *memacc);
 
   };
 

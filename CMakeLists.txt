@@ -51,11 +51,9 @@ macro(add_molly_library name)
   llvm_process_sources(srcs ${ARGN})
   if(MSVC_IDE OR XCODE)
     # Add public headers
-    file( GLOB_RECURSE headers
+    file( GLOB headers
       ${MOLLY_SOURCE_DIR}/include/molly/*.h
-      ${MOLLY_SOURCE_DIR}/include/islpp/*.h
       ${MOLLY_SOURCE_DIR}/lib/*.h
-      ${MOLLY_SOURCE_DIR}/lib/islpp/*.h
     )
     set_source_files_properties(${headers} PROPERTIES HEADER_FILE_ONLY ON)
     set(srcs ${srcs} ${headers})

@@ -5,7 +5,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "molly/LinkAllPasses.h"
-#include "FieldAccess.h"
+#include <polly/MollyFieldAccess.h>
 
 #include <llvm/IR/DerivedTypes.h>
 
@@ -15,52 +15,53 @@
 #include "MollyContext.h"
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Function.h>
-#include <polly/MollyMeta.h>
+//#include <polly/MollyMeta.h>
+#include <polly/ScopInfo.h>
 
 using namespace llvm;
 using namespace molly;
 
 static cl::opt<bool> EnableFieldDetection("molly-field", cl::desc("Enable field detection"), cl::Hidden, cl::init(true));
-static RegisterPass<FieldDetectionAnalysis> FieldAnalysisRegistration("molly-fieldanalysis", "Molly - Field detection", false, true);
+static RegisterPass<FieldDetectionAnalysis> FieldAnalysisRegistration("molly-detect", "Molly - Field detection", false, true);
 
 STATISTIC(NumGlobalFields, "Number of detected global fields");
 
 char FieldDetectionAnalysis::ID = 0;
 char &molly::FieldDetectionAnalysisID = FieldDetectionAnalysis::ID;
 
-
-INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Detect fields", false, false)
-  INITIALIZE_PASS_END(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
-
-
+//static RegisterPass<FieldDetectionAnalysis> FieldDetectionRegistration("molly-detect", "Molly - Find fields", false, true);
+//INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
+//INITIALIZE_PASS_END(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
 
 
 
-  bool FieldDetectionAnalysis::runOnModule(Module &M) {
-    mollyContext = getAnalysis<MollyContextPass>().getMollyContext();
-    assert(mollyContext);
+void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<MollyContextPass>();
+  AU.setPreservesAll();
+}
 
-    //std::string test("xyz");
 
-    //M.dump();
+bool FieldDetectionAnalysis::runOnModule(Module &M) {
+  mollyContext = getAnalysis<MollyContextPass>().getMollyContext();
+  assert(mollyContext);
 
-    auto &glist = M.getGlobalList();
-    auto &flist = M.getFunctionList();
-    auto &alist = M.getAliasList();
-    auto &mlist = M.getNamedMDList();
-    auto &vlist = M.getValueSymbolTable();
+  auto &glist = M.getGlobalList();
+  auto &flist = M.getFunctionList();
+  auto &alist = M.getAliasList();
+  auto &mlist = M.getNamedMDList();
+  auto &vlist = M.getValueSymbolTable();
 
-    auto fieldsMD = M.getNamedMetadata("molly.fields"); 
-    if (fieldsMD) {
-      auto numFields = fieldsMD->getNumOperands();
+  auto fieldsMD = M.getNamedMetadata("molly.fields"); 
+  if (fieldsMD) {
+    auto numFields = fieldsMD->getNumOperands();
 
-      for (unsigned i = 0; i < numFields; i+=1) {
-        auto fieldMD = fieldsMD->getOperand(i);
-        FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
-        fieldTypes[field->getType()] = field;
-      }
+    for (unsigned i = 0; i < numFields; i+=1) {
+      auto fieldMD = fieldsMD->getOperand(i);
+      FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
+      fieldTypes[field->getType()] = field;
     }
-    return false;
+  }
+  return false;
 }
 
 
@@ -101,7 +102,7 @@ FieldVariable *FieldDetectionAnalysis::getFieldVariable(GlobalVariable *gvar) {
 
 
 FieldType *FieldDetectionAnalysis::getFromFunction(Function *func) {
-  if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_ref")) {
+  if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_ptr")) {
     auto fieldParm = &func->getArgumentList().front();
     return getFieldType(cast<StructType>( fieldParm->getType()));
   }
@@ -118,14 +119,14 @@ FieldType *FieldDetectionAnalysis::getFromFunction(Function *func) {
 }
 
 
-FieldVariable *FieldDetectionAnalysis::getFromCall(CallInst *callInst) {
+FieldVariable *FieldDetectionAnalysis::getFromCall(const CallInst *callInst) {
   Function *func = callInst->getCalledFunction();
   if (!func) {
     // Field accessors are not virtual
     return NULL;
   }
 
-  if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_ref")) {
+  if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_ptr")) {
     auto nArgs = callInst->getNumArgOperands();
     assert(nArgs >= 2); // At least reference to field and one coordinate
     auto field = callInst->getArgOperand(0);
@@ -164,49 +165,28 @@ FieldVariable *FieldDetectionAnalysis::getFromAccess(Instruction *inst) {
   return NULL;
 }
 
-FieldAccess FieldDetectionAnalysis::getFieldAccess(llvm::Instruction *instr) {
-  if (auto call = dyn_cast<CallInst>(instr)) {
-    auto func = call->getCalledFunction();
-    assert(func);
-    if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_get")) {
-    }
-    if (func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_set")) {
-    }
-    return FieldAccess(); // Not yet supported
-  }
 
-  Value *ptr;
-  bool isRead = false;
-  bool isWrite = false;
-  if (auto ld = dyn_cast<LoadInst>(instr)) {
-    ptr = ld->getPointerOperand();
-    isRead = true;
-  } else if (auto st = dyn_cast<StoreInst>(instr)) {
-    ptr = st->getPointerOperand();
-    isWrite = true;
-  } else {
-    return FieldAccess(); // Not an access
-  }
-
-  auto refcall = dyn_cast<CallInst>(ptr);
-  if (!refcall)
-    return FieldAccess(); // access to something else
-  assert(refcall->getParent() == instr->getParent()); // At the moment we depend on both being in the same BasicBlock
-
-  auto func = refcall->getCalledFunction();
-  if (!func)
+FieldAccess FieldDetectionAnalysis::getFieldAccess(const llvm::Instruction *instr) {
+  FieldAccess result = FieldAccess::fromAccessInstruction(const_cast<Instruction*>(instr));
+  if (result.isNull())
     return FieldAccess();
+  auto base = result.getBaseField();
+  result.fieldvar = getFieldVariable(dyn_cast<GlobalVariable>(base));
+  return result;
+}
 
-  if (!func->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_ref"))
-    return FieldAccess(); // Not a reference to a field
 
-  auto fieldvar = getFromCall(refcall);
-  return FieldAccess(instr, refcall, fieldvar, isRead, isWrite);
+FieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *memacc) {
+  auto instr = memacc->getAccessInstruction();
+  auto result = getFieldAccess(instr);
+  if (!result.isValid())
+    return result;
+
+  result.setScopAccess(memacc);
+  return result;
 }
 
 
 ModulePass *molly::createFieldDetectionAnalysisPass() {
   return new FieldDetectionAnalysis();
 }
-
-

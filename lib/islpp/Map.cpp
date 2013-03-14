@@ -24,47 +24,6 @@ void Map::give(isl_map *map) {
 }
 
 
-bool Map::findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
-  type = dim.getType();
-
-  switch (type) {
-  case isl_dim_param: {
-    // Param dims are identified by id
-    if (!dim.hasId())
-      return false;
-    auto retval = isl_map_find_dim_by_id(keep(), type, dim.getId().keep());
-    if (retval<0) 
-      return false; // Not found
-    pos = retval;
-    return true;
-                      } break;
-  case isl_dim_in:
-  case isl_dim_out: {
-    // Are identified by position
-    pos = dim.getPos();
-
-    // Consistency check
-    if (this->dim(type) != dim.getTypeDims())
-      return false; // These are different spaces
-
-#ifndef NDEBUG
-    auto thatName = dim.getName();
-    auto thisName = isl_map_get_dim_name(keep(), type, pos);
-    assert(strcmp(thatName, thisName) == 0 && "Give same dimensions the same id/name");
-
-    auto thatId = dim.getId();
-    auto thisId = Id::wrap(isl_map_get_dim_id(keep(), type, pos));
-    assert(thatId == thisId && "Give same dimensions the same id");
-#endif
-
-    return true;
-                    } break;
-  default:
-    return false;
-  }
-}
-
-
 Map Map::readFrom(Ctx *ctx, const char *str) {
   return Map::wrap(isl_map_read_from_str(ctx->keep() , str));
 }

@@ -18,6 +18,8 @@
 #include "Tribool.h"
 #include "Dim.h"
 #include <llvm/Support/ErrorHandling.h>
+#include "Ctx.h"
+#include "Spacelike.h" // class Spacelike (base of Map)
 
 struct isl_map;
 
@@ -53,7 +55,7 @@ namespace isl {
   };
 
 
-  class Map {
+  class Map : public Spacelike /* TODO: What are the costs of making this virtual? */ {
 #pragma region Low-level
   private:
     isl_map *map;
@@ -64,8 +66,6 @@ namespace isl {
     isl_map *keep() const { return map; }
   protected:
     void give(isl_map *map);
-
-    bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos);
 
   public:
     static Map wrap(isl_map *map) { Map result; result.give(map);  return result; }
@@ -111,6 +111,8 @@ namespace isl {
 
     static Map readFrom(Ctx *ctx, const char *str);
     static Map readFrom(Ctx *ctx, FILE *input) { Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
+
+    Map copy() const { return wrap(takeCopy()); }
 #pragma endregion
 
 
@@ -122,12 +124,12 @@ namespace isl {
 #pragma endregion
 
     Ctx *getCtx() const;
-    Space getSpace() const { Space::wrap(isl_map_get_space(keep())); }
+    Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
 
     bool isEmpty() const;
 
     unsigned dim(isl_dim_type type) const { return isl_map_dim(keep(), type); }
-    unsigned dimParam() const { return isl_map_dim(keep(), isl_dim_param); }
+    //unsigned dimParam() const { return isl_map_dim(keep(), isl_dim_param); }
     unsigned dimIn() const { return isl_map_dim(keep(), isl_dim_in); }
     unsigned dimOut() const { return isl_map_dim(keep(), isl_dim_out); }
 
@@ -182,6 +184,16 @@ namespace isl {
     void fix(isl_dim_type type, unsigned pos, const Int &value) { give(isl_map_fix(take(), type, pos, value.keep())); }
     void fix(isl_dim_type type, unsigned pos, int value) { give(isl_map_fix_si(take(), type, pos, value)); }
     void fix(const Dim &dim, const Int &value) {
+      isl_dim_type type;
+      unsigned pos;
+      if(!findDim(dim, type, pos)) llvm_unreachable("Dim not found");
+      give(isl_map_fix(take(), type, pos, value.keep()));
+    }
+    void fix(const Dim &dim, int value) {
+      isl_dim_type type;
+      unsigned pos;
+      if(!findDim(dim, type, pos)) llvm_unreachable("Dim not found");
+      give(isl_map_fix_si(take(), type, pos, value));
     }
 
     void lowerBound(isl_dim_type type, unsigned pos, int value) { give(isl_map_lower_bound_si(take(), type, pos, value));}
@@ -191,12 +203,6 @@ namespace isl {
     void detectEqualities() { give(isl_map_detect_equalities(take())); }
 
     void addDims(isl_dim_type type, unsigned n) { give(isl_map_add_dims(take(), type, n)); }
-    Dim addParamDim() {  }
-    Dim addInDim() {  }
-    Dim addOutDim() {
-      give(isl_map_add_dims(take(), isl_dim_out, 1));
-      return Dim::wrap(keep(), isl_dim_out, isl_map_dim(keep(), isl_dim_out)-1);
-    }
 
     void insertDims(isl_dim_type type, unsigned pos, unsigned n) { give(isl_map_insert_dims(take(), type, pos, n)); }
     void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }

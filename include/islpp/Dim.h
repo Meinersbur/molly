@@ -3,7 +3,7 @@
 
 //#include <cassert>
 #include <isl/space.h> // enum isl_dim_type
-#include "islpp/Id.h" // class Id, member of isl::Dim
+#include "islpp/Id.h" // class Id (member of isl::Dim)
 
 struct isl_space;
 struct isl_local_space;
@@ -11,6 +11,10 @@ struct isl_map;
 struct isl_basic_map;
 struct isl_set;
 struct isl_basic_set;
+
+namespace isl {
+  class Spacelike;
+} // namespace isl
 
 
 namespace isl {
@@ -22,11 +26,16 @@ namespace isl {
 
     unsigned typeDims;
 
+  protected:
+    Dim(isl_dim_type type, unsigned pos, Id &&id, unsigned typeDims) : type(type), pos(pos), id(std::move(id)), typeDims(typeDims) {}
+
   public:
     Dim(): type(isl_dim_cst/*Constant dim not valid*/) {}
 
-    static Dim wrap(isl_space *space, isl_dim_type type, unsigned pos);
-    static Dim wrap(isl_map *map, isl_dim_type type, unsigned pos);
+    //static Dim wrap(__isl_keep isl_space *space, isl_dim_type type, unsigned pos);
+    static Dim wrap(__isl_keep isl_local_space *space, isl_dim_type type, unsigned pos);
+    //static Dim wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos);
+    static Dim wrap(const Spacelike &, isl_dim_type type, unsigned pos);
 
     bool isNull() const { return type==isl_dim_cst; }
     bool isValid() const { return type!=isl_dim_cst; }

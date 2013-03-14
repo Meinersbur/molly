@@ -9,15 +9,23 @@
 using namespace isl;
 
 
-void Id::give(isl_id *id) { 
-  assert(id);
-  if (this->id && this->id!=id) isl_id_free(id); this->id = id;
+isl_id *Id::takeCopyOrNull() const {
+  return isl_id_copy(id);
+}
+
+
+void Id::giveOrNull(isl_id *id) { 
+  if (this->id && this->id!=id) 
+    isl_id_free(this->id); 
+  this->id = id;
 }
 
 
 Id::~Id() {
-  if (id) 
-    isl_id_free(id);
+  if (this->id) isl_id_free(this->id);
+#ifndef NDEBUG
+  this->id = NULL;
+#endif
 }
 
 
@@ -64,7 +72,7 @@ void *Id::getUser() const {
 
 
 const char *Id::getName() const { 
-  return isl_id_get_name(keep()); 
+  return isl_id_get_name(keepOrNull()); 
 }
 
 

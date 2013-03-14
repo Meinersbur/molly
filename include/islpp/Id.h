@@ -22,24 +22,29 @@ namespace isl {
     isl_id *id;
 
   public: // Public because otherwise we had to add a lot of friends
+    isl_id *takeOrNull() { isl_id *result = id; id = nullptr; return result; }
     isl_id *take() { assert(id); isl_id *result = id; id = nullptr; return result; }
-    isl_id *takeCopy() const;
+    isl_id *takeCopyOrNull() const;
+    isl_id *takeCopy() const { assert(id); return takeCopyOrNull(); }
+    isl_id *keepOrNull() const { return id; }
     isl_id *keep() const { assert(id); return id; }
   protected:
-    void give(isl_id *id);
+    void giveOrNull(isl_id *id = NULL);
+    void give(isl_id *id) { assert(id); giveOrNull(id); }
 
   public:
-    static Id wrap(isl_id *id) { Id result; result.give(id); return result; }
+    static Id wrap(isl_id *id) { Id result; result.giveOrNull(id); return result; }
 #pragma endregion
 
+  public:
     ~Id() ;
 
     Id() : id(NULL) {}
-    Id(Id &&that) : id(that.take()) { }
-    Id(const Id &that) : id(that.takeCopy()) { }
+    Id(Id &&that) : id(that.takeOrNull()) { }
+    Id(const Id &that) : id(that.takeCopyOrNull()) { }
 
-    const Id &operator=(Id &&that) { give(that.take()); return *this; }
-    const Id &operator=(const Id &that) { give(that.takeCopy()); return *this; }
+    const Id &operator=(Id &&that) { giveOrNull(that.takeOrNull()); return *this; }
+    const Id &operator=(const Id &that) { give(that.takeCopyOrNull()); return *this; }
 
     //explicit operator bool() const { return id!=NULL; }
     bool isNull() const { return id==NULL; }
@@ -79,8 +84,8 @@ namespace isl {
     void setFreeUser(void (*freefunc)(void *));
   }; // class Id
 
-  bool operator==(const Id &lhs, const Id &rhs) { return lhs.keep()==rhs.keep(); }
-  bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keep()!=rhs.keep(); }
+  inline bool operator==(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()==rhs.keepOrNull(); }
+  inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
 } // namespace isl
 #endif /* ISLPP_ID_H */

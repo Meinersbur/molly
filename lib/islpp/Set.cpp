@@ -606,6 +606,7 @@ void Set::lift() {
   give(isl_set_lift(take()));
 }
 
+
 PwAff Set::dimMin(int pos) const {
   return PwAff::wrap(isl_set_dim_min(takeCopy(), pos));   
 }
@@ -613,7 +614,6 @@ PwAff Set::dimMin(int pos) const {
 
 PwAff Set::dimMin(const Dim &dim) const {
   assert(dim.getType() == isl_dim_set);
-  dim.assertOwner(isl_set_get_space(keep()));
   return PwAff::wrap(isl_set_dim_min(takeCopy(), dim.getPos()));
 }
 
@@ -622,12 +622,11 @@ PwAff Set::dimMax(int pos) const {
   return PwAff::wrap(isl_set_dim_max(takeCopy(), pos));   
 }
 
+
 PwAff Set::dimMax(const Dim &dim) const {
   assert(dim.getType() == isl_dim_set);
-  dim.assertOwner(isl_set_get_space(keep()));
   return PwAff::wrap(isl_set_dim_max(takeCopy(), dim.getPos()));
 }
-
 
 
 Set isl::alignParams(Set &&set, Space &&model) {

@@ -5,8 +5,9 @@
 
 extern int _cart_lengths[1];
 extern int _cart_local_coord[1];
+extern int _rank_local;
 
-
+typedef int rank_t;
 
 template<typename T, int/*size_t*/ length1>
 class Array1D {
@@ -26,9 +27,14 @@ public:
 
   T get(int i) __attribute__(( molly_getterfunc )) { return x; }
   void set(int i, const T &val) __attribute__(( molly_setterfunc )) {}
-  T *ref(int i) __attribute__(( molly_reffunc )) { return (T*)0; }
+  T *ptr(int i) __attribute__(( molly_reffunc )) __attribute__(( molly_inline )) { return (T*)__builtin_molly_ptr(this, length1, i); }
   
-  bool isLocal(int i) __attribute__(( molly_islocalfunc ));
+  bool isLocal(int i) __attribute__(( molly_islocalfunc )) __attribute__(( molly_inline )) { return __builtin_molly_islocal(this, length1, i); }
+  bool isRemote(int i) { return !isLocal(i); }
+  rank_t getRankOf(int i) __attribute__(( molly_getrankoffunc )) __attribute__(( molly_inline )) { return __builtin_molly_rankof(this, length1, i); }
+
+  T getLocal(int i) { assert(isLocal(i)); return x; }
+  void setLocal(int i, const T &val) { assert(isLocal(i)); x = val; }
 } __attribute__(( molly_lengths(clazz, length1) )) /*__attribute__(( molly_dims(1) ))*/;
 
  

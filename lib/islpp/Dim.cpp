@@ -1,17 +1,16 @@
 #include "islpp/Dim.h"
 
+#include "islpp/Spacelike.h"
+
 #include <isl/space.h>
 #include <isl/map.h>
-
 #include <llvm/Support/ErrorHandling.h>
 
 using namespace isl;
 
-
-Dim Dim::wrap(isl_space *space, isl_dim_type type, unsigned pos) {
+#if 0
+Dim Dim::wrap(__isl_keep isl_space *space, isl_dim_type type, unsigned pos) {
   assert(space);
-
-
 
   switch (type) {
   case isl_dim_param:
@@ -30,9 +29,28 @@ Dim Dim::wrap(isl_space *space, isl_dim_type type, unsigned pos) {
   result.typeDims = isl_space_dim(space, type);
   return result;
 }
+#endif
 
 
-Dim Dim::wrap(isl_map *map, isl_dim_type type, unsigned pos) { 
+Dim Dim::wrap(__isl_keep isl_local_space *space, isl_dim_type type, unsigned pos) {
+  assert(space);
+
+  switch (type) {
+  case isl_dim_param:
+  case isl_dim_in:
+  case isl_dim_out:
+    break;
+        //TODO: isl_dim_all
+  default:
+    llvm_unreachable("Unsupported dim");
+  }
+
+  return Dim(type, pos, Id::wrap(isl_local_space_get_dim_id(space, type, pos)), isl_local_space_dim(space, type));
+}
+
+
+#if 0
+Dim Dim::wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos) { 
   assert(map);
 
   switch (type) {
@@ -47,10 +65,33 @@ Dim Dim::wrap(isl_map *map, isl_dim_type type, unsigned pos) {
   Dim result;
   result.type = type;
   result.pos = pos;
-  result.id = Id::wrap(isl_map_get_dim_id(map, type, pos));
+  assert(pos < isl_map_dim(map, type));
+  if (isl_map_has_dim_id(map, type, pos)) {
+    result.id = Id::wrap(isl_map_get_dim_id(map, type, pos));
+  } else {
+    result.id = Id();
+  }
   result.typeDims = isl_map_dim(map, type);
   return result;
 }
+#endif
+
+
+ Dim Dim::wrap(const Spacelike &spacelike, isl_dim_type type, unsigned pos) {
+  switch (type) {
+  case isl_dim_param:
+  case isl_dim_in:
+  case isl_dim_out:
+    break;
+        //TODO: isl_dim_all
+  default:
+    llvm_unreachable("Unsupported dim");
+  }
+  assert(pos < spacelike.dim(type));
+
+  return Dim(type, pos, spacelike.getDimIdOrNull(type, pos), spacelike.dim(type));
+ }
+
 
 #if 0
 class DimBase : public Dim {
