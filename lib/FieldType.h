@@ -1,7 +1,9 @@
 #ifndef MOLLY_FIELDTYPE_H
 #define MOLLY_FIELDTYPE_H
 
-#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
+//#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
+#include <clang/CodeGen/CGMolly.h> // FieldTypeMetadata (member of FieldType)
+#include <llvm/ADT/ArrayRef.h>
 
 namespace llvm {
   class Module;
@@ -9,6 +11,9 @@ namespace llvm {
   class StructType;
   class LLVMContext;
   class Function;
+  namespace CodeGen {
+   class FieldTypeMetadata;
+  } // namespace CodeGen
 }
 
 namespace isl {
@@ -24,26 +29,28 @@ namespace molly {
 
 namespace molly {
   class FieldType {
-    typedef llvm::SmallVector<uint32_t, 4> LengthsType;
   private:
     molly::MollyContext *mollyContext;
     llvm::Module *module;
-    llvm::MDNode *metadata; //TODO: Only used during construction
+
+    clang::CodeGen::FieldTypeMetadata metadata;
+
+    //llvm::MDNode *metadata; //TODO: Only used during construction
 
     // The LLVM type that represents this field
-    llvm::StructType *ty;
+    //llvm::StructType *ty;
 
     /// Logical (global) shape
-    LengthsType lengths;
+    //LengthsType lengths;
     //isl::Set shape;
 
     // Local shape(s)
     bool isdistributed;
-    LengthsType localLengths;
+    llvm::SmallVector<int, 4> localLengths;
     //isl::Set localShape
 
-    llvm::Function *reffunc;
-    llvm::Function *islocalfunc;
+    //llvm::Function *reffunc;
+    //llvm::Function *islocalfunc;
 
   protected:
     FieldType(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
@@ -53,14 +60,9 @@ namespace molly {
 
       this->mollyContext = mollyContext;
       this->module = module;
-      this->metadata = metadata;
 
       isdistributed = false;
-      reffunc = NULL;
-      islocalfunc = NULL;
-
-      if (metadata)
-        readMetadata();
+      this->metadata.readMetadata(module, metadata);
     }
 
     void readMetadata();
@@ -80,35 +82,45 @@ namespace molly {
 
     void dump();
 
-    uint32_t getDimensions() { 
-      return lengths.size(); 
+    unsigned getNumDimensions() {
+      return metadata.dimLengths.size();
     }
 
-    isl::Set getIndexset();
+    isl::Set getLogicalIndexset();
 
     llvm::StructType *getType() { 
-      assert(ty);
-      return ty;
+      assert(metadata.llvmType);
+      return metadata.llvmType;
     }
 
-    llvm::Function *getRefFunc();
-    llvm::Function *getIsLocalFunc();
-    void emitIsLocalFunc();
+    //llvm::Function *getRefFunc();
+    //llvm::Function *getIsLocalFunc();
+    //void emitIsLocalFunc();
 
 
     bool isDistributed() {
       return isdistributed;
     }
-    LengthsType &getLengths() {
-      return lengths;
+    llvm::ArrayRef<int> getLengths() {
+      assert(metadata.dimLengths.size() >= 1);
+      return metadata.dimLengths;
     }
 
     void setDistributed(bool val = true) {
       isdistributed = val;
     }
-    void setLocalLength(const llvm::SmallVectorImpl<uint32_t> &lengths) {
+    void setLocalLength(const llvm::ArrayRef<int> &lengths) {
       this->localLengths.clear();
       this->localLengths.append(lengths.begin(), lengths.end());
+    }
+
+    llvm::Function *getFuncGetBroadcast() {
+      assert(metadata.funcGetBroadcast);
+      return metadata.funcGetBroadcast;
+    }
+    llvm::Function *getFuncSetBroadcast() {
+       assert(metadata.funcSetBroadcast);
+      return metadata.funcSetBroadcast;
     }
 
   }; // class FieldType

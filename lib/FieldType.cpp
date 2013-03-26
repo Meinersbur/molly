@@ -20,6 +20,7 @@
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/IRBuilder.h>
 
+
 #include <assert.h>
 
 using namespace llvm;
@@ -27,48 +28,8 @@ using namespace molly;
 using std::move;
 
 
-/// NamedMDNode "molly.fields": List of MDNodes describing a FieldType
-/// element MDNode:
-/// [0] magic constant string "field"
-/// [1] clang type name string
-/// [2] llvm type name string
-/// [3] int64 llvm unique typeid
-/// [4] MDNode of dimension lengths
-/// [5] ref function
-/// [6] isLocal function
-void FieldType::readMetadata() {
-  assert(metadata);
-
-  auto magic = dyn_cast<MDString>(metadata->getOperand(0));
-  assert(magic->getString() == "field");
-
-  auto clangNameMD = dyn_cast<MDString>(metadata->getOperand(1));
-  auto clangName = clangNameMD->getString();
-
-  auto llvmNameMD = dyn_cast<MDString>(metadata->getOperand(2));
-  auto llvmName = llvmNameMD->getString();
-
-  auto typeidMD = dyn_cast<llvm::ConstantInt>(metadata->getOperand(3));
-  auto tid = typeidMD->getLimitedValue();
-
-  auto lengthsMD = dyn_cast<llvm::MDNode>(metadata->getOperand(4));
-  auto dims = lengthsMD->getNumOperands();
-
-  lengths.clear();
-  for (unsigned i = 0; i < dims; i+=1) {
-    auto lenMD = dyn_cast<llvm::ConstantInt>(lengthsMD->getOperand(i));
-    auto len = lenMD->getLimitedValue();
-    lengths.push_back(len);
-  }
-  localLengths = lengths;
-  isdistributed = false;
-
-  ty = module->getTypeByName(llvmName);
 
 
-  this->reffunc = cast_or_null<Function>(metadata->getOperand(5));
-  this->islocalfunc = cast_or_null<Function>(metadata->getOperand(6));
-}
 
 
 isl::Ctx *FieldType::getIslContext() {
@@ -86,10 +47,10 @@ llvm::Module *FieldType::getModule() {
 }
 
 
-isl::Set FieldType::getIndexset() {
+isl::Set FieldType::getLogicalIndexset() {
   auto ctx = getIslContext();
 
-  auto dims = getDimensions();
+  auto dims = getNumDimensions();
   auto space = ctx->createSpace(0, dims);
   auto set = isl::BasicSet::create(space.copy());
 
@@ -100,7 +61,7 @@ isl::Set FieldType::getIndexset() {
     set.addConstraint(move(ge));
 
     auto lt = isl::Constraint::createInequality(move(space));
-    lt.setConstant(lengths[d]);
+    lt.setConstant(getLengths()[d]);
     lt.setCoefficient(isl_dim_set, 0, -1);
     set.addConstraint(move(lt));
   }
@@ -110,15 +71,12 @@ isl::Set FieldType::getIndexset() {
 
 
 void FieldType::dump() {
-  getIndexset().dump();
+  getLogicalIndexset().dump();
 }
 
 
-llvm::Function *FieldType::getRefFunc() {
-  return reffunc;
-}
 
-
+#if 0
 llvm::Function *FieldType::getIsLocalFunc() {
   if (!islocalfunc) {
     // function has been optimized away; We simply create a new one
@@ -134,7 +92,7 @@ llvm::Function *FieldType::getIsLocalFunc() {
   }
   return islocalfunc;
 }
-
+#endif
 
 static Value *emit(IRBuilderBase &builder, Value *value) {
   return value;
@@ -160,6 +118,7 @@ SmallVector<T*,4> iplistToSmallVector(iplist<T> &list) {
 }
 
 
+#if 0
 void FieldType::emitIsLocalFunc() {
   auto &llvmContext = module->getContext();
   auto func = getIsLocalFunc();
@@ -190,3 +149,4 @@ void FieldType::emitIsLocalFunc() {
 
   builder.CreateRet(inregion);
 }
+#endif

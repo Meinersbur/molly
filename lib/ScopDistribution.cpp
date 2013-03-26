@@ -73,7 +73,7 @@ namespace molly {
     }
 
 
-    void executeIfLocal(FieldAccess *acc) {
+    void executeIfLocal(MollyFieldAccess *acc) {
     }
 
 

@@ -36,6 +36,7 @@ namespace isl {
   class Mat;
   class Aff;
   class MultiAff;
+  class UnionMap;
 } // namespace isl
 
 
@@ -55,6 +56,7 @@ namespace isl {
   };
 
 
+  //TODO: Investigate how useful LLVM_HAS_RVALUE_REFERENCE_THIS could be
   class Map : public Spacelike /* TODO: What are the costs of making this virtual? */ {
 #pragma region Low-level
   private:
@@ -111,6 +113,9 @@ namespace isl {
 
     static Map readFrom(Ctx *ctx, const char *str);
     static Map readFrom(Ctx *ctx, FILE *input) { Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
+
+    static Map createFromUnionMap(UnionMap &&umap);
+
 
     Map copy() const { return wrap(takeCopy()); }
 #pragma endregion

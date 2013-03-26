@@ -38,6 +38,14 @@ namespace isl {
     const UnionSet &operator=(const UnionSet &that) { give(that.takeCopy()); return *this; }
     const UnionSet &operator=(UnionSet &&that) { give(that.take()); return *this; }
 
+#if 0
+    __isl_give isl_union_set *isl_union_set_align_params(
+	__isl_take isl_union_set *uset, __isl_take isl_space *model);
+
+    __isl_give isl_union_map *isl_union_set_unwrap(__isl_take isl_union_set *uset);
+
+#endif
+
   }; // class UnionSet
 } // namespace isl
 #endif /* ISLPP_UNIONSET_H */

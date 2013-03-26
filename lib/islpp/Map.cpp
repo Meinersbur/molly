@@ -2,6 +2,7 @@
 
 #include "islpp/Ctx.h"
 #include "islpp/Printer.h"
+#include "islpp/UnionMap.h"
 
 #include <isl/map.h>
 #include <llvm/Support/raw_ostream.h>
@@ -44,6 +45,13 @@ std::string Map::toString() const {
 void Map::dump() const {
   print(llvm::errs());
 }
+
+     Map Map::createFromUnionMap(UnionMap &&umap) {
+       return Map::wrap(isl_map_from_union_map(umap.take()));
+     }
+
+
+
 
 
 Ctx *Map::getCtx() const {

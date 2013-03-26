@@ -1,0 +1,322 @@
+clang version 3.3 
+Target: i686-pc-win32
+Thread model: posix
+mollycc: warning: argument unused during compilation: '-L/c/Users/Meinersbur/src/molly/build32_mingw/lib'
+ "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/mollycc.exe" -cc1 -triple i686-pc-win32 -emit-obj -disable-free -main-file-name stencil.cpp -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -target-cpu pentium4 -momit-leaf-frame-pointer -v -resource-dir "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug\\..\\lib\\clang\\3.3" -internal-isystem C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/../lib/clang/3.3/include -internal-isystem "C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\VC\\include" -internal-isystem "C:\\Program Files (x86)\\Windows Kits\\8.0\\\\include" -O3 -std=c++11 -fdeprecated-macro -ferror-limit 19 -fmessage-length 0 -mstackrealign -fno-use-cxa-atexit -fms-extensions -fms-compatibility -fmsc-version=1300 -fdelayed-template-parsing -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -mllvm -debug-pass=Details -mllvm -debug -mllvm -polly-report -mllvm -molly -mllvm -shape=4 -o C:/Users/MEINER~1/AppData/Local/Temp/stencil-302390.o -x c++ "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.cpp"
+Args: clang (LLVM option parsing) -debug-pass=Details -debug -polly-report -molly -shape=4 
+clang -cc1 version 3.3 based upon LLVM 3.3svn default target i686-pc-win32
+#include "..." search starts here:
+#include <...> search starts here:
+ C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/../lib/clang/3.3/include
+ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include
+ C:\Program Files (x86)\Windows Kits\8.0\\include
+ C:/Users/Meinersbur/src/molly/molly/include/mollyrt
+End of search list.
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1072:33: error: '_Ty' does not refer to a value
+                _HAS_TRIVIAL_MOVE_CONSTRUCTOR(_Ty)
+                                              ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:52:38: note: expanded from macro '_HAS_TRIVIAL_MOVE_CONSTRUCTOR'
+                        && __has_trivial_move_constructor(_Ty)>
+                                                          ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1070:16: note: declared here
+template<class _Ty>
+               ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1073:2: error: expected class name
+        {       // determine whether _Ty has a trivial move constructor
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1114:28: error: '_Ty' does not refer to a value
+                _HAS_TRIVIAL_MOVE_ASSIGN(_Ty)
+                                         ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:57:40: note: expanded from macro '_HAS_TRIVIAL_MOVE_ASSIGN'
+        : _Cat_base<__has_trivial_move_assign(_Ty)>
+                                              ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1112:16: note: declared here
+template<class _Ty>
+               ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1115:2: error: expected class name
+        {       // determine whether _Ty has a trivial move assignment operator
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1267:28: error: '_Ty' does not refer to a value
+                _HAS_NOTHROW_MOVE_ASSIGN(_Ty)
+                                         ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:72:40: note: expanded from macro '_HAS_NOTHROW_MOVE_ASSIGN'
+        : _Cat_base<__has_nothrow_move_assign(_Ty)>
+                                              ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1265:16: note: declared here
+template<class _Ty>
+               ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1268:2: error: expected class name
+        {       // determine whether _Ty has a nothrow move assignment operator
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:655:21: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:531:50: note: expanded from macro '_VARIADIC_EXPAND_1'
+#define _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:154:19: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+                        __cdecl, X2, X3, X4)
+                                       ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: note: macro '_VARIADIC_CALL_OPT_X1' defined here
+#define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:596:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_2(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:534:50: note: expanded from macro '_VARIADIC_EXPAND_2'
+#define _VARIADIC_EXPAND_2(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:154:19: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+                        __cdecl, X2, X3, X4)
+                                       ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: note: macro '_VARIADIC_CALL_OPT_X1' defined here
+#define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: unknown type name '_VARIADIC_CALL_OPT_X1'
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:655:21: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:531:50: note: expanded from macro '_VARIADIC_EXPAND_1'
+#define _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:152:2: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+        _VARIADIC_CALL_OPT_X1(_CLASS_RESULT_OF_PF, \
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:597:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:537:50: note: expanded from macro '_VARIADIC_EXPAND_3'
+#define _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:154:19: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+                        __cdecl, X2, X3, X4)
+                                       ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: note: macro '_VARIADIC_CALL_OPT_X1' defined here
+#define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: expected ';' after top level declarator
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:597:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:537:50: note: expanded from macro '_VARIADIC_EXPAND_3'
+#define _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:152:2: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+        _VARIADIC_CALL_OPT_X1(_CLASS_RESULT_OF_PF, \
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:598:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_4(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:540:50: note: expanded from macro '_VARIADIC_EXPAND_4'
+#define _VARIADIC_EXPAND_4(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:154:19: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+                        __cdecl, X2, X3, X4)
+                                       ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: note: macro '_VARIADIC_CALL_OPT_X1' defined here
+#define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:599:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_5(FUNC, X1, X2, X3, X4)
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:543:50: note: expanded from macro '_VARIADIC_EXPAND_5'
+#define _VARIADIC_EXPAND_5(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:154:19: note: expanded from macro '_CLASS_RESULT_OF_PF_OPT_0X'
+                        __cdecl, X2, X3, X4)
+                                       ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: note: macro '_VARIADIC_CALL_OPT_X1' defined here
+#define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:655:21: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:531:50: note: expanded from macro '_VARIADIC_EXPAND_1'
+#define _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:222:22: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+                        __thiscall, X2, X3, X4)
+                                          ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: note: macro '_VARIADIC_CALL_OPT_X2' defined here
+#define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:596:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_2(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:534:50: note: expanded from macro '_VARIADIC_EXPAND_2'
+#define _VARIADIC_EXPAND_2(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:222:22: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+                        __thiscall, X2, X3, X4)
+                                          ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: note: macro '_VARIADIC_CALL_OPT_X2' defined here
+#define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: unknown type name '_VARIADIC_CALL_OPT_X2'
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:655:21: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:531:50: note: expanded from macro '_VARIADIC_EXPAND_1'
+#define _VARIADIC_EXPAND_1(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:220:2: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+        _VARIADIC_CALL_OPT_X2(_CLASS_RESULT_OF_PMF, \
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:597:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:537:50: note: expanded from macro '_VARIADIC_EXPAND_3'
+#define _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:222:22: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+                        __thiscall, X2, X3, X4)
+                                          ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: note: macro '_VARIADIC_CALL_OPT_X2' defined here
+#define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
+        ^
+In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
+In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:2:
+In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: expected ';' after top level declarator
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
+                    ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:597:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:537:50: note: expanded from macro '_VARIADIC_EXPAND_3'
+#define _VARIADIC_EXPAND_3(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:220:2: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+        _VARIADIC_CALL_OPT_X2(_CLASS_RESULT_OF_PMF, \
+        ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:652:22: note: expanded from macro '_VARIADIC_EXPAND_0X'
+        _VARIADIC_EXPAND_1X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:656:22: note: expanded from macro '_VARIADIC_EXPAND_1X'
+        _VARIADIC_EXPAND_2X(FUNC, X1, X2, X3, X4)
+                            ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:598:21: note: expanded from macro '_VARIADIC_EXPAND_25'
+        _VARIADIC_EXPAND_4(FUNC, X1, X2, X3, X4) \
+                           ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:540:50: note: expanded from macro '_VARIADIC_EXPAND_4'
+#define _VARIADIC_EXPAND_4(FUNC, X1, X2, X3, X4) \
+                                                 ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:222:22: note: expanded from macro '_CLASS_RESULT_OF_PMF_OPT_0X'
+                        __thiscall, X2, X3, X4)
+                                          ^
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: note: macro '_VARIADIC_CALL_OPT_X2' defined here
+#define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
+        ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

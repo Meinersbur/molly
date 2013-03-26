@@ -20,6 +20,8 @@ add_molly_library(LLVMMolly
   MollyUtils.cpp
   MollyInlinePrepa.cpp
   MollyFieldAccess.cpp
+  PatternSearchAnalysis.cpp
+  GlobalPassManager.cpp
 )
 
 #target_link_libraries( LLVMMolly ${GMP_LIBRARY} )

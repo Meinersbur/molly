@@ -1,8 +1,10 @@
+// BEGIN Molly
 #include "molly/LinkAllPasses.h"
 #include "molly/RegisterPasses.h"
 
 #include "polly/LinkAllPasses.h"
 #include "polly/RegisterPasses.h"
+// END Molly
 
 //===-- driver.cpp - Clang GCC-Compatible Driver --------------------------===//
 //
@@ -472,10 +474,13 @@ int main(int argc_, const char **argv_) {
     argv.insert(&argv[1], ExtraArgs.begin(), ExtraArgs.end());
   }
 
+// BEGIN Molly
   // Molly: The simple way, only works for mingw
   // TODO: LIBPATH? Or just let the user handle it all by himself?
+  // TODO: Just do it manually
   argv.push_back("-L/c/Users/Meinersbur/src/molly/build32_mingw/lib");
   argv.push_back("-lMollyRT");
+// END Molly
   OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;
   SmallVector<std::pair<int, const Command *>, 4> FailingCommands;

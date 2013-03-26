@@ -1,5 +1,5 @@
 // This file contains the implementatations of functions that require the LLVMMolly project being linked
-#include <polly/MollyFieldAccess.h>
+#include "MollyFieldAccess.h"
 
 #include "MollyContext.h"
 #include "FieldVariable.h"
@@ -8,16 +8,21 @@
 #include "islpp/Space.h"
 
 using namespace llvm;
-using namespace polly;
 using namespace molly;
 
 
+MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *instr) {
+  auto pollyFieldAcc = polly::FieldAccess::fromAccessInstruction(instr);
+  FieldAccess mollyFieldAcc(pollyFieldAcc);
+  return mollyFieldAcc;
+}
 
-FieldType *FieldAccess::getFieldType() {
+
+FieldType *MollyFieldAccess::getFieldType() {
   return fieldvar->getFieldType();
 }
 
 
-isl::Space FieldAccess::getLogicalSpace(isl::Ctx* ctx) {
+isl::Space MollyFieldAccess::getLogicalSpace(isl::Ctx* ctx) {
   return isl::Space::wrap(isl_getLogicalSpace(ctx->keep()));
 }

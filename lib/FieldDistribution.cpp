@@ -124,18 +124,18 @@ bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
   auto &contextPass = getAnalysis<MollyContextPass>();
   auto &lengths = fieldTy->getLengths();
   auto &cluster = contextPass.getClusterLengths();
+  auto nDims = lengths.size();
 
-  assert(lengths.size()==1);
-  assert(cluster.size()==1);
-  auto length0 = lengths[0];
-  auto cluster0 = cluster[0];
+  SmallVector<int,4> locallengths;
+  for (auto d = nDims-nDims; d<nDims; d+=1) {
+    auto len = lengths[d];
+    auto clusterLen = (cluster.size() >= d) ? 1 : cluster[d];
 
-  assert(length0 % cluster0 == 0);
-  auto local0 = length0 / cluster0;
-
-  fieldTy->setDistributed(true);
-  SmallVector<uint32_t,1> locallengths;
-  locallengths.push_back(local0);
+    assert(len % clusterLen == 0);
+    auto localLen = len / clusterLen;
+    locallengths.push_back(localLen);
+  }
+  fieldTy->setDistributed();
   fieldTy->setLocalLength(locallengths);
   return true;
 }
@@ -147,7 +147,7 @@ bool FieldDistribution::runOnField(FieldVariable *field) {
   auto &clusterShape = contextPass.getClusterShape();
   auto &clusterLengths = contextPass.getClusterLengths();
 
-  auto indexset = fieldTy->getIndexset();
+  auto indexset = fieldTy->getLogicalIndexset();
   auto indexdims = indexset.getSetDimCount();
   auto clusterdims = clusterLengths.size();
   assert(indexdims == clusterdims); //TODO: Currently they have to match exactly

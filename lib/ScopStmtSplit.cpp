@@ -4,7 +4,7 @@
 #include <polly/ScopDetection.h>
 #include <polly/ScopInfo.h>
 #include <llvm/ADT/SmallVector.h>
-#include <polly/MollyFieldAccess.h>
+#include "MollyFieldAccess.h"
 #include "molly/FieldDetection.h"
 #include "MollyUtils.h"
 #include <polly/Dependences.h>
@@ -15,11 +15,16 @@
 #include <polly/Support/ScopHelper.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include "MollyContextPass.h"
+#include <llvm/Analysis/ScalarEvolution.h>
 
 using namespace molly;
-using namespace polly;
 using namespace llvm;
 using namespace std;
+
+using polly::Scop;
+using polly::ScopStmt;
+using polly::MemoryAccess;
+
 
 namespace molly {
 
@@ -40,7 +45,6 @@ namespace molly {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
       //ScopPass::getAnalysisUsage(AU); // Calls setPreservesAll() !!!
 
-      AU.addRequired<ScopInfo>();
       AU.addRequired<LoopInfo>();
       AU.addRequired<RegionInfo>();
 
@@ -49,21 +53,21 @@ namespace molly {
       AU.addPreserved<FieldDetectionAnalysis>(); // no changes
      
       // Polly
-      AU.addPreserved<ScopDetection>(); // by splitScopStmt
-      AU.addPreserved<ScopInfo>(); // by splitScopStmt
+      AU.addPreserved<polly::ScopDetection>(); // by splitScopStmt
+      AU.addPreserved<polly::ScopInfo>(); // by splitScopStmt
 
       // LLVM
       AU.addPreserved<DominatorTree>(); // by SplitBlock
       AU.addPreserved<LoopInfo>(); // by SplitBlock
       AU.addPreserved<RegionInfo>(); // by splitScopStmt
-      
+      AU.addPreserved<ScalarEvolution>(); // not touched
+
       // Does not preserve:
       // polly::Dependences 
 
       // Open:
       // DominanceFrontier
       // PostDominatorTree
-      // ScalarEvolution
       // TempScopInfo
     }
 
@@ -231,6 +235,7 @@ namespace molly {
       assert(isIndependentBlock(oldBB));
 
       auto newBB = SplitBlock(oldBB, splitBefore, this);
+      auto SE = getAnalysisIfAvailable<ScalarEvolution>();
 
       // TODO: Move movable instructions into the second BB to reduce the number of trivial dependences
       // polly::IndependentBlocks::moveOperandTree() does about the same
@@ -288,7 +293,10 @@ namespace molly {
             // No spill required
           } else if (useInstr->getParent() == newBB) {
             // Do spill
+            
             if (!reloadInstr) {
+              if (SE)
+                SE->forgetValue(instr); // Change of use-def chain (FIXME: The value does not change, is it really necessary to do this?)
               slot = new AllocaInst(instr->getType(), 0,  instr->getName() + ".splitcut2a", allocaBlock); // We are a ScopPass, but this modifies a node outside the Scop!!! 
               (void) new StoreInst(instr, slot, oldBB->getTerminator());
               reloadInstr = new LoadInst(slot, instr->getName()+".a2splitcut", false, newBB->getFirstNonPHI()); //TODO: Update ScopStmt.Access for this memory access
@@ -304,7 +312,7 @@ namespace molly {
       }
 
       // Preserve analyses
-            auto RI = getAnalysisIfAvailable<RegionInfo>(); // Why isn't SplitBlock doing this?
+      auto RI = getAnalysisIfAvailable<RegionInfo>(); // Why isn't SplitBlock doing this?
       if (RI) {
         //assert(RI->isRegion(newBB, oldBB));
         RI->setRegionFor(newBB, RI->getRegionFor(oldBB));
@@ -385,11 +393,11 @@ namespace molly {
       SmallVector<Instruction*, 32> instrs;
       collectInstructionList(bb, instrs);
 
-      FieldAccess lastAccess;
+      MollyFieldAccess lastAccess;
       for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
         auto instr = *it;
 
-        auto access = FieldAccess::fromAccessInstruction(instr);
+        auto access = MollyFieldAccess::fromAccessInstruction(instr);
         if (access.isNull())
           continue;
 
@@ -437,7 +445,7 @@ namespace molly {
 
 char ScopStmtSplitPass::ID = 0;
 char &molly::ScopStmtSplitPassID = ScopStmtSplitPass::ID;
-static RegisterPass<ScopStmtSplitPass> ScopStmtSplitPassRegistration("molly-scopsplit", "Molly - Ensure that every field access has its own ScopStmt");
+static RegisterPass<ScopStmtSplitPass> ScopStmtSplitPassRegistration("molly-scopsplit", "Molly - SCoP split");
 
 llvm::Pass *molly::createScopStmtSplitPass() {
   return new ScopStmtSplitPass();

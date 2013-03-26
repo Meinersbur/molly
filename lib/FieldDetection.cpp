@@ -5,7 +5,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "molly/LinkAllPasses.h"
-#include <polly/MollyFieldAccess.h>
+#include "MollyFieldAccess.h"
 
 #include <llvm/IR/DerivedTypes.h>
 
@@ -166,17 +166,17 @@ FieldVariable *FieldDetectionAnalysis::getFromAccess(Instruction *inst) {
 }
 
 
-FieldAccess FieldDetectionAnalysis::getFieldAccess(const llvm::Instruction *instr) {
-  FieldAccess result = FieldAccess::fromAccessInstruction(const_cast<Instruction*>(instr));
+MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(const llvm::Instruction *instr) {
+  auto result = MollyFieldAccess::fromAccessInstruction(const_cast<Instruction*>(instr));
   if (result.isNull())
-    return FieldAccess();
+    return MollyFieldAccess();
   auto base = result.getBaseField();
   result.fieldvar = getFieldVariable(dyn_cast<GlobalVariable>(base));
   return result;
 }
 
 
-FieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *memacc) {
+MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *memacc) {
   auto instr = memacc->getAccessInstruction();
   auto result = getFieldAccess(instr);
   if (!result.isValid())
