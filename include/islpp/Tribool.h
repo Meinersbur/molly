@@ -1,7 +1,8 @@
 #ifndef TRIBOOL_H
 #define TRIBOOL_H
 
-#include <exception>
+//#include <exception>
+#include <llvm/Support/ErrorHandling.h>
 
 // TODO: What namespace?
 
@@ -44,8 +45,11 @@ public:
 
   bool asBool() { 
     assert(isValid());  
-    if (isIndeterminate())
-      throw new std::exception("Indetermined boolean");
+    if (isIndeterminate()) {
+      llvm_unreachable("Indetermined boolean");
+      //throw new std::exception("Indetermined boolean");
+      abort();
+    }
     return (bool)state;
   } 
 

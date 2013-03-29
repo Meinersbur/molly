@@ -10,7 +10,7 @@ isl_basic_map *BasicMap::takeCopy() const {
 }
 
 
-void BasicMap::give(isl_basic_map *vertices) {
+void BasicMap::give(isl_basic_map *map) {
   assert(this->map != map|| !map);
   if (this->map)
     isl_basic_map_free(this->map);

@@ -1,11 +1,11 @@
 #ifndef ISLPP_POINT_H
 #define ISLPP_POINT_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <isl/space.h> // enum isl_dim_type;
 
 struct isl_point;
-enum isl_dim_type;
 
 namespace llvm {
 } // namespace llvm

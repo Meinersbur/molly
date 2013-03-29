@@ -20,7 +20,7 @@ class ValueSourceVisitor : public InstVisitor<ValueSourceVisitor> {
   DenseSet <Value*> &donelist;
 
 public:
-  ValueSourceVisitor(SmallVectorImpl<User*> &worklist, DenseSet<Value*> &donelist, SmallVectorImpl<llvm::Value*> &sources) : worklist(worklist), donelist(donelist), sources(sources) {
+  ValueSourceVisitor(SmallVectorImpl<User*> &worklist, DenseSet<Value*> &donelist, SmallVectorImpl<llvm::Value*> &sources) : sources(sources), donelist(donelist), worklist(worklist) {
   }
 
   void visitLoad(LoadInst &I) {

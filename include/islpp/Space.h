@@ -1,11 +1,11 @@
 #ifndef ISLPP_SPACE_H
 #define ISLPP_SPACE_H
 
+#include "islpp_common.h"
 #include <assert.h>
 #include <isl/space.h> // enum isl_dim_type;
 
 struct isl_space;
-enum isl_dim_type;
 
 namespace isl {
   class Ctx;

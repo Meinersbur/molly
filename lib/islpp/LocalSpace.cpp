@@ -56,7 +56,8 @@ isl_local_space *LocalSpace::takeCopy() const {
   return isl_local_space_copy(space);
 }
 
-void LocalSpace::give(isl_local_space *set)  {
+
+void LocalSpace::give(isl_local_space *space)  {
   if (this->space)
     isl_local_space_free(this->space);
   this->space = space; 
@@ -67,9 +68,6 @@ LocalSpace::~LocalSpace() {
   if (space)
     isl_local_space_free(space);
 }
-
-
-
 
 
 const LocalSpace &LocalSpace::operator=(const Space &that) {

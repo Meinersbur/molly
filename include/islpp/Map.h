@@ -1,6 +1,7 @@
 #ifndef ISLPP_MAP_H
 #define ISLPP_MAP_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <string>
 
@@ -112,7 +113,7 @@ namespace isl {
     static Map fromMultiAff(MultiAff &&maff) { return Map::wrap(isl_map_from_multi_aff(maff.take())); }
 
     static Map readFrom(Ctx *ctx, const char *str);
-    static Map readFrom(Ctx *ctx, FILE *input) { Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
+    static Map readFrom(Ctx *ctx, FILE *input) { return Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
 
     static Map createFromUnionMap(UnionMap &&umap);
 
@@ -261,7 +262,7 @@ namespace isl {
     void dropConstraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_map_drop_constraints_involving_dims(take(), type, first, n));  }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_map_involves_dims(keep(), type, first, n);  }
 
-    bool plainInputIsFixed(unsigned in, Int &val) const { isl_map_plain_input_is_fixed(keep(), in, val.change()); } 
+    bool plainInputIsFixed(unsigned in, Int &val) const { return isl_map_plain_input_is_fixed(keep(), in, val.change()); } 
     bool plainIsFixed(isl_dim_type type, unsigned pos, Int &val) const { return isl_map_plain_is_fixed(keep(), type, pos, val.change()); } 
     bool fastIsFixed(isl_dim_type type, unsigned pos, Int &val) const { return isl_map_fast_is_fixed(keep(), type, pos, val.change()); } 
 

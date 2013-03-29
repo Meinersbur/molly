@@ -1,13 +1,13 @@
 #ifndef ISLPP_LOCALSPACE_H
 #define ISLPP_LOCALSPACE_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <iterator>
 
 #include <isl/space.h>
 
 struct isl_local_space;
-enum isl_dim_type;
 
 namespace isl {
   class Ctx;
@@ -26,18 +26,18 @@ namespace isl {
     DimTypeCst = (1 << isl_dim_cst),
     DimTypeParam = (1 << isl_dim_param),
     DimTypeIn = (1 << isl_dim_in),
-     DimTypeOut = (1 << isl_dim_out),
-      DimTypeSet = (1 << isl_dim_set),
-      DimTypeDiv = (1 << isl_dim_div),
-      DimTypeAll = (DimTypeCst | DimTypeParam | DimTypeIn | DimTypeOut | DimTypeSet | DimTypeDiv)
+    DimTypeOut = (1 << isl_dim_out),
+    DimTypeSet = (1 << isl_dim_set),
+    DimTypeDiv = (1 << isl_dim_div),
+    DimTypeAll = (DimTypeCst | DimTypeParam | DimTypeIn | DimTypeOut | DimTypeSet | DimTypeDiv)
   } DimTypeFlags;
   namespace DimType {
-    static DimTypeFlags Cst = DimTypeCst;
-    static DimTypeFlags Param = DimTypeParam;
-    static DimTypeFlags Out = DimTypeOut;
-    static DimTypeFlags Set = DimTypeSet;
-    static DimTypeFlags Div = DimTypeDiv;
-    static DimTypeFlags All = DimTypeAll;
+    static const DimTypeFlags Cst = DimTypeCst;
+    static const DimTypeFlags Param = DimTypeParam;
+    static const DimTypeFlags Out = DimTypeOut;
+    static const DimTypeFlags Set = DimTypeSet;
+    static const DimTypeFlags Div = DimTypeDiv;
+    static const DimTypeFlags All = DimTypeAll;
   }
 
   class LocalSpaceDimtypeIter : public std::iterator<std::forward_iterator_tag, isl_dim_type> {
@@ -48,25 +48,25 @@ namespace isl {
 
     iterator &operator++/*preincrement*/();
     value_type operator*() const { return current; }
-      
+
     bool operator==(const LocalSpaceDimtypeIter &that) const { return (this->current == that.current) && (this->current == that.current); }
     bool operator!=(const LocalSpaceDimtypeIter &that) const { return !operator==(that); }
   };
 
 
-    class LocalSpaceDimIter : public std::iterator<std::forward_iterator_tag, Dim> {
-      typedef LocalSpaceDimIter iterator;
-     const LocalSpace *owner;
-     DimTypeFlags typeFilter;
+  class LocalSpaceDimIter : public std::iterator<std::forward_iterator_tag, Dim> {
+    typedef LocalSpaceDimIter iterator;
+    const LocalSpace *owner;
+    DimTypeFlags typeFilter;
 
-      isl_dim_type currentType;
-      int currentTypeSize;
-      int currentPos;
+    isl_dim_type currentType;
+    int currentTypeSize;
+    int currentPos;
   public:
     explicit LocalSpaceDimIter(const LocalSpace *owner, DimTypeFlags typeFilter, isl_dim_type currentType, int currentPos) : owner(owner), typeFilter(typeFilter), currentType(currentType), currentPos(currentPos) {}
 
     const iterator &operator=(const iterator &that) {
-      this->owner = owner;
+      this->owner = that.owner;
       this->currentType = that.currentType;
       this->currentPos = that.currentPos;
       return *this;
@@ -115,7 +115,7 @@ namespace isl {
     ~LocalSpace();
 
     const LocalSpace &operator=(LocalSpace &&that) { assert(!this->space); this->space = that.take(); return *this; }
-    const LocalSpace &operator=(const LocalSpace &that) { give(that.takeCopy()); }
+    const LocalSpace &operator=(const LocalSpace &that) { give(that.takeCopy()); return *this; }
 
 #pragma region Conversion from isl::Space
     /* implicit */ LocalSpace(Space &&);
@@ -148,14 +148,14 @@ namespace isl {
 
 
 
-  typedef LocalSpaceDimIter dim_iterator;
-   typedef LocalSpaceDimIter dim_const_iterator;
-   dim_const_iterator dim_begin(DimTypeFlags filter = DimType::All) const { return LocalSpaceDimIter(this, filter, (isl_dim_type)-1, 0)++; }
-   dim_const_iterator dim_end() const { return LocalSpaceDimIter(this, (DimTypeFlags)0, isl_dim_all, 0); }
+    typedef LocalSpaceDimIter dim_iterator;
+    typedef LocalSpaceDimIter dim_const_iterator;
+    dim_const_iterator dim_begin(DimTypeFlags filter = DimType::All) const { return LocalSpaceDimIter(this, filter, (isl_dim_type)-1, 0)++; }
+    dim_const_iterator dim_end() const { return LocalSpaceDimIter(this, (DimTypeFlags)0, isl_dim_all, 0); }
 
-   typedef LocalSpaceDimtypeIter dimtype_iterator;
-   dimtype_iterator dimtype_begin() { return LocalSpaceDimtypeIter(this, (isl_dim_type)-1); }
-   dimtype_iterator dimtype_end() { return LocalSpaceDimtypeIter(this, isl_dim_all); }
+    typedef LocalSpaceDimtypeIter dimtype_iterator;
+    dimtype_iterator dimtype_begin() { return LocalSpaceDimtypeIter(this, (isl_dim_type)-1); }
+    dimtype_iterator dimtype_end() { return LocalSpaceDimtypeIter(this, isl_dim_all); }
   }; // class LocalSpace
 
 

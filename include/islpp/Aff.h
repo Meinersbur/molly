@@ -1,12 +1,12 @@
 #ifndef ISLPP_AFF_H
 #define ISLPP_AFF_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <string>
 #include <isl/space.h> // enum isl_dim_type;
 
 struct isl_aff;
-enum isl_dim_type;
 
 namespace llvm {
   class raw_ostream;

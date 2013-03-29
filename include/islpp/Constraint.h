@@ -1,12 +1,12 @@
 #ifndef ISLPP_CONSTRAINT_H
 #define ISLPP_CONSTRAINT_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <string>
 #include <isl/space.h> // enum isl_dim_type;
 
 struct isl_constraint;
-enum isl_dim_type; 
 
 namespace llvm {
   class raw_ostream;

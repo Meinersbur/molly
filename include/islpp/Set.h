@@ -1,6 +1,7 @@
 #ifndef ISLPP_SET_H
 #define ISLPP_SET_H
 
+#include "islpp_common.h"
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
@@ -14,8 +15,6 @@
 
 struct isl_set;
 struct isl_basic_set;
-enum isl_dim_type;
-enum isl_lp_result;
 struct isl_point;
 
 

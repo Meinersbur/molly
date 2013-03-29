@@ -57,6 +57,11 @@ InlineCost MollyInlinePrepa::getInlineCost(CallSite CS) {
 }
 
 bool MollyInlinePrepa::runOnSCC(CallGraphSCC &SCC) {
+  auto front = *SCC.begin();
+  auto frontFunc = front->getFunction();
+  if (frontFunc && frontFunc->getName() == "main") {
+    int a = 0;
+  }
   //ICA = &getAnalysis<InlineCostAnalysis>();
   return Inliner::runOnSCC(SCC);
 }

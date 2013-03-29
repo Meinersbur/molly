@@ -13,7 +13,7 @@ using namespace molly;
 
 MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *instr) {
   auto pollyFieldAcc = polly::FieldAccess::fromAccessInstruction(instr);
-  FieldAccess mollyFieldAcc(pollyFieldAcc);
+  MollyFieldAccess mollyFieldAcc(pollyFieldAcc);
   return mollyFieldAcc;
 }
 

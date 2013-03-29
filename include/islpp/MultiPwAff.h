@@ -1,6 +1,7 @@
 #ifndef ISLPP_MULTIPWAFF_H
 #define ISLPP_MULTIPWAFF_H
 
+#include "islpp_common.h"
 #include <cassert>
 
 struct isl_multi_pw_aff;

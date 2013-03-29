@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   //My2DField[0][0] = 5;
   //My3DField[0][0][0] = 3;
 
-  (void)MyField.length();
+  //(void)MyField.length();
   
   auto len = MyField.length(0);
   for (int i = 0; i < len; i+=1) {

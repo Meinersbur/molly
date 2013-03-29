@@ -55,6 +55,22 @@ namespace molly {
     bool changed;
 
     FieldDetectionAnalysis *fields;
+    Function *func;
+
+    Value *createAlloca(Type *ty, const Twine &name = Twine()) {
+      auto entry = &func->getEntryBlock();
+      auto insertPos = entry->getFirstNonPHIOrDbgOrLifetime();
+      auto result = new AllocaInst(ty, name, insertPos);
+      return result;
+    }
+
+    typedef IRBuilder<> BuilderTy;
+
+    Value *createPtrTo(BuilderTy &builder,  Value *val, const Twine &name = Twine()) {
+      auto valueSpace = createAlloca(val->getType(), name);
+      builder.CreateStore(val, valueSpace);
+      return valueSpace;
+    }
 
   public:
     static char ID;
@@ -67,7 +83,7 @@ namespace molly {
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<MollyContextPass>();
-      AU.addRequiredID(FieldDistributionPassID); 
+      //AU.addRequiredID(FieldDistributionPassID); 
       AU.addRequired<FieldDetectionAnalysis>();
     }
 
@@ -76,6 +92,8 @@ namespace molly {
     void emitAccess(MollyFieldAccess &access);
 
     virtual bool runOnFunction(Function &func);
+
+    //virtual void releaseMemory() { }
 
   protected:
     bool emitFieldFunctions();
@@ -118,19 +136,22 @@ void FieldCodeGen::emitWrite(MollyFieldAccess &access) {
   auto accessor = cast<StoreInst>(access.getAccessor());
   auto bb = accessor->getParent();
   auto nDims = access.getNumDims();
+  auto writtenValue = accessor->getOperand(0);
 
   IRBuilder<> builder(bb);
   builder.SetInsertPoint(accessor->getNextNode()); // Behind the old store instr
 
+
   SmallVector<Value*,6> args;
   args.push_back(access.getFieldVariable()->getVariable()); // "this" implicit argument
-  args.push_back(accessor);
+  auto stackPtr = createPtrTo(builder, writtenValue);
+  args.push_back(stackPtr);
   for (auto d = nDims-nDims; d < nDims; d+=1) {
     auto coord = access.getCoordinate(d);
     args.push_back(coord);
   }
 
-  builder.CreateCall(access.getFieldType()->getFuncSetBroadcast(), args, "setcall");
+  builder.CreateCall(access.getFieldType()->getFuncSetBroadcast(), args);
 }
 
 
@@ -148,24 +169,25 @@ void FieldCodeGen::emitAccess(MollyFieldAccess &access) {
 
   // Remove old access
   auto call = access.getFieldCall();
-  if (call != accessor)
-    call->removeFromParent();
-  accessor->removeFromParent();
+  accessor->eraseFromParent();
+  if (call != accessor) { //FIXME: Comparison after delete accessor
+    call->eraseFromParent();
+  }
 }
 
 
-bool FieldCodeGen::runOnFunction(Function &func) {
-  if (func.getName() == "main") {
+bool FieldCodeGen::runOnFunction(Function &F) {
+  if (F.getName() == "main") {
     int a = 0;
   }
 
   MollyContextPass &MollyContext = getAnalysis<MollyContextPass>();
-  fields = &getAnalysis<FieldDetectionAnalysis>();
-
+  this->fields = &getAnalysis<FieldDetectionAnalysis>();
+  this->func = &F;
 
   changed = false;
   SmallVector<Instruction*, 16> instrs;
-  collectInstructionList(&func, instrs);
+  collectInstructionList(&F, instrs);
 
   for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
     auto instr = *it;

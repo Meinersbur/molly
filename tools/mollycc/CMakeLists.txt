@@ -25,3 +25,10 @@ target_link_libraries( mollycc
   LLVMPolly
   LLVMMolly
 )
+
+#IF (MSVC_IDE)
+#  foreach(lang C CXX)
+#      set(CMAKE_${lang}_FLAGS_DEBUG "${CMAKE_${lang}_FLAGS_DEBUG} /ZI")
+#  endforeach(lang)
+#  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /SAFESEH:NO")
+#ENDIF(MSVC_IDE)

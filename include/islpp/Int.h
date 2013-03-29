@@ -1,6 +1,7 @@
 #ifndef ISLPP_INT_H
 #define ISLPP_INT_H
 
+#include "islpp_common.h"
 #include <isl/int.h>
 //#include <gmpxx.h>
 #include <llvm/Support/raw_ostream.h>

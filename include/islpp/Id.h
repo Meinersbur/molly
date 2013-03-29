@@ -1,6 +1,7 @@
 #ifndef ISLPP_ID_H
 #define ISLPP_ID_H
 
+#include "islpp_common.h"
 #include <cassert>
 #include <string>
 
@@ -62,10 +63,11 @@ namespace isl {
     }
   public:
     template<typename T>
-    Id createAndDeleteUser(Ctx *ctx, const char *name, T *user) {
-      isl_id *result = isl_id_alloc(ctx->keep(), name, user);
-      result = isl_id_set_free_user(result, &deleteUser<T>);
-      return Id::wrap(result);
+    static Id createAndDeleteUser(Ctx *ctx, const char *name, T *user) {
+      auto result = create(ctx, name, user);
+      //isl_id *result = isl_id_alloc(ctx->keep(), name, user);
+      result = isl_id_set_free_user(result->keep(), &deleteUser<T>);
+      return result;
     }
 
     Id copy() const { return Id::wrap(takeCopy()); }

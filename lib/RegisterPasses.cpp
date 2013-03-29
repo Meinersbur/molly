@@ -15,6 +15,7 @@
 #include "llvm/Analysis/RegionPass.h"
 #include "PatternSearchAnalysis.h"
 #include <polly/LinkAllPasses.h>
+#include <llvm/Transforms/Scalar.h>
 
 using namespace llvm;
 using namespace std;
@@ -117,7 +118,7 @@ public:
   virtual bool runOnFunction(Function &F) override {
     auto RI = &getAnalysis<RegionInfo>();
     auto TopLevel = RI->getTopLevelRegion();
-    auto ER = &getAnalysis<EmptyRegionPass>(*TopLevel);
+    //auto ER = &getAnalysis<EmptyRegionPass>(*TopLevel);
     return false;
   }
 
@@ -212,7 +213,21 @@ static void registerMollyPasses(llvm::PassManagerBase &PM) {
   }
 #endif
 
-  PM.add(molly::createMollyInlinePass());
+  // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
+  PM.add(molly::createMollyInlinePass()); 
+
+  // Cleanup after inlining
+  //FIXME: Which is the correct one?
+  //PM.add(createConstantPropagationPass());
+  //PM.add(createCorrelatedValuePropagationPass());
+  //PM.add(createSCCPPass()); 
+  //PM.add(createJumpThreadingPass());
+
+  //PM.add(createDeadInstEliminationPass());
+  //PM.add(createDeadCodeEliminationPass());
+  //PM.add(createAggressiveDCEPass());  
+  //PM.add(createCFGSimplificationPass());
+
   //PM.add(polly::createScopInfoPass());
   //PM.add(molly::createScopStmtSplitPass());
   //PM.add(polly::createDependencesPass());

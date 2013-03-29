@@ -1,6 +1,7 @@
 #ifndef ISLPP_BASICMAP_H
 #define ISLPP_BASICMAP_H
 
+#include "islpp_common.h"
 #include <cassert>
 
 struct isl_basic_map;

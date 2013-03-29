@@ -1,6 +1,7 @@
 #ifndef ISLPP_VERTICES_H
 #define ISLPP_VERTICES_H
 
+#include "islpp_common.h"
 #include <cassert>
 
 struct isl_vertices;

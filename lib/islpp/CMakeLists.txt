@@ -1,10 +1,12 @@
 
 if (MSVC_IDE OR XCODE)
-  file( GLOB_RECURSE headers
+  file( GLOB_RECURSE islppheaders
       ${MOLLY_SOURCE_DIR}/include/islpp/*.h
       ${MOLLY_SOURCE_DIR}/lib/islpp/*.h
     )
-  set_source_files_properties(${headers} PROPERTIES HEADER_FILE_ONLY ON)
+  set_source_files_properties(${islppheaders} PROPERTIES HEADER_FILE_ONLY ON)
+else (MSVC_IDE OR XCODE)
+  set( islppheaders )
 endif (MSVC_IDE OR XCODE)
 
 add_llvm_library(Islpp
@@ -42,7 +44,7 @@ add_llvm_library(Islpp
   Pw.cpp
   Multi.cpp
   Spacelike.cpp
-  ${headers}
+  ${islppheaders}
 )
 set_target_properties(Islpp PROPERTIES FOLDER "Molly")
 

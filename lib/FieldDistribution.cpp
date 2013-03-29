@@ -1,5 +1,3 @@
-#pragma once
-
 #define DEBUG_TYPE "molly-distr"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
@@ -122,14 +120,14 @@ FieldType *FieldDistribution::getFieldType(StructType *ty) {
 
 bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
   auto &contextPass = getAnalysis<MollyContextPass>();
-  auto &lengths = fieldTy->getLengths();
+  auto lengths = fieldTy->getLengths();
   auto &cluster = contextPass.getClusterLengths();
   auto nDims = lengths.size();
 
   SmallVector<int,4> locallengths;
   for (auto d = nDims-nDims; d<nDims; d+=1) {
     auto len = lengths[d];
-    auto clusterLen = (cluster.size() >= d) ? 1 : cluster[d];
+    auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
 
     assert(len % clusterLen == 0);
     auto localLen = len / clusterLen;

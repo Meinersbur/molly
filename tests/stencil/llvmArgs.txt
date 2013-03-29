@@ -1,1 +1,2 @@
-Le processus ne peut pas acc‚der au fichier car ce fichier est utilis‚ par un autre processus.
+'clang' n'est pas reconnu en tant que commande interne
+ou externe, un programme ex‚cutable ou un fichier de commandes.

@@ -1,6 +1,7 @@
 #ifndef ISLPP_PRINTER_H
 #define ISLPP_PRINTER_H
 
+#include "islpp_common.h"
 #include <llvm/Support/Compiler.h>
 #include <assert.h>
 #include <string>
@@ -82,7 +83,7 @@ namespace isl {
     Printer(Printer &&printer) : printer(printer.take()), ownsFile(printer.ownsFile) {};
     ~Printer();
 
-    const Printer &operator=(Printer &&printer) { this->give(printer.take()); this->ownsFile = printer.ownsFile; };
+    const Printer &operator=(Printer &&printer) { this->give(printer.take()); this->ownsFile = printer.ownsFile; return *this; };
 
 
 #pragma region Creational

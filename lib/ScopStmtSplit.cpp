@@ -124,10 +124,10 @@ namespace molly {
       auto instr = dyn_cast<Instruction>(val);
       if (!instr)
         return false;
-      return polly::isIndVar(instr, LI);
+
+        Loop *L = LI->getLoopFor(instr->getParent());
+      return L && instr == L->getCanonicalInductionVariable();
     }
-
-
 
 
     // IndependentBlocks::isEscapeUse

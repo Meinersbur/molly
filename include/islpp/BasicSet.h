@@ -1,6 +1,7 @@
 #ifndef ISLPP_BASICSET_H
 #define ISLPP_BASICSET_H
 
+#include "islpp_common.h"
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
@@ -8,7 +9,6 @@
 #include <isl/space.h> // enum isl_dim_type;
 
 struct isl_basic_set;
-enum isl_dim_type;
 struct isl_constraint;
 
 namespace llvm {

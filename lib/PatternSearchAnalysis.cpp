@@ -21,10 +21,10 @@ void PatternSearchAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 
 
 void PatternSearchAnalysis::runOnScop(polly::Scop *scop) {
-  auto deps = &getAnalysis<Dependences>(scop->getRegion());
+  //auto deps = &getAnalysis<Dependences>(scop->getRegion());
 
-  auto flow = isl::wrap(deps->getDependences(Dependences::TYPE_RAW)); // Flow dependences
-  flow.dump();
+  //auto flow = isl::wrap(deps->getDependences(Dependences::TYPE_RAW)); // Flow dependences
+  //flow.dump();
 }
 
 
@@ -42,12 +42,12 @@ bool PatternSearchAnalysis::runOnFunction(llvm::Function &F) {
 
   for (auto itRegion = regions.begin(), endRegion = regions.end(); itRegion!=endRegion; ++itRegion) {
     auto region = *itRegion;
-    auto SI = &getAnalysis<ScopInfo>(*region);
-    auto scop = SI->getScop();
-    if (!scop)
-      continue;
+    //auto SI = &getAnalysis<ScopInfo>(*region);
+    //auto scop = SI->getScop();
+    //if (!scop)
+    //  continue;
 
-    runOnScop(scop);
+    //runOnScop(scop);
   }
   return false;
 }

@@ -1,6 +1,7 @@
 #ifndef ISLPP_CTX_H
 #define ISLPP_CTX_H
 
+#include "islpp_common.h"
 #include <isl/options.h>
 
 //#include <llvm/ADT/PointerIntPair.h>

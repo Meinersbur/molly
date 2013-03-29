@@ -2,7 +2,7 @@
 #define MOLLY_FIELDTYPE_H
 
 //#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
-#include <clang/CodeGen/CGMolly.h> // FieldTypeMetadata (member of FieldType)
+#include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType)
 #include <llvm/ADT/ArrayRef.h>
 
 namespace llvm {
@@ -12,7 +12,7 @@ namespace llvm {
   class LLVMContext;
   class Function;
   namespace CodeGen {
-   class FieldTypeMetadata;
+    class FieldTypeMetadata;
   } // namespace CodeGen
 }
 
@@ -119,7 +119,7 @@ namespace molly {
       return metadata.funcGetBroadcast;
     }
     llvm::Function *getFuncSetBroadcast() {
-       assert(metadata.funcSetBroadcast);
+      assert(metadata.funcSetBroadcast);
       return metadata.funcSetBroadcast;
     }
 

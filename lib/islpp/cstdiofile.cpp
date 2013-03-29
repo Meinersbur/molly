@@ -6,60 +6,80 @@
 #include <cerrno>
 #include <cstdio>
 #include <fstream>
+#include <stdio.h>
 
 using namespace molly;
+using namespace std;
 
-
-
-
-CstdioFile::CstdioFile() { 
-//#ifdef WIN32
- 
-#ifdef WIN32
-  //TODO: createTemporaryFileOnDisk
-   auto tmpfilename = _tempnam( NULL, "tmp" );
-#else
- auto tmpfilename = tmpnam("tmp");
+CstdioFile::CstdioFile() {
+#ifdef CSTDIOFILE_OPEN_MEMSTREAM
+  // Unix version
+  fd = open_memstream(&buf, &writtensize);
 #endif
+
+#ifdef CSTDIOFILE_FOPEN_S
+  // _tempnam, fopen_s only available in MSVCRT
+  auto tmpfilename = _tempnam( NULL, "tmp" );
   assert(tmpfilename);
-  #ifdef WIN32
-  auto retval = fopen_s(&fd, tmpfilename, "w+bTD");  
-   assert(retval == NULL);
-#else
-   fd = fopen(tmpfilename, "w+");//TODO: Use open_memstream() on unices
-#endif
- 
+  auto retval = fopen_s(&fd, tmpfilename, "w+bTD"); // T=Specifies a file as temporary. If possible, it is not flushed to disk; D=Specifies a file as temporary. It is deleted when the last file pointer is closed.
+  assert(retval == NULL);
   //_get_errno( &err );
   //printf( _strerror(NULL) );
   free(tmpfilename);
-//#else
-  //fd = tmpfile();
-  //open_memstream();
-//#endif
+#endif
+
+#ifdef CSTDIOFILE_FOPEN
+  tmpfilename = tmpnam("tmp");
+  assert(tmpfilename);
+  fd = fopen(tmpfilename, "w+");
+#endif
+
+#ifdef CSTDIOFILE_TMPFILE
+  // Deleted on fclose
+  fd = tmpfile();
+#endif
+
+#ifdef CSTDIOFILE_CREATETEMPORARYFILEONDISK
+  // LLVM platform-dependent implementation
+  llvm::Path::createTemporaryFileOnDisk
+#endif
 }
 
 
 void CstdioFile::close() {
-      if (fd)
-        fclose(fd);
-      fd = NULL;
+  if (fd)
+    fclose(fd);
+  fd = NULL;
+
+#ifdef CSTDIOFILE_FOPEN
+  unlink(tmpfilename);
+  free(tmpfilename);
+  tmpfilename = NULL;
+#endif
 }
 
 
 std::string CstdioFile::readAsStringAndClose() {
+#ifdef CSTDIOFILE_OPEN_MEMSTREAM
+  return std::string(buf, writtensize);
+#else
   // Determine file size
   fseek(fd, 0, SEEK_END);
   size_t size = ftell(fd);
 
   rewind(fd);
-  std::vector<char> bytes(size);
+  std::vector<char> bytes(size); // Temporary buffer
   fread(&bytes[0], sizeof(char), size, fd);
   close();
   return std::string(&bytes[0], size);
+#endif
 }
 
 
 llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
+#ifdef CSTDIOFILE_OPEN_MEMSTREAM
+  OS.write(buf, writtensize);
+#else
   fpos_t savepos;
   auto retval = fgetpos(tmp.fd, &savepos);
   assert(retval==0);
@@ -77,4 +97,5 @@ llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
 
   fsetpos(tmp.fd, &savepos);
   return OS;
+#endif
 }
