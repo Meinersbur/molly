@@ -8,10 +8,10 @@
 namespace llvm {
   class GlobalVariable;
   class StructType;
-  class Function;
   class CallInst;
   class Instruction;
   class Module;
+  class ModulePass;
 } // namespace llvm
 
 namespace polly {
@@ -60,6 +60,7 @@ namespace molly {
   public:
     FieldType *lookupFieldType(llvm::StructType *ty) ;
     FieldType *getFieldType(llvm::StructType *ty);
+    FieldType *getFieldType(llvm::Value *val) ;
 
     FieldVariable *lookupFieldVariable(llvm::GlobalVariable *gvar);
     FieldVariable *getFieldVariable(llvm::GlobalVariable *gvar);
@@ -70,14 +71,13 @@ namespace molly {
 
      MollyFieldAccess getFieldAccess(const llvm::Instruction *inst);
      MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc);
-  };
+  }; // class FieldDetectionAnalysis
+} // namespace molly
 
-}
 
 namespace llvm {
   class PassRegistry;
   void initializeScopDetectionPass(llvm::PassRegistry&);
-}
-
+} // namespace llvm
 
 #endif /* MOLLY_FIELD_DETECTION_H */

@@ -78,7 +78,7 @@ namespace isl {
     Map() : map(nullptr) {}
     Map(const Map &that) : map(that.takeCopy()) { }
     Map(Map &&that) : map(that.take()) { }
-    ~Map() { give(nullptr); }
+    virtual ~Map() { give(nullptr); }
 
     const Map &operator=(const Map &that) { give(that.takeCopy()); return *this; }
     const Map &operator=(Map &&that) { give(that.take()); return *this; }

@@ -27,7 +27,7 @@ static cl::opt<int> dbranch("malt", cl::desc("Debug Branch"), cl::init(0), cl::O
 
 
 static void initializeMollyPasses(PassRegistry &Registry) {
-  initializeFieldDetectionAnalysisPass(Registry);
+  //initializeFieldDetectionAnalysisPass(Registry);
 }
 #if 0
 namespace {
@@ -233,6 +233,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM) {
   //PM.add(polly::createDependencesPass());
   //PM.add(new PatternSearchAnalysis());
   PM.add(molly::createFieldDistributionPass());
+  PM.add(molly::createModuleFieldGenPass());
   PM.add(molly::createFieldCodeGenPass());
 }
 

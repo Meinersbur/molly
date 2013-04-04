@@ -40,7 +40,7 @@ namespace {
 
 namespace llvm {
   class PassRegistry;
-  void initializeFieldDetectionAnalysisPass(llvm::PassRegistry &);
+  //void initializeFieldDetectionAnalysisPass(llvm::PassRegistry &);
 }
 
 #endif /* MOLLY_LINKALLPASSES_H */

@@ -8,6 +8,7 @@ namespace isl {
 namespace isl {
   class Obj {
   public:
+    virtual ~Obj() {}
     virtual Ctx *getCtx() const = 0;
   }; // class Obj
 } // namepspace isl

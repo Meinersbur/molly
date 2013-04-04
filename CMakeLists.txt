@@ -31,7 +31,7 @@ FIND_PACKAGE(Libgcc REQUIRED)
 
 include_directories(
   ${MOLLY_SOURCE_DIR}/include
-  ${MOLLY_SOURCE_DIR}/../clang/include  #TODO: Make Clang dir configurable
+  ${MOLLY_SOURCE_DIR}/../clang/include  #TODO: Make Clang dir configurable (or required at all?)
   ${MOLLY_BINARY_DIR}/../clang/include  #TODO: Make Clang dir configurable
   ${POLLY_SOURCE_DIR}/include  
   ${POLLY_BINARY_DIR}/include 

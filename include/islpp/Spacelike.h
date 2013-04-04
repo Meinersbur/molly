@@ -16,6 +16,8 @@ namespace isl {
   protected:
     bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos);
   public:
+    virtual ~Spacelike() {}
+
     virtual Space getSpace() const = 0;
 
     virtual unsigned dim(isl_dim_type type) const = 0;    

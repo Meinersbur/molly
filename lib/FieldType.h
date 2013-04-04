@@ -61,6 +61,9 @@ namespace molly {
       this->mollyContext = mollyContext;
       this->module = module;
 
+      localOffsetFunc = NULL;
+      localLengthFunc = NULL;
+
       isdistributed = false;
       this->metadata.readMetadata(module, metadata);
     }
@@ -105,6 +108,11 @@ namespace molly {
       assert(metadata.dimLengths.size() >= 1);
       return metadata.dimLengths;
     }
+    llvm::ArrayRef<int> getLocalLengths() {
+      if (!isDistributed())
+        return getLengths();
+      return localLengths;
+    }
 
     void setDistributed(bool val = true) {
       isdistributed = val;
@@ -122,6 +130,14 @@ namespace molly {
       assert(metadata.funcSetBroadcast);
       return metadata.funcSetBroadcast;
     }
+
+    llvm::Function *localOffsetFunc;
+    llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
+    void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
+
+        llvm::Function *localLengthFunc;
+    llvm::Function *getLocalLengthFunc() { return localLengthFunc; }
+    void setLocalLengthFunc(llvm::Function *func) { assert(func); this->localLengthFunc = func; }
 
   }; // class FieldType
 } // namespace molly

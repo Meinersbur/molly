@@ -83,6 +83,11 @@ FieldType *FieldDetectionAnalysis::getFieldType(llvm::StructType *ty) {
 }
 
 
+FieldType *FieldDetectionAnalysis::getFieldType(llvm::Value *val) {
+  return getFieldType(llvm::cast<llvm::StructType>(val->getType()));
+}
+
+
 FieldVariable *FieldDetectionAnalysis::lookupFieldVariable(GlobalVariable *gvar) {
   auto res = fieldVars.find(gvar);
   if (res == fieldVars.end())

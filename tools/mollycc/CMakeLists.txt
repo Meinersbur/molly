@@ -2,6 +2,9 @@
 add_molly_executable( mollycc driver.cpp cc1as_main.cpp cc1_main.cpp)
 
 target_link_libraries( mollycc 
+  LLVMMolly
+  PollyAnalysis
+  LLVMPolly
   clangFrontendTool
   clangAST
   clangAnalysis
@@ -21,9 +24,7 @@ target_link_libraries( mollycc
   clangStaticAnalyzerFrontend
   clangStaticAnalyzerCheckers
   clangStaticAnalyzerCore
-  PollyAnalysis
-  LLVMPolly
-  LLVMMolly
+  LLVMSupport
 )
 
 #IF (MSVC_IDE)

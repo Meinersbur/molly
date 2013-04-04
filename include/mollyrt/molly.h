@@ -8,19 +8,53 @@ typedef struct { long double x, y; } __float128;
 #include <cstdlib>
 #include <tuple>
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined __clang__
+//#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#elif defined __GNUC__
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif
+
+#if defined(__clang__)
+#define CONCAT(X,...) X ## __VA_ARGS__
+#define MOLLYATTR(...) __attribute__((CONCAT(molly_, __VA_ARGS__)))
+#else
+#define MOLLYATTR(...)
+#endif
+
+#if !defined(__clang__) && (defined(_MSC_VER) || __GNUC__< 4 || (__GNUC__==4 && __GNUC_MINOR__<8))
 #define __attribute__(X)
 #define CXX11ATTRIBUTE(...)
 #else
-#define CXX11ATTRIBUTE(...) [[__VA_ARGS__]]
+//#define CXX11ATTRIBUTE(...) [[__VA_ARGS__]]
+#define CXX11ATTRIBUTE(...)
 #endif
+
+#define MOLLY_COMMUNICATOR_MEMCPY
+
+namespace molly {
+class Communicator;
+} // namespace molly
 
 extern int _cart_lengths[1];
 extern int _cart_local_coord[1];
 extern int _rank_local;
 
+namespace molly {
 typedef int rank_t;
 
+
+
+void init(int &argc, char **&argv, int clusterDims, int *dimLengths, bool *dimPeriodical);
+void finalize();
+
+void broadcast_send(const void *sendbuf, size_t size);
+void broadcast_recv(void *recvbuf, size_t size, rank_t sender);
+
+int cluster_self_coord(int d);
+
+
+} // namespace molly
+#if 0
 template<typename T, int/*size_t*/ length1>
 class Mesh1D {
 public:
@@ -87,7 +121,7 @@ template<typename T, int L1, int L2, int L3, int L4>
 class Mesh4D {
 }; // class Mesh4D
 
-
+#endif
 
 
 
@@ -115,7 +149,7 @@ namespace molly {
 
 
 
-
+#pragma region _make_index_sequence
   // Based on http://stackoverflow.com/a/6454211
   //template<int...> struct index_tuple{}; 
   template<size_t...> 
@@ -156,13 +190,14 @@ namespace molly {
   //struct _make_index_sequence : _index_sequence<0, _indices<>, Types...> {}; // Using inheritancle becasue there are no templated typedefs (outside of classes)
   using _make_index_sequence = _index_sequence<0, _indices<>, Types...>;
   // TODO: Also a version that converts constants parameter packs (instead of type parameter pack)
-
+#pragma endregion
 
   //template<int... List>
   //int select(int i, typename _inttype<List>::type... list) {
   //  return 
   //}
 
+#pragma region _array_partial_subscript
   template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
   class _array_partial_subscript; // Never instantiate, use specializations only 
 
@@ -182,7 +217,7 @@ namespace molly {
     fieldty *owner;
     int coords[nStored]; 
   public:
-    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) __attribute__((molly_inline)) 
+    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) MOLLYATTR(inline)  
       : owner(owner), coords({coords...})   {
         assert(owner);
         //TODO: assertion that all stored are in range
@@ -190,7 +225,8 @@ namespace molly {
 
   private:
     template<size_t... Indices>
-    subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)  __attribute__((molly_inline)) {
+    __attribute__((molly_inline)) 
+    subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)   {
       return subty(owner, coords[Indices]..., appendCoord);
     }
 
@@ -221,7 +257,8 @@ namespace molly {
 
   private:
     template<size_t... Indices>
-    T &getPtrHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int last) __attribute__((molly_inline)) {
+    __attribute__((molly_inline))
+    T &getPtrHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int last)  {
       return *owner->ptr(coords[Indices]..., last);
     }
 
@@ -232,7 +269,7 @@ namespace molly {
       return getPtrHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
     }
   }; // class _array_partial_subscript
-
+#pragma endregion
 
 
   template<int> struct AsInt {
@@ -240,9 +277,29 @@ namespace molly {
   };
 
 #ifndef __clang__
-  template<typename... Args>
-  int __builtin_molly_ptr(Args... coords) {
-    return sizeof...(coords);
+  template<typename F, typename... Args>
+  void *__builtin_molly_ptr(F, Args...) {
+    return NULL;
+  }
+
+    template<typename F, typename... Args>
+  int __builtin_molly_locallength(F, Args...) {
+    return 0;
+  }
+
+  template<typename F, typename... Args>
+  int __builtin_molly_localoffset(F, Args...) {
+    return 0;
+  }
+
+    template<typename F, typename... Args>
+  bool __builtin_molly_islocal(F, Args...) {
+    return false;
+  }
+
+     template<typename F, typename... Args>
+  rank_t __builtin_molly_rankof(F, Args...) {
+    return 0;
   }
 #endif
 
@@ -283,27 +340,33 @@ namespace molly {
     static const int value = Front;
   };
 
+#pragma region _select
   int _select(int i) __attribute__(( molly_inline )) ; // Forward declaration
 
-  template<typename FirstType, typename... Types> 
-  int _select(int i, FirstType first, Types... list) __attribute__(( molly_inline )) {
-    assert(i < (1/*first*/+sizeof...(list)));
+  template<typename FirstType, typename... Types>
+  __attribute__(( molly_inline ))
+  int _select(int i, FirstType first, Types... list)  {
+    assert(i < (int)(1/*first*/+sizeof...(list)));
     if (i == 0)
       return first;
     return _select(i-1, list...); // This is no recursion, every _select has a different signature
   }
 
-  int _select(int i) __attribute__(( molly_inline )) { // overload for compiler-tim termination, should never be called
+  __attribute__(( molly_inline ))
+  int _select(int i) { // overload for compiler-tim termination, should never be called
 #ifdef _MSC_VER
     __assume(false);
 #else
     __builtin_unreachable();
 #endif
   }
+#pragma endregion
+
 
   template<typename T, int Dims>
   class CXX11ATTRIBUTE(molly::field, molly::dimensions(Dims)) field {
-  } __attribute__((molly_field)) ; // class field
+  public:
+  } MOLLYATTR(field); // class field
 
 
   /// A multi-dimensional array; the dimensions must be given at compile-time
@@ -312,16 +375,43 @@ namespace molly {
   // TODO: Support sizeof...(L)==0
   template<typename T, int... L>
   class CXX11ATTRIBUTE(molly::field/*, molly::lengths(L...)*/) array: public field<T, sizeof...(L)> {
-    T dummy;
+    size_t localelts;
+    T *localdata;
+
+  private:
+    size_t coords2idx(typename _inttype<L>::type... coords) {
+      assert(__builtin_molly_islocal(this, coords...));
+      size_t idx = 0;
+      size_t lastlen = 0;
+      for (auto d = Dims-Dims; d<Dims; d+=1) {
+        auto coord = _select(d, coords...);
+        idx = idx*lastlen + coord;
+        lastlen = _select(d, L...);
+      }
+      return idx;
+    }
 
   public:
     typedef T ElementType;
+    static const auto Dims = sizeof...(L);
+
+    ~array() {
+      free(localdata);
+    }
 
     array() {
+      localelts = 1;
+      for (auto d = Dims-Dims; d < Dims; d+=1) {
+        localelts *= __builtin_molly_locallength(this, d);
+      }
+      localdata = (T*)malloc(localelts * sizeof(T));
+
       if (std::getenv("bla")==(char*)-1) {
         // Dead code, but do not optimize away so the template functions get instantiated
         T dummy;
         (void)ptr(static_cast<int>(L)...);
+        (void)__get_local(dummy, static_cast<int>(L)...);
+        (void)__set_local(dummy, static_cast<int>(L)...);
         (void)__get_broadcast(dummy, static_cast<int>(L)...);
         (void)__set_broadcast(dummy, static_cast<int>(L)...);
         (void)__get_master(dummy, static_cast<int>(L)...);
@@ -330,7 +420,7 @@ namespace molly {
     }
 
     int length(int d) __attribute__(( molly_inline ))/*So the loop ranges are not hidden from Molly*/ {
-      assert(0 <= d && d < sizeof...(L));
+      assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
 
@@ -342,14 +432,9 @@ namespace molly {
     }
 
 
-    // TODO: Only allow sizeof...(L) int parameters, at least match the number of dimensions
-    //template<typename... Coords>
-    // T* ptr(Coords... coords) __attribute__((molly_fieldmember)) __attribute__((molly_ptrfunc)) __attribute__((molly_inline)) {
-    /// Synopsis: 
-    ///   T *ptr(int, int, ...)
     /// Returns a pointer to the element with the given coordinates; Molly will track loads and stores to this memory location and insert communication code
-    T *ptr(typename _inttype<L>::type... coords) __attribute__((molly_fieldmember)) __attribute__((molly_ptrfunc)) __attribute__((molly_inline)) {
-      return (T*)__builtin_molly_ptr(this, (static_cast<int>(coords))...);
+    T *ptr(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptrfunc) MOLLYATTR(inline) {
+      return (T*)__builtin_molly_ptr(this, coords...);
     }
 
 
@@ -384,37 +469,38 @@ namespace molly {
         return subty(this, i);
     }
 
-#if 0
-    template<typename Dummy = void>
-    typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, T&, Dummy>::type >::type
-      operator[](int i) {
-        return dummy;
-    }
-
-    template<typename Dummy = void>
-    typename std::enable_if<(sizeof...(L)>1), typename std::conditional<true, _array_partial_subscript<T, typename d, L...>, Dummy>::type >::type
-      operator[](int i) {
-        return _array_partial_subscript<T, sizeof...(L)-1, L...>();
-    }
-#endif
-
     void __get_local(T &val, typename _inttype<L>::type... coords) const  __attribute__((molly_fieldmember)) __attribute__((molly_get_local)) {
+       assert(__builtin_molly_islocal(this, coords...));
     }
-      void __set_local(const T &val, typename _inttype<L>::type... coords) const  __attribute__((molly_fieldmember)) __attribute__((molly_set_local)) {
+    void __set_local(const T &val, typename _inttype<L>::type... coords) const  __attribute__((molly_fieldmember)) __attribute__((molly_set_local)) {
+      assert(__builtin_molly_islocal(this, coords...));
     }
 
-    //template<typename... Coords>
-    //void __get_broadcast(T &val, Coords... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_broadcast)) 
     void __get_broadcast(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_broadcast)) {
+     if (__builtin_molly_islocal(this, coords...)) {
+
+        broadcast_send(&val, sizeof(T));
+      } else {
+        broadcast_recv(&val, sizeof(T), __builtin_molly_rankof(this, coords...));
+      }
     }
     void __set_broadcast(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_broadcast)) {
+      if (__builtin_molly_islocal(this, coords...)) {
+
+        broadcast_send(&val, sizeof(T));
+      } else {
+        // Nonlocal value, forget it!
+      }
     }
 
-       void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) {
+    void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) {
     }
     void __set_master(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_master)) {
     }
 
+    private:
+      int localoffset(int d) { return __builtin_molly_localoffset(this, d); }
+      int locallength(int d) { return __builtin_molly_locallength(this, d); }
   } __attribute__(( molly_lengths(clazz, L) )); // class array
 
 
@@ -430,16 +516,15 @@ namespace molly {
   }; // class mesh
 
 
+  //void init();
+  //void finalize();
 
-  static class MollyInit {
-  public:
-    MollyInit() {
-      // This will be called multiple times
-      int x = _cart_lengths[0]; // To avoid that early optimizers throw it away 
-      int y = _cart_local_coord[0];
-    }
-    ~MollyInit() {
-    }
-  } molly_global;
+    rank_t getMyRank();
+    bool isMaster();
+
+    int getClusterDims();
+    int getClusterLength(int d);
+
+
 
 } // namespace molly

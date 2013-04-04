@@ -1,6 +1,6 @@
+#include "molly/FieldCodeGen.h"
 
 #include <polly/ScopPass.h>
-#include "molly/FieldCodeGen.h"
 #include "molly/FieldDistribution.h"
 #include "molly/FieldDetection.h"
 #include "MollyContextPass.h"
@@ -15,6 +15,7 @@
 #include <llvm/IR/IRBuilder.h>
 //#include <polly/LinkAllPasses.h>
 #include <polly/ScopPass.h>
+#include <llvm/IR/Intrinsics.h>
 //#include <llvm/Transforms/Utils/ModuleUtils.h> // appendToGlobalCtors
 
 
@@ -49,6 +50,89 @@ namespace molly {
 
 
 
+  class ModuleFieldGen : public ModulePass {
+  private:
+    bool changed;
+  public:
+    static char ID;
+    ModuleFieldGen() : ModulePass(ID) {
+    }
+
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.addRequiredTransitive<MollyContextPass>();
+      AU.addRequiredTransitive <FieldDetectionAnalysis>();
+    }
+
+
+
+    Function *emitLocalLength(Module &M, FieldType *ftype) {
+      auto &context = M.getContext();
+      auto llvmTy = ftype->getType();
+      auto nDims = ftype->getNumDimensions();
+      auto intTy = Type::getInt32Ty(context);
+      auto lengths = ftype->getLengths();
+
+      SmallVector<Type*, 5> argTys;
+      argTys.push_back( PointerType::getUnqual(llvmTy) );
+      argTys.append(nDims, Type::getInt32Ty(context));
+      auto localLengthFuncTy = FunctionType::get(Type::getInt32Ty(context), argTys, false);
+
+      auto localLengthFunc = Function::Create(localLengthFuncTy, GlobalValue::InternalLinkage, "molly_localoffset", &M);
+      auto dimArg = &localLengthFunc->getArgumentList().front();
+
+      auto entryBB = BasicBlock::Create(context, "Entry", localLengthFunc); 
+      auto defaultBB = BasicBlock::Create(context, "Default", localLengthFunc); 
+      new UnreachableInst(context, defaultBB);
+
+      //ReturnInst::Create(context, NULL, entryBB);
+      IRBuilder<> builder(entryBB);
+      builder.SetInsertPoint(entryBB);
+
+      auto sw = builder.CreateSwitch(dimArg, defaultBB, nDims);
+      auto d = 0;
+      for (auto itCase = sw->case_begin(), endCase = sw->case_end(); itCase!=endCase; ++itCase) {
+        itCase.setValue(ConstantInt::get(Type::getInt32Ty(context), d));
+
+        auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc); 
+        ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]) , caseBB); 
+
+        itCase.setSuccessor(caseBB);
+
+        d+=1;
+      }
+
+      changed = true;
+      ftype->setLocalLengthFunc(localLengthFunc);
+      return localLengthFunc;
+    }
+
+    void runOnFieldType(Module &M, FieldType *ftype) {
+      emitLocalLength(M, ftype);
+    }
+
+    virtual bool runOnModule(Module &M) {
+      changed = false;
+      auto FD = &getAnalysis<FieldDetectionAnalysis>();
+
+      auto &ftypes = FD->getFieldTypes();
+      for (auto it = ftypes.begin(), end = ftypes.end(); it!=end; ++it) {
+        auto ftype = it->second;
+        runOnFieldType(M, ftype);
+      }
+
+      return changed;
+    }
+  }; // class ModuleFieldGen
+
+
+    llvm::ModulePass *createModuleFieldGenPass() {
+      return new ModuleFieldGen();
+    }
+
+  char ModuleFieldGen::ID = 0;
+  static RegisterPass<ModuleFieldGen> ModuleFieldGenRegistration("molly-modulegen", "Molly - Code generation per module", false, false);
+
+
 
   class FieldCodeGen : public FunctionPass {
   private:
@@ -70,6 +154,25 @@ namespace molly {
       auto valueSpace = createAlloca(val->getType(), name);
       builder.CreateStore(val, valueSpace);
       return valueSpace;
+    }
+
+    void emitLocalLengthCall(CallInst *callInst) {
+      auto &context = callInst->getContext();
+      auto bb = callInst->getParent();
+
+      auto selfArg = callInst->getArgOperand(0);
+      auto dimArg = callInst->getArgOperand(1);
+
+      auto fty = fields->getFieldType(selfArg);
+      auto locallengthFunc = fty->getLocalLengthFunc();
+      assert(locallengthFunc);
+
+      //TODO: Optimize for common case where dim arg is constant, or will LLVM do proper inlining itself?
+
+      // BuilderTy builder(bb);
+      //builder.SetInsertPoint(callInst);
+      callInst->setCalledFunction(locallengthFunc);
+      changed = true;
     }
 
   public:
@@ -191,6 +294,12 @@ bool FieldCodeGen::runOnFunction(Function &F) {
 
   for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
     auto instr = *it;
+    if (auto callInstr = dyn_cast<CallInst>(instr)) {
+      auto calledFunc = callInstr->getCalledFunction();
+      if (calledFunc && calledFunc->getIntrinsicID() == Intrinsic::molly_locallength) {
+        emitLocalLengthCall(callInstr);
+      }
+    }
 
     auto access = fields->getFieldAccess(instr);
     if (!access.isValid())

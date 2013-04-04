@@ -3,6 +3,7 @@
 #include <cstddef>
 #include "mollyrt/molly.h"
 
+#include <mpi.h>
 
 int _cart_lengths[1];
 int _cart_local_coord[1];
@@ -24,8 +25,8 @@ namespace molly {
     virtual bool isMaster() { return false; }
 #pragma endregion
 
-#pragma region Communication buffers
 
+#pragma region Communication buffers
     virtual void *createSendBuffer(size_t length, uint32_t destRank) { }
     virtual void freeSendBuffer(void  *buf) {}
     virtual void sendAll() {}

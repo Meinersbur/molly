@@ -4,7 +4,7 @@ set CLANG_ARGS_WIN32=-std=c++11 -O3 -g -fno-exceptions -fno-cxx-exceptions -fno-
 set CLANG_ARGS_MINGW=-std=c++11 -O3 -g -IC:\Users\Meinersbur\src\molly\molly\include\mollyrt -target "i686-pc-mingw32"
 set LLVM_ARGS=-mllvm -debug-pass=Details -mllvm -debug 
 set POLLY_ARGS=-mllvm -polly-report
-set MOLLY_ARGS=-mllvm -molly -mllvm -shape=4 -DNDEBUG
+set MOLLY_ARGS=-mllvm -molly -mllvm -shape=4 -DNDEBUG -D__mollycc__ -fms-extensions
 
 clang %CD%/stencil.cpp %DRIVER_ARGS% %CLANG_ARGS_WIN32% -S -emit-llvm -o %CD%/stencil.ll   2> clangArgs.txt
 
