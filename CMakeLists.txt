@@ -65,4 +65,4 @@ endmacro(add_molly_library)
 
 add_subdirectory(lib)
 add_subdirectory(tools)
-add_subdirectory(tests)
+add_subdirectory(examples)

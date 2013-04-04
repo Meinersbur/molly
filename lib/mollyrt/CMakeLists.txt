@@ -31,15 +31,6 @@ macro(clang_compile object_file source)
     DEPENDS clang ${SOURCE_DEPS})
 endmacro()
 
-macro(mollycc_compile object_file source)
-  parse_arguments(SOURCE "CFLAGS;DEPS" "" ${ARGN})
-  get_filename_component(source_rpath ${source} REALPATH)
-  add_custom_command(
-    OUTPUT ${object_file}
-    COMMAND mollycc ${SOURCE_CFLAGS} -D__mollycc__ -c -o "${object_file}" ${source_rpath}
-    MAIN_DEPENDENCY ${source}
-    DEPENDS clang ${SOURCE_DEPS})
-endmacro()
 
 clang_compile(molly.bc molly.cpp CFLAGS -target i686-pc-mingw32 -std=gnu++11 -fms-extensions -D__mollycc__ -emit-llvm-bc -IC:/Users/Meinersbur/src/molly/molly/include -I${MPI_CXX_INCLUDE_PATH} DEPS ${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h)
 

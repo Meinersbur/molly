@@ -1,0 +1,4 @@
+clang version 3.3 
+Target: i686-pc-win32
+Thread model: posix
+clang.exe: error: no such file or directory: 'C:\Users\Meinersbur\src\molly\molly\tests\stencil/hello.c'

@@ -1,6 +1,0 @@
-clang version 3.3 
-Target: i686-pc-mingw32
-Thread model: posix
- "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/mollycc.exe" -cc1 -triple i686-pc-mingw32 -S -disable-free -main-file-name stencil.cpp -mrelocation-model static -mdisable-fp-elim -fmath-errno -mconstructor-aliases -target-cpu pentium4 -momit-leaf-frame-pointer -v -v -resource-dir "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug\\..\\lib\\clang\\3.3" -D NDEBUG -O3 -std=c++11 -fdeprecated-macro -fno-dwarf-directory-asm -ferror-limit 19 -fmessage-length 0 -mstackrealign -fno-use-cxa-atexit -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -mllvm -debug -mllvm -debug-pass=Details -mllvm -debug -mllvm -polly-report -mllvm -molly -mllvm -shape=4 -o C:/Users/MEINER~1/AppData/Local/Temp/stencil-533640.s -x c++ "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.cpp"
-clang (LLVM option parsing): for the -debug option: may only occur zero or one times!
-Args: clang (LLVM option parsing) -debug -debug-pass=Details -debug -polly-report -molly -shape=4 

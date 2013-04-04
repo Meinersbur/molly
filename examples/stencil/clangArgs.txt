@@ -1,19 +1,17 @@
 clang version 3.3 
 Target: i686-pc-win32
 Thread model: posix
-mollycc: warning: argument unused during compilation: '-L/c/Users/Meinersbur/src/molly/build32_mingw/lib'
- "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/mollycc.exe" -cc1 -triple i686-pc-win32 -emit-obj -disable-free -main-file-name stencil.cpp -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -target-cpu pentium4 -momit-leaf-frame-pointer -v -resource-dir "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug\\..\\lib\\clang\\3.3" -internal-isystem C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/../lib/clang/3.3/include -internal-isystem "C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\VC\\include" -internal-isystem "C:\\Program Files (x86)\\Windows Kits\\8.0\\\\include" -O3 -std=c++11 -fdeprecated-macro -ferror-limit 19 -fmessage-length 0 -mstackrealign -fno-use-cxa-atexit -fms-extensions -fms-compatibility -fmsc-version=1300 -fdelayed-template-parsing -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -mllvm -debug -mllvm -polly -mllvm -polly-report -o C:/Users/MEINER~1/AppData/Local/Temp/stencil-497238.o -x c++ "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.cpp"
-Args: clang (LLVM option parsing) -debug -polly -polly-report 
+ "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/clang.exe" -cc1 -triple i686-pc-win32 -emit-llvm -disable-free -main-file-name stencil.cpp -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -target-cpu pentium4 -momit-leaf-frame-pointer -v -g -coverage-file "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.ll" -resource-dir "C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug\\..\\lib\\clang\\3.3" -I "C:\\Users\\Meinersbur\\src\\molly\\molly\\include\\mollyrt" -internal-isystem C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/../lib/clang/3.3/include -internal-isystem "C:\\Program Files (x86)\\Microsoft Visual Studio 11.0\\VC\\include" -internal-isystem "C:\\Program Files (x86)\\Windows Kits\\8.0\\\\include" -O3 -std=c++11 -fdeprecated-macro -ferror-limit 19 -fmessage-length 0 -mstackrealign -fno-use-cxa-atexit -fms-extensions -fms-compatibility -fmsc-version=1300 -fdelayed-template-parsing -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -o "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.ll" -x c++ "C:\\Users\\Meinersbur\\src\\molly\\molly\\tests\\stencil/stencil.cpp"
 clang -cc1 version 3.3 based upon LLVM 3.3svn default target i686-pc-win32
 #include "..." search starts here:
 #include <...> search starts here:
+ C:\Users\Meinersbur\src\molly\molly\include\mollyrt
  C:/Users/Meinersbur/src/molly/build32_vc11/bin/Debug/../lib/clang/3.3/include
  C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include
  C:\Program Files (x86)\Windows Kits\8.0\\include
- C:/Users/Meinersbur/src/molly/molly/include/mollyrt
 End of search list.
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
@@ -34,7 +32,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: no
 #define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
@@ -58,7 +56,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: no
 #define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: unknown type name '_VARIADIC_CALL_OPT_X1'
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
@@ -95,7 +93,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: no
 #define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: expected ';' after top level declarator
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
@@ -135,7 +133,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: no
 #define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:156:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
@@ -159,7 +157,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:949:9: no
 #define _VARIADIC_CALL_OPT_X1(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
@@ -180,7 +178,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
@@ -204,7 +202,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: unknown type name '_VARIADIC_CALL_OPT_X2'
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
@@ -241,7 +239,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: expected ';' after top level declarator
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
@@ -281,7 +279,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:224:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
@@ -305,7 +303,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:225:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const, , )
@@ -326,7 +324,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:225:21: error: too many arguments provided to function-like macro invocation
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const, , )
@@ -350,7 +348,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:225:21: error: unknown type name '_VARIADIC_CALL_OPT_X2'
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const, , )
@@ -387,7 +385,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xstddef:982:9: no
 #define _VARIADIC_CALL_OPT_X2(FUNC, X1, X2, X3, X4, \
         ^
 In file included from C:\Users\Meinersbur\src\molly\molly\tests\stencil/stencil.cpp:2:
-In file included from C:/Users/Meinersbur/src/molly/molly/include/mollyrt\molly.h:6:
+In file included from C:\Users\Meinersbur\src\molly\molly\include\mollyrt\molly.h:6:
 In file included from C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\type_traits:1820:
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\xrefwrap:225:21: error: expected ';' after top level declarator
 _VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const, , )

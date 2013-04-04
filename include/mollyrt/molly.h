@@ -379,15 +379,18 @@ namespace molly {
     T *localdata;
 
   private:
-    size_t coords2idx(typename _inttype<L>::type... coords) {
+    size_t coords2idx(typename _inttype<L>::type... coords) const {
       assert(__builtin_molly_islocal(this, coords...));
       size_t idx = 0;
       size_t lastlen = 0;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
+        auto len = _select(d, L...);
         auto coord = _select(d, coords...);
+        assert(0 <= coord && coord < lastlen);
         idx = idx*lastlen + coord;
-        lastlen = _select(d, L...);
+        lastlen = len;
       }
+      assert(0 <= idx && idx < localelts);
       return idx;
     }
 
@@ -419,7 +422,7 @@ namespace molly {
       }
     }
 
-    int length(int d) __attribute__(( molly_inline ))/*So the loop ranges are not hidden from Molly*/ {
+    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ {
       assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
@@ -427,7 +430,7 @@ namespace molly {
     /// Overload for length(int) for !D
     template<typename Dummy = void>
     typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, int, Dummy>::type >::type
-      length() __attribute__(( molly_inline )) {
+      length() MOLLYATTR(inline) {
         return length(0);
     }
 
@@ -469,27 +472,51 @@ namespace molly {
         return subty(this, i);
     }
 
-    void __get_local(T &val, typename _inttype<L>::type... coords) const  __attribute__((molly_fieldmember)) __attribute__((molly_get_local)) {
+#pragma region Local access
+    void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) {
        assert(__builtin_molly_islocal(this, coords...));
+       auto idx = coords2idx(coords...);
+       assert(0 <= idx && idx < localelts);
+       assert(localdata);
+       val = localdata[idx];
     }
-    void __set_local(const T &val, typename _inttype<L>::type... coords) const  __attribute__((molly_fieldmember)) __attribute__((molly_set_local)) {
+    void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) {
       assert(__builtin_molly_islocal(this, coords...));
+      auto idx = coords2idx(coords...);
+      assert(0 <= idx && idx < localelts);
+      assert(localdata);
+      localdata[idx] = val;
+    }
+    T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) {
+      assert(__builtin_molly_islocal(this, coords...));
+      auto idx = coords2idx(coords...);
+      assert(0 <= idx && idx < localelts);
+      assert(localdata);
+      return &localdata[idx];
+    }
+    const T *__ptr_local(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
+      return const_cast<T*>(__ptr_local(coords...));
+    }
+#pragma endregion
+
+    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
+      return __builtin_molly_islocal(this, coords...);
     }
 
-    void __get_broadcast(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_broadcast)) {
-     if (__builtin_molly_islocal(this, coords...)) {
-
-        broadcast_send(&val, sizeof(T));
+    void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) {
+     if (isLocal(coords...)) {
+        __get_local(val, coords...);
+        broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result
       } else {
         broadcast_recv(&val, sizeof(T), __builtin_molly_rankof(this, coords...));
       }
     }
-    void __set_broadcast(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_broadcast)) {
-      if (__builtin_molly_islocal(this, coords...)) {
-
-        broadcast_send(&val, sizeof(T));
+    void __set_broadcast(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_broadcast) {
+      if (isLocal(coords...)) {
+        __set_local(val, coords...);
       } else {
         // Nonlocal value, forget it!
+        // In debug mode, we could check whether it is really equal on all ranks
       }
     }
 
