@@ -433,6 +433,7 @@ int main(int argc_, const char **argv_) {
   llvm::InitializeAllTargets();
   ParseProgName(argv, SavedStrings, TheDriver);
 
+
   // Handle CC_PRINT_OPTIONS and CC_PRINT_OPTIONS_FILE.
   TheDriver.CCPrintOptions = !!::getenv("CC_PRINT_OPTIONS");
   if (TheDriver.CCPrintOptions)
@@ -478,8 +479,10 @@ int main(int argc_, const char **argv_) {
   // Molly: The simple way, only works for mingw
   // TODO: LIBPATH? Or just let the user handle it all by himself?
   // TODO: Just do it manually
-  argv.push_back("-L/c/Users/Meinersbur/src/molly/build32_mingw/lib");
-  argv.push_back("-lMollyRT");
+  //argv.push_back("-L/c/Users/Meinersbur/src/molly/build32_mingw/lib");
+  //argv.push_back("-lMollyRT");
+  TheDriver.CCCIsCXX = true; // Molly is always C++
+  TheDriver.CCCIsCPP = false;
 // END Molly
   OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;

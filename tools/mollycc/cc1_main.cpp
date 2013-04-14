@@ -93,10 +93,12 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   //                                static_cast<void*>(&Clang->getDiagnostics()));
 
 // BEGIN Molly
+#if 0
   if (Clang->getLangOpts().CPlusPlus) {
     Clang->getHeaderSearchOpts().AddPath("C:/Users/Meinersbur/src/molly/molly/include/mollyrt/", frontend::CXXSystem, false, false);
-    Clang->getPreprocessorOpts().addMacroDef("__mollycc__");
   }
+#endif
+  Clang->getPreprocessorOpts().addMacroDef("__mollycc__");
 // END Molly
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)

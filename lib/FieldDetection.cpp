@@ -65,6 +65,21 @@ bool FieldDetectionAnalysis::runOnModule(Module &M) {
 }
 
 
+void FieldDetectionAnalysis::releaseMemory() {
+  for (auto it = fieldVars .begin(), end = fieldVars.end(); it != end; ++it) {
+    auto fvar = it->second;
+    delete fvar;
+  }
+  fieldVars.clear();
+
+  for (auto it = fieldTypes.begin(), end = fieldTypes.end(); it != end; ++it) {
+    auto fty = it->second;
+    delete fty;
+  }
+  fieldTypes.clear();
+}
+
+
 FieldType *FieldDetectionAnalysis::lookupFieldType(llvm::StructType *ty) {
   auto result = fieldTypes.find(ty);
   if (result == fieldTypes.end())
@@ -84,7 +99,11 @@ FieldType *FieldDetectionAnalysis::getFieldType(llvm::StructType *ty) {
 
 
 FieldType *FieldDetectionAnalysis::getFieldType(llvm::Value *val) {
-  return getFieldType(llvm::cast<llvm::StructType>(val->getType()));
+  auto ty = val->getType();
+  if (auto pty = dyn_cast<PointerType>(ty)) {
+    ty = pty->getPointerElementType();
+  }
+  return getFieldType(llvm::cast<llvm::StructType>(ty));
 }
 
 

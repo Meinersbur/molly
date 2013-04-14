@@ -63,6 +63,7 @@ namespace molly {
 
       localOffsetFunc = NULL;
       localLengthFunc = NULL;
+      islocalFunc = NULL;
 
       isdistributed = false;
       this->metadata.readMetadata(module, metadata);
@@ -75,6 +76,8 @@ namespace molly {
     llvm::Module *getModule();
 
   public:
+    ~FieldType();
+
     static FieldType *createFromMetadata(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       return new FieldType(mollyContext, module, metadata);
     }
@@ -135,9 +138,14 @@ namespace molly {
     llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
     void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
 
-        llvm::Function *localLengthFunc;
+    llvm::Function *localLengthFunc;
     llvm::Function *getLocalLengthFunc() { return localLengthFunc; }
     void setLocalLengthFunc(llvm::Function *func) { assert(func); this->localLengthFunc = func; }
+
+    llvm::Function *islocalFunc;
+    llvm::Function *getIslocalFunc() { assert(metadata.funcIslocal); return metadata.funcIslocal; }
+    //void setIslocalFunc(llvm::Function *func) { assert(func); this->islocalFunc = func; }
+
 
   }; // class FieldType
 } // namespace molly

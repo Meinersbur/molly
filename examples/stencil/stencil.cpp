@@ -48,17 +48,17 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-
+#if 0
 int crash32()
 {
   return (1 << 31) % -1;
 }
 
 //int dynval();
-
 long long crash64()
 {
   return (1LL << 63) % -1;
 }
 
 //int someglobalfield = dynval();
+#endif

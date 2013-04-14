@@ -50,6 +50,7 @@ namespace molly {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     virtual bool runOnModule(llvm::Module &M);
+    virtual void releaseMemory();
 
     llvm::DenseMap<llvm::GlobalVariable*, FieldVariable*> &getFieldVariables() { return fieldVars; }
     llvm::DenseMap<llvm::StructType*, FieldType*> &getFieldTypes() { return fieldTypes; } // TODO: return a list of FieldType*, not a map

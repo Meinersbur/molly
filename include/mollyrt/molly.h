@@ -50,7 +50,8 @@ void finalize();
 void broadcast_send(const void *sendbuf, size_t size);
 void broadcast_recv(void *recvbuf, size_t size, rank_t sender);
 
-int cluster_self_coord(int d);
+int cart_dims();
+int cart_self_coord(int d);
 
 
 } // namespace molly
@@ -341,11 +342,11 @@ namespace molly {
   };
 
 #pragma region _select
-  int _select(int i) __attribute__(( molly_inline )) ; // Forward declaration
+  static inline int _select(int i) __attribute__(( molly_inline )) ; // Forward declaration
 
   template<typename FirstType, typename... Types>
   __attribute__(( molly_inline ))
-  int _select(int i, FirstType first, Types... list)  {
+  static inline int _select(int i, FirstType first, Types... list)  {
     assert(i < (int)(1/*first*/+sizeof...(list)));
     if (i == 0)
       return first;
@@ -353,7 +354,7 @@ namespace molly {
   }
 
   __attribute__(( molly_inline ))
-  int _select(int i) { // overload for compiler-tim termination, should never be called
+  static inline int _select(int i) { // overload for compiler-tim termination, should never be called
 #ifdef _MSC_VER
     __assume(false);
 #else
@@ -366,7 +367,7 @@ namespace molly {
   template<typename T, int Dims>
   class CXX11ATTRIBUTE(molly::field, molly::dimensions(Dims)) field {
   public:
-  } MOLLYATTR(field); // class field
+  }; // class field
 
 
   /// A multi-dimensional array; the dimensions must be given at compile-time
@@ -379,19 +380,39 @@ namespace molly {
     T *localdata;
 
   private:
-    size_t coords2idx(typename _inttype<L>::type... coords) const {
+    size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
       assert(__builtin_molly_islocal(this, coords...));
       size_t idx = 0;
-      size_t lastlen = 0;
+      size_t lastlocallen = 0;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
+        auto locallen = __builtin_molly_locallength(this, d);
         auto coord = _select(d, coords...);
-        assert(0 <= coord && coord < lastlen);
-        idx = idx*lastlen + coord;
-        lastlen = len;
+        auto clustercoord = cart_self_coord(d);
+        auto localcoord = clustercoord*locallen - coord;
+        assert(0 <= localcoord && localcoord < locallen);
+        idx = idx*lastlocallen + localcoord;
+        lastlocallen = locallen;
       }
       assert(0 <= idx && idx < localelts);
       return idx;
+    }
+
+    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) {
+      for (auto d = Dims-Dims; d<Dims; d+=1) {
+        auto len = _select(d, L...);
+        auto locallen = __builtin_molly_locallength(this, d);
+        auto coord = _select(d, coords...);
+        auto clustercoord = cart_self_coord(d);
+
+        auto localbegin = clustercoord*locallen;
+        auto localend = localbegin+localbegin;
+
+        if (localbegin <= coord && coord < localend)
+          continue;
+        return false;
+      }
+      return true;
     }
 
   public:
@@ -419,6 +440,7 @@ namespace molly {
         (void)__set_broadcast(dummy, static_cast<int>(L)...);
         (void)__get_master(dummy, static_cast<int>(L)...);
         (void)__set_master(dummy, static_cast<int>(L)...);
+        (void)isLocal(L...);
       }
     }
 
@@ -456,7 +478,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      operator[](int i) __attribute__((molly_inline)) {
+      operator[](int i) MOLLYATTR(inline) {
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -466,7 +488,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      operator[](int i) __attribute__((molly_inline)) {
+      operator[](int i) MOLLYATTR(inline) {
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return subty(this, i);
@@ -499,9 +521,9 @@ namespace molly {
     }
 #pragma endregion
 
-    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
-      return __builtin_molly_islocal(this, coords...);
-    }
+    //bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
+    //  return __builtin_molly_islocal(this, coords...);
+    //}
 
     void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) {
      if (isLocal(coords...)) {

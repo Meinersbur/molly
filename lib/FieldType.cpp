@@ -47,6 +47,11 @@ llvm::Module *FieldType::getModule() {
 }
 
 
+FieldType::~FieldType() {
+  int a = 0;
+}
+
+
 isl::Set FieldType::getLogicalIndexset() {
   auto ctx = getIslContext();
 

@@ -58,11 +58,14 @@ namespace molly {
     ModuleFieldGen() : ModulePass(ID) {
     }
 
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequiredTransitive<MollyContextPass>();
-      AU.addRequiredTransitive <FieldDetectionAnalysis>();
-    }
 
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.addRequired<MollyContextPass>();
+      AU.addRequired<FieldDetectionAnalysis>();
+
+      AU.addPreserved<MollyContextPass>();
+      AU.addPreserved<FieldDetectionAnalysis>();
+    }
 
 
     Function *emitLocalLength(Module &M, FieldType *ftype) {
@@ -125,9 +128,9 @@ namespace molly {
   }; // class ModuleFieldGen
 
 
-    llvm::ModulePass *createModuleFieldGenPass() {
-      return new ModuleFieldGen();
-    }
+  llvm::ModulePass *createModuleFieldGenPass() {
+    return new ModuleFieldGen();
+  }
 
   char ModuleFieldGen::ID = 0;
   static RegisterPass<ModuleFieldGen> ModuleFieldGenRegistration("molly-modulegen", "Molly - Code generation per module", false, false);
@@ -172,6 +175,17 @@ namespace molly {
       // BuilderTy builder(bb);
       //builder.SetInsertPoint(callInst);
       callInst->setCalledFunction(locallengthFunc);
+      changed = true;
+    }
+
+    void emitIslocalCall(CallInst *callInstr) {
+      auto &context = callInstr->getContext();
+      auto selfArg = callInstr->getArgOperand(0);
+      auto fty = fields->getFieldType(selfArg);
+
+      // This is just a redirection to the implentation
+      callInstr->setCalledFunction(fty->getIslocalFunc());
+
       changed = true;
     }
 
@@ -296,8 +310,17 @@ bool FieldCodeGen::runOnFunction(Function &F) {
     auto instr = *it;
     if (auto callInstr = dyn_cast<CallInst>(instr)) {
       auto calledFunc = callInstr->getCalledFunction();
-      if (calledFunc && calledFunc->getIntrinsicID() == Intrinsic::molly_locallength) {
-        emitLocalLengthCall(callInstr);
+      if (calledFunc) {
+        switch (calledFunc->getIntrinsicID()) {
+        case Intrinsic::molly_locallength:
+          emitLocalLengthCall(callInstr);
+          break;
+        case Intrinsic::molly_islocal:
+          emitIslocalCall(callInstr);
+          break;
+        default:
+          break;
+        }
       }
     }
 
