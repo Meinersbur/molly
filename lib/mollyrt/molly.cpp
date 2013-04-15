@@ -1,9 +1,9 @@
-#include <mollyrt/molly.h>
+#include "molly.h"
 
 #include <malloc.h>
 #include <cstdio>
 #include <mpi.h> 
-
+ 
 using namespace molly;
 
 extern "C" void test() {

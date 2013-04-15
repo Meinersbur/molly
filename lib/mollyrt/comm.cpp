@@ -1,7 +1,7 @@
+#include "molly.h"
 
 #include <cstdint>
 #include <cstddef>
-#include "mollyrt/molly.h"
 
 #include <mpi.h>
 

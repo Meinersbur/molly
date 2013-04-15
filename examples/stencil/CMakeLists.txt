@@ -1,59 +1,87 @@
-if(0)
-get_filename_component(stencilcpp_rpath stencil.cpp REALPATH)
-#message(STATUS "stencil.cpp: ${stencilcpp_rpath}")
 
-# Compile without mollycc
+### Compile using standard compiler
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil.exe ABSOLUTE)
 include_directories(${MOLLY_SOURCE_DIR}/include/mollyrt)
-add_llvm_executable(stencil stencil.cpp)
+add_llvm_example(stencil stencil.cpp)
 set_target_properties(stencil PROPERTIES FOLDER "Molly")
-target_link_libraries(stencil MollyRT)
-endif()
+target_link_libraries(stencil MollyRT ${MPI_CXX_LIBRARIES})
 
 
 
-### Compile using mollycc, link using LTO (using molly.ll)
-get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-ll.exe ABSOLUTE)
-mollyccll_compile(${stencil_path} stencil.cpp
+### Compile using mollycc, link to MollyRT
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc.exe ABSOLUTE)
+mollycc_compile(${stencil_path} 
+  SOURCES stencil.cpp
   FLAGS -v -O3 -g -mllvm -shape=4 -save-temps
-  COMMENT "mollcc molly.ll stencil.cpp"
-)
+  LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES}
+  COMMENT "mollcc MollyRT stencil.cpp")
+
+add_custom_target(stencil-mollycc ALL
+  DEPENDS ${stencil_path}
+  COMMENT "Built stencil using mollycc"
+  VERBATIM)
+
+
+
+### Compile using mollycc, link to MollyRT-o
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-o.exe ABSOLUTE)
+mollycc_o_compile(${stencil_path} 
+  SOURCES stencil.cpp
+  FLAGS -v -O3 -g -mllvm -shape=4
+  COMMENT "mollcc molly.o stencil.cpp")
+
+add_custom_target(stencil-mollycc-o ALL
+  DEPENDS ${stencil_path}
+  COMMENT "Compiling stencil using mollycc-a"
+  VERBATIM)
+  
+add_dependencies(stencil-mollycc-o MollyRT-o)
+
+
+
+### Compile using mollycc, link to MollyRT-a
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-a.exe ABSOLUTE)
+mollycc_a_compile(${stencil_path} 
+  SOURCES stencil.cpp
+  FLAGS -v -O3 -g -mllvm -shape=4
+  COMMENT "mollcc molly.a stencil.cpp")
+
+add_custom_target(stencil-mollycc-a ALL
+  DEPENDS ${stencil_path}
+  COMMENT "Compiling stencil using mollycc-a"
+  VERBATIM)
+  
+add_dependencies(stencil-mollycc-a MollyRT-a)
+
+
+
+### Compile using mollycc, link to MollyRT-ll
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-ll.exe ABSOLUTE)
+mollycc_ll_compile(${stencil_path} 
+  SOURCES stencil.cpp
+  FLAGS -v -O3 -g -mllvm -shape=4
+  COMMENT "mollcc molly.ll stencil.cpp")
+
 add_custom_target(stencil-mollycc-ll ALL
   DEPENDS ${stencil_path}
-# SOURCES
   COMMENT "Compiling stencil using mollycc-ll"
   VERBATIM)
+  
 add_dependencies(stencil-mollycc-ll MollyRT-ll)
   
 
-if(0)
-### Compile using mollycc, link using LTO
-get_filename_component(stencil_mollybc_rpath ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollybc.exe ABSOLUTE)
 
-mollybc_compile(${stencil_mollybc_rpath} ${stencilcpp_rpath}
-  CFLAGS -v -O3 -g -std=c++11 -fms-extensions -target "i686-pc-mingw32" -mllvm -shape=4
-  COMMENT "Compiling stencil using mollycc molly.bc...")
+### Compile using mollycc, link to MollyRT-bc
+get_filename_component(stencil_path ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-bc.exe ABSOLUTE)
+mollycc_bc_compile(${stencil_path} 
+  SOURCES stencil.cpp
+  FLAGS -v -O3 -g -mllvm -shape=4
+  COMMENT "mollcc molly.bc stencil.cpp")
 
-add_custom_target(stencil-mollybc ALL 
-  DEPENDS ${stencil_mollybc_rpath}
-#  SOURCES ${stencilcpp_rpath}
+add_custom_target(stencil-mollycc-bc ALL
+  DEPENDS ${stencil_path}
+  COMMENT "Compiling stencil using mollycc-bc"
   VERBATIM)
-add_dependencies(stencil-mollybc MollyRT)
-set_target_properties(stencil-mollybc PROPERTIES FOLDER "Molly")
+  
+add_dependencies(stencil-mollycc-bc MollyRT-bc)
 
-
-
-
-### Compile using mollycc, link classically
-get_filename_component(stencil_mollycc_rpath ${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc.exe ABSOLUTE)
-
-mollycc_compile(${stencil_mollycc_rpath} ${stencilcpp_rpath}
-  CFLAGS -mllvm -shape=4
-  COMMENT "Compiling stencil using mollycc -lMollyRT...")
-
-add_custom_target(stencil-mollycc ALL 
-  DEPENDS ${stencil_mollycc_rpath}
-#  SOURCES ${stencilcpp_rpath}
-  VERBATIM)
-add_dependencies(stencil-mollycc MollyRT)
-set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
-endif()
