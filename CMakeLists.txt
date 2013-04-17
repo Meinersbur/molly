@@ -45,26 +45,35 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 
+macro(add_molly_library name)
+  parse_arguments(PARM "LINK_LIBS;LINK_COMPONENTS;TARGET_DEPENDS;EXTERNAL_LIBS;SOURCES;HEADERS;HEADER_DIRS" "" ${ARGN})
+  
+  set(_headers)
+  if (MSVC_IDE OR XCODE)
+    file(GLOB _dir_headers
+      ${PARM_HEADER_DIRS}/*.h
+    )
+    set(_headers ${_dir_headers} ${PARM_HEADERS})
+    set_source_files_properties(${_headers} PROPERTIES HEADER_FILE_ONLY ON)
+  endif ()
+  
+  add_llvm_library(${name} 
+    ${PARM_DEFAULT_ARGS} 
+    SOURCES ${PARM_SOURCES} ${_headers} 
+    LINK_LIBS ${PARM_LINK_LIBS} 
+    LINK_COMPONENTS ${PARM_LINK_COMPONENTS} 
+    TARGET_DEPENDS ${PARM_TARGET_DEPENDS} 
+    EXTERNAL_LIBS ${PARM_EXTERNAL_LIBS}
+    )
+  set_target_properties(${name} PROPERTIES FOLDER "Molly")
+endmacro(add_molly_library)
+
+
 macro(add_molly_executable name)
   add_llvm_executable( ${name} ${ARGN} )
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_executable)
 
-macro(add_molly_library name)
-  llvm_process_sources(srcs ${ARGN})
-  if(MSVC_IDE OR XCODE)
-    # Add public headers
-    file( GLOB headers
-      ${MOLLY_SOURCE_DIR}/include/molly/*.h
-      ${MOLLY_SOURCE_DIR}/lib/*.h
-    )
-    set_source_files_properties(${headers} PROPERTIES HEADER_FILE_ONLY ON)
-    set(srcs ${srcs} ${headers})
-  endif(MSVC_IDE OR XCODE)
-  
-  add_llvm_library( ${name} ${srcs} )
-  set_target_properties(${name} PROPERTIES FOLDER "Molly")
-endmacro(add_molly_library)
 
 
 macro(clang_compile _outfile)

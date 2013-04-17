@@ -1,43 +1,44 @@
 
-#set(MODULE TRUE)
-#set(LLVM_NO_RTTI 1)
-
-
-
 add_molly_library(LLVMMolly
-  RegisterPasses.cpp
-  FieldDetection.cpp
-  FieldDistribution.cpp
-  FieldType.cpp
-  FieldVariable.cpp
-  Nodegrid.cpp
-  MollyContext.cpp
-  MollyContextPass.cpp
-  FieldCodeGen.cpp
-  ValueSourceAnalysis.cpp
-  ScopDistribution.cpp
-  ScopStmtSplit.cpp
-  MollyUtils.cpp
-  MollyInlinePrepa.cpp
-  MollyFieldAccess.cpp
-  PatternSearchAnalysis.cpp
-  GlobalPassManager.cpp
+  SOURCES
+    RegisterPasses.cpp
+    FieldDetection.cpp
+    FieldDistribution.cpp
+    FieldType.cpp
+    FieldVariable.cpp
+    Nodegrid.cpp
+    MollyContext.cpp
+    MollyContextPass.cpp
+    FieldCodeGen.cpp
+    ValueSourceAnalysis.cpp
+    ScopDistribution.cpp
+    ScopStmtSplit.cpp
+    MollyUtils.cpp
+    MollyInlinePrepa.cpp
+    MollyFieldAccess.cpp
+    PatternSearchAnalysis.cpp
+    GlobalPassManager.cpp
+  HEADER_DIRS 
+    ${MOLLY_SOURCE_DIR}/include/molly 
+    ${MOLLY_SOURCE_DIR}/lib
+  LINK_COMPONENTS 
+    support
+    Polly
+  LINK_LIBS 
+    Islpp
+  TARGET_DEPENDS 
+    intrinsics_gen
+  EXTERNAL_LIBS 
+    #${GMP_LIBRARY} 
+    #${ISL_LIBRARY} 
+    #${CLOOG_LIBRARY} 
+    #${BARVINOK_LIBRARY} 
+    #${POLYLIB_LIBRARY} 
+    #${LIBGCC_LIBRARY} 
+    #${NTL_LIBRARY}
 )
 
-#target_link_libraries( LLVMMolly ${GMP_LIBRARY} )
-#target_link_libraries( LLVMMolly ${ISL_LIBRARY} )
-#target_link_libraries( LLVMMolly ${CLOOG_LIBRARY} )
-#target_link_libraries( LLVMMolly ${BARVINOK_LIBRARY} )
-#target_link_libraries( LLVMMolly ${POLYLIB_LIBRARY} )
-#target_link_libraries( LLVMMolly ${LIBGCC_LIBRARY} )
-#target_link_libraries( LLVMMolly ${NTL_LIBRARY} )
-
-#set_target_properties(LLVMMolly
-#  PROPERTIES
-#  LINKER_LANGUAGE CXX
-#  PREFIX "")
+#add_dependencies(LLVMMolly intrinsics_gen)
 
 add_subdirectory(mollyrt)
 add_subdirectory(islpp)
-
-target_link_libraries( LLVMMolly Islpp )

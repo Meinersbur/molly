@@ -3,7 +3,7 @@ set(MOLLYRT_SOURCES molly.cpp comm.cpp)
 
 ### MollyRT, compile using standard compiler
 include_directories(${MOLLY_SOURCE_DIR}/include/mollyrt ${MPI_CXX_INCLUDE_PATH})
-add_library(MollyRT ${MOLLYRT_SOURCES} ${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h)
+add_library(MollyRT STATIC ${MOLLYRT_SOURCES} ${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h)
 set_target_properties(MollyRT PROPERTIES FOLDER "Molly")
 target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES}) 
 

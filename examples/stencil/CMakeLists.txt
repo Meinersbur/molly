@@ -20,7 +20,7 @@ add_custom_target(stencil-mollycc ALL
   DEPENDS ${stencil_path}
   COMMENT "Built stencil using mollycc"
   VERBATIM)
-
+set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
 
 
 ### Compile using mollycc, link to MollyRT-o
@@ -34,7 +34,7 @@ add_custom_target(stencil-mollycc-o ALL
   DEPENDS ${stencil_path}
   COMMENT "Compiling stencil using mollycc-a"
   VERBATIM)
-  
+set_target_properties(stencil-mollycc-o PROPERTIES FOLDER "Molly")
 add_dependencies(stencil-mollycc-o MollyRT-o)
 
 
@@ -50,7 +50,7 @@ add_custom_target(stencil-mollycc-a ALL
   DEPENDS ${stencil_path}
   COMMENT "Compiling stencil using mollycc-a"
   VERBATIM)
-  
+set_target_properties(stencil-mollycc-a PROPERTIES FOLDER "Molly")
 add_dependencies(stencil-mollycc-a MollyRT-a)
 
 
@@ -66,7 +66,7 @@ add_custom_target(stencil-mollycc-ll ALL
   DEPENDS ${stencil_path}
   COMMENT "Compiling stencil using mollycc-ll"
   VERBATIM)
-  
+set_target_properties(stencil-mollycc-ll PROPERTIES FOLDER "Molly")
 add_dependencies(stencil-mollycc-ll MollyRT-ll)
   
 
@@ -82,6 +82,5 @@ add_custom_target(stencil-mollycc-bc ALL
   DEPENDS ${stencil_path}
   COMMENT "Compiling stencil using mollycc-bc"
   VERBATIM)
-  
+set_target_properties(stencil-mollycc-bc PROPERTIES FOLDER "Molly")
 add_dependencies(stencil-mollycc-bc MollyRT-bc)
-
