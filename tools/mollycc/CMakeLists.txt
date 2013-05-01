@@ -24,10 +24,44 @@
 #set_target_properties(mollycc3 PROPERTIES FOLDER "Molly")
 
 add_molly_executable(mollycc
-  driver.cpp 
-  cc1as_main.cpp 
-  cc1_main.cpp
-  TARGET_DEPENDS clang-headers intrinsics_gen
-  LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} asmparser bitreader bitwriter irreader codegen instrumentation ipo linker selectiondag
-  LINK_LIBS LLVMMolly PollyAnalysis LLVMPolly clangFrontendTool clangAST clangAnalysis clangBasic clangCodeGen clangDriver clangEdit clangFrontend clangLex clangParse clangEdit clangARCMigrate clangRewriteCore clangRewriteFrontend clangSema clangSerialization clangStaticAnalyzerFrontend clangStaticAnalyzerCheckers clangStaticAnalyzerCore LLVMSupport
+  SOURCES
+    driver.cpp 
+    cc1as_main.cpp 
+    cc1_main.cpp
+  TARGET_DEPENDS 
+    clang-headers 
+    intrinsics_gen
+  LINK_COMPONENTS 
+    ${LLVM_TARGETS_TO_BUILD}
+    asmparser
+    bitreader
+    bitwriter
+    irreader
+    codegen
+    instrumentation
+    ipo
+    linker
+    selectiondag
+  LINK_LIBS 
+    LLVMMolly
+    PollyAnalysis # PollyAnalysis references symbols from LLVMPolly
+    clangFrontendTool 
+    clangAST 
+    clangAnalysis 
+    clangBasic 
+    clangCodeGen 
+    clangDriver 
+    clangEdit 
+    clangFrontend 
+    clangLex 
+    clangParse 
+    clangEdit 
+    clangARCMigrate 
+    clangRewriteCore 
+    clangRewriteFrontend 
+    clangSema 
+    clangSerialization 
+    clangStaticAnalyzerFrontend 
+    clangStaticAnalyzerCheckers 
+    clangStaticAnalyzerCore 
 )

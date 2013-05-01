@@ -50,7 +50,7 @@ namespace isl {
     Ctx(const Ctx &) LLVM_DELETED_FUNCTION;
     const Ctx &operator=(const Ctx &) LLVM_DELETED_FUNCTION;
 
- #pragma region Low-Level
+#pragma region Low-Level
   public:
     isl_ctx *keep() const { assert(this); return const_cast<isl_ctx*>(reinterpret_cast<const isl_ctx*>(this)); }
 

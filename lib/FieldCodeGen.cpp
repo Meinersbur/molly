@@ -113,9 +113,48 @@ namespace molly {
       emitLocalLength(M, ftype);
     }
 
+    llvm::Module *module;
+
+ 
+    void wrapMain() {
+       auto &context = module->getContext();
+
+      // Search main function
+      auto origMainFunc = module->getFunction("main");
+
+      // Rename old main function
+      const char *replMainName = "__molly_orig_main";
+      auto replMainFunc = module->getFunction(replMainName);
+      if (replMainFunc) {
+        llvm_unreachable("main already replaced?");
+      }
+      origMainFunc->setName(replMainName);
+
+      // Find the wrapper function from MollyRT
+      auto rtMain = module->getOrInsertFunction("__molly_main", Type::getInt32Ty(context), Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8Ty(context), 0)/*argv*/ );
+      assert(rtMain);
+
+      // Create new main function
+      Type *parmTys[] = {Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8Ty(context), 0)/*argv*/ };
+      auto mainFuncTy = FunctionType::get(Type::getInt32Ty(context), parmTys, false);
+      auto wrapFunc = Function::Create(mainFuncTy, GlobalValue::ExternalLinkage, "main", module);
+
+      auto entry = BasicBlock::Create(context, "entry", wrapFunc);
+      IRBuilder<> builder(entry);
+
+      // Create a call to the wrapper main function
+      SmallVector<Value *, 2> args;
+      collect(args, wrapFunc->getArgumentList());
+      //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
+      auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
+      builder.CreateRet(ret);
+    }
+
     virtual bool runOnModule(Module &M) {
       changed = false;
+      this->module = &M;
       auto FD = &getAnalysis<FieldDetectionAnalysis>();
+      
 
       auto &ftypes = FD->getFieldTypes();
       for (auto it = ftypes.begin(), end = ftypes.end(); it!=end; ++it) {
@@ -123,6 +162,9 @@ namespace molly {
         runOnFieldType(M, ftype);
       }
 
+      wrapMain();
+
+      module = NULL;
       return changed;
     }
   }; // class ModuleFieldGen

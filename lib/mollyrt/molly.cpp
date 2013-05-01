@@ -99,7 +99,7 @@ namespace molly {
   int _world_ranks;
   rank_t _world_self;
 
-  int _cart_dims;
+  int _cart_dims = 0;
   MPI_Comm _cart_self;
   MPI_Comm _cart_comm;
   int *_cart_lengths;
@@ -224,3 +224,10 @@ public:
     //delete communicator;
   }
 } molly_global;
+
+
+int main(int argc, char *argv[]);
+
+int __molly_main(int argc, char *argv[]) {
+  main(argc, argv);
+}

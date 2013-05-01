@@ -12,7 +12,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MOLLY_SOURCE_DIR}/cmake" "${POLLY_
 find_package(Gmp REQUIRED)
 INCLUDE_DIRECTORIES( ${GMP_INCLUDE_DIR} )
 
-find_package(Isl REQUIRED)
+add_llvm_external_project(isl)
+if (NOT LLVM_EXTERNAL_ISL_BUILD)
+  find_package(Isl REQUIRED)
+endif ()
 INCLUDE_DIRECTORIES( ${ISL_INCLUDE_DIR} )
 
 #FIND_PACKAGE(Cloog REQUIRED)
@@ -41,7 +44,7 @@ include_directories(
 )
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-unknown-pragmas")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 
@@ -89,11 +92,22 @@ macro(clang_compile _outfile)
 endmacro()
 
 
-set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt -I${MPI_CXX_INCLUDE_PATH} -mllvm -molly)
+option(MOLLYCC_DEBUG "Compile Debug version of MollyRT (and anything compiled with mollycc)" ON)
+mark_as_advanced(MOLLYCC_DEBUG)
+
+if (MOLLYCC_DEBUG)
+message("MollyRT Debug build")
+  set(MOLLYCC_DEBUG_FLAGS "-g -O3")
+else ()
+message("MollyRT Release build")
+  set(MOLLYCC_DEBUG_FLAGS "-g0 -DNDEBUG")
+endif ()
+
+set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt -I${MPI_CXX_INCLUDE_PATH})
 set(MOLLYCC_PLATFORM_FLAGS -target "i686-pc-mingw32")
 #set(MOLLYCC_PLATFORM_FLAGS -target "i686-pc-win32" -fno-exceptions)
 macro(mollycc_compile _outfile)
-  parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "" ${ARGN})
+  parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "PLAIN" ${ARGN})
   if (NOT PARM_COMMENT)
     set(PARM_COMMENT "Generating ${_outfile} using Mollycc...")
   endif ()
@@ -103,9 +117,15 @@ macro(mollycc_compile _outfile)
     get_filename_component(_real ${_rel} REALPATH)
     list(APPEND _realsources ${_real})
   endforeach()
+  if (PARM_PLAIN)
+    # Do not activate Molly transformations
+    set(_flags ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${PARM_FLAGS} )
+  else ()
+    set(_flags ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${PARM_FLAGS} -mllvm -molly)
+  endif ()
   add_custom_command(
     OUTPUT ${_outfile}
-    COMMAND mollycc ${MOLLYCC_COMMON_FLAGS} ${PARM_FLAGS} ${_realsources} -o ${_outfile} ${PARM_LIBS}
+    COMMAND mollycc ${_flags} ${_realsources} -o ${_outfile} ${PARM_LIBS}
     DEPENDS mollycc ${_realsources}
     IMPLICIT_DEPENDS ${_realsources}
     COMMENT "${PARM_COMMENT}")
@@ -113,23 +133,29 @@ endmacro()
 
 
 macro(mollycc_compile_link _outfile)
-  parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "BC;LL;OBJ;AR" ${ARGN})
+  parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "BC;LL;OBJ;AR;PLAIN" ${ARGN})
   get_filename_component(_outfile ${_outfile} ABSOLUTE)
+  
+  if (PARM_PLAIN)
+    set(_plain PLAIN)
+  else ()
+    set(_plain)
+  endif ()
   
   list(LENGTH PARM_SOURCES _sourceslen)
   if (_sourceslen EQUAL 1 AND NOT PARM_AR)
     if (PARM_BC)
-      mollycc_compile(${_outfile}
+      mollycc_compile(${_outfile} ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -emit-llvm -c -S ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_LL)
-      mollycc_compile(${_outfile}
+      mollycc_compile(${_outfile} ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -emit-llvm -c ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_OBJ)
-      mollycc_compile(${_outfile}
+      mollycc_compile(${_outfile} ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -c ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
@@ -153,19 +179,19 @@ macro(mollycc_compile_link _outfile)
       get_filename_component(_base ${_src} NAME)
       if (PARM_LL)
         set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.ll)
-        mollycc_compile(${_intermediatefilename}
+        mollycc_compile(${_intermediatefilename} ${_plain}
           SOURCES ${_src}
           FLAGS -emit-llvm -S ${PARM_FLAGS}
           )
       elseif (PARM_BC OR PARM_OBJ)
         set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.bc)
-        mollycc_compile(${_intermediatefilename}
+        mollycc_compile(${_intermediatefilename} ${_plain}
           SOURCES ${_src}
           FLAGS -emit-llvm -c ${PARM_FLAGS}
           )
       elseif (PARM_AR)
         set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.o)
-        mollycc_compile(${_intermediatefilename}
+        mollycc_compile(${_intermediatefilename} ${_plain}
           SOURCES ${_src}
           FLAGS -c ${PARM_FLAGS}
           )
@@ -197,7 +223,7 @@ macro(mollycc_compile_link _outfile)
         COMMENT ${PARM_COMMENT}
         VERBATIM)
     
-      mollycc_compile(${_outfile}
+      mollycc_compile(${_outfile} ${_plain}
         SOURCES ${_outfile}.bc
         FLAGS -c
         COMMENT ${PARM_COMMENT})

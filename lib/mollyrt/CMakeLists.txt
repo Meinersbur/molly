@@ -1,5 +1,5 @@
 
-set(MOLLYRT_SOURCES molly.cpp comm.cpp)
+set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp)
 
 ### MollyRT, compile using standard compiler
 include_directories(${MOLLY_SOURCE_DIR}/include/mollyrt ${MPI_CXX_INCLUDE_PATH})
@@ -10,7 +10,7 @@ target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES})
 
 
 ### MollyRT-ll
-mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.ll 
+mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.ll PLAIN
   SOURCES ${MOLLYRT_SOURCES}
   COMMENT "Generating molly.ll..."
   LL)
@@ -27,7 +27,7 @@ install(FILES ${LLVM_BINARY_DIR}/lib/molly.ll
 
 
 ### MollyRT-bc
-mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.bc 
+mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.bc PLAIN
   SOURCES ${MOLLYRT_SOURCES}
   COMMENT "Generating molly.bc..."
   BC)
@@ -44,7 +44,7 @@ install(FILES ${LLVM_BINARY_DIR}/lib/molly.bc
 
 
 ### MollyRT-o
-mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.o
+mollycc_compile_link(${LLVM_BINARY_DIR}/lib/molly.o PLAIN
   SOURCES ${MOLLYRT_SOURCES}
   COMMENT "Generating molly.o..."
   OBJ)
@@ -61,7 +61,7 @@ install(FILES ${LLVM_BINARY_DIR}/lib/molly.o
 
 
 ### MollyRT-a
-mollycc_compile(${LLVM_BINARY_DIR}/lib/molly.a
+mollycc_compile(${LLVM_BINARY_DIR}/lib/molly.a PLAIN
   SOURCES ${MOLLYRT_SOURCES}
   COMMENT "Generating molly.a...")
 
@@ -73,26 +73,3 @@ set_target_properties(MollyRT-a PROPERTIES FOLDER "Molly")
 install(FILES ${LLVM_BINARY_DIR}/lib/molly.a
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
   DESTINATION lib${LLVM_LIBDIR_SUFFIX})
-
-  
-  
-  
-
-if(0)
-#set(LLVM_NO_RTTI 1)
-
-find_package(MPI REQUIRED)
-include_directories(${MPI_C_INCLUDE_PATH})
-include_directories(${MPI_CXX_INCLUDE_PATH})
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS}")
-#set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
-#set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
-
-
-### Standard binary Library
-add_library(MollyRT molly.cpp ${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h comm.cpp)
-set_target_properties(MollyRT PROPERTIES FOLDER "Molly")
-target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES}) 
-
-endif()

@@ -7,6 +7,7 @@ typedef struct { long double x, y; } __float128;
 #include <cassert>
 #include <cstdlib>
 #include <tuple>
+#include <limits>
 
 #if defined __clang__
 //#pragma clang diagnostic ignored "-Wunknown-pragmas"
@@ -28,6 +29,41 @@ typedef struct { long double x, y; } __float128;
 //#define CXX11ATTRIBUTE(...) [[__VA_ARGS__]]
 #define CXX11ATTRIBUTE(...)
 #endif
+ 
+
+#pragma region Debugging
+extern int _debugindention;
+
+#ifndef NDEBUG
+#include <iostream>
+#define MOLLY_DEBUG(...) \
+  do { \
+    for (int i = _debugindention; i > 0; i-=1) { \
+      std::cerr << "  "; \
+    } \
+    std::cerr << __VA_ARGS__ << std::endl; \
+  } while (0)
+#else
+#define MOLLY_DEBUG(...) ((void)0)
+#endif
+
+class DebugFunctionScope {
+  const char *funcname;
+public:
+  DebugFunctionScope(const char *funcname) : funcname(funcname) {
+    MOLLY_DEBUG("ENTER "  << funcname);
+    _debugindention += 1;
+  }
+  ~DebugFunctionScope() {
+    _debugindention -= 1;
+    MOLLY_DEBUG("EXIT  "  << funcname);
+  }
+};
+
+#define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__);
+#pragma endregion
+
+
 
 #define MOLLY_COMMUNICATOR_MEMCPY
 
@@ -277,33 +313,84 @@ namespace molly {
     typedef int type;
   };
 
-#ifndef __clang__
-  template<typename F, typename... Args>
-  void *__builtin_molly_ptr(F, Args...) {
-    return NULL;
+
+#pragma region Implementation of out_parampack
+  template<typename... Args>
+  struct out_parampack_impl;
+  
+ template<> 
+ struct out_parampack_impl<> {
+ public:
+   out_parampack_impl(const char *sep) {}
+   void print(std::ostream &os) const {}
+ };
+
+   template<typename Arg> 
+ struct out_parampack_impl<Arg> : out_parampack_impl<>  {
+   const char *sep;
+   Arg &arg;
+ public:
+   out_parampack_impl(const char *sep, Arg &arg) : out_parampack_impl<>(sep), sep(sep), arg(arg) {}
+    void print(std::ostream &os) const {
+      os << arg;
+      out_parampack_impl<>::print(os);
+    }
+ };
+
+  template<typename Arg, typename... Args> 
+ struct out_parampack_impl<Arg, Args...> : out_parampack_impl<Args...>  {
+   const char *sep;
+   Arg &arg;
+ public:
+   out_parampack_impl(const char *sep, Arg &arg, Args&... args) : out_parampack_impl<Args...>(sep, args...), sep(sep),  arg(arg) {}
+    void print(std::ostream &os) const {
+      os << ", " << arg;
+      out_parampack_impl<Args...>::print(os);
+    }
+ };
+
+  template<typename... Args> 
+ std::ostream &operator<<(std::ostream &stream, const out_parampack_impl<Args...> &ob)  {
+   ob.print(stream);
+   return stream;
+   }
+
+      template<typename... Args>
+   out_parampack_impl<Args...> out_parampack(const char *sep, Args&... args) {
+    return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
   }
 
-    template<typename F, typename... Args>
-  int __builtin_molly_locallength(F, Args...) {
+#pragma endregion
+
+
+#pragma region Dummy builtins for other compilers
+#ifndef __mollycc__
+  template<typename F, typename... Args>
+  void *__builtin_molly_ptr(F field, Args... coords) { MOLLY_DEBUG_FUNCTION_SCOPE
+    return field->__ptr_local(coords...);
+  }
+
+  template<typename F>
+  int __builtin_molly_locallength(F field, int d) { MOLLY_DEBUG_FUNCTION_SCOPE
+    return field->length(0);
+  }
+
+  template<typename F, typename... Args>
+  int __builtin_molly_localoffset(F, Args...) { MOLLY_DEBUG_FUNCTION_SCOPE
     return 0;
   }
 
-  template<typename F, typename... Args>
-  int __builtin_molly_localoffset(F, Args...) {
-    return 0;
-  }
-
     template<typename F, typename... Args>
-  bool __builtin_molly_islocal(F, Args...) {
-    return false;
+  bool __builtin_molly_islocal(F field, Args... coords) { MOLLY_DEBUG_FUNCTION_SCOPE
+    return true;
   }
 
      template<typename F, typename... Args>
-  rank_t __builtin_molly_rankof(F, Args...) {
+  rank_t __builtin_molly_rankof(F, Args...) { MOLLY_DEBUG_FUNCTION_SCOPE
     return 0;
   }
 #endif
-
+#pragma endregion
 
   template<typename ... Args> 
   class _consume_parameterpack {
@@ -379,8 +466,14 @@ namespace molly {
     size_t localelts;
     T *localdata;
 
+#ifndef NDEBUG
+// Allow access to assert, etc.
+  public:
+#else
   private:
-    size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
+#endif
+    size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLY_DEBUG("coords2idx(" << out_parampack(", ", coords...) << ")");
       assert(__builtin_molly_islocal(this, coords...));
       size_t idx = 0;
       size_t lastlocallen = 0;
@@ -389,7 +482,8 @@ namespace molly {
         auto locallen = __builtin_molly_locallength(this, d);
         auto coord = _select(d, coords...);
         auto clustercoord = cart_self_coord(d);
-        auto localcoord = clustercoord*locallen - coord;
+        auto localcoord = coord - clustercoord*locallen;
+        MOLLY_DEBUG("d="<<d << " len="<<len << " locallen="<<locallen << " coord="<<coord << " clustercoord="<<clustercoord << " localcoord"<<localcoord);
         assert(0 <= localcoord && localcoord < locallen);
         idx = idx*lastlocallen + localcoord;
         lastlocallen = locallen;
@@ -398,7 +492,7 @@ namespace molly {
       return idx;
     }
 
-    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) {
+    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
         auto locallen = __builtin_molly_locallength(this, d);
@@ -424,11 +518,23 @@ namespace molly {
     }
 
     array() {
+      MOLLY_DEBUG_FUNCTION_SCOPE
+#ifndef NDEBUG
+     std::cerr << "array dimension is (";
+     for (auto d = Dims-Dims; d < Dims; d+=1) {
+       if (d!=0)
+         std::cerr << ",";
+       std::cerr << _select(d, L...);
+     }
+     std::cerr << ")\n";
+#endif
+
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
         localelts *= __builtin_molly_locallength(this, d);
       }
       localdata = (T*)malloc(localelts * sizeof(T));
+      assert(localdata);
 
       if (std::getenv("bla")==(char*)-1) {
         // Dead code, but do not optimize away so the template functions get instantiated
@@ -445,6 +551,7 @@ namespace molly {
     }
 
     int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ {
+      MOLLY_DEBUG_FUNCTION_SCOPE
       assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
@@ -463,22 +570,10 @@ namespace molly {
     }
 
 
-
-#if 0
-    template<typename... Argss>
-    //class XY {
-    //public:
-    typename std::enable_if< _condition<(sizeof...(Argss) == sizeof...(L))>::value, T*>::type
-      ptr(Argss... coords) __attribute__(( molly_memberfunc )) __attribute__(( molly_ptrfunc )) __attribute__(( molly_inline )) {
-        return (T*)__builtin_molly_ptr(this, L..., (static_cast<int>(coords))...);
-    }
-    //};
-#endif
-
-
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
       operator[](int i) MOLLYATTR(inline) {
+        MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -489,6 +584,7 @@ namespace molly {
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
       operator[](int i) MOLLYATTR(inline) {
+        MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return subty(this, i);
@@ -509,7 +605,8 @@ namespace molly {
       assert(localdata);
       localdata[idx] = val;
     }
-    T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) {
+    T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) { MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLY_DEBUG("Coords are (" << out_parampack(", ", coords...) << ")");
       assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
       assert(0 <= idx && idx < localelts);
@@ -577,3 +674,5 @@ namespace molly {
 
 
 } // namespace molly
+
+

@@ -24,6 +24,7 @@ molly::array<int, 128> MyField;
 
 
 int main(int argc, char *argv[]) {
+  MOLLY_DEBUG_FUNCTION_SCOPE
   //MyField.set(0,1);
   //MySecondField.set(0,2);
   //MyField.memberwithattr();
@@ -34,7 +35,7 @@ int main(int argc, char *argv[]) {
 
   //(void)MyField.length();
   
-  auto len = MyField.length(0);
+  auto len = MyField.length();
   for (int i = 0; i < len; i+=1) {
     //MyField.set(i,i+1);
     
@@ -47,18 +48,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-
-#if 0
-int crash32()
-{
-  return (1 << 31) % -1;
-}
-
-//int dynval();
-long long crash64()
-{
-  return (1LL << 63) % -1;
-}
-
-//int someglobalfield = dynval();
-#endif
