@@ -41,7 +41,7 @@ extern int _debugindention;
     for (int i = _debugindention; i > 0; i-=1) { \
       std::cerr << "  "; \
     } \
-    std::cerr << __VA_ARGS__ << std::endl; \
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << __VA_ARGS__ << std::endl; \
   } while (0)
 #else
 #define MOLLY_DEBUG(...) ((void)0)
@@ -51,12 +51,12 @@ class DebugFunctionScope {
   const char *funcname;
 public:
   DebugFunctionScope(const char *funcname) : funcname(funcname) {
-    MOLLY_DEBUG("ENTER "  << funcname);
+    MOLLY_DEBUG("ENTER " << funcname);
     _debugindention += 1;
   }
   ~DebugFunctionScope() {
     _debugindention -= 1;
-    MOLLY_DEBUG("EXIT  "  << funcname);
+    MOLLY_DEBUG("EXIT  " << funcname);
   }
 };
 
@@ -238,8 +238,6 @@ namespace molly {
   template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
   class _array_partial_subscript; // Never instantiate, use specializations only 
 
-
-
   template<typename T, int... Stored, int... Togo> 
   class _array_partial_subscript<T, _dimlengths<Stored...>, _dimlengths<Togo...>> {
     static_assert(sizeof...(Togo) > 1, "Specialization for more-coordinates-to-come");
@@ -249,7 +247,7 @@ namespace molly {
     static const int nDim = nStored + nTogo;
 
     typedef array<T, Stored..., Togo...> fieldty;
-    typedef   _array_partial_subscript<T, _dimlengths<Stored..., _unqueue<Togo...>::value>, typename _unqueue<Togo...>::rest > subty;
+    typedef _array_partial_subscript<T, _dimlengths<Stored..., _unqueue<Togo...>::value>, typename _unqueue<Togo...>::rest > subty;
 
     fieldty *owner;
     int coords[nStored]; 
@@ -356,7 +354,7 @@ namespace molly {
    }
 
       template<typename... Args>
-   out_parampack_impl<Args...> out_parampack(const char *sep, Args&... args) {
+   out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
     return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
   }
 
@@ -477,6 +475,7 @@ namespace molly {
       assert(__builtin_molly_islocal(this, coords...));
       size_t idx = 0;
       size_t lastlocallen = 0;
+      size_t localelts = 1;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
         auto locallen = __builtin_molly_locallength(this, d);
@@ -487,7 +486,9 @@ namespace molly {
         assert(0 <= localcoord && localcoord < locallen);
         idx = idx*lastlocallen + localcoord;
         lastlocallen = locallen;
+        localelts += locallen;
       }
+      assert(this->localelts == localelts)
       assert(0 <= idx && idx < localelts);
       return idx;
     }
@@ -514,29 +515,28 @@ namespace molly {
     static const auto Dims = sizeof...(L);
 
     ~array() {
+      MOLLY_DEBUG_FUNCTION_SCOPE
       free(localdata);
     }
 
     array() {
+       std::cout << "x" << std::endl;
       MOLLY_DEBUG_FUNCTION_SCOPE
-#ifndef NDEBUG
-     std::cerr << "array dimension is (";
-     for (auto d = Dims-Dims; d < Dims; d+=1) {
-       if (d!=0)
-         std::cerr << ",";
-       std::cerr << _select(d, L...);
-     }
-     std::cerr << ")\n";
-#endif
+        std::cout << "y" << std::endl;
+      MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
+      std::cout << "z" << std::endl;
 
-      localelts = 1;
+      size_t localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
+        MOLLY_DEBUG("__builtin_molly_locallength(this, "<<d<<")=" << __builtin_molly_locallength(this, d));
         localelts *= __builtin_molly_locallength(this, d);
       }
+      MOLLY_DEBUG("localelts=" << localelts);
       localdata = (T*)malloc(localelts * sizeof(T));
       assert(localdata);
 
       if (std::getenv("bla")==(char*)-1) {
+        MOLLY_DEBUG("This should never execute");
         // Dead code, but do not optimize away so the template functions get instantiated
         T dummy;
         (void)ptr(static_cast<int>(L)...);

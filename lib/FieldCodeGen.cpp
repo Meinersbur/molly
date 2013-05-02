@@ -17,7 +17,7 @@
 #include <polly/ScopPass.h>
 #include <llvm/IR/Intrinsics.h>
 //#include <llvm/Transforms/Utils/ModuleUtils.h> // appendToGlobalCtors
-
+#include <llvm/Support/Debug.h>
 
 using namespace llvm;
 using namespace molly;
@@ -115,12 +115,18 @@ namespace molly {
 
     llvm::Module *module;
 
- 
+
     void wrapMain() {
-       auto &context = module->getContext();
+      auto &context = module->getContext();
 
       // Search main function
       auto origMainFunc = module->getFunction("main");
+      if (!origMainFunc) {
+        //FIXME: This means that either we are compiling modules independently (instead of whole program as intended), or this program as already been optimized 
+        // The driver should resolve this
+        return;
+        llvm_unreachable("No main function found");
+      }
 
       // Rename old main function
       const char *replMainName = "__molly_orig_main";
@@ -128,14 +134,15 @@ namespace molly {
       if (replMainFunc) {
         llvm_unreachable("main already replaced?");
       }
+      
       origMainFunc->setName(replMainName);
 
       // Find the wrapper function from MollyRT
-      auto rtMain = module->getOrInsertFunction("__molly_main", Type::getInt32Ty(context), Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8Ty(context), 0)/*argv*/ );
+      auto rtMain = module->getOrInsertFunction("__molly_main", Type::getInt32Ty(context), Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8PtrTy(context), 0)/*argv*/, NULL);
       assert(rtMain);
 
       // Create new main function
-      Type *parmTys[] = {Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8Ty(context), 0)/*argv*/ };
+      Type *parmTys[] = {Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8PtrTy(context), 0)/*argv*/ };
       auto mainFuncTy = FunctionType::get(Type::getInt32Ty(context), parmTys, false);
       auto wrapFunc = Function::Create(mainFuncTy, GlobalValue::ExternalLinkage, "main", module);
 
@@ -147,6 +154,8 @@ namespace molly {
       collect(args, wrapFunc->getArgumentList());
       //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
       auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
+      llvm::dbgs() << ">>>Wrapped main\n";
+      changed = true;
       builder.CreateRet(ret);
     }
 
@@ -154,7 +163,7 @@ namespace molly {
       changed = false;
       this->module = &M;
       auto FD = &getAnalysis<FieldDetectionAnalysis>();
-      
+
 
       auto &ftypes = FD->getFieldTypes();
       for (auto it = ftypes.begin(), end = ftypes.end(); it!=end; ++it) {
@@ -348,6 +357,7 @@ bool FieldCodeGen::runOnFunction(Function &F) {
   SmallVector<Instruction*, 16> instrs;
   collectInstructionList(&F, instrs);
 
+  // Replace intrinsics
   for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
     auto instr = *it;
     if (auto callInstr = dyn_cast<CallInst>(instr)) {

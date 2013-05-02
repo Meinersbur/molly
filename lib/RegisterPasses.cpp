@@ -215,6 +215,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM) {
 
   // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
   PM.add(molly::createMollyInlinePass()); 
+  PM.add(llvm::createCFGSimplificationPass()); // calls to __builtin_molly_ptr and load/store instructions must be in same BB
 
   // Cleanup after inlining
   //FIXME: Which is the correct one?

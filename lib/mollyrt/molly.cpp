@@ -226,8 +226,14 @@ public:
 } molly_global;
 
 
-int main(int argc, char *argv[]);
+// If running with molly optimization, the original main method will be renamed to this one
+extern "C" int __molly_orig_main(int argc, char *argv[]);
+// ... and a new main generated, that just calls __molly_main
+extern "C" int main(int argc, char *argv[]);
 
-int __molly_main(int argc, char *argv[]) {
-  main(argc, argv);
+
+extern "C" int __molly_main(int argc, char *argv[]) {
+  MOLLY_DEBUG_FUNCTION_SCOPE
+  //TODO: MPI_Init
+  return __molly_orig_main(argc, argv);//TODO: MPI may modify arguments
 }
