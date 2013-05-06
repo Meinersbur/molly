@@ -12,7 +12,7 @@ get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc
 get_target_property(MollyRT_LOCATION MollyRT LOCATION)
 mollycc_compile(${stencil_path} 
   SOURCES stencil.cpp
-  FLAGS -mllvm -shape=4 -save-temps
+  FLAGS -mllvm -shape=4
   LIBS ${MollyRT_LOCATION} ${MPI_CXX_LIBRARIES}
   COMMENT "mollycc MollyRT stencil.cpp...")
 
@@ -20,6 +20,7 @@ add_custom_target(stencil-mollycc ALL
   DEPENDS ${stencil_path}
   COMMENT "Built stencil using mollycc"
   VERBATIM)
+add_dependencies(stencil-mollycc MollyRT)
 set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
 
 

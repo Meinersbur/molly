@@ -49,4 +49,20 @@ isl::Ctx *MollyContextPass::getIslContext() {
 }
 
 
+int MollyContextPass::getClusterDims() const {
+	return clusterLengths.size();
+}
+
+
+int MollyContextPass::getClusterSize() const {
+	int result = 1;
+	for (auto it = clusterLengths.begin(), end = clusterLengths.end(); it != end; ++it) {
+		auto len = *it;
+		result *= len;
+	}
+	assert(result >= 1);
+	return result;
+}
+
+
 static RegisterPass<MollyContextPass> FieldAnalysisRegistration("molly-context", "Molly - Context", false, true);

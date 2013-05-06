@@ -203,9 +203,42 @@ namespace molly {
       collect(args, wrapFunc->getArgumentList());
       //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
       auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
-      llvm::dbgs() << ">>>Wrapped main\n";
+      DEBUG(llvm::dbgs() << ">>>Wrapped main\n");
       changed = true;
       builder.CreateRet(ret);
+    }
+
+
+    void emitMollyGlobalVars() {
+    	auto &context = module->getContext();
+    	auto intTy = Type::getInt32Ty(context);
+    	auto intPtrTy = Type::getInt32PtrTy(context);
+    	auto molly = &getAnalysis<MollyContextPass>();
+
+    	new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterDims()), "__molly_cluster_dims");
+    	new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterSize()), "__molly_cluster_size");
+
+    	auto &lengths = molly->getClusterLengths();
+    	auto nDims = lengths.size();
+
+    	SmallVector<Constant*, 4> lengthConsts;
+    	SmallVector<Constant*, 4> periodicConsts;
+    	for (auto d=nDims-nDims; d<nDims; d+=1) {
+    		lengthConsts.push_back(ConstantInt::get(intTy, lengths[d]));
+    		periodicConsts.push_back(ConstantInt::get(intTy, true));//FIXME: Determine whether periodicity is really needed
+    	}
+    	lengthConsts.push_back(ConstantInt::get(intTy, 0));
+    	periodicConsts.push_back(ConstantInt::get(intTy, -1));
+    	auto clusterLengthsConstsTy = ArrayType::get(intTy, nDims+1);
+    	auto glengths = ConstantArray::get(clusterLengthsConstsTy, lengthConsts);
+    	auto clusterLengthsGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, glengths);
+    	new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clusterLengthsGlobArr, "__molly_cluster_lengths");
+
+    	auto gperiodic = ConstantArray::get(clusterLengthsConstsTy, periodicConsts);
+    	auto clustePeriodicGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, gperiodic);
+    	new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clustePeriodicGlobArr, "__molly_cluster_periodic");
+
+    	DEBUG(llvm::dbgs() << "Emitted __molly_cluster_dims\n");
     }
 
     virtual bool runOnModule(Module &M) {
@@ -221,6 +254,7 @@ namespace molly {
       }
 
       wrapMain();
+      emitMollyGlobalVars();
 
       module = NULL;
       return changed;
@@ -394,7 +428,7 @@ void FieldCodeGen::emitAccess(MollyFieldAccess &access) {
 
 
 bool FieldCodeGen::runOnFunction(Function &F) {
-  if (F.getName() == "main" || F.getName() == "__molly_orig_main" || (F.getName().find("isLocal") != StringRef::npos)) {
+  if (F.getName() == "main" || F.getName() == "__molly_orig_main") {
     int a = 0;
     DEBUG(llvm::dbgs() << "### before FieldCodeGen ########\n");
     DEBUG(llvm::dbgs() << F);
@@ -463,7 +497,7 @@ bool FieldCodeGen::runOnFunction(Function &F) {
 
   //bool funcEmitted = emitFieldFunctions();
 
-  if (F.getName() == "main" || F.getName() == "__molly_orig_main" || (F.getName().find("isLocal") != StringRef::npos)) {
+  if (F.getName() == "main" || F.getName() == "__molly_orig_main") {
     DEBUG(llvm::dbgs() << "### after FieldCodeGen ########\n");
     DEBUG(llvm::dbgs() << F);
     DEBUG(llvm::dbgs() << "###############################\n");

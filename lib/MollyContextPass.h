@@ -36,6 +36,8 @@ namespace molly {
 
     isl::BasicSet &getClusterShape() { return clusterShape; }
     const llvm::SmallVectorImpl<unsigned> &getClusterLengths() { return clusterLengths; }
+    int getClusterDims() const;
+    int getClusterSize() const;
   };
 }
 

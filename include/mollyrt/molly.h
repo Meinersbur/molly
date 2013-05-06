@@ -54,6 +54,8 @@ static inline const char *extractFilename(const char *filename) {
 	}
 }
 
+extern "C" bool __molly_isMaster();
+
 #ifndef NDEBUG
 #ifdef __clang__
 // Hack to compile without exceptions and libstdc++ 4.7 (nested_exception.h)
@@ -63,10 +65,12 @@ static inline const char *extractFilename(const char *filename) {
 #include <iostream>
 #define MOLLY_DEBUG(...) \
   do { \
+	if (__molly_isMaster()) { \
     for (int i = _debugindention; i > 0; i-=1) { \
       std::cerr << "  "; \
     } \
     std::cerr << extractFilename(__FILE__) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << __LINE__ << " " << std::resetiosflags(std::ios::left) << __VA_ARGS__ << std::endl; \
+	} \
   } while (0)
 #else
 #define MOLLY_DEBUG(...) ((void)0)
@@ -76,13 +80,17 @@ class DebugFunctionScope {
   const char *funcname;
 public:
   DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
+	  if (!__molly_isMaster())
+		  return;
 	    for (int i = _debugindention; i > 0; i-=1) {
 	      std::cerr << "  ";
 	    }
-	    std::cerr << extractFilename(file) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << line << " " << std::resetiosflags(std::ios::left) << "ENTER " << funcname << std::endl;
+	    std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
     _debugindention += 1;
   }
   ~DebugFunctionScope() {
+	  if (!__molly_isMaster())
+	  		  return;
     _debugindention -= 1;
     for (int i = _debugindention; i > 0; i-=1) {
       std::cerr << "  ";
@@ -96,7 +104,7 @@ public:
 
 
 
-#define MOLLY_COMMUNICATOR_MEMCPY
+//#define MOLLY_COMMUNICATOR_MEMCPY
 
 namespace molly {
 class Communicator;
