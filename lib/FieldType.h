@@ -9,6 +9,7 @@ namespace llvm {
   class Module;
   class MDNode;
   class StructType;
+  class PointerType;
   class LLVMContext;
   class Function;
   namespace CodeGen {
@@ -146,7 +147,15 @@ namespace molly {
     llvm::Function *getIslocalFunc() { assert(metadata.funcIslocal); return metadata.funcIslocal; }
     //void setIslocalFunc(llvm::Function *func) { assert(func); this->islocalFunc = func; }
 
+    llvm::Function *ptrFunc;
+    llvm::Function *getPtrFunc() { return ptrFunc; }
+    void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
+    llvm::Type *getEltType() {
+    	assert(metadata.llvmEltType);
+    	return metadata.llvmEltType;
+    }
+    llvm::PointerType *getEltPtrType();
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

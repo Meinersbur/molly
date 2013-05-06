@@ -1,4 +1,4 @@
-
+#define DEBUG_TYPE "molly"
 #include "FieldType.h"
 
 #include "MollyContext.h"
@@ -79,6 +79,11 @@ void FieldType::dump() {
   getLogicalIndexset().dump();
 }
 
+
+llvm::PointerType *FieldType::getEltPtrType() {
+	auto eltType = getEltType();
+	return PointerType::getUnqual(eltType);
+}
 
 
 #if 0

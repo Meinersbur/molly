@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "molly/FieldCodeGen.h"
 
 #include <polly/ScopPass.h>
@@ -49,7 +50,6 @@ namespace molly {
   }
 
 
-
   class ModuleFieldGen : public ModulePass {
   private:
     bool changed;
@@ -67,6 +67,37 @@ namespace molly {
       AU.addPreserved<FieldDetectionAnalysis>();
     }
 
+#if 0
+    // Not possible because we cannot determine the element type
+    Function *emitPtr(Module &M, FieldType *ftype) {
+		// Resolve to nothing; loads and stores should have been resolved
+		auto &context = M.getContext();
+		auto llvmTy = ftype->getType();
+		auto nDims = ftype->getNumDimensions();
+		auto intTy = Type::getInt32Ty(context);
+		auto rtnTy = ftype->getEltPtrType();
+
+		// Built function type
+		SmallVector<Type*, 5> argTys;
+		argTys.push_back(PointerType::getUnqual(llvmTy));
+		for (auto i = nDims - nDims; i < nDims; i += 1) {
+			argTys.push_back(intTy);
+		}
+		auto ptrFuncTy = FunctionType::get(rtnTy, argTys, false);
+
+		// Create function
+		auto ptrFunc = Function::Create(ptrFuncTy, GlobalValue::InternalLinkage, "molly_ptr", &M);
+		auto entryBB = BasicBlock::Create(context, "Entry", ptrFunc);
+
+		// Build body
+		IRBuilder<> builder(entryBB);
+		builder.SetInsertPoint(entryBB);
+		builder.CreateRet(llvm::UndefValue::get(rtnTy));
+
+		changed = true;
+		return ptrFunc;
+	}
+#endif
 
     Function *emitLocalLength(Module &M, FieldType *ftype) {
       auto &context = M.getContext();
@@ -77,11 +108,16 @@ namespace molly {
 
       SmallVector<Type*, 5> argTys;
       argTys.push_back( PointerType::getUnqual(llvmTy) );
-      argTys.append(nDims, Type::getInt32Ty(context));
-      auto localLengthFuncTy = FunctionType::get(Type::getInt32Ty(context), argTys, false);
+      argTys.append(nDims, intTy);
+      auto localLengthFuncTy = FunctionType::get(intTy, argTys, false);
 
-      auto localLengthFunc = Function::Create(localLengthFuncTy, GlobalValue::InternalLinkage, "molly_localoffset", &M);
-      auto dimArg = &localLengthFunc->getArgumentList().front();
+      auto localLengthFunc = Function::Create(localLengthFuncTy, GlobalValue::InternalLinkage, "molly_locallength", &M);
+      auto it = localLengthFunc->getArgumentList().begin();
+      auto fieldArg = &*it;
+      ++it;
+      auto dimArg = &*it;
+      ++it;
+      assert(localLengthFunc->getArgumentList().end() == it);
 
       auto entryBB = BasicBlock::Create(context, "Entry", localLengthFunc); 
       auto defaultBB = BasicBlock::Create(context, "Default", localLengthFunc); 
@@ -91,18 +127,30 @@ namespace molly {
       IRBuilder<> builder(entryBB);
       builder.SetInsertPoint(entryBB);
 
+      DEBUG(llvm::dbgs() << nDims << " Cases\n");
       auto sw = builder.CreateSwitch(dimArg, defaultBB, nDims);
+      for (auto d = nDims-nDims; d<nDims; d+=1) {
+    	  DEBUG(llvm::dbgs() << "Case " << d << "\n");
+    	  auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc);
+    	  ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]), caseBB);
+
+    	  sw->addCase(ConstantInt::get(intTy, d), caseBB);
+      }
+
+#if 0
       auto d = 0;
       for (auto itCase = sw->case_begin(), endCase = sw->case_end(); itCase!=endCase; ++itCase) {
         itCase.setValue(ConstantInt::get(Type::getInt32Ty(context), d));
-
+        DEBUG(llvm::dbgs() << "Case " << d << "\n");
         auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc); 
-        ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]) , caseBB); 
+        ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]), caseBB);
 
         itCase.setSuccessor(caseBB);
-
         d+=1;
       }
+#endif
+
+      //builder.CreateRet(UndefValue::get(intTy));
 
       changed = true;
       ftype->setLocalLengthFunc(localLengthFunc);
@@ -111,6 +159,7 @@ namespace molly {
 
     void runOnFieldType(Module &M, FieldType *ftype) {
       emitLocalLength(M, ftype);
+      //emitPtr(M, ftype);
     }
 
     llvm::Module *module;
@@ -345,8 +394,11 @@ void FieldCodeGen::emitAccess(MollyFieldAccess &access) {
 
 
 bool FieldCodeGen::runOnFunction(Function &F) {
-  if (F.getName() == "main") {
+  if (F.getName() == "main" || F.getName() == "__molly_orig_main" || (F.getName().find("isLocal") != StringRef::npos)) {
     int a = 0;
+    DEBUG(llvm::dbgs() << "### before FieldCodeGen ########\n");
+    DEBUG(llvm::dbgs() << F);
+    DEBUG(llvm::dbgs() << "################################\n");
   }
 
   MollyContextPass &MollyContext = getAnalysis<MollyContextPass>();
@@ -409,7 +461,13 @@ bool FieldCodeGen::runOnFunction(Function &F) {
 #endif
   }
 
-  bool funcEmitted = emitFieldFunctions();
+  //bool funcEmitted = emitFieldFunctions();
+
+  if (F.getName() == "main" || F.getName() == "__molly_orig_main" || (F.getName().find("isLocal") != StringRef::npos)) {
+    DEBUG(llvm::dbgs() << "### after FieldCodeGen ########\n");
+    DEBUG(llvm::dbgs() << F);
+    DEBUG(llvm::dbgs() << "###############################\n");
+  }
 
   return changed;
 }

@@ -191,9 +191,14 @@ static RegisterPass<Empty3FunctionPass> Empty3FunctionPassRegistration("empty3fu
 char Empty3FunctionPass::ID;
 
 
-static void registerMollyPasses(llvm::PassManagerBase &PM) {
-  //PM.add(molly::createFieldDetectionAnalysisPass());
+static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, int optLevel) {
+	if (!mollyEnabled) {
+		llvm::errs() << "Molly: Loaded but disabled\n";
+		//FIXME: Even if molly is disabled, we need to remove the molly intrinsics by some local access
+		return;
+	}
 
+	llvm::errs() << "Molly: Enabled lvl " << optLevel << "\n";
 
 #if 0
   //PM.add(new EmptyRegionPass());
@@ -212,6 +217,8 @@ static void registerMollyPasses(llvm::PassManagerBase &PM) {
   } else {
   }
 #endif
+
+  //PM.add(molly::createFieldDetectionAnalysisPass());
 
   // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
   PM.add(molly::createMollyInlinePass()); 
@@ -239,20 +246,15 @@ static void registerMollyPasses(llvm::PassManagerBase &PM) {
 }
 
 
+static void registerMollyNoOptPasses(const llvm::PassManagerBuilder &Builder, llvm::PassManagerBase &PM) {
+	//REMINDER: Usually we'd disable molly without optimization, but for debugging, enabled it
+	//registerMollyPasses(PM, false, 0);
+	registerMollyPasses(PM, MollyEnabled, 0);
+}
+
+
 static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder, llvm::PassManagerBase &PM) {
-  if (Builder.OptLevel == 0)
-    return;
-
-  if (!MollyEnabled) {
-    return;
-  }
-
-  if (Builder.OptLevel != 3) {
-    errs() << "Molly should only be run with -O3. Disabling Molly.\n";
-    return;
-  }
-
-  registerMollyPasses(PM);
+  registerMollyPasses(PM, MollyEnabled, Builder.OptLevel);
 }
 
 
@@ -263,7 +265,8 @@ namespace molly {
 }
 
 
-static llvm::RegisterStandardPasses PassRegister(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly, registerMollyEarlyAsPossiblePasses);
+static llvm::RegisterStandardPasses OptPassRegister(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly, registerMollyEarlyAsPossiblePasses);
+static llvm::RegisterStandardPasses NoOptPassRegister(llvm::PassManagerBuilder::EP_EnabledOnOptLevel0, registerMollyNoOptPasses);
 
 namespace molly {
   void forceLinkPassRegistration() {
@@ -280,7 +283,8 @@ namespace molly {
   srand( *((unsigned int*)&(val)) )
 
     // Do something with the static variable to ensure it is linked into the library
-    USE(PassRegister);
+    USE(OptPassRegister);
+    USE(NoOptPassRegister);
     USE(MollyEnabled);
   }
 }

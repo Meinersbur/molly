@@ -1,8 +1,14 @@
+/**
+ * Molly Runtime Library
+ *
+ * Do not use __builtin_molly_* in here, they won't work. In fact, most builtins from the user application will be transformed to to calls to this runtime library
+ */
 #include "molly.h"
 
 #include <malloc.h>
 #include <cstdio>
 #include <mpi.h> 
+#include <assert.h>
  
 using namespace molly;
 
@@ -100,7 +106,7 @@ namespace molly {
   rank_t _world_self;
 
   int _cart_dims = 0;
-  MPI_Comm _cart_self;
+  rank_t _cart_self;
   MPI_Comm _cart_comm;
   int *_cart_lengths;
   rank_t *_cart_self_coords;
@@ -173,6 +179,9 @@ namespace molly {
     return _cart_self_coords[d];
   }
 
+  rank_t world_self() {
+	  return _world_self;
+  }
 
   class MemcpyCommunicator : public CommunicatorCommon {
   public:
@@ -227,13 +236,14 @@ public:
 
 
 // If running with molly optimization, the original main method will be renamed to this one
-extern "C" int __molly_orig_main(int argc, char *argv[]);
+extern "C" int __molly_orig_main(int argc, char *argv[]) __attribute__((weak));
 // ... and a new main generated, that just calls __molly_main
 extern "C" int main(int argc, char *argv[]);
 
 
 extern "C" int __molly_main(int argc, char *argv[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
+  assert(&__molly_orig_main && "Must be compiled using mollycc");
   //TODO: MPI_Init
   return __molly_orig_main(argc, argv);//TODO: MPI may modify arguments
 }

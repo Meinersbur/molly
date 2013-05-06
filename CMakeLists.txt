@@ -97,13 +97,16 @@ mark_as_advanced(MOLLYCC_DEBUG)
 
 if (MOLLYCC_DEBUG)
 message("MollyRT Debug build")
-  set(MOLLYCC_DEBUG_FLAGS -g)
+  set(MOLLYCC_DEBUG_FLAGS -g -w -mllvm -debug -mllvm -debug-only=molly)
 else ()
 message("MollyRT Release build")
-  set(MOLLYCC_DEBUG_FLAGS -g0 -DNDEBUG)
+  set(MOLLYCC_DEBUG_FLAGS -O3 -g0 -DNDEBUG)
 endif ()
 
-set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt -I${MPI_CXX_INCLUDE_PATH})
+set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -fno-exceptions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt)
+foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
+  list(APPEND MOLLYCC_COMMON_FLAGS "-I${_include}")
+endforeach()
 set(MOLLYCC_VERBOSE_FLAGS -v -save-temps)
 #set(MOLLYCC_VERBOSE_FLAGS -v)
 #set(MOLLYCC_VERBOSE_FLAGS)
@@ -129,7 +132,7 @@ macro(mollycc_compile _outfile)
   add_custom_command(
     OUTPUT ${_outfile}
     COMMAND mollycc ${_flags} ${_realsources} -o ${_outfile} ${PARM_LIBS}
-    DEPENDS mollycc ${_realsources}
+    DEPENDS mollycc ${_realsources} ${PARM_LIBS}
     IMPLICIT_DEPENDS ${_realsources}
     COMMENT "${PARM_COMMENT}")
 endmacro()

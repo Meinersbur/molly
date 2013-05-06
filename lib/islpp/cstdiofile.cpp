@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <fstream>
 #include <stdio.h>
+#include <string>
+
 
 using namespace molly;
 using namespace std;
@@ -78,7 +80,7 @@ std::string CstdioFile::readAsStringAndClose() {
 
 llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
 #ifdef CSTDIOFILE_OPEN_MEMSTREAM
-  OS.write(buf, writtensize);
+  OS.write(tmp.buf, tmp.writtensize);
 #else
   fpos_t savepos;
   auto retval = fgetpos(tmp.fd, &savepos);
@@ -96,6 +98,7 @@ llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
   }
 
   fsetpos(tmp.fd, &savepos);
-  return OS;
+
 #endif
+  return OS;
 }

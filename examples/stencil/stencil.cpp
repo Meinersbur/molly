@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   //(void)MyField.length();
   
   auto len = MyField.length();
-  for (int i = 0; i < len; i+=1) {
+  for (int i = 0; i < 2; i+=1) {
     //MyField.set(i,i+1);
     
     //*MyField.ptr(i) = i+1;

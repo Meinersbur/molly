@@ -6,11 +6,11 @@
 
 #include "islpp/Isl.h"
 
-#include "molly\FieldDetection.h"
+#include "molly/FieldDetection.h"
 #include "FieldVariable.h"
 #include "FieldType.h"
 #include "MollyContextPass.h"
-#include "molly\FieldDistribution.h"
+#include "molly/FieldDistribution.h"
 
 using namespace llvm;
 using namespace molly;
@@ -73,7 +73,7 @@ namespace {
       return ModulePass::getPotentialPassManagerType();
     }
 
-    virtual Pass *createPrinterPass(raw_ostream &O, const std::string &Banner) const  {
+    virtual Pass *createPrinterPass(llvm::raw_ostream &O, const std::string &Banner) const {
       return ModulePass::createPrinterPass(O, Banner);
     }
 

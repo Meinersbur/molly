@@ -13,12 +13,13 @@
 #include "islpp/PwMultiAff.h"
 #include "islpp/Point.h"
 #include "islpp/Vertices.h"
-#include "CstdioFile.h"
+#include "cstdiofile.h"
 
 #include <llvm/Support/raw_ostream.h>
 #include <isl/set.h>
 #include <isl/map.h>
 #include <isl/vertices.h>
+#include <functional>
 //#include <stdio.h>
 
 using namespace isl;
