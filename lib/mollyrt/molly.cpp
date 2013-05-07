@@ -107,17 +107,40 @@ namespace molly {
     	MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &_world_self));
     	RTASSERT(_world_ranks == __molly_cluster_size, "Have to mpirun with exact shape that was used when compiling");
 
+#ifndef NDEBUG
+    	MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD)); // Wait for all ranks to avoid mixing messages with non-master ranks
+    	if (__molly_isMaster()) {
+    		std::cerr << "###############################################################################\n";
+    	}
+#endif
+
     	MOLLY_DEBUG("__molly_cluster_dims="<<__molly_cluster_dims << " __molly_cluster_size="<<__molly_cluster_size);
     	for (auto d = __molly_cluster_dims-__molly_cluster_dims; d < __molly_cluster_dims; d+=1) {
     		MOLLY_DEBUG("d="<<d << " __molly_cluster_lengths[d]="<<__molly_cluster_lengths[d] << " __molly_cluster_periodic[d]="<<__molly_cluster_periodic[d]);
     	}
 
-	   MPI_CHECK(MPI_Cart_create(MPI_COMM_WORLD, __molly_cluster_dims, const_cast<int*>(__molly_cluster_lengths), const_cast<int*>(__molly_cluster_periodic), true, &_cart_comm));
+    	_cart_dims = __molly_cluster_dims;
+	   MPI_CHECK(MPI_Cart_create(MPI_COMM_WORLD, _cart_dims, const_cast<int*>(__molly_cluster_lengths), const_cast<int*>(__molly_cluster_periodic), true, &_cart_comm));
 	   MPI_CHECK(MPI_Comm_rank(_cart_comm, &_cart_self));
 	   MOLLY_DEBUG("_cart_self="<<_cart_self);
 
-	   _cart_self_coords = static_cast<int*>(malloc(sizeof(*_cart_self_coords) * __molly_cluster_dims)); // TODO: mollycc could preallocate some space
+	   _cart_self_coords = static_cast<int*>(malloc(sizeof(*_cart_self_coords) * _cart_dims)); // TODO: mollycc could preallocate some space
 	   MPI_CHECK(MPI_Cart_coords(_cart_comm, _cart_self, __molly_cluster_dims, _cart_self_coords));
+
+#ifndef NDEBUG
+	   std::string cartcoord;
+	   std::stringstream os;
+	   for (auto d=__molly_cluster_dims-__molly_cluster_dims; d<__molly_cluster_dims;d+=1) {
+		   if (d!=0)
+			   os<<",";
+		   os<<_cart_self_coords[d];
+	   }
+	   auto tmp = _world_self;
+	   _world_self = 0;
+	   MOLLY_DEBUG("Here is rank " << tmp << " at cart coord ("<<os.rdbuf()<<")");
+	   _world_self = tmp;
+	   MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+#endif
     }
 
     static void finalize() {
@@ -131,11 +154,13 @@ namespace molly {
 
     }
 
-    static  void broadcast_send(const void *sendbuf, size_t size) {
+
+    static  void broadcast_send(const void *sendbuf, size_t size) { MOLLY_DEBUG_FUNCTION_SCOPE
       MPI_CHECK(MPI_Bcast(const_cast<void*> (sendbuf), size, MPI_BYTE, _cart_self, _cart_comm));
     }
 
-    static void broadcast_recv(void *recvbuf, size_t size, rank_t sender) {
+
+    static void broadcast_recv(void *recvbuf, size_t size, rank_t sender) { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(sender != _cart_self);
       MPI_CHECK(MPI_Bcast(recvbuf, size, MPI_BYTE, sender, _cart_comm));
     }
@@ -148,11 +173,11 @@ namespace molly {
   //static int _providedThreadLevel;
 
 
-  void broadcast_send(const void *sendbuf, size_t size) {
+  void broadcast_send(const void *sendbuf, size_t size) { MOLLY_DEBUG_FUNCTION_SCOPE
    TheCommunicator::broadcast_send(sendbuf, size);
   }
 
-  void broadcast_recv(void *recvbuf, size_t size, rank_t sender) {
+  void broadcast_recv(void *recvbuf, size_t size, rank_t sender) { MOLLY_DEBUG_FUNCTION_SCOPE
 	  TheCommunicator::broadcast_recv(recvbuf, size, sender);
   }
 
@@ -160,10 +185,11 @@ namespace molly {
     return _cart_dims;
   }
 
-  int cart_self_coord(int d) {
+  int cart_self_coord(int d) { MOLLY_DEBUG_FUNCTION_SCOPE
     assert(d >= 0);
     if (d >= cart_dims())
       return 0;
+    MOLLY_VAR(d, _cart_self_coords[d]);
     return _cart_self_coords[d];
   }
 
@@ -180,12 +206,12 @@ namespace molly {
   class Communicator : public TheCommunicator {};
 }
 
-rank_t molly::getMyRank() {
+rank_t molly::getMyRank() { MOLLY_DEBUG_FUNCTION_SCOPE
   return _cart_self;
 }
 
 
-bool molly::isMaster() {
+bool molly::isMaster() { MOLLY_DEBUG_FUNCTION_SCOPE
   return _world_self==0;
 }
 
@@ -195,7 +221,7 @@ extern "C" bool __molly_isMaster() {
 }
 
 
-int molly::getClusterDims() {
+int molly::getClusterDims() { MOLLY_DEBUG_FUNCTION_SCOPE
   return _cart_dims;
 }
 
@@ -237,6 +263,7 @@ extern "C" int __molly_main(int argc, char *argv[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
   assert(&__molly_orig_main && "Must be compiled using mollycc");
 
+  //TODO: We could change the communicator dynamically using argc,argv or getenv()
   Communicator::init(argc, argv);
   //FIXME: Exception-handling, but currently we do not support exceptions
   auto retval = __molly_orig_main(argc, argv);

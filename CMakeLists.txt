@@ -93,7 +93,7 @@ endmacro()
 
 
 option(MOLLYCC_DEBUG "Compile Debug version of MollyRT (and anything compiled with mollycc)" ON)
-mark_as_advanced(MOLLYCC_DEBUG)
+#mark_as_advanced(MOLLYCC_DEBUG)
 
 if (MOLLYCC_DEBUG)
 message("MollyRT Debug build")

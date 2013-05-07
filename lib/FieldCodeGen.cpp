@@ -105,9 +105,10 @@ namespace molly {
       auto nDims = ftype->getNumDimensions();
       auto intTy = Type::getInt32Ty(context);
       auto lengths = ftype->getLengths();
+      auto molly = &getAnalysis<MollyContextPass>();
 
       SmallVector<Type*, 5> argTys;
-      argTys.push_back( PointerType::getUnqual(llvmTy) );
+      argTys.push_back(PointerType::getUnqual(llvmTy));
       argTys.append(nDims, intTy);
       auto localLengthFuncTy = FunctionType::get(intTy, argTys, false);
 
@@ -123,7 +124,6 @@ namespace molly {
       auto defaultBB = BasicBlock::Create(context, "Default", localLengthFunc); 
       new UnreachableInst(context, defaultBB);
 
-      //ReturnInst::Create(context, NULL, entryBB);
       IRBuilder<> builder(entryBB);
       builder.SetInsertPoint(entryBB);
 
@@ -132,25 +132,10 @@ namespace molly {
       for (auto d = nDims-nDims; d<nDims; d+=1) {
     	  DEBUG(llvm::dbgs() << "Case " << d << "\n");
     	  auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc);
-    	  ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]), caseBB);
+    	  ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d] / molly->getClusterLength(d)/*FIXME: wrong if nondivisible*/), caseBB);
 
     	  sw->addCase(ConstantInt::get(intTy, d), caseBB);
       }
-
-#if 0
-      auto d = 0;
-      for (auto itCase = sw->case_begin(), endCase = sw->case_end(); itCase!=endCase; ++itCase) {
-        itCase.setValue(ConstantInt::get(Type::getInt32Ty(context), d));
-        DEBUG(llvm::dbgs() << "Case " << d << "\n");
-        auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc); 
-        ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d]), caseBB);
-
-        itCase.setSuccessor(caseBB);
-        d+=1;
-      }
-#endif
-
-      //builder.CreateRet(UndefValue::get(intTy));
 
       changed = true;
       ftype->setLocalLengthFunc(localLengthFunc);
@@ -375,7 +360,7 @@ void FieldCodeGen::emitRead(MollyFieldAccess &access){
     args.push_back(coord);
   }
 
-  builder.CreateCall(access.getFieldType()->getFuncGetBroadcast(), args, "getcall");
+  auto call =builder.CreateCall(access.getFieldType()->getFuncGetBroadcast(), args);
   auto load = builder.CreateLoad(buf, "loadget");
   accessor->replaceAllUsesWith(load);
 }
@@ -412,7 +397,7 @@ void FieldCodeGen::emitAccess(MollyFieldAccess &access) {
 
   if (access.isRead()) {
     emitRead(access);
-  } else if  (access.isWrite()) {
+  } else if (access.isWrite()) {
     emitWrite(access);
   } else {
     llvm_unreachable("What is it?");

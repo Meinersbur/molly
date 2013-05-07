@@ -1,3 +1,15 @@
+#ifndef MOLLY_H
+#define MOLLY_H
+
+#include "molly_debug.h"
+
+
+
+// TODO: Modes:
+// - Single: There is just one rank
+// - Broadcast: Every rank executes everything, but only the results of master are saved //TODO: for complete emulation of single-rank execution, we should also replace calls to output functions, such as printf, fwrite, etc...
+// - Master: The master executes everything, only parallizable work is delegate to other ranks
+
 
 #ifdef __clang__
 typedef struct { long double x, y; } __float128;
@@ -9,6 +21,10 @@ typedef struct { long double x, y; } __float128;
 #include <tuple>
 #include <limits>
 //#include <bits/nested_exception.h>
+#ifdef __clang__
+// Hack to compile without exceptions and libstdc++ 4.7 (nested_exception.h)
+#define _GLIBCXX_NESTED_EXCEPTION_H 1
+#endif
 
 #if defined __clang__
 //#pragma clang diagnostic ignored "-Wunknown-pragmas"
@@ -54,15 +70,111 @@ static inline const char *extractFilename(const char *filename) {
 	}
 }
 
+
+
 extern "C" bool __molly_isMaster();
 
 #ifndef NDEBUG
-#ifdef __clang__
-// Hack to compile without exceptions and libstdc++ 4.7 (nested_exception.h)
-#define _GLIBCXX_NESTED_EXCEPTION_H 1
-#endif
 #include <iomanip>
 #include <iostream>
+#include <sstream>
+
+// Recursion end
+static void dbgPrintVars_inner(const char *varnames) {}
+
+template<typename First>
+static void dbgPrintVars_inner(const char *varnames, const First &first) {
+	std::cerr << ' ';
+	auto argsnames=varnames;
+
+	// Skip leading space
+	while (true) {
+		auto ch = *argsnames;
+		switch (ch) {
+		case ' ':
+			argsnames +=1;
+			break;
+		}
+		break;
+	}
+
+	while (true) {
+		auto ch = *argsnames;
+		switch (ch) {
+		case ',':
+			argsnames +=1;
+			break;
+		case '\0':
+			break;
+		default:
+			std::cerr<<ch;
+			argsnames +=1;
+			continue;
+		}
+		break;
+	}
+	std::cerr << '=' << first;
+}
+
+template<typename First, typename... Args>
+static void dbgPrintVars_inner(const char *varnames, const First &first, const Args&... args) {
+	std::cerr << ' ';
+	auto argsnames=varnames;
+
+	// Skip leading space
+	while (true) {
+		auto ch = *argsnames;
+		switch (ch) {
+		case ' ':
+			argsnames +=1;
+			break;
+		}
+		break;
+	}
+
+	while (true) {
+		auto ch = *argsnames;
+		switch (ch) {
+		case ',':
+			argsnames +=1;
+			break;
+		case '\0':
+			break;
+		default:
+			std::cerr<<ch;
+			argsnames +=1;
+			continue;
+		}
+		break;
+	}
+	std::cerr << '=' << first;
+
+	dbgPrintVars_inner(argsnames, args...);
+}
+
+template<typename... Args>
+static void dbgPrintVars(const char *file, int line, const char *varnames, const Args&... args) {
+	if (!__molly_isMaster())
+		return;
+
+	for (int i = _debugindention; i > 0; i-=1) {
+	  std::cerr << "  ";
+	}
+	std::cerr << extractFilename(file) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << line << std::resetiosflags(std::ios::left);
+
+	dbgPrintVars_inner(varnames, args...);
+	std::cerr << std::endl;
+}
+
+//TODO: improve:
+// - Put 2 char tag in front to mark severity
+// - Refector part that writes prologue (severity, indention, __FILE__:__LINE__) to allow at other places
+// - make configurable which rank to print
+// - account for newlines
+// - allow arbitrary code
+// - Put into its own file
+// - A version MOLLY_DEBUG_FUNCTION_SCOPE to which you can submit the arguments to; and maybe also the return value
+// - redirect to a file for each rank
 #define MOLLY_DEBUG(...) \
   do { \
 	if (__molly_isMaster()) { \
@@ -72,10 +184,18 @@ extern "C" bool __molly_isMaster();
     std::cerr << extractFilename(__FILE__) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << __LINE__ << " " << std::resetiosflags(std::ios::left) << __VA_ARGS__ << std::endl; \
 	} \
   } while (0)
+
+#define MOLLY_VAR(...) \
+		dbgPrintVars(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+
+#define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
 #else
 #define MOLLY_DEBUG(...) ((void)0)
+#define MOLLY_VAR(...) ((void)0)
+#define MOLLY_DEBUG_FUNCTION_SCOPE
 #endif
 
+#ifndef NDEBUG
 class DebugFunctionScope {
   const char *funcname;
 public:
@@ -98,8 +218,9 @@ public:
     std::cerr << "EXIT  " << funcname << std::endl;
   }
 };
+#endif
 
-#define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
+
 #pragma endregion
 
 
@@ -353,6 +474,7 @@ namespace molly {
 
 
 #pragma region Implementation of out_parampack
+#ifndef NDEBUG
   template<typename... Args>
   struct out_parampack_impl;
   
@@ -394,10 +516,18 @@ std::ostream &operator<<(std::ostream &stream, const out_parampack_impl<Args...>
 }
 
 template<typename... Args>
-out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
+static inline out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
 	return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
 }
+#endif
 #pragma endregion
+
+
+
+
+
+
+
 
 
 #pragma region Dummy builtins for other compilers
@@ -553,23 +683,26 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
 
 
     bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
+    	auto expRank = coords2rank(coords...);
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
-        MOLLY_DEBUG("d="<<d << " len="<<len);
         auto locallen = __builtin_molly_locallength(this, d);
         auto coord = _select(d, coords...);
-        MOLLY_DEBUG("d="<<d << " len="<<len << " locallen="<<locallen << " coord="<<coord);
         auto clustercoord = cart_self_coord(d); //TODO: Make sure this is inlined
-        MOLLY_DEBUG("d="<<d << " len="<<len << " locallen="<<locallen << " coord="<<coord << " clustercoord="<<clustercoord);
+        //MOLLY_DEBUG("d="<<d << " len="<<len << " locallen="<<locallen << " coord="<<coord << " clustercoord="<<clustercoord);
 
         auto localbegin = clustercoord*locallen;
-        auto localend = localbegin+localbegin;
-
+        auto localend = localbegin+locallen;
+        MOLLY_VAR(d,len,locallen,coord,clustercoord,localbegin,localend);
         if (localbegin <= coord && coord < localend)
           continue;
+
+        MOLLY_DEBUG("rtn=false coords2rank(coords...)="<<expRank<< " self="<<world_self());
+        assert(expRank != world_self());
         return false;
       }
-      assert(coords2rank(coords...) == world_self());
+    MOLLY_DEBUG("rtn=true coords2rank(coords...)="<<expRank<< " self="<<world_self());
+      assert(expRank == world_self());
       return true;
     }
 
@@ -578,18 +711,13 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
     static const auto Dims = sizeof...(L);
 
 
-    ~array() {
-      MOLLY_DEBUG_FUNCTION_SCOPE
+    ~array() { MOLLY_DEBUG_FUNCTION_SCOPE
       free(localdata);
     }
 
 
-    array() {
-       //std::cout << "x" << std::endl;
-      MOLLY_DEBUG_FUNCTION_SCOPE
-       //std::cout << "y" << std::endl;
+    array() { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
-       //std::cout << "z" << std::endl;
 
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
@@ -617,8 +745,7 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
     }
 
 
-    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ {
-      MOLLY_DEBUG_FUNCTION_SCOPE
+    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
@@ -626,21 +753,20 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
     /// Overload for length(int) for !D
     template<typename Dummy = void>
     typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, int, Dummy>::type >::type
-      length() MOLLYATTR(inline) {
+      length() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
         return length(0);
     }
 
 
     /// Returns a pointer to the element with the given coordinates; Molly will track loads and stores to this memory location and insert communication code
-    T *ptr(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptrfunc) MOLLYATTR(inline) {
+    T *ptr(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptrfunc) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
       return (T*)__builtin_molly_ptr(this, coords...);
     }
 
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      operator[](int i) MOLLYATTR(inline) {
-        MOLLY_DEBUG_FUNCTION_SCOPE
+      operator[](int i) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -650,22 +776,21 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      operator[](int i) MOLLYATTR(inline) {
-        MOLLY_DEBUG_FUNCTION_SCOPE
+      operator[](int i) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return subty(this, i);
     }
 
 #pragma region Local access
-    void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) {
+    void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) { MOLLY_DEBUG_FUNCTION_SCOPE
        assert(__builtin_molly_islocal(this, coords...));
        auto idx = coords2idx(coords...);
        assert(0 <= idx && idx < localelts);
        assert(localdata);
        val = localdata[idx];
     }
-    void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) {
+    void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
       assert(0 <= idx && idx < localelts);
@@ -685,11 +810,8 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
     }
 #pragma endregion
 
-    //bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) {
-    //  return __builtin_molly_islocal(this, coords...);
-    //}
 
-    void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) {
+    void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
      if (isLocal(coords...)) {
         __get_local(val, coords...);
         broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result
@@ -697,7 +819,8 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
         broadcast_recv(&val, sizeof(T), coords2rank(coords...));
       }
     }
-    void __set_broadcast(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_broadcast) {
+    void __set_broadcast(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLY_DEBUG("coords=("<<out_parampack(", ", coords...) << ") L=("<<out_parampack(", ", L...) <<")");
       if (isLocal(coords...)) {
         __set_local(val, coords...);
       } else {
@@ -706,9 +829,9 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
       }
     }
 
-    void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) {
+    void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
     }
-    void __set_master(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_master)) {
+    void __set_master(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
     }
 
     private:
@@ -741,5 +864,4 @@ out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) 
 
 
 } // namespace molly
-
-
+#endif /* MOLLY_H */

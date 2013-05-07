@@ -38,6 +38,7 @@ namespace molly {
     const llvm::SmallVectorImpl<unsigned> &getClusterLengths() { return clusterLengths; }
     int getClusterDims() const;
     int getClusterSize() const;
+    int getClusterLength(int d) const;
   };
 }
 

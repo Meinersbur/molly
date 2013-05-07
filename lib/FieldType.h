@@ -156,6 +156,8 @@ namespace molly {
     	return metadata.llvmEltType;
     }
     llvm::PointerType *getEltPtrType();
+
+    //TODO: Element length in bytes
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

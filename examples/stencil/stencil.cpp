@@ -1,6 +1,7 @@
 
 #include <molly.h>
  
+#include <iostream>
 
 #if 0
  //================ 
@@ -40,11 +41,19 @@ int main(int argc, char *argv[]) {
     //MyField.set(i,i+1);
     
     //*MyField.ptr(i) = i+1;
-     MyField[i] = i+1;
+     MyField[i] = i+2;
 
     //*MySecondField.ptr(i) = i+2;
     //MySecondField[i] = i+2;
   }
 
+  for (int i = 0; i < 2; i+=1) {
+	  MyField[i+len/2] = i+len/2+1;
+  }
+
+  auto val = MyField[len/2];
+
+  //std::cerr << "cerr: Rank " << molly::world_self() << " got value " << val << std::endl;
+  std::cout << "cout: Rank " << molly::world_self() << " got value " << val << std::endl;
   return 0;
 }

@@ -64,5 +64,13 @@ int MollyContextPass::getClusterSize() const {
 	return result;
 }
 
+int MollyContextPass::getClusterLength(int d) const {
+	assert(d >= 0);
+	if (d < clusterLengths.size()) {
+		return clusterLengths[d];
+	}
+	return 1;
+}
+
 
 static RegisterPass<MollyContextPass> FieldAnalysisRegistration("molly-context", "Molly - Context", false, true);
