@@ -4,6 +4,8 @@
 #include "molly/FieldCodeGen.h"
 #include "ScopStmtSplit.h"
 #include "MollyInlinePrepa.h"
+//#include "MollyPassManager.h"
+#include "ScopDistribution.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Analysis/Passes.h"
@@ -240,7 +242,14 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //PM.add(molly::createScopStmtSplitPass());
   //PM.add(polly::createDependencesPass());
   //PM.add(new PatternSearchAnalysis());
+
   PM.add(molly::createFieldDistributionPass());
+
+  //auto MollyPM = MollyPassManager::create();
+  //MollyPM.add(molly::createFieldDistributionPass());
+  //PM.add(MollyPM);
+  PM.add(molly::createFieldDistributionPass());
+
   PM.add(molly::createModuleFieldGenPass());
   PM.add(molly::createFieldCodeGenPass());
 }
@@ -288,4 +297,3 @@ namespace molly {
     USE(MollyEnabled);
   }
 }
-

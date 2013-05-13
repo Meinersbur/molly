@@ -2,10 +2,17 @@
 #define ISLPP_MULTI_H
 
 namespace isl {
+  class Aff;
+} // namespace isl
 
+
+namespace isl {
   template<typename T>
   class Multi;
 
-} // namepsace isl
+  template<>
+  class Multi<Aff>;
+  typedef Multi<Aff> MultiAff;
 
-#endif /* ISLPP_PW_H */
+} // namespace isl
+#endif /* ISLPP_MULTI_H */

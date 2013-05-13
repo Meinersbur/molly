@@ -18,6 +18,7 @@ add_molly_library(LLVMMolly
     MollyFieldAccess.cpp
     PatternSearchAnalysis.cpp
     GlobalPassManager.cpp
+    MollyPassManager.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

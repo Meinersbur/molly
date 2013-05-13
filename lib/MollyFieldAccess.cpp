@@ -4,6 +4,7 @@
 #include "MollyContext.h"
 #include "FieldVariable.h"
 #include "islpp/Aff.h"
+#include "islpp/MultiAff.h"
 #include "islpp/Ctx.h"
 #include "islpp/Space.h"
 
@@ -18,6 +19,20 @@ MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *inst
 }
 
 
+MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc) {
+  auto instr = const_cast<Instruction*>(acc->getAccessInstruction());
+  auto result = fromAccessInstruction(instr);
+  result.augmentMemoryAccess(acc);
+  return result;
+}
+
+
+void MollyFieldAccess::augmentMemoryAccess(polly::MemoryAccess *acc) {
+  assert(acc->getAccessInstruction() == getAccessor());
+  this->scopAccess = acc;
+}
+
+
 FieldType *MollyFieldAccess::getFieldType() {
   return fieldvar->getFieldType();
 }
@@ -26,3 +41,39 @@ FieldType *MollyFieldAccess::getFieldType() {
 isl::Space MollyFieldAccess::getLogicalSpace(isl::Ctx* ctx) {
   return isl::Space::wrap(isl_getLogicalSpace(ctx->keep()));
 }
+
+
+ polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
+   assert(scopAccess && "Need to augment the access using SCoP");
+ return scopAccess;
+ }
+
+
+    polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
+       assert(scopAccess && "Need to augment the access using SCoP");
+       auto result = scopAccess->getStatement();
+       assert(result);
+      return result;
+    }
+
+
+    isl::MultiAff MollyFieldAccess::getAffineAccess() {
+      SmallVector<llvm::Value*,4> coords;
+      getCoordinates(coords);
+
+      isl::MultiAff result;
+
+      for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
+        auto coord = *it;
+
+        isl::Aff aff;
+
+        result.
+      }
+
+      return result;
+    }
+
+
+    isl::Map MollyFieldAccess::getAccessedRegion() {
+    }

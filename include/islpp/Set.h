@@ -11,6 +11,7 @@
 #include <isl/lp.h> // enum isl_lp_result;
 
 #include "islpp/Int.h"
+#include "islpp/Multi.h"
 
 
 struct isl_set;
@@ -32,7 +33,6 @@ namespace isl {
   class Id;
   class Aff;
   class Map;
-  class MultiAff;
   class Point;
   class MultiPwAff;
   class PwQPolynomialFold;

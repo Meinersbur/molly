@@ -20,7 +20,10 @@ namespace isl {
   class Id;
   class Set;
   class BasicSet;
-  class MultiAff;
+  class Aff;
+
+  template<typename T> class Multi;
+  template<> class Multi<Aff>;
 } // namespace isl
 
 
@@ -117,7 +120,7 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-    void pullbackMultiAff(MultiAff &&);
+    void pullbackMultiAff(Multi<Aff> &&);
   }; // class Aff
 
   bool isPlainEqual(const Aff &aff1, const Aff &aff2);

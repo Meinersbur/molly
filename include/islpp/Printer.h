@@ -2,6 +2,8 @@
 #define ISLPP_PRINTER_H
 
 #include "islpp_common.h"
+#include "islpp/Multi.h"
+
 #include <llvm/Support/Compiler.h>
 #include <assert.h>
 #include <string>
@@ -29,7 +31,6 @@ namespace isl {
   class UnionPwQPolynomial;
   class PwQPolynomialFold;
   class UnionPwQPolynomialFold;
-  class MultiAff;
   class Constraint;
   class Id;
 
