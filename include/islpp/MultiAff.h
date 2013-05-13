@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <isl/aff.h>
+#include <isl/multi.h>
 
 #include "islpp/Multi.h"
 #include "islpp/Aff.h"
@@ -25,6 +26,9 @@ namespace llvm {
 namespace isl {
   class Aff;
 } // namespace isl
+
+// Forgotten declarations
+//__isl_give isl_multi_aff *isl_multi_aff_alloc(__isl_take isl_set *set, __isl_take isl_multi_aff *maff);
 
 
 namespace isl {
@@ -71,6 +75,7 @@ namespace isl {
     static Multi<Aff> readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_aff_read_from_str(ctx->keep(), str)); } 
 #pragma endregion
 
+
 #pragma region Dimensions
     unsigned dim(enum isl_dim_type type) const { return isl_multi_aff_dim(keep(), type); }
 
@@ -98,7 +103,7 @@ namespace isl {
     //void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
     void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { llvm_unreachable("API function missing"); }
     void dropDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_multi_aff_drop_dims(take(), type, first, n)); }
-    
+
     void removeDims(isl_dim_type type, unsigned first, unsigned n) { dropDims(type, first, n); }
 #pragma endregion
 
@@ -113,7 +118,9 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::wrap(isl_multi_aff_get_aff(keep(), pos)); }
+    void append(Aff &&aff);
 #pragma endregion
+
 
     void scale(Int f) { give(isl_multi_aff_scale(take(), f.keep())); };
     void scaleVec(Vec &&v) { give(isl_multi_aff_scale_vec(take(), v.take())); }
@@ -121,28 +128,28 @@ namespace isl {
     void alignParams(Space &&model) { give(isl_multi_aff_align_params(take(), model.take())); }
     void gistParams(Set &&context) { give(isl_multi_aff_gist_params(take(), context.take())); }
     void gist(Set &&context) { give(isl_multi_aff_gist(take(), context.take())); }
-     void lift() { give(isl_multi_aff_lift(take(), nullptr)); }
-     LocalSpace lift(LocalSpace &context) { 
-       isl_local_space *ls = nullptr;
-       give(isl_multi_aff_lift(take(), &ls));
-       return LocalSpace::wrap(ls);
-     }
+    void lift() { give(isl_multi_aff_lift(take(), nullptr)); }
+    LocalSpace lift(LocalSpace &context) { 
+      isl_local_space *ls = nullptr;
+      give(isl_multi_aff_lift(take(), &ls));
+      return LocalSpace::wrap(ls);
+    }
 
   }; // class MultiAff
 
   static inline bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
   static inline Multi<Aff> add(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_add(maff1.take(), maff2.take())); }
   static inline Multi<Aff> sub(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_sub(maff1.take(), maff2.take())); }
-  
+
   static inline Multi<Aff> rangeSplice(Multi<Aff> &&maff1, unsigned pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_splice(maff1.take(), pos, maff2.take())); }
   static inline Multi<Aff> splice(Multi<Aff> &&maff1, unsigned in_pos, unsigned out_pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_splice(maff1.take(), in_pos, out_pos, maff2.take())); }
 
   static inline Multi<Aff> rangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_product(maff1.take(), maff2.take())); }
   static inline Multi<Aff> flatRangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_flat_range_product(maff1.take(), maff2.take())); }
   static inline Multi<Aff> product(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_product(maff1.take(), maff2.take())); }
-  
+
   static inline Multi<Aff> pullbackMultiAff(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_pullback_multi_aff(maff1.take(), maff2.take())); }
-  
+
   static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
   static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
 } // namespace isl

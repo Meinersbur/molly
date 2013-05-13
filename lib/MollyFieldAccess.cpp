@@ -77,7 +77,7 @@ isl::MultiAff MollyFieldAccess::getAffineAccess() {
 
     isl::Aff aff;
 
-    // result.
+    result.append(std::move(aff));
   }
 
   return result;

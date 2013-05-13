@@ -23,6 +23,7 @@ Multi<Aff>::~Multi() {
   if (this->maff)
     isl_multi_aff_free(this->maff);
 #ifndef NDEBUG
+  //TODO: Ifndef NVALGRIND mark as uninitialized
   this->maff = nullptr;
 #endif
 }
@@ -48,4 +49,9 @@ void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) 
   } else {
     out << "...";
   }
+}
+
+
+void Multi<Aff>::append(Aff &&aff) {
+
 }

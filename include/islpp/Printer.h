@@ -69,10 +69,10 @@ namespace isl {
     isl_printer *take() { assert(printer); isl_printer *result = printer; printer = nullptr; return result; }
     //isl_printer *takeCopy() const;
     isl_printer *keep() const { return printer; }
-  protected:
+  public:
     void give(isl_printer *printer);
     void give(isl_printer *printer, bool ownsFile);
-  public:
+
     static Printer wrap(isl_printer *printer, bool ownsFile) { Printer result; result.give(printer, ownsFile); return result; }
 #pragma endregion
 

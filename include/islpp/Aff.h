@@ -42,7 +42,8 @@ namespace isl {
     void give(isl_aff *aff);
 
   public:
-    static Aff wrap(isl_aff *aff) { Aff result; result.give(aff); return result; }
+    static Aff wrap(__isl_take isl_aff *aff) { assert(aff); Aff result; result.give(aff); return result; }
+    static Aff wrapCopy(__isl_keep isl_aff *aff);
 #pragma endregion
 
   public:

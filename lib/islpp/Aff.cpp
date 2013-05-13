@@ -28,6 +28,17 @@ void Aff::give(isl_aff *aff) {
 }
 
 
+Aff Aff::wrapCopy(__isl_keep isl_aff *aff) {
+  // TODO: It could be more efficient if wo don't copy but just do not free in the destructor
+  // - Adding a flag is more costly than the reference counter increment inside isl_aff_copy
+  // - Make a second implementation that does not free in destructor; complicates using this class
+  assert(aff);
+  Aff result;
+  result.give(isl_aff_copy(aff)); 
+  return result; 
+}
+
+
 Aff::~Aff(void) {
   if (this->aff)
     isl_aff_free(this->aff);
