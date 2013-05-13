@@ -130,20 +130,21 @@ namespace isl {
 
   }; // class MultiAff
 
-  bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
-  Multi<Aff> add(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_add(maff1.take(), maff2.take())); }
-  Multi<Aff> sub(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_sub(maff1.take(), maff2.take())); }
+  static inline bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
+  static inline Multi<Aff> add(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_add(maff1.take(), maff2.take())); }
+  static inline Multi<Aff> sub(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_sub(maff1.take(), maff2.take())); }
   
-  Multi<Aff> rangeSplice(Multi<Aff> &&maff1, unsigned pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_splice(maff1.take(), pos, maff2.take())); }
-  Multi<Aff> splice(Multi<Aff> &&maff1, unsigned in_pos, unsigned out_pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_splice(maff1.take(), in_pos, out_pos, maff2.take())); }
+  static inline Multi<Aff> rangeSplice(Multi<Aff> &&maff1, unsigned pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_splice(maff1.take(), pos, maff2.take())); }
+  static inline Multi<Aff> splice(Multi<Aff> &&maff1, unsigned in_pos, unsigned out_pos, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_splice(maff1.take(), in_pos, out_pos, maff2.take())); }
 
-  Multi<Aff> rangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_product(maff1.take(), maff2.take())); }
-  Multi<Aff> flatRangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_flat_range_product(maff1.take(), maff2.take())); }
-  Multi<Aff> product(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_product(maff1.take(), maff2.take())); }
+  static inline Multi<Aff> rangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_range_product(maff1.take(), maff2.take())); }
+  static inline Multi<Aff> flatRangeProduct(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_flat_range_product(maff1.take(), maff2.take())); }
+  static inline Multi<Aff> product(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_product(maff1.take(), maff2.take())); }
   
-  Multi<Aff> pullbackMultiAff(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_pullback_multi_aff(maff1.take(), maff2.take())); }
+  static inline Multi<Aff> pullbackMultiAff(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_pullback_multi_aff(maff1.take(), maff2.take())); }
   
-  Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
-  Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
+  static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
+  static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
 } // namespace isl
+
 #endif /* ISLPP_MULTIAFF_H */

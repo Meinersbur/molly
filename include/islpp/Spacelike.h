@@ -23,24 +23,24 @@ namespace isl {
     virtual unsigned dim(isl_dim_type type) const = 0;    
     unsigned dimParam() const { return dim(isl_dim_param); }
 
-    virtual bool hasTupleId(isl_dim_type type) const { return getTupleId(type).isValid(); } 
-    virtual Id getTupleId(isl_dim_type type) const { return getSpace().getTupleId(type); }
+    virtual bool hasTupleId(isl_dim_type type) const;
+    virtual Id getTupleId(isl_dim_type type) const;
     virtual void setTupleId(isl_dim_type type, Id &&id) = 0;
 
-    virtual bool hasTupleName(isl_dim_type type) const { return getTupleName(type); }
-    virtual const char *getTupleName(isl_dim_type type) const { return getSpace().getTupleName(type); }
+    virtual bool hasTupleName(isl_dim_type type) const;
+    virtual const char *getTupleName(isl_dim_type type) const;
     virtual void setTupleName(isl_dim_type type, const char *s) = 0;
 
-    virtual bool hasDimId(isl_dim_type type, unsigned pos) const { return getDimId(type, pos).isValid(); }
-    virtual Id getDimId(isl_dim_type type, unsigned pos) const { return getSpace().getDimId(type, pos); }
+    virtual bool hasDimId(isl_dim_type type, unsigned pos) const;
+    virtual Id getDimId(isl_dim_type type, unsigned pos) const;
     Id getDimIdOrNull(isl_dim_type type, unsigned pos) const;
     virtual void setDimId(isl_dim_type type, unsigned pos, Id &&id) = 0;
-    virtual int findDimById(isl_dim_type type, const Id &id) const { return getSpace().findDimById(type, id); } 
+    virtual int findDimById(isl_dim_type type, const Id &id) const;
 
-    virtual bool hasDimName(isl_dim_type type, unsigned pos) const { return getDimName(type, pos); }
-    virtual const char *getDimName(isl_dim_type type, unsigned pos) const { return getSpace().getDimName(type, pos); }
+    virtual bool hasDimName(isl_dim_type type, unsigned pos) const;
+    virtual const char *getDimName(isl_dim_type type, unsigned pos) const;
     virtual void setDimName(isl_dim_type type, unsigned pos, const char *s)  = 0;
-    virtual int findDimByName(isl_dim_type type, const char *name) const { return getSpace().findDimByName(type, name); }
+    virtual int findDimByName(isl_dim_type type, const char *name) const;
 
     virtual void insertDims(isl_dim_type type, unsigned pos, unsigned n) = 0;
     virtual void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) = 0;

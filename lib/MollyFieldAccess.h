@@ -1,11 +1,11 @@
 #ifndef MOLLY_MOLLYFIELDACCESS_H
 #define MOLLY_MOLLYFIELDACCESS_H
 
+#include "islpp/MultiAff.h"
 #include <polly/FieldAccess.h>
 
 namespace isl {
   class Map;
-  class MultiAff;
 } // namespace isl
 
 
@@ -18,17 +18,22 @@ namespace molly {
     polly::MemoryAccess *scopAccess;
 
   protected:
-    MollyFieldAccess(const polly::FieldAccess &that) : polly::FieldAccess(that) { this->fieldvar = NULL; this->scopAccess = NULL; }
+    MollyFieldAccess(const polly::FieldAccess &that) : polly::FieldAccess(that) {
+      this->fieldvar = nullptr;
+      this->scopAccess = nullptr; 
+    }
 
   public:
     MollyFieldAccess() {
-      this->fieldvar = NULL;
+      this->fieldvar = nullptr;
+       this->scopAccess = nullptr; 
     }
 
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
     static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc);
 
     void augmentMemoryAccess(polly::MemoryAccess *acc);
+    void augmentFieldVariable(FieldVariable *fieldvar);
 
     FieldVariable *getFieldVariable() { return fieldvar; }
     FieldType *getFieldType();

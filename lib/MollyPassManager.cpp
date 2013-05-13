@@ -17,20 +17,21 @@ namespace molly {
 
 
 char molly::MollyPassManager::ID = 0;
-  molly::MollyPassManager::MollyPassManager() : ModulePass(ID)  {
-  }
+molly::MollyPassManager::MollyPassManager() : ModulePass(ID)  {
+}
 
-       void MollyPassManager::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-       }
+void MollyPassManager::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+}
 
-     bool MollyPassManager::runOnModule(llvm::Module &M) {
-     }
+bool MollyPassManager::runOnModule(llvm::Module &M) {
+  return false;
+}
 
-     void MollyPassManager:: add(llvm::Pass *pass) {
-     }
+void MollyPassManager:: add(llvm::Pass *pass) {
+}
 
 
-      MollyPassManager *MollyPassManager::create() {
-         return new MollyPassManager();
-      }
+MollyPassManager *MollyPassManager::create() {
+  return new MollyPassManager();
+}
 

@@ -34,7 +34,7 @@ add_molly_library(Islpp
     Pw.cpp
     Multi.cpp
     Spacelike.cpp
-    Vec.h
+    Vec.cpp
   HEADER_DIRS
     ${MOLLY_SOURCE_DIR}/include/islpp 
     ${MOLLY_SOURCE_DIR}/lib/islpp

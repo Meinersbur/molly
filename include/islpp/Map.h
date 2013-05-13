@@ -2,6 +2,7 @@
 #define ISLPP_MAP_H
 
 #include "islpp_common.h"
+#include "Multi.h"
 #include <cassert>
 #include <string>
 
@@ -36,7 +37,6 @@ namespace isl {
   class Set;
   class Mat;
   class Aff;
-  class MultiAff;
   class UnionMap;
 } // namespace isl
 

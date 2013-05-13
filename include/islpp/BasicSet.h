@@ -2,6 +2,7 @@
 #define ISLPP_BASICSET_H
 
 #include "islpp_common.h"
+#include "islpp/Multi.h"
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
@@ -25,7 +26,6 @@ namespace isl {
   class Id;
   class Int;
   class BasicMap;
-  class MultiAff;
   class PwMultiAff;
   class Point;
   class Vertices;

@@ -7,6 +7,7 @@
 #include "islpp/MultiAff.h"
 #include "islpp/Ctx.h"
 #include "islpp/Space.h"
+#include "islpp/Map.h"
 
 using namespace llvm;
 using namespace molly;
@@ -28,8 +29,16 @@ MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc) {
 
 
 void MollyFieldAccess::augmentMemoryAccess(polly::MemoryAccess *acc) {
+  assert(acc);
   assert(acc->getAccessInstruction() == getAccessor());
   this->scopAccess = acc;
+}
+
+
+void MollyFieldAccess::augmentFieldVariable(FieldVariable *fieldvar) {
+  assert(fieldvar);
+  assert(!this->fieldvar || this->fieldvar == fieldvar);
+  this->fieldvar = fieldvar;
 }
 
 
@@ -43,37 +52,39 @@ isl::Space MollyFieldAccess::getLogicalSpace(isl::Ctx* ctx) {
 }
 
 
- polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
-   assert(scopAccess && "Need to augment the access using SCoP");
- return scopAccess;
- }
+polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
+  assert(scopAccess && "Need to augment the access using SCoP");
+  return scopAccess;
+}
 
 
-    polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
-       assert(scopAccess && "Need to augment the access using SCoP");
-       auto result = scopAccess->getStatement();
-       assert(result);
-      return result;
-    }
+polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
+  assert(scopAccess && "Need to augment the access using SCoP");
+  auto result = scopAccess->getStatement();
+  assert(result);
+  return result;
+}
 
 
-    isl::MultiAff MollyFieldAccess::getAffineAccess() {
-      SmallVector<llvm::Value*,4> coords;
-      getCoordinates(coords);
+isl::MultiAff MollyFieldAccess::getAffineAccess() {
+  SmallVector<llvm::Value*,4> coords;
+  getCoordinates(coords);
 
-      isl::MultiAff result;
+  isl::MultiAff result;
 
-      for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
-        auto coord = *it;
+  for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
+    auto coord = *it;
 
-        isl::Aff aff;
+    isl::Aff aff;
 
-        result.
-      }
+    // result.
+  }
 
-      return result;
-    }
+  return result;
+}
 
 
-    isl::Map MollyFieldAccess::getAccessedRegion() {
-    }
+isl::Map MollyFieldAccess::getAccessedRegion() {
+  isl::Map result;
+  return result;
+}

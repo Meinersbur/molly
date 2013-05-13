@@ -2,6 +2,7 @@
 #define ISLPP_PWAFF_H
 
 #include "islpp_common.h"
+#include "Multi.h"
 #include <cassert>
 #include <string>
 #include <functional>
@@ -20,7 +21,6 @@ namespace isl {
   class Set;
   class LocalSpace;
   class Id;
-  class MultiAff;
   class PwMultiAff;
   class Int;
 } // namespace isl

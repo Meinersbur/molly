@@ -201,12 +201,8 @@ MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(const llvm::Instruction 
 
 
 MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *memacc) {
-  auto instr = memacc->getAccessInstruction();
-  auto result = getFieldAccess(instr);
-  if (!result.isValid())
-    return result;
-
-  result.setScopAccess(memacc);
+  MollyFieldAccess result = MollyFieldAccess::fromMemoryAccess(memacc);
+  //result.augmentFieldVariable();
   return result;
 }
 

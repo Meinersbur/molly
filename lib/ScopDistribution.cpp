@@ -55,7 +55,7 @@ namespace molly {
         for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
           auto memacc = *itAcc;
 
-          MollyFieldAccess acc = MollyFieldAccess::fromMem
+          //MollyFieldAccess acc = MollyFieldAccess::fromMem
 
 
         }

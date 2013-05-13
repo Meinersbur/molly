@@ -2,7 +2,7 @@
 
 #include "islpp/Dim.h"
 #include "islpp/Id.h"
-
+#include "islpp/Space.h"
 
 using namespace isl;
 
@@ -55,7 +55,7 @@ bool Spacelike::findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
     auto thatName = dim.getName();
     auto thisName = getDimName(type, pos);
     assert(!!thatName == !!thisName);
-    assert((thatName == thisName) || strcmp(thatName, thisName) == 0 && "Give same dimensions the same id/name");
+    assert(((thatName == thisName) || (strcmp(thatName, thisName) == 0)) && "Give same dimensions the same id/name");
 
     auto thatId = dim.hasId() ? dim.getId() : Id();
     auto thisId = hasDimId(type, pos) ? getDimId(type, pos) : Id();
@@ -67,4 +67,41 @@ bool Spacelike::findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
   default:
     return false;
   }
+}
+
+
+bool Spacelike::hasTupleId(isl_dim_type type) const { 
+  return getTupleId(type).isValid();
+} 
+Id Spacelike::getTupleId(isl_dim_type type) const { 
+  return getSpace().getTupleId(type); 
+}
+
+bool Spacelike::hasTupleName(isl_dim_type type) const {
+  return getTupleName(type); 
+}
+const char *Spacelike::getTupleName(isl_dim_type type) const {
+  return getSpace().getTupleName(type);
+}
+
+bool Spacelike::hasDimId(isl_dim_type type, unsigned pos) const { 
+  return getDimId(type, pos).isValid();
+}
+Id Spacelike::getDimId(isl_dim_type type, unsigned pos) const { 
+  return getSpace().getDimId(type, pos); 
+}
+
+int Spacelike::findDimById(isl_dim_type type, const Id &id) const { 
+  return getSpace().findDimById(type, id); 
+} 
+
+bool Spacelike::hasDimName(isl_dim_type type, unsigned pos) const { 
+  return getDimName(type, pos);
+}
+const char *Spacelike::getDimName(isl_dim_type type, unsigned pos) const { 
+  return getSpace().getDimName(type, pos);
+}
+
+int Spacelike::findDimByName(isl_dim_type type, const char *name) const {
+  return getSpace().findDimByName(type, name);
 }

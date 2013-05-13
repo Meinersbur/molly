@@ -57,7 +57,6 @@ namespace molly {
   private:
     static Pass *createFieldDetectionAnalysisPass();
 
-
   public:
     FieldType *lookupFieldType(llvm::StructType *ty) ;
     FieldType *getFieldType(llvm::StructType *ty);
@@ -66,12 +65,12 @@ namespace molly {
     FieldVariable *lookupFieldVariable(llvm::GlobalVariable *gvar);
     FieldVariable *getFieldVariable(llvm::GlobalVariable *gvar);
 
-     FieldType *getFromFunction(llvm::Function *func);
-     FieldVariable *getFromCall(const llvm::CallInst *inst);
-     FieldVariable *getFromAccess(llvm::Instruction *inst);
+    FieldType *getFromFunction(llvm::Function *func);
+    FieldVariable *getFromCall(const llvm::CallInst *inst);
+    FieldVariable *getFromAccess(llvm::Instruction *inst);
 
-     MollyFieldAccess getFieldAccess(const llvm::Instruction *inst);
-     MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc);
+    MollyFieldAccess getFieldAccess(const llvm::Instruction *inst);
+    MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc);
   }; // class FieldDetectionAnalysis
 } // namespace molly
 
