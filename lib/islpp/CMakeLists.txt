@@ -36,9 +36,11 @@ add_molly_library(Islpp
     Spacelike.cpp
     Vec.cpp
     AffList.cpp
+    MultiPwAff.cpp
+    PwAffList.cpp
   HEADER_DIRS
-    ${MOLLY_SOURCE_DIR}/include/islpp 
-    ${MOLLY_SOURCE_DIR}/lib/islpp
+    "${MOLLY_SOURCE_DIR}/include/islpp"
+    "${MOLLY_SOURCE_DIR}/lib/islpp"
   LINK_COMPONENTS 
     Support
   LINK_LIBS

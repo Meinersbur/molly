@@ -9,6 +9,8 @@
 #include "islpp/Space.h"
 #include "islpp/Map.h"
 
+#include <llvm/Analysis/ScalarEvolution.h>
+
 using namespace llvm;
 using namespace molly;
 
@@ -57,7 +59,7 @@ polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
   return scopAccess;
 }
 
-
+ 
 polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
   assert(scopAccess && "Need to augment the access using SCoP");
   auto result = scopAccess->getStatement();
@@ -66,16 +68,20 @@ polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
 }
 
 
-isl::MultiAff MollyFieldAccess::getAffineAccess() {
+isl::MultiAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
   SmallVector<llvm::Value*,4> coords;
   getCoordinates(coords);
 
   isl::MultiAff result;
 
   for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
-    auto coord = *it;
+    auto coordVal = *it;
+    auto coordSCEV = se->getSCEV(coordVal);
+      
 
     isl::Aff aff;
+
+
 
     result.append(std::move(aff));
   }

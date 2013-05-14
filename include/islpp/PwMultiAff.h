@@ -2,6 +2,7 @@
 #define ISLPP_PWMULTIAFF_H
 
 #include <cassert>
+#include "Pw.h"
 
 struct isl_pw_multi_aff;
 
@@ -13,7 +14,8 @@ namespace isl {
 
 
 namespace isl {
-  class PwMultiAff {
+  template<>
+  class Pw<MultiAff> {
 #pragma region Low-level
   private:
     isl_pw_multi_aff *aff;
@@ -25,16 +27,16 @@ namespace isl {
   protected:
     void give(isl_pw_multi_aff *aff);
 
-    explicit PwMultiAff(isl_pw_multi_aff *aff) : aff(aff) { }
+    explicit Pw(isl_pw_multi_aff *aff) : aff(aff) { }
   public:
     static PwMultiAff wrap(isl_pw_multi_aff *aff) { return PwMultiAff(aff); }
 #pragma endregion
 
   public:
-    PwMultiAff(void) : aff(nullptr) {}
-    PwMultiAff(const PwMultiAff &that) : aff(that.takeCopy()) {}
-    PwMultiAff(PwMultiAff &&that) : aff(that.take()) { }
-    ~PwMultiAff(void);
+    Pw() : aff(nullptr) {}
+    Pw(const PwMultiAff &that) : aff(that.takeCopy()) {}
+    Pw(PwMultiAff &&that) : aff(that.take()) { }
+    ~Pw();
 
     const PwMultiAff &operator=(const PwMultiAff &that) { give(that.takeCopy()); return *this; }
     const PwMultiAff &operator=(PwMultiAff &&that) { give(that.take()); return *this; }

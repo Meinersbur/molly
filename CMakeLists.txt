@@ -53,10 +53,13 @@ macro(add_molly_library name)
   
   set(_headers)
   if (MSVC_IDE OR XCODE)
-    file(GLOB _dir_headers
-      ${PARM_HEADER_DIRS}/*.h
-    )
-    set(_headers ${_dir_headers} ${PARM_HEADERS})
+    set(_headers ${PARM_HEADERS})
+message("_headers: " ${_headers})
+    foreach (_dir IN LISTS PARM_HEADER_DIRS)
+      file(GLOB _dir_headers "${_dir}/*.h")
+      list(APPEND _headers ${_dir_headers})
+message("_headers: " ${_headers})
+    endforeach ()
     set_source_files_properties(${_headers} PROPERTIES HEADER_FILE_ONLY ON)
   endif ()
   

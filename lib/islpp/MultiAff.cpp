@@ -53,5 +53,16 @@ void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) 
 
 
 void Multi<Aff>::append(Aff &&aff) {
+  auto n = dim(isl_dim_out);
 
+  auto list = isl_aff_list_alloc(isl_multi_aff_get_ctx(keep()), n+1);
+  for (auto i = n-n; i < n; i+=1) {
+    list = isl_aff_list_set_aff(list, i, isl_multi_aff_get_aff(keep(), i));
+  }
+  list = isl_aff_list_set_aff(list, n, aff.take());
+
+  auto space = getSpace();
+  space.addDims(isl_dim_out, n);
+
+  give(isl_multi_aff_from_aff_list(space.take(), list));
 }

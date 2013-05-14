@@ -19,6 +19,7 @@ add_molly_library(LLVMMolly
     PatternSearchAnalysis.cpp
     GlobalPassManager.cpp
     MollyPassManager.cpp
+    SCEVAffinator.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

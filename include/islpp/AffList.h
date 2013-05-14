@@ -9,8 +9,11 @@
 
 #include <isl/printer.h>
 #include <isl/list.h>
+
+extern "C" {
 ISL_DECLARE_LIST_TYPE(aff)
 ISL_DECLARE_LIST_FN(aff)
+}
 
 //__isl_give isl_aff_list *isl_aff_list_copy(__isl_keep isl_aff_list *);
 //void *isl_aff_list_free(__isl_take isl_aff_list *);

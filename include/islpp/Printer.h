@@ -4,6 +4,8 @@
 #include "islpp_common.h"
 #include "islpp/Multi.h"
 
+#include "Pw.h"
+#include "Multi.h"
 #include <llvm/Support/Compiler.h>
 #include <assert.h>
 #include <string>
@@ -14,6 +16,7 @@ struct isl_printer;
 namespace llvm {
   class raw_ostream;
 } // namespace llvm
+
 namespace isl {
   class Ctx;
   class Set;
@@ -21,11 +24,7 @@ namespace isl {
   class Map;
   class UnionSet;
   class UnionMap;
-  class Aff;
-  class PwAff;
-  class MultiPwAff;
   class UnionPwMultiAff;
-  class PwMultiAff;
   class QPolynomial;
   class PwQPolynomial;
   class UnionPwQPolynomial;

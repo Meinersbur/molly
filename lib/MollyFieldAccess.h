@@ -34,6 +34,7 @@ namespace molly {
 
     void augmentMemoryAccess(polly::MemoryAccess *acc);
     void augmentFieldVariable(FieldVariable *fieldvar);
+    //void augmentScEv(llvm::ScalarEvolution *se) {}
 
     FieldVariable *getFieldVariable() { return fieldvar; }
     FieldType *getFieldType();
@@ -42,7 +43,7 @@ namespace molly {
 
     polly::MemoryAccess *getPollyMemoryAccess();
     polly::ScopStmt *getPollyScopStmt();
-    isl::MultiAff getAffineAccess();
+    isl::MultiAff getAffineAccess(llvm::ScalarEvolution *se);
     isl::Map getAccessedRegion();
   }; // class MollyFieldAccess
 

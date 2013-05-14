@@ -3,6 +3,7 @@
 
 #include "islpp_common.h"
 #include "Multi.h"
+#include "Pw.h"
 #include <cassert>
 #include <string>
 #include <functional>
@@ -21,13 +22,13 @@ namespace isl {
   class Set;
   class LocalSpace;
   class Id;
-  class PwMultiAff;
   class Int;
 } // namespace isl
 
 
 namespace isl {
-  class PwAff {
+  template<>
+  class Pw<Aff> {
 #pragma region Low-level
   private:
     isl_pw_aff *aff;
@@ -44,10 +45,10 @@ namespace isl {
 #pragma endregion
 
   public:
-    PwAff(void) : aff(nullptr) {}
-    /* implicit */ PwAff(const PwAff &that) : aff(that.takeCopy()) {}
-    /* implicit */ PwAff(PwAff &&that) : aff(that.take()) { }
-    ~PwAff(void);
+    Pw(void) : aff(nullptr) {}
+    /* implicit */ Pw(const PwAff &that) : aff(that.takeCopy()) {}
+    /* implicit */ Pw(PwAff &&that) : aff(that.take()) { }
+    ~Pw(void);
 
     const PwAff &operator=(const PwAff &that) { give(that.takeCopy()); return *this; }
     const PwAff &operator=(PwAff &&that) { give(that.take()); return *this; }

@@ -2,6 +2,9 @@
 #define ISLPP_SET_H
 
 #include "islpp_common.h"
+#include "Pw.h"
+#include "Multi.h"
+#include "Int.h"
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
@@ -9,10 +12,6 @@
 #include <vector>
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/lp.h> // enum isl_lp_result;
-
-#include "islpp/Int.h"
-#include "islpp/Multi.h"
-
 
 struct isl_set;
 struct isl_basic_set;
@@ -28,15 +27,11 @@ namespace isl {
   class Constraint;
   class BasicSet;
   class Ctx;
-  class PwAff;
-  class PwMultiAff;
   class Id;
   class Aff;
   class Map;
   class Point;
-  class MultiPwAff;
   class PwQPolynomialFold;
-  class PwAff;
   class Dim;
 } // namespace isl
 
