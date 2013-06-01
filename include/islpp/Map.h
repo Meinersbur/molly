@@ -71,7 +71,7 @@ namespace isl {
     void give(isl_map *map);
 
   public:
-    static Map wrap(isl_map *map) { Map result; result.give(map);  return result; }
+    static Map wrap(isl_map *map) { Map result; result.give(map);  return result; } //TODO: Rename to enwrap to avaoid name collision
 #pragma endregion
 
   public:
@@ -84,8 +84,9 @@ namespace isl {
     const Map &operator=(Map &&that) { give(that.take()); return *this; }
 
 #pragma region Creational
-    static Map create(Ctx *ctx, unsigned nparam, unsigned in, unsigned out, int n, unsigned flags ) { return Map::wrap(isl_map_alloc(ctx->keep(), nparam, in, out, n, flags)); }
+    static Map create(Ctx *ctx, unsigned nparam, unsigned in, unsigned out, int n, unsigned flags = 0) { return Map::wrap(isl_map_alloc(ctx->keep(), nparam, in, out, n, flags)); }
     static Map createUniverse(Space &&space) { return Map::wrap(isl_map_universe(space.take())); }
+    static Map createUniverse(const Space &space) { return createUniverse(space.copy());  }
     static Map createNatUniverse(Space &&space) { return Map::wrap(isl_map_nat_universe(space.take())); }
     static Map createEmpty(Space &&space) { return Map::wrap(isl_map_empty(space.take())); }
     //static Map createEmptyLike(Map &&model) { return Map::wrap(isl_map_empty_like(model.take())); }
@@ -111,6 +112,7 @@ namespace isl {
 
     static Map fromAff(Aff &&aff) { return Map::wrap(isl_map_from_aff(aff.take())); }
     static Map fromMultiAff(MultiAff &&maff) { return Map::wrap(isl_map_from_multi_aff(maff.take())); }
+    static Map fromPwMultiAff(PwMultiAff &&pwmaff) { return Map::wrap(isl_map_from_pw_multi_aff(pwmaff.take())); }
 
     static Map readFrom(Ctx *ctx, const char *str);
     static Map readFrom(Ctx *ctx, FILE *input) { return Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
@@ -119,6 +121,7 @@ namespace isl {
 
 
     Map copy() const { return wrap(takeCopy()); }
+    Map &&move() { return std::move(*this); }
 #pragma endregion
 
 
@@ -177,7 +180,21 @@ namespace isl {
 
 
     void addBasicMap(BasicMap &&bmap) { give(isl_map_add_basic_map(take(), bmap.take())); }
-    void reverse() { give(isl_map_reverse(take())); }
+
+    /// reverse({ U -> V }) = { V -> U }
+    Map reverse() const { wrap(isl_map_reverse(takeCopy())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Map reverse() && { wrap(isl_map_reverse(take())); }
+#endif
+
+    /// Function concatenation
+    /// { U -> V }.applyRange({ X -> Y }) = { U -> {X->Y}(V) } => { U -> Y }
+    Map applyRange(const Map &map2) const { wrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
+    Map applyRange(Map &&map2) const { wrap(isl_map_apply_range(takeCopy(), map2.take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Map applyRange(const Map &map2) && { wrap(isl_map_apply_range(take(), map2.takeCopy())); }
+    Map applyRange(Map &&map2) && { wrap(isl_map_apply_range(take(), map2.take())); }
+#endif
 
     void intersectDomain(Set &&set) { give(isl_map_intersect_domain(take(), set.take())); }
     void intersectRange(Set &&set) { give(isl_map_intersect_range(take(), set.take())); }
@@ -186,6 +203,15 @@ namespace isl {
     void substractDomain(Set &&dom) { give(isl_map_subtract_domain(take(), dom.take())); }
     void substractRange(Set &&dom) { give(isl_map_subtract_range(take(), dom.take())); }
     void complement() { give(isl_map_complement(take())); }
+
+    Set range() const { return Set::wrap(isl_map_range(takeCopy())); }
+    Set domain() const { return Set::wrap(isl_map_domain(takeCopy())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Set range() && { return Set::wrap(isl_map_range(take())); }
+    Set domain() && { return Set::wrap(isl_map_domain(take())); }
+#endif
+
+
 
     void fix(isl_dim_type type, unsigned pos, const Int &value) { give(isl_map_fix(take(), type, pos, value.keep())); }
     void fix(isl_dim_type type, unsigned pos, int value) { give(isl_map_fix_si(take(), type, pos, value)); }
@@ -249,15 +275,15 @@ namespace isl {
     void zip() {give(isl_map_zip(take()));}
 
     bool canCurry() const { return isl_map_can_curry(keep()); }
-    void curry() {give(isl_map_curry(take()));}
+    void curry() { give(isl_map_curry(take())); }
 
     bool canUnurry() const { return isl_map_can_uncurry(keep()); }
     void uncurry() {give(isl_map_uncurry(take()));}
 
     void makeDisjoint()  {give(isl_map_make_disjoint(take()));}
 
-    void computeDivs()  {give(isl_map_compute_divs(take()));}
-    void alignDivs()  {give(isl_map_align_divs(take()));}
+    void computeDivs() {give(isl_map_compute_divs(take()));}
+    void alignDivs() {give(isl_map_align_divs(take()));}
 
     void dropConstraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_map_drop_constraints_involving_dims(take(), type, first, n));  }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_map_involves_dims(keep(), type, first, n);  }
@@ -314,51 +340,58 @@ namespace isl {
     void alignParams(Space &&model) { give(isl_map_align_params(take(), model.take())); }
   }; // class Map
 
+  static inline Map enwrap(isl_map *obj) { return Map::wrap(obj); }
 
-  inline BasicMap simpleHull(Map &&map)  { return BasicMap::wrap(isl_map_simple_hull(map.take())); }
-  inline BasicMap unshiftedSimpleHull(Map &&map)  { return BasicMap::wrap(isl_map_unshifted_simple_hull(map.take())); }
-  inline Map sum(Map &&map1, Map &&map2) { return Map::wrap(isl_map_sum(map1.take(), map2.take())); }
+  static inline Map reverse(Map &&map) { return enwrap(isl_map_reverse(map.take())); }
+  static inline Map reverse(Map &map) { return enwrap(isl_map_reverse(map.takeCopy())); }
 
-  inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::wrap( isl_map_lexmin_pw_multi_aff(map.take())); } 
-  inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::wrap( isl_map_lexmax_pw_multi_aff(map.take())); } 
+  static inline Map intersectDomain(Map &&map, Set &&set) { return enwrap(isl_map_intersect_domain(map.take(), set.take())); }
+  static inline Map intersectRange(Map &&map, Set &&set) { return enwrap(isl_map_intersect_range(map.take(), set.take())); }
 
-  inline Map union_(Map &&map1, Map &&map2) { return Map::wrap(isl_map_union(map1.take(), map2.take())); }
+  static  inline BasicMap simpleHull(Map &&map)  { return BasicMap::wrap(isl_map_simple_hull(map.take())); }
+  static  inline BasicMap unshiftedSimpleHull(Map &&map)  { return BasicMap::wrap(isl_map_unshifted_simple_hull(map.take())); }
+  static  inline Map sum(Map &&map1, Map &&map2) { return Map::wrap(isl_map_sum(map1.take(), map2.take())); }
 
-  inline Map applyDomain(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_domain(map1.take(), map2.take())); }
-  inline Map applyRange(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_range(map1.take(), map2.take())); }
-  inline Map domainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_domain_product(map1.take(), map2.take())); }
-  inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_range_product(map1.take(), map2.take())); }
-  inline Map flatProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_product(map1.take(), map2.take())); }
-  inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
-  inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_range_product(map1.take(), map2.take())); }
-  inline Map intersect(Map &&map1, Map &&map2) { return Map::wrap(isl_map_intersect(map1.take(), map2.take())); }
-  inline Map substract(Map &&map1, Map &&map2) { return Map::wrap(isl_map_subtract(map1.take(), map2.take())); }
+  static  inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 
+  static  inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(map.take())); } 
 
-  inline Set deltas(Map &&map) { return Set::wrap(isl_map_deltas(map.take())); }
-  inline BasicMap affineHull(Map &&map) { return BasicMap::wrap(isl_map_affine_hull(map.take()));}  
-  inline BasicMap convexHull(Map &&map) { return BasicMap::wrap(isl_map_convex_hull(map.take()));} 
-  inline BasicMap polyhedralHull(Map &&map) { return BasicMap::wrap(isl_map_polyhedral_hull(map.take()));} 
+  static inline Map union_(Map &&map1, Map &&map2) { return Map::wrap(isl_map_union(map1.take(), map2.take())); }
 
-  inline Set wrap(Map &&map) { return Set::wrap(isl_map_wrap(map.take()));}
+  static  inline Map applyDomain(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_domain(map1.take(), map2.take())); }
+  static  inline Map applyRange(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_range(map1.take(), map2.take())); }
+  static   inline Map domainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_domain_product(map1.take(), map2.take())); }
+  static   inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_range_product(map1.take(), map2.take())); }
+  static  inline Map flatProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_product(map1.take(), map2.take())); }
+  static  inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
+  static  inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_range_product(map1.take(), map2.take())); }
+  static inline Map intersect(Map &&map1, Map &&map2) { return Map::wrap(isl_map_intersect(map1.take(), map2.take())); }
+  static  inline Map substract(Map &&map1, Map &&map2) { return Map::wrap(isl_map_subtract(map1.take(), map2.take())); }
 
-  inline Set params(Map &&map) { return Set::wrap(isl_map_params(map.take()));}
-  inline Set domain(Map &&map) { return Set::wrap(isl_map_domain(map.take()));}
-  inline Set range(Map &&map) { return Set::wrap(isl_map_range(map.take()));}
+  static inline Set deltas(Map &&map) { return Set::wrap(isl_map_deltas(map.take())); }
+  static inline BasicMap affineHull(Map &&map) { return BasicMap::wrap(isl_map_affine_hull(map.take()));}  
+  static inline BasicMap convexHull(Map &&map) { return BasicMap::wrap(isl_map_convex_hull(map.take()));} 
+  static inline BasicMap polyhedralHull(Map &&map) { return BasicMap::wrap(isl_map_polyhedral_hull(map.take()));} 
+
+  static  inline Set wrap(Map &&map) { return Set::wrap(isl_map_wrap(map.take()));} 
+
+  static inline Set params(Map &&map) { return Set::wrap(isl_map_params(map.take()));}
+  static inline Set domain(Map &&map) { return Set::wrap(isl_map_domain(map.take()));}
+  static  inline Set range(Map &&map) { return Set::wrap(isl_map_range(map.take()));}
 
 
-  inline BasicMap sample( Map &&map) { return BasicMap::wrap(isl_map_sample(map.take())); }
+  static  inline BasicMap sample(Map &&map) { return BasicMap::wrap(isl_map_sample(map.take())); }
 
-  inline bool isSubset(const Map &map1, const Map &map2) { return isl_map_is_subset(map1.keep(), map2.keep()); }
-  inline bool isStrictSubset(const Map &map1, const Map &map2) { return isl_map_is_strict_subset(map1.keep(), map2.keep()); }
+  static  inline bool isSubset(const Map &map1, const Map &map2) { return isl_map_is_subset(map1.keep(), map2.keep()); }
+  static  inline bool isStrictSubset(const Map &map1, const Map &map2) { return isl_map_is_strict_subset(map1.keep(), map2.keep()); }
 
-  inline bool isDisjoint(const Map &map1, const Map &map2) { return isl_map_is_disjoint(map1.keep(), map2.keep()); }
+  static   inline bool isDisjoint(const Map &map1, const Map &map2) { return isl_map_is_disjoint(map1.keep(), map2.keep()); }
 
-  inline bool hasEqualSpace(const Map &map1, const Map &map2) { return isl_map_has_equal_space(map1.keep(), map2.keep()); }
-  inline bool plainIsEqual(const Map &map1, const Map &map2) { return isl_map_plain_is_equal(map1.keep(), map2.keep()); }
-  inline bool fastIsEqual(const Map &map1, const Map &map2) { return isl_map_fast_is_equal(map1.keep(), map2.keep()); }
-  inline bool isEqual(const Map &map1, const Map &map2) { return isl_map_is_equal(map1.keep(), map2.keep()); }
+  static  inline bool hasEqualSpace(const Map &map1, const Map &map2) { return isl_map_has_equal_space(map1.keep(), map2.keep()); }
+  static  inline bool plainIsEqual(const Map &map1, const Map &map2) { return isl_map_plain_is_equal(map1.keep(), map2.keep()); }
+  static  inline bool fastIsEqual(const Map &map1, const Map &map2) { return isl_map_fast_is_equal(map1.keep(), map2.keep()); }
+  static  inline bool isEqual(const Map &map1, const Map &map2) { return isl_map_is_equal(map1.keep(), map2.keep()); }
 
-  inline Tribool isEqual(const Map &map1, const Map &map2, Accuracy accuracy) {
+  static inline Tribool isEqual(const Map &map1, const Map &map2, Accuracy accuracy) {
     switch (accuracy) {
     case Accuracy::Exact:
       return isl_map_is_equal(map1.keep(), map2.keep());
@@ -371,11 +404,15 @@ namespace isl {
     }
   }
 
-  inline Map lexLeMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_le_map(map1.take(), map2.take())); } 
-  inline Map lexGeMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_lt_map(map1.take(), map2.take())); } 
-  inline Map lexGtMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_gt_map(map1.take(), map2.take())); } 
-  inline Map lexLtMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_lt_map(map1.take(), map2.take())); } 
+  static inline Map lexLeMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_le_map(map1.take(), map2.take())); } 
+  static inline Map lexGeMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_lt_map(map1.take(), map2.take())); } 
+  static inline Map lexGtMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_gt_map(map1.take(), map2.take())); } 
+  static inline Map lexLtMap(Map &&map1, Map &&map2) { return Map::wrap(isl_map_lex_lt_map(map1.take(), map2.take())); } 
 
-  inline PwAff dimMax(Map &&map, int pos) { return PwAff::wrap(isl_map_dim_max(map.take(), pos)); }
+  static inline PwAff dimMax(Map &&map, int pos) { return PwAff::wrap(isl_map_dim_max(map.take(), pos)); }
+
+
+
+
 } // namespace isl
 #endif /* ISLPP_MAP_H */

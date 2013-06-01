@@ -5,11 +5,18 @@
 #include <assert.h>
 #include <isl/space.h> // enum isl_dim_type;
 
+#include "Ctx.h"
+
 struct isl_space;
 
 namespace isl {
   class Ctx;
   class Id;
+  class Set;
+  class BasicSet;
+  class Map;
+  class BasicMap;
+  class Int;
 } // namespace isl
 
 
@@ -43,18 +50,33 @@ namespace isl {
     const Space &operator=(Space &&that) { give(that.take()); return *this; }
 
 #pragma region Creational
-    static Space createMapSpace(const Ctx &ctx, unsigned nparam, unsigned n_in/*domain*/, unsigned n_out/*range*/);
-    static Space createParamsSpace(const Ctx &ctx, unsigned nparam);
-    static Space createSetSpace(const Ctx &ctx, unsigned nparam, unsigned dim);
+    static Space createMapSpace(const Ctx *ctx, unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
+    static Space createParamsSpace(const Ctx *ctx, unsigned nparam);
+    static Space createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
 
     Space copy() const { return Space::wrap(takeCopy()); }
+    Space &&move() { return std::move(*this); }
 #pragma endregion
 
 
+#pragma region Create Sets/Maps using this map
+    Set emptySet() const;
+    Set universeSet() const;
+
+    Map emptyMap() const;
+    Map universeMap() const;
+
+    Aff createZeroAff() const;
+    Aff createConstantAff(const Int &) const;
+    Aff createVarAff(isl_dim_type type, unsigned pos) const;
+#pragma endregion
+
+    Ctx *getCtx() const { return enwrap(isl_space_get_ctx(keep())); }
+
     unsigned dim(isl_dim_type type) const;
     unsigned getParamDims() const;
-     unsigned getSetDims() const;
+    unsigned getSetDims() const;
     unsigned getInDims() const;
     unsigned getOutDims() const;
     unsigned getTotalDims() const;
@@ -98,6 +120,13 @@ namespace isl {
     void zip();
     void curry();
     void uncurry();
+
+#pragma region Create
+    Set createUniverseSet() const;
+    BasicSet createUniverseBasicSet() const;
+    Map createUniverseMap() const;
+    BasicMap createUniverseBasicMap() const;
+#pragma endregion
   }; // class Space
 
 
@@ -108,7 +137,6 @@ namespace isl {
 
   Space join(Space &&left, Space &&right);
   Space alignParams(Space &&space1, Space &&space2);
-
-
 } // namespace isl
+
 #endif /* ISLPP_SPACE_H */

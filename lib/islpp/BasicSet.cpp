@@ -80,6 +80,10 @@ BasicSet BasicSet::createBoxFromPoints(Point &&pnt1, Point &&pnt2) {
   return BasicSet::wrap(isl_basic_set_box_from_points(pnt1.take(), pnt2.take()));
 }
 
+BasicSet BasicSet::createFromBasicMap(BasicMap &&bmap) { 
+  return wrap(isl_basic_set_from_basic_map(bmap.take())); 
+}
+
 BasicSet BasicSet::readFromFile(Ctx *ctx, FILE *input){
   return BasicSet::wrap(isl_basic_set_read_from_file(ctx->keep(), input));
 }
@@ -322,10 +326,10 @@ Set isl::partialLexmax(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
 }
 
 PwMultiAff isl::partialLexminPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
-  return PwMultiAff::wrap(isl_basic_set_partial_lexmin_pw_multi_aff(bset.take(), dom.take(), empty.change()));
+  return PwMultiAff::enwrap(isl_basic_set_partial_lexmin_pw_multi_aff(bset.take(), dom.take(), empty.change()));
 }
 PwMultiAff isl::partialLexmaxPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
-  return PwMultiAff::wrap(isl_basic_set_partial_lexmax_pw_multi_aff(bset.take(), dom.take(), empty.change()));
+  return PwMultiAff::enwrap(isl_basic_set_partial_lexmax_pw_multi_aff(bset.take(), dom.take(), empty.change()));
 }
 
 Set isl::lexmin(BasicSet &&bset){

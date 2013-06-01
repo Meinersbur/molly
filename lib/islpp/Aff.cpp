@@ -16,6 +16,12 @@ using namespace isl;
 using namespace std;
 
 
+
+  Aff isl::div(Aff &&aff1, const Int &divisor) {
+    return div(move(aff1), aff1.getSpace().createConstantAff(divisor));
+  }
+
+
 isl_aff *Aff::takeCopy() const {
   return isl_aff_copy(keep());
 }

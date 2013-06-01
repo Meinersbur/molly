@@ -71,6 +71,12 @@ Set Set::createFromParams(Set &&set) {
   return Set::wrap(isl_set_from_params(set.take()));
 }
 
+
+    Set Set::createFromPwMultiAff(PwMultiAff &&aff) { 
+      return wrap(isl_set_from_pw_multi_aff(aff.take()));
+    }
+
+
 Set Set::createFromPoint(Point &&point) {
   return Set::wrap(isl_set_from_point(point.take()));
 }

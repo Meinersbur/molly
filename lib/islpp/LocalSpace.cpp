@@ -6,6 +6,7 @@
 #include "islpp/Aff.h"
 #include "islpp/BasicMap.h"
 #include "islpp/Dim.h"
+#include "islpp/Aff.h"
 
 #include <isl/local_space.h>
 
@@ -91,6 +92,10 @@ const LocalSpace &LocalSpace::operator=(Space &&that) {
 
 
 
+
+Aff LocalSpace::createZeroAff() const {
+  return enwrap(isl_aff_zero_on_domain(takeCopy()));
+}
 
 Ctx *LocalSpace::getCtx() const {
   return Ctx::wrap(isl_local_space_get_ctx(keep()));

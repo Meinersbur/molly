@@ -2,87 +2,152 @@
 #define ISLPP_MULTIPWAFF_H
 
 #include "islpp_common.h"
+#include "Spacelike.h"
 #include "Multi.h"
-#include "Pw.h"
+
+#include "PwAff.h"
+#include "Space.h"
+#include "Ctx.h"
+#include <isl/aff.h>
+#include <isl/multi.h>
 #include <cassert>
 #include <llvm/Support/ErrorHandling.h>
 
-#include <isl/aff.h>
-#include <isl/multi.h>
-
-#include "islpp/Multi.h"
-#include "islpp/Aff.h"
-#include "islpp/Space.h"
-#include "islpp/Ctx.h"
-#include "islpp/Id.h"
-#include "islpp/Vec.h"
-#include "islpp/Int.h"
-#include "islpp/Set.h"
-#include "islpp/LocalSpace.h"
-#include "islpp/Spacelike.h"
-#include "PwAff.h"
 
 
-#define ISLPP_EL pw_aff
-#define ISLPP_ELPP PwAff
 
-#include "Multi_decls.inc.h"
+
+// isl/aff_type.h
+struct isl_multi_pw_aff;
+
 
 namespace isl {
   template<>
   class Multi<PwAff> : public Spacelike {
-#include "Multi_members.inc.h"
-  }; // class PwAff
+  public:
+    typedef isl_multi_pw_aff IslType;
+    typedef PwAff EltType;
+    typedef Multi<PwAff> MultiType;
 
-#include "Multi_funcs.inc.h"
-
-} // namespace isl
-
-#undef ISLPP_EL
-#undef ISLPP_ELPP
-
-
-
-#if 0
-struct isl_multi_pw_aff;
-
-namespace llvm {
-} // namespace llvm
-
-namespace isl {
-} // namespace isl
-
-
-namespace isl {
-  template<>
-  class Multi<PwAff> {
 #pragma region Low-level
   private:
-    isl_multi_pw_aff *aff;
+    IslType *multi;
 
   public: // Public because otherwise we had to add a lot of friends
-    isl_multi_pw_aff *take() { assert(aff); isl_multi_pw_aff *result = aff; aff = nullptr; return result; }
-    isl_multi_pw_aff *takeCopy() const;
-    isl_multi_pw_aff *keep() const { return aff; }
+    IslType *take() { assert(multi); IslType *result = multi; multi = nullptr; return result; }
+    IslType *takeCopy() const { assert(multi); return isl_multi_pw_aff_copy(multi); }
+    IslType *keep() const { assert(multi); return multi; }
   protected:
-    void give(isl_multi_pw_aff *aff);
+    void give(IslType *multi) { assert(multi); if (this->multi) isl_multi_pw_aff_free(this->multi); this->multi = multi; }
 
-    explicit Multi(isl_multi_pw_aff *aff) : aff(aff) { }
+    explicit Multi(IslType *multi) : multi(multi) { }
   public:
-    static MultiPwAff wrap(isl_multi_pw_aff *aff) { return MultiPwAff(aff); }
+    static MultiType wrap(IslType *multi) { return MultiType(multi); }
 #pragma endregion
 
   public:
-    Multi(void) : aff(nullptr) {}
-    /* implicit */ Multi(const MultiPwAff &that) : aff(that.takeCopy()) {}
-    /* implicit */ Multi(MultiPwAff &&that) : aff(that.take()) { }
-    ~Multi(void);
-
-    const MultiPwAff &operator=(const MultiPwAff &that) { give(that.takeCopy()); return *this; }
-    const MultiPwAff &operator=(MultiPwAff &&that) { give(that.take()); return *this; }
-
-  }; // class MultiPwAff
-} // namespace isl
+    Multi() : multi(nullptr) {}
+    Multi(const MultiType &that) : multi(that.takeCopy()) {}
+    Multi(MultiType &&that) : multi(that.take()) {}
+    ~Multi() {
+      if (this->multi)
+        isl_multi_pw_aff_free(this->multi); 
+#ifndef NDEBUG
+      this->multi = nullptr;
 #endif
+    }
+
+    const MultiType &operator=(const MultiType &that) { give(that.takeCopy()); return *this; }
+    const MultiType &operator=(MultiType &&that) { give(that.take()); return *this; }
+
+    MultiType copy() const { return wrap(takeCopy()); }
+
+    Ctx *getCtx() const { return Ctx::wrap(isl_multi_pw_aff_get_ctx(keep())); }
+    Space getSpace() const { return Space::wrap(isl_multi_pw_aff_get_space(keep())); }
+    Space getDomainSpace() const { return Space::wrap(isl_multi_pw_aff_get_domain_space(keep())); }
+
+#pragma region Creational
+    //static MultiType fromAff(Aff &&aff) { return wrap(isl_multi_pw_aff_from_aff(aff.take())); }
+    static MultiType createZero(Space &&space) { return wrap(isl_multi_pw_aff_zero(space.take())); }
+    static MultiType createIdentity(Space &&space) { return wrap(isl_multi_pw_aff_identity(space.take())); }
+
+    //static MultiType readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_pw_aff_read_from_str(ctx->keep(), str)); } 
+#pragma endregion
+
+
+#pragma region Dimensions
+    unsigned dim(enum isl_dim_type type) const { return isl_multi_pw_aff_dim(keep(), type); }
+
+    //bool hasTupleName(isl_dim_type type) const { return isl_multi_aff_has_tuple_name(keep(), type); } 
+    const char *getTupleName(isl_dim_type type) const { return isl_multi_pw_aff_get_tuple_name(keep(), type); }
+    void setTupleName(isl_dim_type type, const char *s) { give(isl_multi_pw_aff_set_tuple_name(take(), type, s)); }
+
+    //bool hasTupleId(isl_dim_type type) const { return isl_multi_aff_has_tuple_id(keep(), type); }
+    //Id getTupleId(isl_dim_type type) const { return Id::wrap(isl_multi_aff_get_tuple_id(keep(), type)); }
+    void setTupleId(isl_dim_type type, Id &&id) { llvm_unreachable("API function missing"); }
+
+    //bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_multi_aff_has_dim_name(keep(), type, pos); }
+    //const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_multi_aff_get_dim_name(keep(), type, pos); }
+    void setDimName(isl_dim_type type, unsigned pos, const char *s) { give(isl_multi_pw_aff_set_dim_name(take(), type, pos, s)); }
+    //int findDimByName(isl_dim_type type, const char *name) const { return isl_multi_aff_find_dim_by_name(keep(), type, name); }
+
+    //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_multi_aff_has_dim_id(keep(), type, pos); }
+    //Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_multi_aff_get_dim_id(keep(), type, pos)); }
+    //void setDimId(isl_dim_type type, unsigned pos, Id &&id) { give(isl_multi_aff_set_dim_id(take(), type, pos, id.take())); }
+    void setDimId(isl_dim_type type, unsigned pos, Id &&id) { llvm_unreachable("API function missing"); }
+    //int findDimById(isl_dim_type type, const Id &id) const { return isl_multi_aff_find_dim_by_id(keep(), type, id.keep()); }
+
+    void addDims(isl_dim_type type, unsigned n) { give(isl_multi_pw_aff_add_dims(take(), type, n)); }
+    void insertDims(isl_dim_type type, unsigned pos, unsigned n) { give(isl_multi_pw_aff_insert_dims(take(), type, pos, n)); }
+    //void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
+    void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { llvm_unreachable("API function missing"); }
+    //void dropDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_multi_pw_aff_drop_dims(take(), type, first, n)); }
+
+    void removeDims(isl_dim_type type, unsigned first, unsigned n) { llvm_unreachable("API function missing"); }
+#pragma endregion
+
+
+#pragma region Printing
+    void print(llvm::raw_ostream &out) const;
+    std::string toString() const;
+    void dump() const;
+    void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
+#pragma endregion
+
+
+#pragma region Multi
+    EltType getPwAff(int pos) const { return EltType::wrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
+    void push_back(PwAff &&);
+#pragma endregion
+
+
+    //void scale(Int f) { give(isl_multi_pw_aff_scale(take(), f.keep())); };
+    //void scaleVec(Vec &&v) { give(isl_multi_pw_aff_scale_vec(take(), v.take())); }
+
+    //void alignParams(Space &&model) { give(isl_multi_pw_aff_align_params(take(), model.take())); }
+    //void gistParams(Set &&context) { give(isl_multi_pw_aff_gist_params(take(), context.take())); }
+    //void gist(Set &&context) { give(isl_multi_pw_aff_gist(take(), context.take())); }
+    //void lift() { give(isl_multi_pw_aff_lift(take(), nullptr)); }
+  }; // class MultiAff
+
+  //static inline bool plainIsEqual(const Multi<PwAff> &maff1, const Multi<PwAff> &maff2) { return isl_multi_pw_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
+  //static inline Multi<PwAff> add(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_add(maff1.take(), maff2.take())); }
+  //static inline Multi<PwAff> sub(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_sub(maff1.take(), maff2.take())); }
+
+  static inline Multi<PwAff> rangeSplice(Multi<PwAff> &&maff1, unsigned pos, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_range_splice(maff1.take(), pos, maff2.take())); }
+  static inline Multi<PwAff> splice(Multi<PwAff> &&maff1, unsigned in_pos, unsigned out_pos, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_splice(maff1.take(), in_pos, out_pos, maff2.take())); }
+
+  static inline Multi<PwAff> rangeProduct(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_range_product(maff1.take(), maff2.take())); }
+  static inline Multi<PwAff> flatRangeProduct(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_flat_range_product(maff1.take(), maff2.take())); }
+  //static inline Multi<PwAff> product(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_product(maff1.take(), maff2.take())); }
+
+  //static inline Multi<PwAff> pullbackMultiAff(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Multi<PwAff>::wrap(isl_multi_pw_aff_pullback_multi_pw_aff(maff1.take(), maff2.take())); }
+
+  //static inline Set lexLeSet(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Set::wrap(isl_multi_pw_aff_lex_le_set(maff1.take(), maff2.take())); }
+  //static inline Set lexGeSet(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Set::wrap(isl_multi_pw_aff_lex_ge_set(maff1.take(), maff2.take())); }
+
+  static inline Multi<PwAff> enwrap(isl_multi_pw_aff *obj) { return Multi<PwAff>::wrap(obj); }
+
+} // namespace isl
 
 #endif /* ISLPP_MULTIPWAFF_H */

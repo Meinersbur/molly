@@ -19,6 +19,7 @@
 #include "islpp/UnionPwQPolynomialFold.h"
 #include "islpp/Constraint.h"
 #include "islpp/Id.h"
+#include "islpp/Val.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -65,9 +66,12 @@ Printer::~Printer() {
   }
 }
 
+
 Printer Printer::createToFile(Ctx *ctx, FILE *file){
   return Printer::wrap(isl_printer_to_file(ctx->keep(), file), false);
 }
+
+
 Printer Printer::createToStr(Ctx *ctx) {
   return Printer::wrap(isl_printer_to_str(ctx->keep()), false);
 }
@@ -187,6 +191,9 @@ void Printer::print(const Constraint &constraint) {
 }
 void Printer::print(const Id &id) {
   give(isl_printer_print_id(take(), id.keep()));
+}
+void Printer::print(const Val &v) {
+  give(isl_printer_print_val(take(), v.keep()));
 }
 
 void Printer::flush(){

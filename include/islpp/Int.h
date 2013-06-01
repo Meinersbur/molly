@@ -24,6 +24,9 @@ namespace isl {
   public :
     /*const (isl does not use const) */ isl_int &keep() const { return const_cast<isl_int&>(val); }
     isl_int *change() { return &val; }
+    void give(const isl_int &val) { isl_int_set(this->val, val); }
+
+    static Int wrap(const isl_int &val) { Int result; result.give(val); return result; }
 #pragma endregion
 
   public:

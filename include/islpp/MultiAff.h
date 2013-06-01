@@ -1,33 +1,16 @@
 #ifndef ISLPP_MULTIAFF_H
 #define ISLPP_MULTIAFF_H
 
-#include <cassert>
-#include <isl/aff.h>
-#include <isl/multi.h>
-
-#include "islpp/Multi.h"
-#include "islpp/Aff.h"
-#include "islpp/Space.h"
-#include "islpp/Ctx.h"
-#include "islpp/Id.h"
-#include "islpp/Vec.h"
-#include "islpp/Int.h"
-#include "islpp/Set.h"
-#include "islpp/LocalSpace.h"
-#include "islpp/Spacelike.h"
-
-#include <llvm/Support/ErrorHandling.h>
-
-
 #include "islpp_common.h"
 #include "Multi.h"
 #include "Pw.h"
-#include <cassert>
-#include <llvm/Support/ErrorHandling.h>
+#include "Spacelike.h"
+
 
 #include <isl/aff.h>
 #include <isl/multi.h>
-
+#include <cassert>
+#include <llvm/Support/ErrorHandling.h>
 #include "islpp/Multi.h"
 #include "islpp/Aff.h"
 #include "islpp/Space.h"
@@ -39,32 +22,6 @@
 #include "islpp/LocalSpace.h"
 #include "islpp/Spacelike.h"
 
-
-
-
-#define ISLPP_EL pw_aff
-#define ISLPP_ELPP PwAff
-#define ISLPP_STRUCT NAMEUS(isl,multi,ISLPP_EL)
-
-namespace isl {
-  template<>
-  class Multi<PwAff> : public Spacelike {
-#include "Multi_members.inc.h"
-
-  public:
-       static MultiType readFromString(Ctx *ctx, const char *str) { return wrap(NAMEUS(isl_multi,ISLPP_EL,read_from_string)(ctx->keep(), str)); } 
-  }; // class PwAff
-
-#include "Multi_funcs.inc.h"
-
-} // namespace isl
-
-#undef ISLPP_EL
-#undef ISLPP_ELPP
-#undef ISLPP_STRUCT
-
-
-#if 0
 struct isl_multi_aff;
 
 namespace llvm {
@@ -74,15 +31,17 @@ namespace isl {
   class Aff;
 } // namespace isl
 
-// Forgotten declarations
-//__isl_give isl_multi_aff *isl_multi_aff_alloc(__isl_take isl_set *set, __isl_take isl_multi_aff *maff);
-
 
 namespace isl {
   typedef Multi<Aff> MultiAff;
 
   template<>
   class Multi<Aff> : public Spacelike {
+  public:
+    typedef isl_multi_pw_aff IslType;
+    typedef PwAff EltType;
+    typedef Multi<PwAff> MultiType;
+
 #pragma region Low-level
   private:
     isl_multi_aff *maff;
@@ -100,7 +59,7 @@ namespace isl {
 #pragma endregion
 
   public:
-    Multi<Aff>() : maff(nullptr) {}
+    Multi() : maff(nullptr) {}
     Multi(const Multi<Aff> &that) : maff(that.takeCopy()) {}
     Multi(Multi<Aff> &&that) : maff(that.take()) {}
     ~Multi();
@@ -165,7 +124,8 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::wrap(isl_multi_aff_get_aff(keep(), pos)); }
-    void append(Aff &&aff);
+    void push_back(Aff &&aff);
+    void push_back(const Aff &aff) { return push_back(aff.copy()); }
 #pragma endregion
 
 
@@ -182,6 +142,8 @@ namespace isl {
       return LocalSpace::wrap(ls);
     }
 
+    BasicMap toBasicMap() const;
+    Map toMap() const;
   }; // class MultiAff
 
   static inline bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
@@ -199,7 +161,9 @@ namespace isl {
 
   static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
   static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
+
+   static inline Multi<Aff> enwrap(isl_multi_aff *obj) { return Multi<Aff>::wrap(obj); }
+
 } // namespace isl
-#endif
 
 #endif /* ISLPP_MULTIAFF_H */

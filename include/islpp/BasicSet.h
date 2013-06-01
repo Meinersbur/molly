@@ -4,11 +4,13 @@
 #include "islpp_common.h"
 #include "Multi.h"
 #include "Pw.h"
+#include "Spacelike.h"
 #include <llvm/Support/Compiler.h>
 #include <cassert>
 #include <string>
 #include <functional>
 #include <isl/space.h> // enum isl_dim_type;
+#include <isl/set.h>
 
 struct isl_basic_set;
 struct isl_constraint;
@@ -36,7 +38,7 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet {
+  class BasicSet /*: public Spacelike2<BasicSet>*/ {
 #pragma region Low-level
   private:
     isl_basic_set *set;
@@ -75,14 +77,31 @@ namespace isl {
     static BasicSet createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&ineq, isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4);
     static BasicSet createFromPoint(Point &&pnt);
     static BasicSet createBoxFromPoints(Point &&pnt1, Point &&pnt2);
-
+    static BasicSet createFromBasicMap(BasicMap &&bmap);
+    
     static BasicSet readFromFile(Ctx *ctx, FILE *input);
     static BasicSet readFromStr(Ctx *ctx, const char *str);
+
+    BasicSet copy() const { return wrap(isl_basic_set_copy(keep())); }
+    BasicSet &&move() { return std::move(*this); }
 #pragma endregion
 
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
+
+#pragma region Spacelike2
+   // BasicSet setTupleId(isl_dim_type type, Id &&id)  const { return wrap(isl_basic_set_set_tuple_id(type, id.keep)); }
+
+    BasicSet setTupleName(isl_dim_type type, const char *s) const { return wrap(isl_basic_set_set_tuple_name(takeCopy(), s)); }
+    //BasicSet setDimId(isl_dim_type type, unsigned pos, Id &&id) const
+    BasicSet setDimName(isl_dim_type type, unsigned pos, const char *s) const { return wrap(isl_basic_set_set_dim_name(takeCopy(), type, pos, s)); }
+
+    BasicSet insertDims(isl_dim_type type, unsigned pos, unsigned n) const  { return wrap(isl_basic_set_insert_dims(takeCopy(), type, pos, n)); } 
+    BasicSet moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) const { return wrap(isl_basic_set_move_dims(takeCopy(), dst_type, dst_pos,src_type, src_pos,  n)); } 
+    BasicSet addDims(isl_dim_type type, unsigned n) const { return wrap(isl_basic_set_add_dims(takeCopy(), type, n)); } 
+    BasicSet removeDims(isl_dim_type type, unsigned first, unsigned n) const { return wrap(isl_basic_set_remove_dims(takeCopy(), type, first, n)); }
+#pragma endregion
 
 #pragma region Constraints
     void addConstraint(Constraint &&constraint);
@@ -148,6 +167,8 @@ namespace isl {
     void gist(BasicSet &&context);
     Vertices computeVertices() const;
   }; // class BasicSet
+
+  static inline BasicSet enwrap(isl_basic_set *bset) { return BasicSet::wrap(bset); }
 
 
   BasicSet params(BasicSet &&params);

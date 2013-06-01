@@ -85,7 +85,7 @@ namespace isl {
 
   }; // class List<Aff>
 
-  List<Aff> concat(List<Aff> &&list1, List<Aff> &&list2) { return List<Aff>::wrap(isl_aff_list_concat(list1.take(), list2.take())); }
+  static inline List<Aff> concat(List<Aff> &&list1, List<Aff> &&list2) { return List<Aff>::wrap(isl_aff_list_concat(list1.take(), list2.take())); }
 
 } // namespace isl
 #endif /* ISLPP_AFFLIST_H */

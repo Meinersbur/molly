@@ -32,6 +32,7 @@ namespace isl {
   class UnionPwQPolynomialFold;
   class Constraint;
   class Id;
+  class Val;
 
   template<typename T>
   class List;
@@ -127,7 +128,8 @@ namespace isl {
     void print(const PwQPolynomialFold &pwf);
     void print(const UnionPwQPolynomialFold &upwf);
     void print(const Constraint &constraint);
-      void print(const Id &id);
+    void print(const Id &id);
+    void print(const Val &v);
 
     void flush();
   }; // class Printer

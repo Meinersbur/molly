@@ -1,6 +1,9 @@
 #include "islpp/MultiAff.h"
 
 #include "islpp/Printer.h"
+#include <isl/map.h>
+#include "islpp/BasicMap.h"
+#include "islpp/Map.h"
 
 using namespace isl;
 
@@ -52,7 +55,7 @@ void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) 
 }
 
 
-void Multi<Aff>::append(Aff &&aff) {
+void Multi<Aff>::push_back(Aff &&aff) {
   auto n = dim(isl_dim_out);
 
   auto list = isl_aff_list_alloc(isl_multi_aff_get_ctx(keep()), n+1);
@@ -66,3 +69,34 @@ void Multi<Aff>::append(Aff &&aff) {
 
   give(isl_multi_aff_from_aff_list(space.take(), list));
 }
+
+
+
+// Missing in isl
+static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
+	if (!mpwaff)
+		return NULL;
+
+	isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
+  isl_map *map = isl_map_universe(isl_space_from_domain(space));
+
+  unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
+	for (int i = 0; i < n; ++i) {
+    isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
+		isl_map *map_i = isl_map_from_pw_aff(pwaff);
+		map = isl_map_flat_range_product(map, map_i);
+	}
+
+	isl_multi_pw_aff_free(mpwaff);
+	return map;
+}
+
+
+    BasicMap Multi<Aff>::toBasicMap() const {
+      return enwrap(isl_basic_map_from_multi_aff(takeCopy()));
+    }
+
+
+    Map Multi<Aff>::toMap() const {
+      return enwrap(isl_map_from_multi_aff(takeCopy()));
+    }

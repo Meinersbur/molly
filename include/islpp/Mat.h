@@ -41,5 +41,8 @@ namespace isl {
     const Mat &operator=(Mat &&that) { give(that.take()); return *this; }
 
   }; // class Mat
+
+  static inline Mat enwrap(__isl_take isl_mat *mat) { return Mat::wrap(mat); }
+
 } // namespace isl
 #endif /* ISLPP_MAT_H */

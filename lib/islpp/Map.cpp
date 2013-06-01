@@ -46,12 +46,10 @@ void Map::dump() const {
   print(llvm::errs());
 }
 
-     Map Map::createFromUnionMap(UnionMap &&umap) {
-       return Map::wrap(isl_map_from_union_map(umap.take()));
-     }
 
-
-
+Map Map::createFromUnionMap(UnionMap &&umap) {
+  return Map::wrap(isl_map_from_union_map(umap.take()));
+}
 
 
 Ctx *Map::getCtx() const {
@@ -63,6 +61,7 @@ bool Map::isEmpty() const {
   return isl_map_is_empty(keep());
 }
 
+
 static int foearchBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(BasicMap&&)>*>(user);
@@ -72,4 +71,9 @@ static int foearchBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
 bool Map::foreachBasicMap(std::function<bool(BasicMap&&)> func) const {
   auto retval = isl_map_foreach_basic_map(keep(), foearchBasicMapCallback, &func);
   return retval!=0;
+}
+
+
+Map BasicMap::toMap() const {
+  return enwrap(isl_map_from_basic_map(takeCopy()));
 }

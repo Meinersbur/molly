@@ -17,9 +17,13 @@ namespace llvm {
 
 namespace isl {
   class Set;
+  class Map;
   class Space;
+   class LocalSpace;
   class BasicSet;
   class Printer;
+  class BasicMap;
+  class Aff;
 } // namespace isl
 
 
@@ -40,12 +44,7 @@ namespace isl {
 
   /// All manipulations of integer sets and relations occur within the context of an isl_ctx. A given isl_ctx can only be used within a single thread. All arguments of a function are required to have been allocated within the same context. There are currently no functions available for moving an object from one isl_ctx to another isl_ctx. This means that there is currently no way of safely moving an object from one thread to another, unless the whole isl_ctx is moved.
   class Ctx {
-
-
   private:
-    //isl_ctx *ctx;
-    //llvm::PointerIntPair<isl_ctx*,1, bool> ctx;
-
     Ctx() LLVM_DELETED_FUNCTION;
     Ctx(const Ctx &) LLVM_DELETED_FUNCTION;
     const Ctx &operator=(const Ctx &) LLVM_DELETED_FUNCTION;
@@ -64,7 +63,7 @@ namespace isl {
    static Ctx *create();
 
 #pragma region Error handling
-       isl_error getLastError() const;
+    isl_error getLastError() const;
     void resetLastError();
     void setOnError(OnErrorEnum val);
     OnErrorEnum getOnError() const;
@@ -77,13 +76,44 @@ namespace isl {
 #pragma endregion
 
 #pragma region Create spaces
-        Space createSpace(unsigned nparam, unsigned dim);
+     Space createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
+     Space createMapSpace(Space &&domain, Space &&range);
+
+     Space createParamsSpace(unsigned nparam);
+     Space createSetSpace(unsigned nparam, unsigned dim);
 #pragma endregion
+
+     
+#pragma region Create affine expressions
+    Aff createZeroAff(LocalSpace &&space);
+#pragma endregion
+
+//#pragma region Create local spaces
+//     LocalSpace createSetLocalSpace(unsigned nparam/*params*/, unsigned n, unsigned divs);
+//     LocalSpace createMapLocalSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/, unsigned divs);
+//#pragma endregion
 
 #pragma region Create BasicSets
          BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
           BasicSet readBasicSet(const char *str);
 #pragma endregion
+
+#pragma region Create Maps
+    Map createMap(unsigned nparam, unsigned in, unsigned out, int n/*number of BasicMaps*/, unsigned flags = 0);
+    Map createEmptyMap(Space &&space);
+    Map createEmptyMap(const BasicSet &domain, Space &&rangeSpace);
+    Map createEmptyMap(const BasicSet &domain, const Set &range);
+    Map createUniverseMap(Space &&space);
+    Map createAlltoallMap(Set &&domain, Set &&range);
+#pragma endregion
+
+#pragma region Create BasicMaps
+    BasicMap createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq);
+    BasicMap createUniverseBasicMap(Space &&space);
+#pragma endregion
   }; // class Ctx
+
+  static inline Ctx *enwrap(isl_ctx *ctx) { return Ctx::wrap(ctx); }
+
 } // namespace isl
 #endif /* ISLPP_CTX_H */

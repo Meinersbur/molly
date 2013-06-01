@@ -4,6 +4,7 @@
 #include "islpp_common.h"
 #include <cassert>
 #include <string>
+#include <isl/ctx.h>
 
 struct isl_id;
 
@@ -86,8 +87,10 @@ namespace isl {
     void setFreeUser(void (*freefunc)(void *));
   }; // class Id
 
-  inline bool operator==(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()==rhs.keepOrNull(); }
-  inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
+  static inline Id enwrap(__isl_take isl_id *id) { return Id::wrap(id); }
+   
+  static inline bool operator==(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()==rhs.keepOrNull(); }
+  static inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
 } // namespace isl
 #endif /* ISLPP_ID_H */

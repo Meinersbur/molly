@@ -5,6 +5,9 @@
 #include "islpp/LocalSpace.h"
 #include "islpp/Constraint.h"
 #include "islpp/Printer.h"
+#include "islpp/Map.h"
+#include "islpp/BasicMap.h"
+#include "islpp/Aff.h"
 
 #include <isl/ctx.h>
 #include <isl/options.h>
@@ -38,7 +41,6 @@ Ctx *Ctx::create() {
 }
 
 
-
 isl_error Ctx::getLastError() const {
   return isl_ctx_last_error(keep());
 }
@@ -58,9 +60,11 @@ OnErrorEnum Ctx::getOnError() const {
   return static_cast<OnErrorEnum>(isl_options_get_on_error(keep()));
 }
 
+
 Printer Ctx::createPrinterToFile(FILE *file) {
   return Printer::wrap(isl_printer_to_file(keep(), file), false);
 }
+
 
 Printer Ctx:: createPrinterToFile(const char *filename) {
   FILE *file = fopen(filename, "w");
@@ -69,20 +73,42 @@ Printer Ctx:: createPrinterToFile(const char *filename) {
   return result;
 }
 
+
 Printer Ctx::createPrinterToStr(){
   return Printer::wrap(isl_printer_to_str(keep()), false);
 }
 
 
-Space Ctx::createSpace(unsigned nparam, unsigned dim) {
-  isl_space *space = isl_space_set_alloc(keep(), nparam, dim);
-  return Space::wrap(space);
+Space Ctx::createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/) {
+  return Space::createMapSpace(this, nparam, n_in, n_out);
 }
+
+
+Space Ctx::createMapSpace(Space &&domain, Space &&range) {
+  return Space::createMapFromDomainAndRange(domain.move(), range.move());
+}
+
+
+Space Ctx::createParamsSpace(unsigned nparam) {
+  return Space::createParamsSpace(this, nparam);
+}
+
+
+Space Ctx::createSetSpace(unsigned nparam, unsigned dim) {
+  return Space::createSetSpace(this, nparam, dim);
+}
+
+
+Aff Ctx::createZeroAff(LocalSpace &&space) {
+  return enwrap(isl_aff_zero_on_domain(space.take()));
+}
+
+
 
 
 BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths) {
   auto dims = lengths.size();
-  Space space = createSpace(0, dims);
+  Space space = createSetSpace(0, dims);
   BasicSet set = BasicSet::create(space.copy());
 
   for (auto d = dims-dims; d < dims; d+=1) {
@@ -102,4 +128,52 @@ BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &length
 
 BasicSet Ctx::readBasicSet(const char *str) {
   return BasicSet::wrap(isl_basic_set_read_from_str(keep(), str));
+}
+
+
+Map Ctx::createMap(unsigned nparam, unsigned in, unsigned out, int n, unsigned flags) {
+  return Map::create(this, nparam, in, out, n, flags);
+}
+
+
+Map Ctx::createUniverseMap(Space &&space) {
+  return Map::createUniverse(move(space));
+}
+
+
+Map Ctx::createAlltoallMap(Set &&domain, Set &&range) {
+  auto resultspace = Space::createMapFromDomainAndRange(domain.getSpace(), range.getSpace());
+  auto result = resultspace.createUniverseMap();
+  result = intersectDomain(result.move(), domain.move());
+  result = intersectRange(result.move(), range.move());
+  return result;
+}
+
+
+  Map Ctx::createEmptyMap(Space &&space) {
+    assert(isl_space_get_ctx(space.keep()) == keep());
+    return enwrap(isl_map_empty(space.take()));
+  }
+
+
+   Map Ctx::createEmptyMap(const BasicSet &domain, Space &&rangeSpace) {
+     auto mapspace = isl_space_map_from_domain_and_range(domain.getSpace().take(), rangeSpace.take());
+     return enwrap(isl_map_empty(mapspace));
+   }
+
+
+   Map Ctx::createEmptyMap(const BasicSet &domain, const Set &range) {
+     auto mapspace = isl_space_map_from_domain_and_range(domain.getSpace().take(), range.getSpace().take());
+     return enwrap(isl_map_empty(mapspace));
+   }
+
+
+BasicMap Ctx::createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq) {
+  return enwrap(isl_basic_map_alloc(keep(), nparam, in, out, extra, n_eq, n_ineq));
+}
+
+
+BasicMap Ctx::createUniverseBasicMap(Space &&space) {
+  assert(space.getCtx() == this);
+  return enwrap(isl_basic_map_universe(space.take()));
 }

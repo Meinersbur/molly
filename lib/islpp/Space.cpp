@@ -2,9 +2,14 @@
 
 #include "islpp/Ctx.h"
 #include "islpp/Id.h"
+#include "islpp/Set.h"
+#include "islpp/BasicSet.h"
+#include "islpp/Map.h"
+#include "islpp/BasicMap.h"
 
 #include <isl/space.h>
-
+#include <isl/set.h>
+#include <isl/map.h>
 
 using namespace isl;
 using namespace std;
@@ -18,24 +23,68 @@ isl_space *Space::takeCopy() const {
   return isl_space_copy(space);
 }
 
+
 Space::~Space() {
   if (space) isl_space_free(space);
 }
 
-Space Space::createMapSpace(const Ctx &ctx, unsigned nparam, unsigned n_in, unsigned n_out) {
-  return Space::wrap(isl_space_alloc(ctx.keep(), nparam, n_in, n_out));
+
+Space Space::createMapSpace(const Ctx *ctx, unsigned nparam, unsigned n_in, unsigned n_out) {
+  return Space::wrap(isl_space_alloc(ctx->keep(), nparam, n_in, n_out));
 }
 
-Space Space::createParamsSpace(const Ctx &ctx, unsigned nparam) {
-  return Space::wrap(isl_space_params_alloc(ctx.keep(), nparam));
+
+Space Space::createParamsSpace(const Ctx *ctx, unsigned nparam) {
+  return Space::wrap(isl_space_params_alloc(ctx->keep(), nparam));
 }
 
-Space Space:: createSetSpace(const Ctx &ctx, unsigned nparam, unsigned dim) {
-  return Space::wrap(isl_space_set_alloc(ctx.keep(), nparam, dim));
+
+Space Space:: createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim) {
+  return Space::wrap(isl_space_set_alloc(ctx->keep(), nparam, dim));
 }
+
 
 Space Space::createMapFromDomainAndRange(Space &&domain, Space &&range) {
   return Space::wrap(isl_space_map_from_domain_and_range(domain.take(), range.take()));
+}
+
+
+Map Space::emptyMap() const {
+  return enwrap(isl_map_empty(takeCopy()));
+}
+
+
+Map Space::universeMap() const {
+  return enwrap(isl_map_universe(takeCopy()));
+}
+
+
+Aff  Space::createZeroAff() const {
+  return enwrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
+}
+
+
+Aff Space::createConstantAff(const Int &c) const {
+  auto zero = createZeroAff();
+  zero.setConstant(c);
+  return zero;
+}
+
+
+Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
+  return enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
+}
+
+
+Set Space::emptySet() const {
+  assert(dim(isl_dim_in) == 0);
+  return enwrap(isl_set_empty(takeCopy()));
+}
+
+
+Set Space::universeSet() const {
+  assert(dim(isl_dim_in ) == 0);
+  return enwrap(isl_set_universe(takeCopy()));
 }
 
 
@@ -44,32 +93,32 @@ unsigned Space::dim(isl_dim_type type) const {
 }
 
 
-    unsigned Space::getParamDims() const {
-      return dim(isl_dim_param);
-    }
+unsigned Space::getParamDims() const {
+  return dim(isl_dim_param);
+}
 
 
-        unsigned Space::getSetDims() const {
-          assert(isSetSpace());
-             return dim(isl_dim_set);
-        }
+unsigned Space::getSetDims() const {
+  assert(isSetSpace());
+  return dim(isl_dim_set);
+}
 
 
-    unsigned Space::getInDims() const{
-      assert(isMapSpace());
-      return dim(isl_dim_in);
-    }
+unsigned Space::getInDims() const{
+  assert(isMapSpace());
+  return dim(isl_dim_in);
+}
 
 
-    unsigned Space::getOutDims() const{
-      assert(isMapSpace());
-      return dim(isl_dim_out);
-    }
+unsigned Space::getOutDims() const{
+  assert(isMapSpace());
+  return dim(isl_dim_out);
+}
 
 
-    unsigned Space::getTotalDims() const {
-   return dim(isl_dim_all);
-    }
+unsigned Space::getTotalDims() const {
+  return dim(isl_dim_all);
+}
 
 
 bool Space::isParamsSpace() const{
@@ -190,6 +239,24 @@ void Space::curry(){
 }
 void Space::uncurry(){
   give(isl_space_uncurry(take()));
+}
+
+
+
+Set Space::createUniverseSet() const {
+  return enwrap(isl_set_universe(keep()));
+}
+
+BasicSet Space::createUniverseBasicSet() const {
+  return enwrap(isl_basic_set_universe(keep()));
+}
+
+Map Space::createUniverseMap() const {
+  return enwrap(isl_map_universe(keep()));
+}
+
+BasicMap Space::createUniverseBasicMap() const {
+  return enwrap(isl_basic_map_universe(keep()));
 }
 
 

@@ -81,7 +81,7 @@ namespace isl {
     /// @brief A zero-dimensional (basic) set can be constructed on a given parameter domain using the following function.
     static Set createFromParams(Set &&set);
     static Set createFromPwAff(PwAff &&);
-    static Set createFromPwMultiAff(PwMultiAff &&);
+    static Set createFromPwMultiAff(PwMultiAff &&aff);
     static Set createFromPoint(Point &&);
     static Set createBocFromPoints(Point &&pnt1, Point &&pnt2);
 
@@ -89,7 +89,9 @@ namespace isl {
     static Set readFrom(Ctx *, const char *);
 
     Set copy() const { return Set::wrap(takeCopy()); }
+    Set &&move() { return std::move(*this); }
 #pragma endregion
+
 
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;
@@ -184,6 +186,7 @@ namespace isl {
     PwAff dimMax(const Dim &dim) const;
   }; // class Set
 
+  static inline Set enwrap(isl_set *obj) { return Set::wrap(obj); }
 
   /// @brief Convex hull
   /// If the input set or relation has any existentially quantified variables, then the result of these operations is currently undefined.

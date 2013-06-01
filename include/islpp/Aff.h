@@ -5,6 +5,7 @@
 #include <cassert>
 #include <string>
 #include <isl/space.h> // enum isl_dim_type;
+#include <isl/aff.h>
 
 struct isl_aff;
 
@@ -28,6 +29,8 @@ namespace isl {
 
 
 namespace isl {
+
+  Aff div(Aff &&aff1, const Int &aff2);
 
   class Aff {
 #pragma region Low-level
@@ -60,6 +63,9 @@ namespace isl {
     static Aff createVarOnDomain(LocalSpace &&space, isl_dim_type type, unsigned pos);
 
     static Aff readFromString(Ctx *ctx, const char *str);
+
+    Aff copy() const { return wrap(isl_aff_copy(keep())); }
+    Aff &&move() { return std::move(*this); }
 #pragma endregion
 
 #pragma region Printing
@@ -107,6 +113,18 @@ namespace isl {
     void floor();
     void mod(const Int &mod);
 
+    Aff divBy(const Aff &divisor) const {  return wrap(isl_aff_div(takeCopy(), divisor.takeCopy())); }
+    Aff divBy(Aff &&divisor) const { return wrap(isl_aff_div(takeCopy(), divisor.take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIERS
+    Aff divBy(const Aff &divisor) && { return wrap(isl_aff_div(take(), divisor.takeCopy()));  }
+    Aff divBy(Aff &&divisor) && { return wrap(isl_aff_div(take(), divisor.take()));  }
+#endif
+
+    Aff divBy(const Int &divisor) const { return div(this->copy(), divisor); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIERS
+    Aff divBy(const Int &divisor) && { return return div(this->move(), divisor); }
+#endif
+
     void scale(const Int &f);
     void scaleDown(const Int &f);
     void scaleDown(unsigned f);
@@ -122,12 +140,16 @@ namespace isl {
     void gistParams(Set &&context);
 
     void pullbackMultiAff(Multi<Aff> &&);
+
   }; // class Aff
 
+
+  static inline Aff enwrap(__isl_take isl_aff *obj) { return Aff::wrap(obj); }
+
   bool isPlainEqual(const Aff &aff1, const Aff &aff2);
-  Aff mul( Aff &&aff1, Aff &&aff2);
-  Aff div( Aff &&aff1, Aff &&aff2);
-  Aff add( Aff &&aff1, Aff &&aff2);
+  Aff mul(Aff &&aff1, Aff &&aff2);
+  Aff div(Aff &&aff1, Aff &&aff2);
+  Aff add(Aff &&aff1, Aff &&aff2);
   //Aff sub( Aff &&aff1, Aff &&aff2);
 
 

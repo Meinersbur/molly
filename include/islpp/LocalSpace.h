@@ -125,7 +125,16 @@ namespace isl {
     const LocalSpace &operator=(const Space &that);
 #pragma endregion
 
+
+#pragma region Creational
     LocalSpace copy() { return LocalSpace::wrap(takeCopy()); }
+#pragma endregion
+
+
+#pragma region Build something basic from this space
+    Aff createZeroAff() const;
+#pragma endregion
+
 
     Ctx *getCtx() const;
     bool isSet() const;
@@ -163,6 +172,9 @@ namespace isl {
 
   bool isEqual(const LocalSpace &ls1, const LocalSpace &ls2);
   LocalSpace intersect( LocalSpace &&ls1,  LocalSpace &&ls2);
+
+
+  LocalSpace enwrap(__isl_take isl_local_space *ls) { return LocalSpace::wrap(ls); }
 
 } // namepsace isl
 #endif /* ISLPP_LOCALSPACE_H */
