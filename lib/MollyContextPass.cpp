@@ -1,6 +1,8 @@
 #include "MollyContextPass.h"
 
 #include "MollyContext.h"
+#include "islpp/Space.h"
+#include "islpp/MultiAff.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CommandLine.h>
@@ -44,6 +46,12 @@ bool MollyContextPass::runOnModule(Module &M) {
 }
 
 
+isl::Space MollyContextPass::getClusterSpace() {
+  auto result = getIslContext()->createSetSpace(0, clusterLengths.size());
+  return result;
+}
+
+
 isl::Ctx *MollyContextPass::getIslContext() {
   return context->getIslContext();
 }
@@ -70,6 +78,13 @@ int MollyContextPass::getClusterLength(int d) const {
 		return clusterLengths[d];
 	}
 	return 1;
+}
+
+isl::MultiAff MollyContextPass:: getMasterRank() {
+  auto islctx = getIslContext();
+  auto nDims = getClusterDims();
+
+  return isl::MultiAff::createZero(getClusterSpace());
 }
 
 

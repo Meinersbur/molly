@@ -102,6 +102,7 @@ namespace isl {
     Map createMap(unsigned nparam, unsigned in, unsigned out, int n/*number of BasicMaps*/, unsigned flags = 0);
     Map createEmptyMap(Space &&space);
     Map createEmptyMap(Space &&domainSpace, Space &&rangeSpace);
+     Map createEmptyMap(const Space &domainSpace, Space &&rangeSpace);
     Map createEmptyMap(const BasicSet &domain, Space &&rangeSpace);
     Map createEmptyMap(const BasicSet &domain, const Set &range);
     Map createEmptyMap(Set &&domain, Set &&range);

@@ -4,6 +4,8 @@
 //#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
 #include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType)
 #include <llvm/ADT/ArrayRef.h>
+#include "islpp/Space.h"
+#include "islpp/MultiAff.h"
 
 namespace llvm {
   class Module;
@@ -21,6 +23,7 @@ namespace isl {
   class Ctx;
   class Set;
   class BasicSet;
+  class Map;
 }
 
 namespace molly {
@@ -93,7 +96,8 @@ namespace molly {
       return metadata.dimLengths.size();
     }
 
-    isl::Set getLogicalIndexset();
+    isl::BasicSet getLogicalIndexset();
+    isl::Space getLogicalIndexsetSpace();
 
     llvm::StructType *getType() { 
       assert(metadata.llvmType);
@@ -117,6 +121,10 @@ namespace molly {
         return getLengths();
       return localLengths;
     }
+    int getLocalLength(int d) {
+      assert(d <= 0 && d < getNumDimensions());
+      return localLengths[d];
+    }
 
     void setDistributed(bool val = true) {
       isdistributed = val;
@@ -125,6 +133,9 @@ namespace molly {
       this->localLengths.clear();
       this->localLengths.append(lengths.begin(), lengths.end());
     }
+    //void setDistribution(const llvm::ArrayRef<int> &localLengths )
+    isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */
+    isl::MultiAff getDistributionAff(); /* global coordinate -> node coordinate */
 
     llvm::Function *getFuncGetBroadcast() {
       assert(metadata.funcGetBroadcast);
@@ -152,12 +163,20 @@ namespace molly {
     void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
     llvm::Type *getEltType() {
-    	assert(metadata.llvmEltType);
-    	return metadata.llvmEltType;
+      assert(metadata.llvmEltType);
+      return metadata.llvmEltType;
     }
     llvm::PointerType *getEltPtrType();
 
     //TODO: Element length in bytes
+
+    isl::Set getGlobalIndexset();
+    int getGlobalLength(int d);
+
+    isl::Map getLocalIndexset(const isl::BasicSet &clusterSet); // { clusterCoordinate -> Indexset }
+
+    /// { globalcoord -> nodecoord } where the value is stored
+    isl::PwMultiAff getHomeAff(); 
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

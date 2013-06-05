@@ -83,6 +83,13 @@ namespace isl {
     const Map &operator=(const Map &that) { give(that.takeCopy()); return *this; }
     const Map &operator=(Map &&that) { give(that.take()); return *this; }
 
+
+#pragma region Conversion
+    Map(const MultiAff &maff) : map(isl_map_from_multi_aff(maff.takeCopy())) {}
+    Map(MultiAff &&maff) : map(isl_map_from_multi_aff(maff.take())) {}
+#pragma endregion
+
+
 #pragma region Creational
     static Map create(Ctx *ctx, unsigned nparam, unsigned in, unsigned out, int n, unsigned flags = 0) { return Map::wrap(isl_map_alloc(ctx->keep(), nparam, in, out, n, flags)); }
     static Map createUniverse(Space &&space) { return Map::wrap(isl_map_universe(space.take())); }
@@ -124,7 +131,6 @@ namespace isl {
     Map copy() const { return wrap(takeCopy()); }
     Map &&move() { return std::move(*this); }
 #pragma endregion
-
 
 
 #pragma region Printing
@@ -190,11 +196,11 @@ namespace isl {
 
     /// Function composition
     /// { U -> V }.applyRange({ X -> Y }) = { U -> {X->Y}(V) } => { U -> Y }
-    Map applyRange(const Map &map2) const { wrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
-    Map applyRange(Map &&map2) const { wrap(isl_map_apply_range(takeCopy(), map2.take())); }
+    Map applyRange(const Map &map2) const { return wrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
+    Map applyRange(Map &&map2) const { return wrap(isl_map_apply_range(takeCopy(), map2.take())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    Map applyRange(const Map &map2) && { wrap(isl_map_apply_range(take(), map2.takeCopy())); }
-    Map applyRange(Map &&map2) && { wrap(isl_map_apply_range(take(), map2.take())); }
+    Map applyRange(const Map &map2) && { return wrap(isl_map_apply_range(take(), map2.takeCopy())); }
+    Map applyRange(Map &&map2) && { return wrap(isl_map_apply_range(take(), map2.take())); }
 #endif
 
     void intersectDomain(Set &&set) { give(isl_map_intersect_domain(take(), set.take())); }

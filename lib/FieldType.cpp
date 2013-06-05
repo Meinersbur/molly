@@ -8,6 +8,8 @@
 #include "islpp/LocalSpace.h"
 #include "islpp/BasicSet.h"
 #include "islpp/Constraint.h"
+#include "islpp/Map.h"
+#include "islpp/BasicMap.h"
 
 #include <isl/space.h>
 
@@ -52,11 +54,11 @@ FieldType::~FieldType() {
 }
 
 
-isl::Set FieldType::getLogicalIndexset() {
+isl::BasicSet FieldType::getLogicalIndexset() {
   auto ctx = getIslContext();
 
   auto dims = getNumDimensions();
-  auto space = ctx->createSpace(0, dims);
+  auto space = ctx->createSetSpace(0, dims);
   auto set = isl::BasicSet::create(space.copy());
 
   for (auto d = dims-dims; d < dims; d+=1) {
@@ -75,34 +77,52 @@ isl::Set FieldType::getLogicalIndexset() {
 }
 
 
+isl::Space FieldType::getLogicalIndexsetSpace() {
+  auto islctx = getIslContext(); 
+  auto dims = getNumDimensions();
+  return islctx->createSetSpace(0, dims);
+}
+
+
 void FieldType::dump() {
   getLogicalIndexset().dump();
 }
 
 
-llvm::PointerType *FieldType::getEltPtrType() {
-	auto eltType = getEltType();
-	return PointerType::getUnqual(eltType);
+isl::Map FieldType::getDistributionMapping() {
+  auto result = getDistributionAff().toMap();
+  //TODO: index >= 0 && index < length[d]
+  return result;
 }
 
 
-#if 0
-llvm::Function *FieldType::getIsLocalFunc() {
-  if (!islocalfunc) {
-    // function has been optimized away; We simply create a new one
-    auto llvmContext = getLLVMContext();
+/* global coordinate -> node coordinate */
+isl::MultiAff FieldType::getDistributionAff() {
+  auto islctx = getIslContext();
+  isl::MultiAff result;
+  auto indexspace = getLogicalIndexsetSpace();
 
-    // Prototype
-    Type *params[] = {
-      Type::getInt32Ty(*llvmContext) //TODO: Clang may have "int" int to some other type
-    };
-    auto functy = FunctionType::get(Type::getInt1Ty(*llvmContext), params, false);
-
-    islocalfunc = Function::Create(functy, GlobalValue::ExternalLinkage, "isLocal", getModule());
+  auto &lengths = getLengths();
+  auto dims = lengths.size();
+  for (auto d = 0; d < dims; d+=1){
+    auto len = lengths[d];
+    // gcoord = nodecoord*len + lcoord
+    // => nodecoord = (gcoord - lcoord)/len
+    // => nodecoord = [gcoord/len]
+    auto gcoord = indexspace.createVarAff(isl_dim_set, d);
+    auto nodecoord = div(gcoord.move(), indexspace.createConstantAff(len));
+    result.push_back(nodecoord.move());
   }
-  return islocalfunc;
+  return result;
 }
-#endif
+
+
+llvm::PointerType *FieldType::getEltPtrType() {
+  auto eltType = getEltType();
+  return PointerType::getUnqual(eltType);
+}
+
+
 
 static Value *emit(IRBuilderBase &builder, Value *value) {
   return value;
@@ -128,35 +148,70 @@ SmallVector<T*,4> iplistToSmallVector(iplist<T> &list) {
 }
 
 
-#if 0
-void FieldType::emitIsLocalFunc() {
-  auto &llvmContext = module->getContext();
-  auto func = getIsLocalFunc();
-  func->getBasicBlockList().clear(); // Remove any existing implementation; Alternative: Delete old one, create new one
 
-  auto entryBB = BasicBlock::Create(llvmContext, "Entry", func);
-  IRBuilder<> builder(entryBB);
 
-  if (!isdistributed) {
-    auto trueConst = emit(builder, true);
-    builder.CreateRet(trueConst);
-    return;
+isl::Set FieldType::getGlobalIndexset() {
+  return getLogicalIndexset();
+}
+
+
+int FieldType::getGlobalLength(int d) {
+  assert(0 <= d && d < getNumDimensions());
+  return metadata.dimLengths[d];
+}
+
+
+isl::Map FieldType::getLocalIndexset(const isl::BasicSet &clusterSet) {
+  auto nDims = getNumDimensions();//FIXME: Assumption cluster dimensions = field dimensions
+  //auto space = getIslContext()->createMapSpace(0, nDims, nDims); 
+  //auto domainSpace = getIslContext()->createSetSpace(0, nDims); // cluster coordinate
+  //auto rangeSpace = getIslContext()->createSetSpace(0, nDims); 
+
+  auto domain = clusterSet;
+  auto range = getLogicalIndexset();
+  auto space = isl::Space::createMapFromDomainAndRange(domain.getSpace(), range.getSpace());
+  auto result = isl::BasicMap::createFromDomainAndRange(domain.copy(), range.copy());
+
+
+  for (auto d = nDims-nDims; d<nDims; d+=1) {
+    auto globalLen = getGlobalLength(d);
+    auto localLen = getLocalLength(d);
+    auto clusterLen = (globalLen + localLen - 1) / localLen;
+
+    // globalCoord_low <= clustercoord * clusterLen
+    auto c_low = isl::Constraint::createInequality(result.getSpace());
+    c_low.setCoefficient(isl_dim_in, d, clusterLen);
+    c_low.setCoefficient(isl_dim_out, d, -1);
+    c_low.setConstant(0);
+
+    // (clustercoord + 1) * clusterLen < globalCoord_hi
+    // clustercoord * clusterLen + clusterLen < globalCoord_hi
+    auto c_hi = isl::Constraint::createInequality(result.getSpace());
+    c_hi.setCoefficient(isl_dim_in, d, clusterLen);
+    c_hi.setCoefficient(isl_dim_out, d, -1);
+    c_hi.setConstant(clusterLen);
   }
 
-  auto args = iplistToSmallVector(func->getArgumentList());
-  GlobalVariable *coordVar = module->getGlobalVariable("_cart_local_coord");
-  assert(coordVar);
-  //auto coordAddr = builder.CreateInBoundsGEP(coordVar, emit(builder, (uint32_t)0));
-  auto coordAddr = builder.CreateConstInBoundsGEP2_32(coordVar, 0, 0);
-  auto coord = builder.CreateLoad(coordAddr, "coord");
-  auto localLength = emit(builder, localLengths[0]);
-  auto origin = builder.CreateNSWMul(coord, localLength);
-  auto end = builder.CreateAdd(origin, localLength);
-
-  auto lower = builder.CreateICmpUGE(origin, args[1]);
-  auto higher = builder.CreateICmpUGT(args[1], end);
-  auto inregion = builder.CreateAnd(lower, higher);
-
-  builder.CreateRet(inregion);
+  return result.toMap();
 }
-#endif
+
+
+/// { globalcoord -> nodecoord } where the value is stored between distributed SCoPs
+isl::PwMultiAff FieldType::getHomeAff() {
+  assert(isDistributed());
+  isl::MultiAff maff;
+  auto gcoordSpace = getLogicalIndexsetSpace();
+
+  auto nDims = getNumDimensions();
+  for (auto d = nDims-nDims; d<nDims; d+=1) {
+    auto globalLen = getGlobalLength(d);
+    auto localLen = getLocalLength(d);
+    auto clusterLen = (globalLen + localLen - 1) / localLen;
+
+    // [globalcoordinate/len]
+    auto aff = gcoordSpace.createVarAff(isl_dim_in, d).divBy(localLen);
+    maff.push_back(aff);
+  }
+
+  return maff.restrictDomain(getLogicalIndexset());
+}

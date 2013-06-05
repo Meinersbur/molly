@@ -1,3 +1,4 @@
+/// obsolete, replaced by GlobalPassManager
 // This file is the result of the shortcomings of LLVM's pass manager,
 // Namely:
 // - Cannot access lower-level passes (Except on-the-fly FunctionPass from ModulePass)

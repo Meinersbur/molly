@@ -18,10 +18,13 @@ int main2() { Foo<int, float> f; Bar(f); }
 //molly::array<int, 4> My1DField;
 //molly::array<int, 4, 4> My2DField;
 //molly::array<int, 4, 4, 4> My3DField;
-//molly::array<int, 4, 4, 4, 4> My4DField;
+molly::array<int, 4, 4, 4, 4> My4DField;
+//std::vector<int> vec;
 
-molly::array<int, 128> MyField;
+//#pragma layout interchange(0,1)
+//molly::array<int, 128> MyField;
 //molly::array<int, 44> MySecondField;
+
 
 
 int main(int argc, char *argv[]) {
@@ -37,14 +40,36 @@ int main(int argc, char *argv[]) {
   //(void)MyField.length();
   
   auto len = MyField.length();
-  for (int i = 0; i < 2; i+=1) {
+  for (int i = 0; i < len; i+=1) {
     //MyField.set(i,i+1);
     
     //*MyField.ptr(i) = i+1;
      MyField[i] = i+2;
 
+     int *a = &MyField[i];
+     int *b = a + 1;
+
+     auto ptr = __builtin_molly_ptr(&MyField, i);
+     *ptr = i+2;
+
+     auto x = *ptr;
+
     //*MySecondField.ptr(i) = i+2;
     //MySecondField[i] = i+2;
+  }
+
+  for (int i = 0; i < LowLoval; i++) {
+     // MPI
+  }
+  for (int i = LowLocal; i < HighLocal; i++) {
+    MyField[i] = MyField[i-1] + MyField[i+1];
+    
+    // MyField[i-1]
+    // Local
+    // MyField[i+1]
+  }
+  for (int i = HighLocal; i < len; i++) {
+    // MPI
   }
 
   for (int i = 0; i < 2; i+=1) {

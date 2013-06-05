@@ -14,7 +14,7 @@ namespace llvm {
 
 namespace molly {
 
-  isl::PwAff convertScEvToAffine(polly::ScopStmt *, llvm::SCEV *);
+  isl::PwAff convertScEvToAffine(polly::ScopStmt *, const llvm::SCEV *);
 
 } // namespace molly
 #endif /* MOLLY_SCEVAFFINATOR_H */

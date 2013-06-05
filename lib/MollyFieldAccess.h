@@ -1,7 +1,7 @@
 #ifndef MOLLY_MOLLYFIELDACCESS_H
 #define MOLLY_MOLLYFIELDACCESS_H
 
-#include "islpp/MultiAff.h"
+#include "islpp/MultiPwAff.h"
 #include <polly/FieldAccess.h>
 
 namespace isl {
@@ -26,7 +26,7 @@ namespace molly {
   public:
     MollyFieldAccess() {
       this->fieldvar = nullptr;
-       this->scopAccess = nullptr; 
+      this->scopAccess = nullptr; 
     }
 
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
@@ -43,8 +43,9 @@ namespace molly {
 
     polly::MemoryAccess *getPollyMemoryAccess();
     polly::ScopStmt *getPollyScopStmt();
-    isl::MultiAff getAffineAccess(llvm::ScalarEvolution *se);
-    isl::Map getAccessedRegion();
+    isl::MultiPwAff getAffineAccess(llvm::ScalarEvolution *se);
+    isl::Map/*iteration coord -> field coord*/ getAccessRelation();
+    isl::Set getAccessedRegion();
   }; // class MollyFieldAccess
 
 } // namespace molly

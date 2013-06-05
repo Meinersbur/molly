@@ -18,6 +18,7 @@
 #include "PatternSearchAnalysis.h"
 #include <polly/LinkAllPasses.h>
 #include <llvm/Transforms/Scalar.h>
+#include <polly/ScopPass.h>
 
 using namespace llvm;
 using namespace std;
@@ -29,16 +30,16 @@ static cl::opt<int> dbranch("malt", cl::desc("Debug Branch"), cl::init(0), cl::O
 
 
 static void initializeMollyPasses(PassRegistry &Registry) {
-  //initializeFieldDetectionAnalysisPass(Registry);
+	//initializeFieldDetectionAnalysisPass(Registry);
 }
 #if 0
 namespace {
-  class StaticInitializer {
-  public:
-    StaticInitializer() {
-      PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    }
-  };
+	class StaticInitializer {
+	public:
+		StaticInitializer() {
+			PassRegistry &Registry = *PassRegistry::getPassRegistry();
+		}
+	};
 }
 
 static StaticInitializer InitializeErverything;
@@ -47,29 +48,29 @@ static StaticInitializer InitializeErverything;
 static int EmptyRegionPassInsts = 0;
 class EmptyRegionPass : public llvm::RegionPass {
 public:
-  static char ID;
-  bool hasRun;
+	static char ID;
+	bool hasRun;
 
-  EmptyRegionPass() : RegionPass(ID), hasRun(false) {
-    EmptyRegionPassInsts+=1;
-  }
-  ~EmptyRegionPass() {
-    int a= 0;
-  }
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-  virtual bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    hasRun = true;
-    return false;
-  }
+	EmptyRegionPass() : RegionPass(ID), hasRun(false) {
+		EmptyRegionPassInsts+=1;
+	}
+	~EmptyRegionPass() {
+		int a= 0;
+	}
+	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+		AU.setPreservesAll();
+	}
+	virtual bool runOnRegion(Region *R, RGPassManager &RGM) override {
+		hasRun = true;
+		return false;
+	}
 
-  virtual void assignPassManager(PMStack &a,  PassManagerType b) {
-    RegionPass::assignPassManager(a,b);
-  }
-  virtual void preparePassManager(PMStack &a) {
-    RegionPass::preparePassManager(a);
-  }
+	virtual void assignPassManager(PMStack &a,  PassManagerType b) {
+		RegionPass::assignPassManager(a,b);
+	}
+	virtual void preparePassManager(PMStack &a) {
+		RegionPass::preparePassManager(a);
+	}
 };
 static RegisterPass<EmptyRegionPass> EmptyRegionPassRegistration("emptyregion", "EmptyRegionPass", false, true);
 char EmptyRegionPass::ID;
@@ -77,20 +78,20 @@ char EmptyRegionPass::ID;
 
 class Empty2FunctionPass : public llvm::FunctionPass {
 public:
-  static char ID;
-  Empty2FunctionPass() : FunctionPass(ID) {}
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-  virtual bool runOnFunction(Function &F) override {
-    return false;
-  }
-  virtual void assignPassManager(PMStack &a,  PassManagerType b) {
-    FunctionPass::assignPassManager(a,b);
-  }
-  virtual void preparePassManager(PMStack &a) {
-    FunctionPass::preparePassManager(a);
-  }
+	static char ID;
+	Empty2FunctionPass() : FunctionPass(ID) {}
+	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+		AU.setPreservesAll();
+	}
+	virtual bool runOnFunction(Function &F) override {
+		return false;
+	}
+	virtual void assignPassManager(PMStack &a,  PassManagerType b) {
+		FunctionPass::assignPassManager(a,b);
+	}
+	virtual void preparePassManager(PMStack &a) {
+		FunctionPass::preparePassManager(a);
+	}
 };
 static RegisterPass<Empty2FunctionPass> Empty2FunctionPassRegistration("empty2function", "EmptyFunctionPass", false, true);
 char Empty2FunctionPass::ID;
@@ -100,36 +101,36 @@ char Empty2FunctionPass::ID;
 static int EmptyFunctionPassInsts = 0;
 class EmptyFunctionPass : public llvm::FunctionPass {
 public:
-  static char ID;
-  EmptyFunctionPass() : FunctionPass(ID) {
-    EmptyFunctionPassInsts+=1;
-  }
-  ~EmptyFunctionPass() {
-    int a= 0;
-  }
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    if (dbranch == 0) {
-    } else if (dbranch == 1) {
-      AU.addRequired<RegionInfo>();
-      AU.addRequired<EmptyRegionPass>();
-    } else {
-      AU.addRequired<Empty2FunctionPass>();
-    }
-    AU.setPreservesAll();
-  }
-  virtual bool runOnFunction(Function &F) override {
-    auto RI = &getAnalysis<RegionInfo>();
-    auto TopLevel = RI->getTopLevelRegion();
-    //auto ER = &getAnalysis<EmptyRegionPass>(*TopLevel);
-    return false;
-  }
+	static char ID;
+	EmptyFunctionPass() : FunctionPass(ID) {
+		EmptyFunctionPassInsts+=1;
+	}
+	~EmptyFunctionPass() {
+		int a= 0;
+	}
+	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+		if (dbranch == 0) {
+		} else if (dbranch == 1) {
+			AU.addRequired<RegionInfo>();
+			AU.addRequired<EmptyRegionPass>();
+		} else {
+			AU.addRequired<Empty2FunctionPass>();
+		}
+		AU.setPreservesAll();
+	}
+	virtual bool runOnFunction(Function &F) override {
+		auto RI = &getAnalysis<RegionInfo>();
+		auto TopLevel = RI->getTopLevelRegion();
+		//auto ER = &getAnalysis<EmptyRegionPass>(*TopLevel);
+		return false;
+	}
 
-  virtual void assignPassManager(PMStack &a,  PassManagerType b) {
-    FunctionPass::assignPassManager(a,b);
-  }
-  virtual void preparePassManager(PMStack &a) {
-    FunctionPass::preparePassManager(a);
-  }
+	virtual void assignPassManager(PMStack &a,  PassManagerType b) {
+		FunctionPass::assignPassManager(a,b);
+	}
+	virtual void preparePassManager(PMStack &a) {
+		FunctionPass::preparePassManager(a);
+	}
 };
 static RegisterPass<EmptyFunctionPass> EmptyFunctionPassRegistration("emptyfunction", "EmptyFunctionPass", false, true);
 char EmptyFunctionPass::ID;
@@ -137,34 +138,34 @@ char EmptyFunctionPass::ID;
 static int EmptyModulePassInsts = 0;
 class EmptyModulePass : public llvm::ModulePass {
 public:
-  static char ID;
-  EmptyModulePass() : ModulePass(ID) {
-    EmptyModulePassInsts+=1;
-  }
-  ~EmptyModulePass() {
-    int a= 0;
-  }
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    if (dbranch == 0)
-      AU.addRequired<EmptyFunctionPass>();
+	static char ID;
+	EmptyModulePass() : ModulePass(ID) {
+		EmptyModulePassInsts+=1;
+	}
+	~EmptyModulePass() {
+		int a= 0;
+	}
+	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+		if (dbranch == 0)
+			AU.addRequired<EmptyFunctionPass>();
 
-    //AU.addRequired<EmptyRegionPass>();
+		//AU.addRequired<EmptyRegionPass>();
 
-    AU.setPreservesAll();
-  }
-  virtual bool runOnModule(Module &M) {
-    auto ER = &getAnalysis<EmptyRegionPass>();
-    auto EF = &getAnalysis<EmptyFunctionPass>();
-    assert(ER->hasRun);
-    return false;
-  }
+		AU.setPreservesAll();
+	}
+	virtual bool runOnModule(Module &M) {
+		auto ER = &getAnalysis<EmptyRegionPass>();
+		auto EF = &getAnalysis<EmptyFunctionPass>();
+		assert(ER->hasRun);
+		return false;
+	}
 
-  virtual void assignPassManager(PMStack &a,  PassManagerType b) {
-    ModulePass::assignPassManager(a,b);
-  }
-  virtual void preparePassManager(PMStack &a) {
-    ModulePass::preparePassManager(a);
-  }
+	virtual void assignPassManager(PMStack &a,  PassManagerType b) {
+		ModulePass::assignPassManager(a,b);
+	}
+	virtual void preparePassManager(PMStack &a) {
+		ModulePass::preparePassManager(a);
+	}
 };
 static RegisterPass<EmptyModulePass> EmptyModulePassRegistration("emptymodule", "EmptyModulePass");
 char EmptyModulePass::ID;
@@ -173,21 +174,21 @@ char EmptyModulePass::ID;
 
 class Empty3FunctionPass : public llvm::FunctionPass {
 public:
-  static char ID;
-  Empty3FunctionPass() : FunctionPass(ID) {}
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.addRequired<EmptyModulePass>();
-    AU.setPreservesAll();
-  }
-  virtual bool runOnFunction(Function &F) override {
-    return false;
-  }
-  virtual void assignPassManager(PMStack &a,  PassManagerType b) {
-    FunctionPass::assignPassManager(a,b);
-  }
-  virtual void preparePassManager(PMStack &a) {
-    FunctionPass::preparePassManager(a);
-  }
+	static char ID;
+	Empty3FunctionPass() : FunctionPass(ID) {}
+	virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+		AU.addRequired<EmptyModulePass>();
+		AU.setPreservesAll();
+	}
+	virtual bool runOnFunction(Function &F) override {
+		return false;
+	}
+	virtual void assignPassManager(PMStack &a,  PassManagerType b) {
+		FunctionPass::assignPassManager(a,b);
+	}
+	virtual void preparePassManager(PMStack &a) {
+		FunctionPass::preparePassManager(a);
+	}
 };
 static RegisterPass<Empty3FunctionPass> Empty3FunctionPassRegistration("empty3function", "Empty3FunctionPass", false, true);
 char Empty3FunctionPass::ID;
@@ -203,55 +204,56 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 	llvm::errs() << "Molly: Enabled lvl " << optLevel << "\n";
 
 #if 0
-  //PM.add(new EmptyRegionPass());
-  if (dbranch == 0) {
-    PM.add(new EmptyFunctionPass());
-    PM.add(new EmptyModulePass());
-  } else if (dbranch == 1) {
-    PM.add(new EmptyRegionPass());
-    PM.add(new EmptyFunctionPass());
-  } else if (dbranch == 2) {
-    PM.add(new Empty2FunctionPass());
-    PM.add(new EmptyFunctionPass());
-  } else if (dbranch == 3) {
-    PM.add(new EmptyModulePass());
-    PM.add(new Empty3FunctionPass());
-  } else {
-  }
+	//PM.add(new EmptyRegionPass());
+	if (dbranch == 0) {
+		PM.add(new EmptyFunctionPass());
+		PM.add(new EmptyModulePass());
+	} else if (dbranch == 1) {
+		PM.add(new EmptyRegionPass());
+		PM.add(new EmptyFunctionPass());
+	} else if (dbranch == 2) {
+		PM.add(new Empty2FunctionPass());
+		PM.add(new EmptyFunctionPass());
+	} else if (dbranch == 3) {
+		PM.add(new EmptyModulePass());
+		PM.add(new Empty3FunctionPass());
+	} else {
+	}
 #endif
 
-  //PM.add(molly::createFieldDetectionAnalysisPass());
+	//PM.add(molly::createFieldDetectionAnalysisPass());
 
-  // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
-  PM.add(molly::createMollyInlinePass()); 
-  PM.add(llvm::createCFGSimplificationPass()); // calls to __builtin_molly_ptr and load/store instructions must be in same BB
+	// Unconditional inlining for field member function to make llvm.molly intrinsics visisble
+	PM.add(molly::createMollyInlinePass()); 
+	PM.add(llvm::createCFGSimplificationPass()); // calls to __builtin_molly_ptr and load/store instructions must be in same BB
 
-  // Cleanup after inlining
-  //FIXME: Which is the correct one?
-  //PM.add(createConstantPropagationPass());
-  //PM.add(createCorrelatedValuePropagationPass());
-  //PM.add(createSCCPPass()); 
-  //PM.add(createJumpThreadingPass());
+	// Cleanup after inlining
+	//FIXME: Which is the correct one?
+	//PM.add(createConstantPropagationPass());
+	//PM.add(createCorrelatedValuePropagationPass());
+	//PM.add(createSCCPPass()); 
+	//PM.add(createJumpThreadingPass());
 
-  //PM.add(createDeadInstEliminationPass());
-  //PM.add(createDeadCodeEliminationPass());
-  //PM.add(createAggressiveDCEPass());  
-  //PM.add(createCFGSimplificationPass());
+	//PM.add(createDeadInstEliminationPass());
+	//PM.add(createDeadCodeEliminationPass());
+	//PM.add(createAggressiveDCEPass());  
+	//PM.add(createCFGSimplificationPass());
 
-  //PM.add(polly::createScopInfoPass());
-  //PM.add(molly::createScopStmtSplitPass());
-  //PM.add(polly::createDependencesPass());
-  //PM.add(new PatternSearchAnalysis());
+	//PM.add(polly::createScopInfoPass());
+	//PM.add(molly::createScopStmtSplitPass());
+	//PM.add(polly::createDependencesPass());
+	//PM.add(new PatternSearchAnalysis());
 
-  PM.add(molly::createFieldDistributionPass());
+	// Find a home location for all the data
+	PM.add(molly::createFieldDistributionPass());
 
-  //auto MollyPM = MollyPassManager::create();
-  //MollyPM.add(molly::createFieldDistributionPass());
-  //PM.add(MollyPM);
-  PM.add(molly::createFieldDistributionPass());
+	//auto MollyPM = MollyPassManager::create();
+	//MollyPM.add(molly::createFieldDistributionPass());
+	//PM.add(MollyPM);
+	PM.add(molly::createScopDistributionPass());
 
-  PM.add(molly::createModuleFieldGenPass());
-  PM.add(molly::createFieldCodeGenPass());
+	PM.add(molly::createModuleFieldGenPass());
+	PM.add(molly::createFieldCodeGenPass());
 }
 
 
@@ -263,14 +265,14 @@ static void registerMollyNoOptPasses(const llvm::PassManagerBuilder &Builder, ll
 
 
 static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder, llvm::PassManagerBase &PM) {
-  registerMollyPasses(PM, MollyEnabled, Builder.OptLevel);
+	registerMollyPasses(PM, MollyEnabled, Builder.OptLevel);
 }
 
 
 namespace molly {
-  ModulePass *createFieldDetectionAnalysisPass();
+	ModulePass *createFieldDetectionAnalysisPass();
 
-  extern char &FieldDetectionAnalysisID;
+	extern char &FieldDetectionAnalysisID;
 }
 
 
@@ -278,22 +280,22 @@ static llvm::RegisterStandardPasses OptPassRegister(llvm::PassManagerBuilder::EP
 static llvm::RegisterStandardPasses NoOptPassRegister(llvm::PassManagerBuilder::EP_EnabledOnOptLevel0, registerMollyNoOptPasses);
 
 namespace molly {
-  void forceLinkPassRegistration() {
-    // We must reference the passes in such a way that compilers will not
-    // delete it all as dead code, even with whole program optimization,
-    // yet is effectively a NO-OP. As the compiler isn't smart enough
-    // to know that getenv() never returns -1, this will do the job.
-    if (std::getenv("bar") != (char*) -1)
-      return;
+	void forceLinkPassRegistration() {
+		// We must reference the passes in such a way that compilers will not
+		// delete it all as dead code, even with whole program optimization,
+		// yet is effectively a NO-OP. As the compiler isn't smart enough
+		// to know that getenv() never returns -1, this will do the job.
+		if (std::getenv("bar") != (char*) -1)
+			return;
 
-    molly::createFieldDetectionAnalysisPass();
+		molly::createFieldDetectionAnalysisPass();
 
 #define USE(val) \
-  srand( *((unsigned int*)&(val)) )
+	srand( *((unsigned int*)&(val)) )
 
-    // Do something with the static variable to ensure it is linked into the library
-    USE(OptPassRegister);
-    USE(NoOptPassRegister);
-    USE(MollyEnabled);
-  }
+		// Do something with the static variable to ensure it is linked into the library
+		USE(OptPassRegister);
+		USE(NoOptPassRegister);
+		USE(MollyEnabled);
+	}
 }

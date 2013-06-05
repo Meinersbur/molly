@@ -80,6 +80,7 @@ namespace isl {
     Vec sort() const { return enwrap( isl_vec_sort(takeCopy())); }
 #pragma endregion
 
+
     Vec dropEls(unsigned pos, unsigned n) { return enwrap(isl_vec_drop_els(takeCopy(), pos, n)); }
     Vec insertEls(unsigned pos, unsigned n) { return enwrap(isl_vec_insert_els(takeCopy(), pos, n)); }
     Vec insertZeroEls(unsigned pos, unsigned n) { return enwrap(isl_vec_insert_zero_els(takeCopy(), pos, n)); }

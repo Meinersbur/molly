@@ -35,7 +35,7 @@ public:
 
       isl_set *Domain = isl_set_universe(isl_space_copy(Space));
       isl_aff *Affine =
-          isl_aff_zero_on_domain(isl_local_space_from_space(Space));
+        isl_aff_zero_on_domain(isl_local_space_from_space(Space));
       Affine = isl_aff_add_coefficient_si(Affine, isl_dim_param, 0, 1);
 
       return isl_pw_aff_alloc(Domain, Affine);
@@ -45,8 +45,8 @@ public:
   }
 
   SCEVAffinator(const ScopStmt *Stmt)
-      : Ctx(Stmt->getIslCtx()), NbLoopSpaces(Stmt->getNumIterators()),
-        S(Stmt->getParent()) {}
+    : Ctx(Stmt->getIslCtx()), NbLoopSpaces(Stmt->getNumIterators()),
+    S(Stmt->getParent()) {}
 
   __isl_give isl_pw_aff *visitConstant(const SCEVConstant *Constant) {
     ConstantInt *Value = Constant->getValue();
@@ -128,7 +128,7 @@ public:
 
   int getLoopDepth(const Loop *L) {
     Loop *outerLoop =
-        S->getRegion().outermostLoopInRegion(const_cast<Loop *>(L));
+      S->getRegion().outermostLoopInRegion(const_cast<Loop *>(L));
     assert(outerLoop && "Scop does not contain this loop");
     return L->getLoopDepth() - outerLoop->getLoopDepth();
   }
@@ -136,7 +136,7 @@ public:
   __isl_give isl_pw_aff *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     assert(Expr->isAffine() && "Only affine AddRecurrences allowed");
     assert(S->getRegion().contains(Expr->getLoop()) &&
-           "Scop does not contain the loop referenced in this AddRec");
+      "Scop does not contain the loop referenced in this AddRec");
 
     isl_pw_aff *Start = visit(Expr->getStart());
     isl_pw_aff *Step = visit(Expr->getOperand(1));
@@ -146,7 +146,7 @@ public:
     int loopDimension = getLoopDepth(Expr->getLoop());
 
     isl_aff *LAff = isl_aff_set_coefficient_si(
-        isl_aff_zero_on_domain(LocalSpace), isl_dim_in, loopDimension, 1);
+      isl_aff_zero_on_domain(LocalSpace), isl_dim_in, loopDimension, 1);
     isl_pw_aff *LPwAff = isl_pw_aff_from_aff(LAff);
 
     // TODO: Do we need to check for NSW and NUW?
@@ -174,13 +174,13 @@ public:
 }; // class SCEVAffinator
 
 
-isl::PwAff convertScEvToAffine(ScopStmt *Stmt, SCEV *se) {
-    Scop *S = Stmt->getParent();
-    const Region *Reg = &S->getRegion();
+isl::PwAff convertScEvToAffine(ScopStmt *Stmt, const SCEV *se) {
+  Scop *S = Stmt->getParent();
+  const Region *Reg = &S->getRegion();
 
-    S->addParams(getParamsInAffineExpr(Reg, se, *S->getSE()));
+  S->addParams(getParamsInAffineExpr(Reg, se, *S->getSE()));
 
-    SCEVAffinator Affinator(Stmt);
+  SCEVAffinator Affinator(Stmt);
   auto pwaff = Affinator.visit(se);
   return isl::PwAff::wrap(pwaff);
 }

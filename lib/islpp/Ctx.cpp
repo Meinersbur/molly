@@ -166,6 +166,12 @@ Map Ctx::createAlltoallMap(Set &&domain, Set &&range) {
    }
 
 
+   Map createEmptyMap(const Space &domainSpace, Space &&rangeSpace) {
+      auto mapspace = isl_space_map_from_domain_and_range(domainSpace.takeCopy(), rangeSpace.take());
+       return enwrap(isl_map_empty(mapspace));
+   }
+
+
    Map Ctx::createEmptyMap(const BasicSet &domain, Space &&rangeSpace) {
      auto mapspace = isl_space_map_from_domain_and_range(domain.getSpace().take(), rangeSpace.take());
      return enwrap(isl_map_empty(mapspace));

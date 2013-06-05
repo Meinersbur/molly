@@ -8,9 +8,11 @@
 #include "islpp/Ctx.h"
 #include "islpp/Space.h"
 #include "islpp/Map.h"
+#include "SCEVAffinator.h"
 
 #include <llvm/Analysis/ScalarEvolution.h>
 
+using std::move;
 using namespace llvm;
 using namespace molly;
 
@@ -68,29 +70,30 @@ polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
 }
 
 
-isl::MultiAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
+isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
   SmallVector<llvm::Value*,4> coords;
   getCoordinates(coords);
+  auto scopStmt = getPollyScopStmt();
 
-  isl::MultiAff result;
-
+  isl::MultiPwAff result;
   for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
     auto coordVal = *it;
     auto coordSCEV = se->getSCEV(coordVal);
-      
 
-    isl::Aff aff;
-
-
-
-    result.append(std::move(aff));
+    auto aff = convertScEvToAffine(scopStmt, coordSCEV);
+    result.push_back(move(aff));
   }
 
   return result;
 }
 
 
-isl::Map MollyFieldAccess::getAccessedRegion() {
-  isl::Map result;
-  return result;
+isl::Map MollyFieldAccess::getAccessRelation() {
+  assert(scopAccess);
+  return isl::enwrap(scopAccess->getAccessRelation());
+}
+
+
+isl::Set MollyFieldAccess::getAccessedRegion() {
+  return getAccessRelation().getRange();
 }

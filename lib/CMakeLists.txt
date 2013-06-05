@@ -6,7 +6,7 @@ add_molly_library(LLVMMolly
     FieldDistribution.cpp
     FieldType.cpp
     FieldVariable.cpp
-    Nodegrid.cpp
+    Nodegrid.cpp  # Obsolete?
     MollyContext.cpp
     MollyContextPass.cpp
     FieldCodeGen.cpp
@@ -14,12 +14,22 @@ add_molly_library(LLVMMolly
     ScopDistribution.cpp
     ScopStmtSplit.cpp
     MollyUtils.cpp
-    MollyInlinePrepa.cpp
+    MollyInlinePrepa.cpp # Obsolete?
     MollyFieldAccess.cpp
-    PatternSearchAnalysis.cpp
+    PatternSearchAnalysis.cpp # Obsolete
     GlobalPassManager.cpp
-    MollyPassManager.cpp
+    MollyPassManager.cpp # Obsolete
     SCEVAffinator.cpp
+    UnusedValueElimination.cpp
+    CommunicationBuffer.cpp
+    ScopEditor.cpp
+    ScopUtils.cpp
+    FieldLayout.cpp
+    LayoutMapping.cpp
+    AffineMapping.cpp
+    IndirectMapping.cpp
+    ZCurveMapping.cpp
+    HilbertCurveMapping.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

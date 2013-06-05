@@ -1,0 +1,2 @@
+namespace molly {
+} // namespace molly
