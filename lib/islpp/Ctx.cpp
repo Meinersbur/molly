@@ -149,11 +149,21 @@ Map Ctx::createAlltoallMap(Set &&domain, Set &&range) {
   return result;
 }
 
+    Map Ctx::createAlltoallMap(const Set &domain, Set &&range) { return createAlltoallMap(domain.copy(), range.move()); }
+    Map Ctx::createAlltoallMap(Set &&domain, const Set &range) { return createAlltoallMap(domain.move(), range.copy()); }
+    Map Ctx::createAlltoallMap(const Set &domain, const Set &range) { return createAlltoallMap(domain.copy(), range.copy()); }
+
 
   Map Ctx::createEmptyMap(Space &&space) {
     assert(isl_space_get_ctx(space.keep()) == keep());
     return enwrap(isl_map_empty(space.take()));
   }
+
+
+   Map Ctx::createEmptyMap(Space &&domainSpace, Space &&rangeSpace) {
+         auto mapspace = isl_space_map_from_domain_and_range(domainSpace.take(), rangeSpace.take());
+         return enwrap(isl_map_empty(mapspace));
+   }
 
 
    Map Ctx::createEmptyMap(const BasicSet &domain, Space &&rangeSpace) {
@@ -167,6 +177,11 @@ Map Ctx::createAlltoallMap(Set &&domain, Set &&range) {
      return enwrap(isl_map_empty(mapspace));
    }
 
+
+   Map Ctx::createEmptyMap(Set &&domain, Set &&range) {
+     auto mapspace = isl_space_map_from_domain_and_range(isl_set_get_space(domain.keep()), isl_set_get_space(range.keep()));
+      return enwrap(isl_map_empty(mapspace));
+   }
 
 BasicMap Ctx::createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq) {
   return enwrap(isl_basic_map_alloc(keep(), nparam, in, out, extra, n_eq, n_ineq));

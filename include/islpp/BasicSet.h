@@ -11,6 +11,9 @@
 #include <functional>
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/set.h>
+#include <llvm/Support/ErrorHandling.h>
+#include "Ctx.h"
+#include "Id.h"
 
 struct isl_basic_set;
 struct isl_constraint;
@@ -34,11 +37,10 @@ namespace isl {
 } // namespace isl
 
 
-
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet /*: public Spacelike2<BasicSet>*/ {
+  class BasicSet : public Spacelike2<BasicSet> {
 #pragma region Low-level
   private:
     isl_basic_set *set;
@@ -86,22 +88,42 @@ namespace isl {
     BasicSet &&move() { return std::move(*this); }
 #pragma endregion
 
+
+#pragma region Printing
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
+#pragma endregion
+
+
+    Ctx *getCtx() const { return Ctx::wrap(isl_basic_set_get_ctx(keep())); }
+
 
 #pragma region Spacelike2
-   // BasicSet setTupleId(isl_dim_type type, Id &&id)  const { return wrap(isl_basic_set_set_tuple_id(type, id.keep)); }
+    unsigned dim(isl_dim_type type) const { return isl_basic_set_dim(keep(), type); }
 
-    BasicSet setTupleName(isl_dim_type type, const char *s) const { return wrap(isl_basic_set_set_tuple_name(takeCopy(), s)); }
-    //BasicSet setDimId(isl_dim_type type, unsigned pos, Id &&id) const
-    BasicSet setDimName(isl_dim_type type, unsigned pos, const char *s) const { return wrap(isl_basic_set_set_dim_name(takeCopy(), type, pos, s)); }
+    //bool hasTupleId(isl_dim_type type) const { return isl_basic_set_has_tuple_id(keep(), type); }
+    Id getTupleId(isl_dim_type type) const { llvm_unreachable("Missing API function"); }
+    void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER{ llvm_unreachable("Missing API function"); }
+    //bool hasTupleName(isl_dim_type type) const { return isl_basic_set_has_tuple_name(keep(), type); }
+    const char *getTupleName(isl_dim_type type=isl_dim_set) const { assert(type==isl_dim_set); return isl_basic_set_get_tuple_name(keep());  }
+   // const char *getTupleName() const { return isl_basic_set_get_tuple_name(keep()); }
+     void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_basic_set_set_tuple_name(take(), s)); }
+     void setTupleName_inplace(const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_name(take(), s)); }
 
-    BasicSet insertDims(isl_dim_type type, unsigned pos, unsigned n) const  { return wrap(isl_basic_set_insert_dims(takeCopy(), type, pos, n)); } 
-    BasicSet moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) const { return wrap(isl_basic_set_move_dims(takeCopy(), dst_type, dst_pos,src_type, src_pos,  n)); } 
-    BasicSet addDims(isl_dim_type type, unsigned n) const { return wrap(isl_basic_set_add_dims(takeCopy(), type, n)); } 
-    BasicSet removeDims(isl_dim_type type, unsigned first, unsigned n) const { return wrap(isl_basic_set_remove_dims(takeCopy(), type, first, n)); }
+    //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_id(keep(), type, pos); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_basic_set_get_dim_id(keep(), type, pos)); }
+    void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing API function"); }
+    //bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_name(keep(), type, pos); }
+    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_get_dim_name(keep(), type, pos); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_name(take(), type, pos, s)); }
+
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_insert_dims(take(), type, pos, n)); }
+    void addDims_inplace(isl_dim_type type, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_dims(take(), type, n)); }
+ void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_remove_dims(take(), type, first, n)); }
 #pragma endregion
+
 
 #pragma region Constraints
     void addConstraint(Constraint &&constraint);
@@ -132,14 +154,14 @@ namespace isl {
     void removeUnknownDivs();
 
     /// The number of parameters, input, output or set dimensions can be obtained using the following functions.
-    unsigned dim(isl_dim_type type) const;
+//    unsigned dim(isl_dim_type type) const;
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const;
 
-    const char *getTupleName() const;
-    void setTupleName(const char *s);
+//    const char *getTupleName() const;
+//    void setTupleName(const char *s);
 
-    Id getDimId(isl_dim_type type, unsigned pos) const;
-    const char *getDimName(isl_dim_type type, unsigned pos) const;
+//    Id getDimId(isl_dim_type type, unsigned pos) const;
+ //   const char *getDimName(isl_dim_type type, unsigned pos) const;
 
     bool plainIsEmpty() const;
     bool isEmpty() const;

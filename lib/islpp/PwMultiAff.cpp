@@ -14,11 +14,16 @@ PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) { return enwrap(isl_pw
 PwMultiAff PwMultiAff::createIdentity(Space &&space) { return enwrap(isl_pw_multi_aff_identity(space.take())); }
 PwMultiAff PwMultiAff::createFromMultiAff(MultiAff &&maff) { return enwrap(isl_pw_multi_aff_from_multi_aff(maff.take())); }
 
-PwMultiAff PwMultiAff::createEmpty(Space &&space) {return enwrap(isl_pw_multi_aff_empty(space.take())); }
+PwMultiAff PwMultiAff::createEmpty(Space &&space) { return enwrap(isl_pw_multi_aff_empty(space.take())); }
 PwMultiAff PwMultiAff::createFromDomain(Set &&set) { return enwrap(isl_pw_multi_aff_from_domain(set.take())); }
 
 PwMultiAff PwMultiAff::createFromSet(Set &&set) { return enwrap(isl_pw_multi_aff_from_set(set.take())); }
 PwMultiAff PwMultiAff::createFromMap(Map &&map) { return enwrap(isl_pw_multi_aff_from_map(map.take())); }
+
+
+Map PwMultiAff::toMap() const {
+  return Map::wrap(isl_map_from_pw_multi_aff(takeCopy()));
+}
 
 
 void PwMultiAff::print(llvm::raw_ostream &out) const{

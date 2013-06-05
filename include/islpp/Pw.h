@@ -29,6 +29,6 @@ namespace isl {
   template<>
   class Pw<MultiAff>;
   typedef Pw<MultiAff> PwMultiAff;
-
 } // namepsace isl
+
 #endif /* ISLPP_PW_H */

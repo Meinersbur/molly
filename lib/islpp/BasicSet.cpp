@@ -20,7 +20,6 @@
 #include <isl/map.h>
 #include <isl/vertices.h>
 #include <functional>
-//#include <stdio.h>
 
 using namespace isl;
 using namespace std;
@@ -194,27 +193,9 @@ void  BasicSet::removeUnknownDivs() {
   give(isl_basic_set_remove_unknown_divs(take()));
 }
 
-unsigned BasicSet::dim(isl_dim_type type) const {
-  return isl_basic_set_dim(keep(), type);
-}
 
 bool BasicSet::involvesDims(isl_dim_type type, unsigned first, unsigned n) const{
   return isl_basic_set_involves_dims(keep(), type, first, n);
-}
-
-const char *BasicSet::getTupleName() const{
-  return isl_basic_set_get_tuple_name(keep());
-}
-void BasicSet::setTupleName(const char *s){
-  give(isl_basic_set_set_tuple_name(take(), s));
-}
-
-
-Id BasicSet::getDimId(isl_dim_type type, unsigned pos) const{
-  return Id::wrap(isl_basic_set_get_dim_id(keep(), type, pos));
-}
-const char *BasicSet::getDimName(isl_dim_type type, unsigned pos) const{
-  return isl_basic_set_get_dim_name(keep(), type, pos);
 }
 
 

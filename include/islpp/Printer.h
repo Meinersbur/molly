@@ -33,6 +33,7 @@ namespace isl {
   class Constraint;
   class Id;
   class Val;
+  class Vec;
 
   template<typename T>
   class List;
@@ -130,6 +131,7 @@ namespace isl {
     void print(const Constraint &constraint);
     void print(const Id &id);
     void print(const Val &v);
+    void print(const Vec &v);
 
     void flush();
   }; // class Printer

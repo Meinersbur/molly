@@ -67,11 +67,17 @@ namespace isl {
     const Multi<Aff> &operator=(const Multi<Aff> &that) { give(that.takeCopy()); return *this; }
     const Multi<Aff> &operator=(Multi<Aff> &&that) { give(that.take()); return *this; }
 
-    Multi<Aff> copy() const { return wrap(takeCopy()); }
-
     Ctx *getCtx() const { return Ctx::wrap(isl_multi_aff_get_ctx(keep())); }
     Space getSpace() const { return Space::wrap(isl_multi_aff_get_space(keep())); }
     Space getDomainSpace() const { return Space::wrap(isl_multi_aff_get_domain_space(keep())); }
+
+
+#pragma region Conversion
+    BasicMap toBasicMap() const;
+    Map toMap() const;
+    PwMultiAff toPwMultiAff() const;
+#pragma endregion
+
 
 #pragma region Creational
     static Multi<Aff> fromAff(Aff &&aff) { return wrap(isl_multi_aff_from_aff(aff.take())); }
@@ -79,6 +85,9 @@ namespace isl {
     static Multi<Aff> createIdentity(Space &&space) { return wrap(isl_multi_aff_identity(space.take())); }
 
     static Multi<Aff> readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_aff_read_from_str(ctx->keep(), str)); } 
+
+    MultiAff copy() const { return wrap(isl_multi_aff_copy(keep())); }
+    MultiAff &&move() { return std::move(*this); }
 #pragma endregion
 
 
@@ -142,9 +151,13 @@ namespace isl {
       return LocalSpace::wrap(ls);
     }
 
-    BasicMap toBasicMap() const;
-    Map toMap() const;
+
+#pragma region Derived
+    PwMultiAff restrictDomain(Set &&set) const;
+#pragma endregion
   }; // class MultiAff
+
+  static inline Multi<Aff> enwrap(isl_multi_aff *obj) { return Multi<Aff>::wrap(obj); }
 
   static inline bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }
   static inline Multi<Aff> add(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Multi<Aff>::wrap(isl_multi_aff_add(maff1.take(), maff2.take())); }
@@ -161,9 +174,6 @@ namespace isl {
 
   static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
   static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::wrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
-
-   static inline Multi<Aff> enwrap(isl_multi_aff *obj) { return Multi<Aff>::wrap(obj); }
-
 } // namespace isl
 
 #endif /* ISLPP_MULTIAFF_H */

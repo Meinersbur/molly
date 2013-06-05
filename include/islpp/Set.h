@@ -67,10 +67,14 @@ namespace isl {
     const Set &operator=(const Set &that) { give(that.takeCopy()); return *this; }
     const Set &operator=(Set &&that) { give(that.take()); return *this; }
 
+
+#pragma region Conversion
     /* implicit */ Set(BasicSet &&set);
     const Set &operator=(BasicSet &&that);
      /* implicit */ Set(const BasicSet &set);
     const Set &operator=(const BasicSet &that);
+#pragma endregion
+
 
 #pragma region Creational
     static Set createEmpty(Space &&space);

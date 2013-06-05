@@ -49,7 +49,7 @@ namespace isl {
     static PwMultiAff createFromMultiAff(MultiAff &&maff);
 
     static PwMultiAff createEmpty(Space &&space);
-    static PwMultiAff createFromDomain(Set &&set) ;
+    static PwMultiAff createFromDomain(Set &&set);
 
     static PwMultiAff createFromSet(Set &&set);
     static PwMultiAff createFromMap(Map &&map);
@@ -66,6 +66,8 @@ namespace isl {
     /* implicit */ Pw(PwMultiAff &&that) : Obj2(that.take()) { }
     const PwMultiAff &operator=(const PwMultiAff &that) { give(that.takeCopy()); return *this; }
     const PwMultiAff &operator=(PwMultiAff &&that) { give(that.take()); return *this; }
+
+    Map toMap() const;
 #pragma endregion
 
 
@@ -102,6 +104,7 @@ namespace isl {
     Space getSpace() const { Space::wrap(isl_pw_multi_aff_get_space(keep())); }
 #pragma endregion
 
+
     PwAff getPwAff(int pos) const { return PwAff::wrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
     PwMultiAff setPwAff(int pos, PwAff &&pa) const { return enwrap(isl_pw_multi_aff_set_pw_aff(takeCopy(), pos, pa.take())); }
 
@@ -121,6 +124,7 @@ namespace isl {
 
     bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
   }; // class Pw<MultiAff>
+
 
   static inline PwMultiAff enwrap(isl_pw_multi_aff *pwmaff) { return PwMultiAff::enwrap(pwmaff); }
 

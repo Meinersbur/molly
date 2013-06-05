@@ -101,10 +101,15 @@ namespace isl {
 #pragma region Create Maps
     Map createMap(unsigned nparam, unsigned in, unsigned out, int n/*number of BasicMaps*/, unsigned flags = 0);
     Map createEmptyMap(Space &&space);
+    Map createEmptyMap(Space &&domainSpace, Space &&rangeSpace);
     Map createEmptyMap(const BasicSet &domain, Space &&rangeSpace);
     Map createEmptyMap(const BasicSet &domain, const Set &range);
+    Map createEmptyMap(Set &&domain, Set &&range);
     Map createUniverseMap(Space &&space);
     Map createAlltoallMap(Set &&domain, Set &&range);
+    Map createAlltoallMap(const Set &domain, Set &&range) ;
+    Map createAlltoallMap(Set &&domain, const Set &range);
+    Map createAlltoallMap(const Set &domain, const Set &range);
 #pragma endregion
 
 #pragma region Create BasicMaps

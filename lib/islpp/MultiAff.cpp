@@ -8,11 +8,10 @@
 using namespace isl;
 
 
- isl_multi_aff *Multi<Aff>::takeCopy() const {
-   assert(this->maff);
-   return isl_multi_aff_copy(this->maff);
- }
-
+isl_multi_aff *Multi<Aff>::takeCopy() const {
+  assert(this->maff);
+  return isl_multi_aff_copy(this->maff);
+}
 
 
 void Multi<Aff>::give(isl_multi_aff *aff) {
@@ -29,6 +28,11 @@ Multi<Aff>::~Multi() {
   //TODO: Ifndef NVALGRIND mark as uninitialized
   this->maff = nullptr;
 #endif
+}
+
+
+PwMultiAff Multi<Aff>::toPwMultiAff() const {
+  return enwrap(isl_pw_multi_aff_from_multi_aff(takeCopy()));
 }
 
 
@@ -74,29 +78,34 @@ void Multi<Aff>::push_back(Aff &&aff) {
 
 // Missing in isl
 static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
-	if (!mpwaff)
-		return NULL;
+  if (!mpwaff)
+    return NULL;
 
-	isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
+  isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
   isl_map *map = isl_map_universe(isl_space_from_domain(space));
 
   unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
-	for (int i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i) {
     isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
-		isl_map *map_i = isl_map_from_pw_aff(pwaff);
-		map = isl_map_flat_range_product(map, map_i);
-	}
+    isl_map *map_i = isl_map_from_pw_aff(pwaff);
+    map = isl_map_flat_range_product(map, map_i);
+  }
 
-	isl_multi_pw_aff_free(mpwaff);
-	return map;
+  isl_multi_pw_aff_free(mpwaff);
+  return map;
 }
 
 
-    BasicMap Multi<Aff>::toBasicMap() const {
-      return enwrap(isl_basic_map_from_multi_aff(takeCopy()));
-    }
+BasicMap Multi<Aff>::toBasicMap() const {
+  return enwrap(isl_basic_map_from_multi_aff(takeCopy()));
+}
 
 
-    Map Multi<Aff>::toMap() const {
-      return enwrap(isl_map_from_multi_aff(takeCopy()));
-    }
+Map Multi<Aff>::toMap() const {
+  return enwrap(isl_map_from_multi_aff(takeCopy()));
+}
+
+
+PwMultiAff Multi<Aff>::restrictDomain(Set &&set) const {
+  return enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
+}

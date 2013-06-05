@@ -195,6 +195,9 @@ void Printer::print(const Id &id) {
 void Printer::print(const Val &v) {
   give(isl_printer_print_val(take(), v.keep()));
 }
+void Printer::print(const Vec &v) {
+  give(isl_printer_print_vec(take(), v.keep()));
+}
 
 void Printer::flush(){
   give(isl_printer_flush(take()));

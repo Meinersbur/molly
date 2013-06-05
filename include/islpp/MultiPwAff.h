@@ -60,11 +60,15 @@ namespace isl {
     const MultiType &operator=(const MultiType &that) { give(that.takeCopy()); return *this; }
     const MultiType &operator=(MultiType &&that) { give(that.take()); return *this; }
 
-    MultiType copy() const { return wrap(takeCopy()); }
-
     Ctx *getCtx() const { return Ctx::wrap(isl_multi_pw_aff_get_ctx(keep())); }
     Space getSpace() const { return Space::wrap(isl_multi_pw_aff_get_space(keep())); }
     Space getDomainSpace() const { return Space::wrap(isl_multi_pw_aff_get_domain_space(keep())); }
+
+
+#pragma region Conversion
+    Map toMap() const;
+#pragma endregion
+
 
 #pragma region Creational
     //static MultiType fromAff(Aff &&aff) { return wrap(isl_multi_pw_aff_from_aff(aff.take())); }
@@ -72,6 +76,8 @@ namespace isl {
     static MultiType createIdentity(Space &&space) { return wrap(isl_multi_pw_aff_identity(space.take())); }
 
     //static MultiType readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_pw_aff_read_from_str(ctx->keep(), str)); } 
+
+        MultiType copy() const { return wrap(takeCopy()); }
 #pragma endregion
 
 

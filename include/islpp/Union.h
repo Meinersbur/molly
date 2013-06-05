@@ -12,6 +12,9 @@ namespace isl {
   class Union;
 
   template<> class Union<Set>;
+  typedef Union<Set> UnionSet;
+
   template<> class Union<Map>;
+  typedef Union<Map> UnionMap;
 } // namespace isl
 #endif /* ISLPP_UNION_H */

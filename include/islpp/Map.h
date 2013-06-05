@@ -113,6 +113,7 @@ namespace isl {
     static Map fromAff(Aff &&aff) { return Map::wrap(isl_map_from_aff(aff.take())); }
     static Map fromMultiAff(MultiAff &&maff) { return Map::wrap(isl_map_from_multi_aff(maff.take())); }
     static Map fromPwMultiAff(PwMultiAff &&pwmaff) { return Map::wrap(isl_map_from_pw_multi_aff(pwmaff.take())); }
+    static Map fromMultiPwAff(MultiPwAff &&mpaff);
 
     static Map readFrom(Ctx *ctx, const char *str);
     static Map readFrom(Ctx *ctx, FILE *input) { return Map::wrap(isl_map_read_from_file(ctx->keep(), input) ); }
@@ -187,7 +188,7 @@ namespace isl {
     Map reverse() && { wrap(isl_map_reverse(take())); }
 #endif
 
-    /// Function concatenation
+    /// Function composition
     /// { U -> V }.applyRange({ X -> Y }) = { U -> {X->Y}(V) } => { U -> Y }
     Map applyRange(const Map &map2) const { wrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
     Map applyRange(Map &&map2) const { wrap(isl_map_apply_range(takeCopy(), map2.take())); }
@@ -200,17 +201,23 @@ namespace isl {
     void intersectRange(Set &&set) { give(isl_map_intersect_range(take(), set.take())); }
 
     void intersectParams(Set &&params) { give(isl_map_intersect_params(take(), params.take())); }
-    void substractDomain(Set &&dom) { give(isl_map_subtract_domain(take(), dom.take())); }
+
+    Map substractDomain(Set &&dom) const { return wrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
+    Map substractDomain(const Set &dom) const { return wrap(isl_map_subtract_domain(takeCopy(), dom.takeCopy())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Map substractDomain(Set &&dom) && { return wrap(isl_map_subtract_domain(take(), dom.take())); }
+    Map substractDomain(const Set &dom) && { return wrap(isl_map_subtract_domain(take(), dom.takeCopy())); }
+#endif
+
     void substractRange(Set &&dom) { give(isl_map_subtract_range(take(), dom.take())); }
     void complement() { give(isl_map_complement(take())); }
 
-    Set range() const { return Set::wrap(isl_map_range(takeCopy())); }
-    Set domain() const { return Set::wrap(isl_map_domain(takeCopy())); }
+    Set getRange() const { return Set::wrap(isl_map_range(takeCopy())); }
+    Set getDomain() const { return Set::wrap(isl_map_domain(takeCopy())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    Set range() && { return Set::wrap(isl_map_range(take())); }
-    Set domain() && { return Set::wrap(isl_map_domain(take())); }
+    Set getRange() && { return Set::wrap(isl_map_range(take())); }
+    Set getDomain() && { return Set::wrap(isl_map_domain(take())); }
 #endif
-
 
 
     void fix(isl_dim_type type, unsigned pos, const Int &value) { give(isl_map_fix(take(), type, pos, value.keep())); }
@@ -280,10 +287,10 @@ namespace isl {
     bool canUnurry() const { return isl_map_can_uncurry(keep()); }
     void uncurry() {give(isl_map_uncurry(take()));}
 
-    void makeDisjoint()  {give(isl_map_make_disjoint(take()));}
+    void makeDisjoint() { give(isl_map_make_disjoint(take()));}
 
-    void computeDivs() {give(isl_map_compute_divs(take()));}
-    void alignDivs() {give(isl_map_align_divs(take()));}
+    void computeDivs() { give(isl_map_compute_divs(take()));}
+    void alignDivs() { give(isl_map_align_divs(take()));}
 
     void dropConstraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_map_drop_constraints_involving_dims(take(), type, first, n));  }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_map_involves_dims(keep(), type, first, n);  }
@@ -292,6 +299,7 @@ namespace isl {
     bool plainIsFixed(isl_dim_type type, unsigned pos, Int &val) const { return isl_map_plain_is_fixed(keep(), type, pos, val.change()); } 
     bool fastIsFixed(isl_dim_type type, unsigned pos, Int &val) const { return isl_map_fast_is_fixed(keep(), type, pos, val.change()); } 
 
+    /// Simplify this map by removing redundant constraint that are implied by context (assuming that the points of this map that are outside of context are irrelevant)
     void gist(Map &&context) { give(isl_map_gist(take(), context.take())); }
     void gist(BasicMap &&context) { give(isl_map_gist_basic_map(take(), context.take())); }
     void gistDomain(Set &&context) { give(isl_map_gist_domain(take(), context.take())); }
@@ -355,7 +363,11 @@ namespace isl {
   static  inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 
   static  inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(map.take())); } 
 
+  // "union" is a reserved word; "unite"?
   static inline Map union_(Map &&map1, Map &&map2) { return Map::wrap(isl_map_union(map1.take(), map2.take())); }
+  static inline Map union_(Map &&map1, const Map &&map2) { return Map::wrap(isl_map_union(map1.take(), map2.takeCopy())); }
+  static inline Map union_(const Map &map1, const Map &&map2) { return Map::wrap(isl_map_union(map1.takeCopy(), map2.takeCopy())); }
+  static inline Map union_(const Map &map1, const Map &map2) { return Map::wrap(isl_map_union(map1.takeCopy(), map2.takeCopy())); }
 
   static  inline Map applyDomain(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_domain(map1.take(), map2.take())); }
   static  inline Map applyRange(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_range(map1.take(), map2.take())); }

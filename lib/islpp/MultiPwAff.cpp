@@ -1,9 +1,15 @@
 #include "islpp/MultiPwAff.h"
 
 #include "islpp/Printer.h"
+#include "islpp/Map.h"
 #include <llvm/Support/raw_ostream.h>
 
 using namespace isl;
+
+
+ Map Multi<PwAff>::toMap() const {
+   return Map::fromMultiPwAff(this->copy());
+ }
 
 
 void Multi<PwAff>::print(llvm::raw_ostream &out) const{
@@ -43,3 +49,5 @@ void Multi<PwAff>::push_back(PwAff &&aff) {
 
   give(isl_multi_pw_aff_from_pw_aff_list(space.take(), list));
 }
+
+
