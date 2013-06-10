@@ -13,7 +13,7 @@ namespace polly {
 
 namespace molly {
 
-  polly::ScopPass *createFieldScopCodeGenPass();
+  //polly::ScopPass *createFieldScopCodeGenPass();
   llvm::ModulePass *createModuleFieldGenPass();
   llvm::FunctionPass *createFieldCodeGenPass();
 

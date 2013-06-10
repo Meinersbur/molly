@@ -28,28 +28,6 @@ using polly::Scop;
 
 
 namespace molly {
-  class FieldScopCodeGen : public polly::ScopPass {
-
-  public:
-    static char ID;
-    FieldScopCodeGen() : ScopPass(ID) {
-    }
-
-    virtual const char *getPassName() const {
-      return "FieldScopCodeGen";
-    }
-
-    virtual bool runOnScop(Scop &S);
-  }; // FieldCodeGen
-
-
-  bool FieldScopCodeGen::runOnScop(Scop &S) {
-    //auto pollyGen = createIslCodeGenerationPass();
-
-    return false;
-  }
-
-
   class ModuleFieldGen : public ModulePass {
   private:
     bool changed;
@@ -225,6 +203,7 @@ namespace molly {
 
     	DEBUG(llvm::dbgs() << "Emitted __molly_cluster_dims\n");
     }
+
 
     virtual bool runOnModule(Module &M) {
       changed = false;
@@ -515,14 +494,6 @@ bool FieldCodeGen::emitFieldFunctions() {
 
 char FieldCodeGen::ID = 0;
 static RegisterPass<FieldCodeGen> FieldCodeGenRegistration("molly-fieldcodegen", "Molly - Code generation", false, false);
-
-char FieldScopCodeGen::ID = 0;
-static RegisterPass<FieldScopCodeGen> FieldScopCodeGenRegistration("molly-fieldscopcodegen", "Molly - Modify SCoPs", false, false);
-
-
-ScopPass *molly::createFieldScopCodeGenPass() {
-  return new FieldScopCodeGen();
-}
 
 
 FunctionPass *molly::createFieldCodeGenPass() {

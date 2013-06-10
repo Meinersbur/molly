@@ -53,6 +53,66 @@ namespace molly {
       AU.setPreservesAll();
     }
 
+#if 0
+    MollyFieldAccess getTheFieldAccess(ScopStmt *stmt) {
+      // Currently we support just one field access per ScopStmt
+      // This function searches it or returns an invalid MollyFieldAccess
+      MollyFieldAccess result;
+      for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
+        auto memacc = *itAcc;
+        MollyFieldAccess acc = MollyFieldAccess::fromMemoryAccess(memacc);
+        if (!acc.isValid())
+          continue;
+
+        assert(result.isNull() && "Just one FieldAccess allowed per ScopStmt");
+        result = acc;
+#ifdef NDEBUG
+       break;
+#endif
+      }
+      return result;
+    }
+#endif
+
+
+#if 0
+    isl::PwMultiAff/* {iteration coord -> node coord} */ computeWhereToExecuteStmt(ScopStmt *stmt) {
+      //auto result = islctx->createEmptyMap(Ctx->getClusterShape(), ScopUtils::getIterationDomain(stmt));
+
+      //auto resultSpace = islctx->createMapSpace(Ctx->getClusterSpace(), ScopUtils::getIterationDomain(stmt).getSpace());
+      //auto fieldWriteMap = resultSpace.emptyMap();
+      //auto fieldReadMap = resultSpace.emptyMap();
+      //auto tilingMap = resultSpace.emptyMap();
+
+      // Use the following rules to determine where to execute it
+
+       for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
+           auto memacc = *itAcc;
+        MollyFieldAccess acc = MollyFieldAccess::fromMemoryAccess(memacc);
+        if (!acc.isValid())
+          continue;
+
+        auto fieldTy = acc.getFieldType();
+        auto fieldVar = acc.getFieldVariable();
+
+        if (acc.isRead()) {
+        }
+
+        if (acc.isWrite()) {
+          auto rel = acc.getAffineAccess(); /*iteration coord -> field coord*/
+          //auto when = reverse(rel.move()); /*field coord -> iteration coords*/
+
+          auto nodecoord2fieldcoordset = fieldTy->getLocalIndexset(Ctx->getClusterShape()); // { nodecoord -> its local gcoords }
+          auto fieldcoord2nodecoord = nodecoord2fieldcoordset.reverse(); // { fieldcoord -> nodecoord where it is local }
+          auto itercoord2nodecoord = rel.applyRange(fieldcoord2nodecoord);
+        }
+       }
+    
+
+       return result;
+    }
+#endif
+
 
     void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
         auto fieldVar = acc.getFieldVariable();

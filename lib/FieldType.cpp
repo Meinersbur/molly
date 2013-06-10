@@ -102,7 +102,7 @@ isl::MultiAff FieldType::getDistributionAff() {
   isl::MultiAff result;
   auto indexspace = getLogicalIndexsetSpace();
 
-  auto &lengths = getLengths();
+  auto lengths = getLengths();
   auto dims = lengths.size();
   for (auto d = 0; d < dims; d+=1){
     auto len = lengths[d];

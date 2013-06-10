@@ -6,12 +6,15 @@ add_molly_library(LLVMMolly
     FieldDistribution.cpp
     FieldType.cpp
     FieldVariable.cpp
-    Nodegrid.cpp  # Obsolete?
+    FieldCodeGen.cpp
+    ScopDistribution.cpp
     MollyContext.cpp
     MollyContextPass.cpp
-    FieldCodeGen.cpp
+    ScopUtils.cpp
+    ScopFieldCodeGen.cpp
+    
+    Nodegrid.cpp  # Obsolete?
     ValueSourceAnalysis.cpp
-    ScopDistribution.cpp
     ScopStmtSplit.cpp
     MollyUtils.cpp
     MollyInlinePrepa.cpp # Obsolete?
@@ -23,13 +26,14 @@ add_molly_library(LLVMMolly
     UnusedValueElimination.cpp
     CommunicationBuffer.cpp
     ScopEditor.cpp
-    ScopUtils.cpp
     FieldLayout.cpp
     LayoutMapping.cpp
     AffineMapping.cpp
     IndirectMapping.cpp
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
+    FlattenMapping.cpp
+    ClusterInfo.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

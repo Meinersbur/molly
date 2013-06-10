@@ -3,7 +3,7 @@
 using isl::enwrap;
 
 
-isl::Set getIterationDomain(polly::ScopStmt *stmt) {
+isl::Set molly::getIterationDomain(polly::ScopStmt *stmt) {
  auto dom = stmt->getDomain();
  return enwrap(dom);
 }

@@ -174,7 +174,7 @@ public:
 }; // class SCEVAffinator
 
 
-isl::PwAff convertScEvToAffine(ScopStmt *Stmt, const SCEV *se) {
+isl::PwAff molly::convertScEvToAffine(ScopStmt *Stmt, const SCEV *se) {
   Scop *S = Stmt->getParent();
   const Region *Reg = &S->getRegion();
 
