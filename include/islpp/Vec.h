@@ -14,7 +14,7 @@ namespace llvm {
 
 
 namespace isl {
-  class Vec : public Obj2<isl_vec> {
+  class Vec final : public Obj2<isl_vec> {
 #pragma region Low-level
     typedef isl_vec StructTy;
     typedef Obj2<isl_vec> ObjTy;
@@ -27,6 +27,7 @@ namespace isl {
     StructTy *takeCopy() const { return isl_vec_copy(keep()); }
 
   public:
+    ~Vec() { release(); }
     static Vec enwrap(StructTy *obj) { ThisTy result; result.give(obj); return result; }
 #pragma endregion
 

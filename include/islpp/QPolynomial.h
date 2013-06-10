@@ -13,7 +13,7 @@ namespace isl {
 
 
 namespace isl {
-  class QPolynomial {
+  class QPolynomial final {
 #pragma region Low-level
   private:
     isl_qpolynomial *poly;

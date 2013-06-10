@@ -28,16 +28,15 @@ namespace llvm {
 
 
 namespace isl {
-  PwMultiAff enwrap(isl_pw_multi_aff *pwmaff);
-
   template<>
   class Pw<MultiAff> final : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
 #pragma region Low-level
   public:
-    isl_pw_multi_aff *takeCopy() const { return isl_pw_multi_aff_copy(keep()); }
+    virtual isl_pw_multi_aff *takeCopy() const override { return isl_pw_multi_aff_copy(keep()); }
   protected:
-    void release() { isl_pw_multi_aff_free(take()); }
+    virtual void release() override;
   public:
+    ~Pw() { release(); }
     Pw() : Obj2() { }
     static PwMultiAff enwrap(isl_pw_multi_aff *pwmaff) { assert(pwmaff); PwMultiAff result; result.give(pwmaff); return result; }
 #pragma endregion

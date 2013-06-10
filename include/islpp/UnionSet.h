@@ -13,7 +13,7 @@ namespace isl {
 
 
 namespace isl {
-  class UnionSet {
+  class UnionSet final {
 #pragma region Low-level
   private:
     isl_union_set *set;

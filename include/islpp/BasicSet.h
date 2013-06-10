@@ -40,7 +40,7 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet : public Spacelike2<BasicSet> {
+  class BasicSet final : public Spacelike2<BasicSet> {
 #pragma region Low-level
   private:
     isl_basic_set *set;

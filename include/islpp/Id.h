@@ -18,7 +18,7 @@ namespace isl {
 
 
 namespace isl {
-  class Id {
+  class Id final {
 #pragma region Low-level functions
   private:
     isl_id *id;

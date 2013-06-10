@@ -19,8 +19,6 @@ namespace llvm {
 
 
 namespace isl {
-  Val enwrap(isl_val *val);
-
   class Val final : public Obj2<isl_val> {
 #pragma region Low-level
   public: // Public because otherwise we had to add a lot of friends
@@ -33,6 +31,7 @@ namespace isl {
     //void give(isl_pw_multi_aff *pwmaff) { assert(pwmaff); if (this->pwmaff) isl_pw_multi_aff_free(pwmaff); this->pwmaff = pwmaff; }
 
   public:
+    ~Val() { release(); }
     Val() : Obj2() { }
     static Val enwrap(isl_val *val) { assert(val); Val result; result.give(val); return result; }
 #pragma endregion
@@ -47,7 +46,7 @@ namespace isl {
 #pragma endregion
   }; // class Val
 
-  static inline Val enwrap(isl_val *val) { Val::enwrap(val); }
+  inline Val enwrap(isl_val *val) { Val::enwrap(val); }
 
 } // namespace isl
 #endif /* ISLPP_VAL_H */

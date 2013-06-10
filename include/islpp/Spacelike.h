@@ -4,6 +4,7 @@
 #include "islpp_common.h"
 #include <isl/space.h> // enum isl_dim_type
 #include "Obj.h" // class Obj (base of Map)
+#include "Id.h" // Id::wrap
 
 namespace isl {
   class Space;
@@ -20,6 +21,8 @@ namespace isl {
     virtual Ctx *getCtx() const = 0;
 
   public:
+    //virtual ~Spacelike2() {}
+
     virtual unsigned dim(isl_dim_type type) const = 0;  
     unsigned getParamDimCount() { return dim(isl_dim_param); }
     unsigned getSetDimCount() { assert(dim(isl_dim_in) == 0 && "Space must be set-like"); return dim(isl_dim_set); }
@@ -29,7 +32,7 @@ namespace isl {
     virtual bool hasTupleId(isl_dim_type type) const { return getTupleId(type).isValid(); }
     virtual Id getTupleId(isl_dim_type type) const = 0;
     virtual void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER = 0;
-    void setTupleId_inplace(isl_dim_type type, const Id &id) ISLPP_INPLACE_QUALIFIER { setTupleId_inplace(type, copy(id)) }
+    void setTupleId_inplace(isl_dim_type type, const Id &id) ISLPP_INPLACE_QUALIFIER { setTupleId_inplace(type, copy(id)); }
     T setTupleId(isl_dim_type type, const Id  &id) const { auto result = copy(); result.setTupleId_inplace(type, copy(id)); return result; }
     T setTupleId(isl_dim_type type,       Id &&id) const { auto result = copy(); result.setTupleId_inplace(type, move(id)); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
@@ -39,7 +42,7 @@ namespace isl {
 
     virtual bool hasTupleName(isl_dim_type type) const { return getTupleName(type); }
     virtual const char *getTupleName(isl_dim_type type) const { return getTupleId(type).getName(); }
-    virtual void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { setTupleId_inplace(type, enwrap(isl_id_alloc(getCtx()->keep(), s, nullptr))); }
+    virtual void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { setTupleId_inplace(type, Id::wrap(isl_id_alloc(getCtx()->keep(), s, nullptr))); }
     T setTupleName(isl_dim_type type, const char *s) const { auto result = copy(); result.setTupleName_inplace(type, s); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     T setTupleName(isl_dim_type type, const char *s) && { setTupleName_inplace(type, s); return *this; }
@@ -58,7 +61,7 @@ namespace isl {
 
     virtual bool hasDimName(isl_dim_type type, unsigned pos) const { return getDimName(type, pos); }
     virtual const char *getDimName(isl_dim_type type, unsigned pos) const { return getDimId(type, pos).getName(); }
-    virtual void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { setDimId_inplace(type, pos, enwrap(isl_id_alloc(getCtx()->keep(), s, nullptr))); }
+    virtual void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { setDimId_inplace(type, pos, Id::wrap(isl_id_alloc(getCtx()->keep(), s, nullptr))); }
     T setDimName(isl_dim_type type, unsigned pos,const char *s) const { auto result = copy(); result.setDimName_inplace(type, pos, s); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     T setDimName(isl_dim_type type, unsigned pos,const char *s) && { setDimName_inplace(type, pos, s); return *this; }

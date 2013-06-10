@@ -12,7 +12,7 @@ namespace isl {
 namespace isl {
 
   template<>
-  class List<Set> {
+  class List<Set> final {
 #pragma region Low-level
   private:
     isl_set_list *list;

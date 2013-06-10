@@ -14,7 +14,7 @@ namespace isl {
 
 
 namespace isl {
-  class Vertices {
+  class Vertices final {
 #pragma region Low-level
   private:
     isl_vertices *vertices;

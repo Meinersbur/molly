@@ -40,7 +40,7 @@
 #define ISLPP_INLINE_DEFINITION extern inline
 #endif
 
-
+#include <utility> // std::move, std::forward
 namespace isl {
   using std::move;
   

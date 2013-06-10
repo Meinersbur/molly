@@ -25,7 +25,7 @@ namespace isl {
 
 
 namespace isl {
-  class Constraint {
+  class Constraint final {
 #pragma region Low-level
   private:
     isl_constraint *constraint;

@@ -60,7 +60,7 @@ namespace isl {
     static const FormatEnum Latex = FormatLatex;
   }
 
-  class Printer {
+  class Printer final {
 #pragma region Low-level
   private:
     isl_printer *printer;

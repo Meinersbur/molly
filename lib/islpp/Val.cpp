@@ -5,6 +5,7 @@
 
 using namespace isl;
 
+extern inline Val enwrap(isl_val *val);
 
 void Val::print(llvm::raw_ostream &out) const{
   auto printer = Printer::createToStr(getCtx());

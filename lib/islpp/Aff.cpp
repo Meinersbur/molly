@@ -8,6 +8,7 @@
 #include "islpp/Id.h"
 #include "islpp/Set.h"
 #include "islpp/MultiAff.h"
+#include "islpp/BasicSet.h"
 
 #include <isl/aff.h>
 #include <llvm/Support/raw_ostream.h>
@@ -17,9 +18,9 @@ using namespace std;
 
 
 
-  Aff isl::div(Aff &&aff1, const Int &divisor) {
-    return div(move(aff1), aff1.getSpace().createConstantAff(divisor));
-  }
+Aff isl::div(Aff &&aff1, const Int &divisor) {
+  return div(move(aff1), aff1.getSpace().createConstantAff(divisor));
+}
 
 
 isl_aff *Aff::takeCopy() const {
@@ -228,3 +229,9 @@ void Aff::gistParams(Set &&context) {
 void Aff::pullbackMultiAff(MultiAff &&ma) {
   give(isl_aff_pullback_multi_aff(take(), ma.take()));
 }
+
+
+BasicSet isl::zeroBasicSet(Aff &&aff) { return BasicSet::wrap(isl_aff_zero_basic_set(aff.take())); }
+BasicSet isl::negBasicSet(Aff &&aff){ return BasicSet::wrap(isl_aff_neg_basic_set(aff.take())); }
+BasicSet isl::leBasicSet(Aff &aff1, Aff &aff2){ return BasicSet::wrap(isl_aff_le_basic_set (aff1.take(),aff2.take())); }
+BasicSet isl::geBasicSet(Aff &aff1, Aff &aff2){ return BasicSet::wrap(isl_aff_ge_basic_set(aff1.take(),aff2.take())); }

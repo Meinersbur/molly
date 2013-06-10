@@ -25,7 +25,7 @@ ISL_DECLARE_LIST_FN(aff)
 namespace isl {
 
   template<>
-  class List<Aff> : public Obj {
+  class List<Aff> final : public Obj {
 #pragma region Low-level
   private:
     isl_aff_list *list;

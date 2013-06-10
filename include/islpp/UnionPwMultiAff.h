@@ -13,7 +13,7 @@ namespace isl {
 
 
 namespace isl {
-  class UnionPwMultiAff {
+  class UnionPwMultiAff final {
 #pragma region Low-level
   private:
     isl_union_pw_multi_aff *aff;

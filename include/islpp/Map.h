@@ -58,7 +58,7 @@ namespace isl {
 
 
   //TODO: Investigate how useful LLVM_HAS_RVALUE_REFERENCE_THIS could be
-  class Map : public Spacelike /* TODO: What are the costs of making this virtual? */ {
+  class Map final : public Spacelike /* TODO: What are the costs of making this virtual? */ {
 #pragma region Low-level
   private:
     isl_map *map;

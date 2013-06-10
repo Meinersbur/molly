@@ -18,7 +18,7 @@ namespace isl {
 
 
 namespace isl {
-  class Point {
+  class Point final {
 #pragma region Low-level
   private:
     isl_point *point;

@@ -23,7 +23,7 @@ struct isl_multi_pw_aff;
 
 namespace isl {
   template<>
-  class Multi<PwAff> : public Spacelike {
+  class Multi<PwAff> final : public Spacelike {
   public:
     typedef isl_multi_pw_aff IslType;
     typedef PwAff EltType;

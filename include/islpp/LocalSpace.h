@@ -89,7 +89,7 @@ namespace isl {
   };
 
   /// A local space is essentially a space with zero or more existentially quantified variables.
-  class LocalSpace {
+  class LocalSpace final {
 #pragma region Low-Level
   private:
     isl_local_space *space;
@@ -167,14 +167,14 @@ namespace isl {
     dimtype_iterator dimtype_end() { return LocalSpaceDimtypeIter(this, isl_dim_all); }
   }; // class LocalSpace
 
+  
+  inline LocalSpace enwrap(__isl_take isl_local_space *ls) { return LocalSpace::wrap(ls); }
+
 
   BasicMap lifting(LocalSpace &&ls);
 
   bool isEqual(const LocalSpace &ls1, const LocalSpace &ls2);
   LocalSpace intersect( LocalSpace &&ls1,  LocalSpace &&ls2);
-
-
-  LocalSpace enwrap(__isl_take isl_local_space *ls) { return LocalSpace::wrap(ls); }
 
 } // namepsace isl
 #endif /* ISLPP_LOCALSPACE_H */

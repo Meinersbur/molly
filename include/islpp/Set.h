@@ -41,7 +41,7 @@ namespace isl {
   typedef int (*BasicSetCallback)(isl_basic_set *bset, void *user);
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
-  class Set {
+  class Set final {
 #pragma region Low-level functions
   private:
     isl_set *set;

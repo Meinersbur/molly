@@ -12,6 +12,8 @@
 
 using namespace isl;
 
+extern inline LocalSpace isl::enwrap(__isl_take isl_local_space *ls);
+
 
 LocalSpaceDimtypeIter::iterator &LocalSpaceDimtypeIter::operator++/*preincrement*/() {
   while (true) {

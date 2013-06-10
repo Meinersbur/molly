@@ -25,7 +25,7 @@ namespace isl {
 namespace isl {
 
   /// Contains a Map per Space
-  class UnionMap {
+  class UnionMap final {
 #pragma region Low-level
   private:
     isl_union_map *map;

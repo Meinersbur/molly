@@ -28,7 +28,7 @@ namespace isl {
 
 namespace isl {
   template<>
-  class Pw<Aff> {
+  class Pw<Aff> final {
 #pragma region Low-level
   private:
     isl_pw_aff *aff;
@@ -64,6 +64,7 @@ namespace isl {
     static PwAff readFromStr(Ctx *ctx, const char *str);
 
     PwAff copy() const { return PwAff::wrap(takeCopy()); }
+    PwAff &&move() { return std::move(*this); }
 #pragma endregion
 
 #pragma region Printing
@@ -151,11 +152,10 @@ namespace isl {
   Set geSet(PwAff &&pwaff1, PwAff &&pwaff2);
   Set gtSet(PwAff &&pwaff1, PwAff &&pwaff2);
 
-
-  template<typename T, typename U>
-  static inline PwAff operator-(T &&lhs, U &&rhs) {
-    return sub(mim<T>(lhs), mim<U>(rhs));
-  }
+  static inline PwAff operator-(PwAff &&lhs, PwAff &&rhs) { return sub(lhs.move(),rhs.move()); }
+  static inline PwAff operator-(const PwAff &lhs, PwAff &&rhs) { return sub(lhs.copy(),rhs.move()); }
+  static inline PwAff operator-(PwAff &&lhs, const PwAff &rhs) { return sub(lhs.move(),rhs.copy()); }
+  static inline PwAff operator-(const PwAff &lhs, const PwAff &rhs) { return sub(lhs.copy(),rhs.copy()); }
 
 } // namespace isl
 #endif /* ISLPP_PWAFF_H */

@@ -21,15 +21,14 @@ namespace isl {
     virtual void release() = 0;
 
   public:
-    T *take() { assert(obj); T* result = obj; this->obj = nullptr; return result; }
+    T *take() { assert(obj); T *result = obj; this->obj = nullptr; return result; }
     virtual T *takeCopy() const = 0;
     T *keep() const { assert(obj); return obj; }
 
   protected:
-    void give(T *obj) { assert(obj); release(); this->obj = obj;  }
+    void give(T *obj) { assert(obj); this->release(); this->obj = obj;  }
 
   public:
-    ~Obj2() { release(); }
     Obj2() : obj(nullptr) {}
 
   protected:

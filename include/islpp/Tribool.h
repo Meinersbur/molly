@@ -6,7 +6,7 @@
 
 // TODO: What namespace?
 
-class Tribool {
+class Tribool final {
 public:
   enum Consts {
     False,

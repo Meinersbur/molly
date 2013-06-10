@@ -28,7 +28,7 @@ namespace isl {
 
 
 namespace isl {
-  class BasicMap : Spacelike {
+  class BasicMap final : Spacelike {
 #pragma region Low-level
   private:
     isl_basic_map *map;

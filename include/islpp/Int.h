@@ -16,7 +16,7 @@ namespace isl {
   /// - Use gmpxx.h
   /// - More rvalue references
   /// - Implement refcounting ourselves
-  class Int {
+  class Int final {
   private:
     isl_int val;
 

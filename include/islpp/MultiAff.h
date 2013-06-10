@@ -36,7 +36,7 @@ namespace isl {
   typedef Multi<Aff> MultiAff;
 
   template<>
-  class Multi<Aff> : public Spacelike {
+  class Multi<Aff> final : public Spacelike {
   public:
     typedef isl_multi_pw_aff IslType;
     typedef PwAff EltType;
