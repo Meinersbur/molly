@@ -1,6 +1,8 @@
 #include "ScopFieldCodeGen.h"
 
 #include <polly/ScopPass.h>
+#include "MollyContextPass.h"
+#include "FieldDetection.h"
 
 using namespace molly;
 using namespace llvm;
@@ -17,6 +19,14 @@ namespace molly {
 
     virtual const char *getPassName() const {
       return "ScopFieldCodeGen";
+    }
+
+        virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.addRequired<MollyContextPass>();
+      AU.addRequired<FieldDetectionAnalysis>();
+
+      AU.addPreserved<MollyContextPass>();
+      AU.addPreserved<FieldDetectionAnalysis>();
     }
 
     virtual bool runOnScop(Scop &S) {

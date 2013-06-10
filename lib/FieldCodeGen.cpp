@@ -1,9 +1,9 @@
 #define DEBUG_TYPE "molly"
-#include "molly/FieldCodeGen.h"
+#include "FieldCodeGen.h"
 
 #include <polly/ScopPass.h>
-#include "molly/FieldDistribution.h"
-#include "molly/FieldDetection.h"
+#include "FieldDistribution.h"
+#include "FieldDetection.h"
 #include "MollyContextPass.h"
 #include "MollyFieldAccess.h"
 #include "FieldType.h"
