@@ -12,6 +12,7 @@
 #include "Set.h"
 #include "UnionSet.h"
 #include "Int.h"
+#include <functional>
 
 struct isl_union_map;
 
@@ -90,7 +91,7 @@ namespace isl {
     void lexmin() { give(isl_union_map_lexmin(take())); }
     void lexmax() { give(isl_union_map_lexmax(take())); }
 
-    void addMap(Map &&map){ give(isl_union_map_add_map(take(), map.take())); }
+    void addMap(Map &&map) { give(isl_union_map_add_map(take(), map.take())); }
     void intersectParams(Set &&set) { give(isl_union_map_intersect_params(take(), set.take())); } 
 
     void gist(UnionMap &&context) { give(isl_union_map_gist(take(), context.take())); } 
@@ -115,7 +116,8 @@ namespace isl {
     bool isBijective() const { return isl_union_map_is_bijective(keep()); }
 
     unsigned getNumMaps() const { return isl_union_map_n_map(keep()); }
-    bool foreachMap(int (*fn)(__isl_take isl_map *map, void *user), void *user) const { return isl_union_map_foreach_map(keep(), fn, user); }
+    //bool foreachMap(int (*fn)(__isl_take isl_map *map, void *user), void *user) const { return isl_union_map_foreach_map(keep(), fn, user); }
+    bool foreachMap(const std::function<bool(isl::Map)> &/*return true to break enumeration*/) const;
 
     bool contains(const Space &space) const { return isl_union_map_contains(keep(), space.keep()); }
 
@@ -141,38 +143,39 @@ namespace isl {
     void alignParams(Space &&model) { give(isl_union_map_align_params(take(), model.take())); }
   }; // class UnionMap
 
-  inline UnionMap wrap(isl_union_map *map) { return UnionMap::wrap(map); }
+  //static inline UnionMap wrap(isl_union_map *map) { return UnionMap::wrap(map); }
+  static inline UnionMap enwrap(isl_union_map *map) { return UnionMap::wrap(map); }
 
-  inline Set params(UnionMap &&umap) { return Set::wrap(isl_union_map_params(umap.take())); }
-  inline UnionSet domain(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_domain(umap.take())); }
-  inline UnionSet range(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_range(umap.take())); }
+  static inline Set params(UnionMap &&umap) { return Set::wrap(isl_union_map_params(umap.take())); }
+  static  inline UnionSet domain(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_domain(umap.take())); }
+  static inline UnionSet range(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_range(umap.take())); }
 
-  inline UnionMap union_(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_union(umap1.take(), umap2.take())); } //TODO: rename to unit?
-  inline UnionMap substract(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_subtract(umap1.take(), umap2.take())); }
-  inline UnionMap intersect(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_intersect(umap1.take(), umap2.take())); }
-  inline UnionMap product(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_product(umap1.take(), umap2.take())); }
-  inline UnionMap domainProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_domain_product(umap1.take(), umap2.take())); }
-  inline UnionMap rangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_range_product(umap1.take(), umap2.take())); }
-  inline UnionMap flatRangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_flat_range_product(umap1.take(), umap2.take())); }
+  static inline UnionMap union_(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_union(umap1.take(), umap2.take())); } //TODO: rename to unit?
+  static inline UnionMap substract(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_subtract(umap1.take(), umap2.take())); }
+  static inline UnionMap intersect(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_intersect(umap1.take(), umap2.take())); }
+  static inline UnionMap product(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_product(umap1.take(), umap2.take())); }
+  static inline UnionMap domainProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_domain_product(umap1.take(), umap2.take())); }
+  static inline UnionMap rangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_range_product(umap1.take(), umap2.take())); }
+  static inline UnionMap flatRangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_flat_range_product(umap1.take(), umap2.take())); }
 
-  inline  UnionMap applyDomain(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_apply_domain(umap1.take(), umap2.take())); }
-  inline UnionMap applyRange(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_apply_range(umap1.take(), umap2.take())); }
+  static inline  UnionMap applyDomain(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_apply_domain(umap1.take(), umap2.take())); }
+  static inline UnionMap applyRange(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_apply_range(umap1.take(), umap2.take())); }
 
-  inline UnionSet deltas(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_deltas(umap.take())); }
+  static  inline UnionSet deltas(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_deltas(umap.take())); }
 
-  inline bool isSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_subset(umap1.keep(), umap2.keep()); }
-  inline  bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
-  inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
+  static  inline bool isSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_subset(umap1.keep(), umap2.keep()); }
+  static inline  bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
+  static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
 
-  inline  Map extractMap(const UnionMap &umap, Space &&dim) { return Map::wrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
+  static inline  Map extractMap(const UnionMap &umap, Space &&dim) { return Map::wrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
 
-  inline  BasicMap sample(UnionMap &&umap) { return BasicMap::wrap(isl_union_map_sample(umap.take())); }
+  static inline  BasicMap sample(UnionMap &&umap) { return BasicMap::wrap(isl_union_map_sample(umap.take())); }
 
-  inline UnionMap lexLt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_lt_union_map(umap1.take(), umap2.take())); }
-  inline  UnionMap lexLe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_le_union_map(umap1.take(), umap2.take())); }
-  inline  UnionMap lexGt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_gt_union_map(umap1.take(), umap2.take())); }
-  inline UnionMap lexGe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_ge_union_map(umap1.take(), umap2.take())); }
+  static inline UnionMap lexLt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_lt_union_map(umap1.take(), umap2.take())); }
+  static inline  UnionMap lexLe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_le_union_map(umap1.take(), umap2.take())); }
+  static inline  UnionMap lexGt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_gt_union_map(umap1.take(), umap2.take())); }
+  static inline UnionMap lexGe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::wrap(isl_union_map_lex_ge_union_map(umap1.take(), umap2.take())); }
 
-  inline UnionSet wrap(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_wrap(umap.take())); }//TODO: Unfortunate overloading
+  static inline UnionSet wrap(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_wrap(umap.take())); }//TODO: Unfortunate overloading
 } // namespace isl
 #endif /* ISLPP_UNIONMAP_H */

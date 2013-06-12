@@ -33,7 +33,7 @@ add_molly_library(LLVMMolly
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
     FlattenMapping.cpp
-    ClusterInfo.cpp
+    ClusterConfig.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

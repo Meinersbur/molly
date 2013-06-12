@@ -3,6 +3,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Function.h>
 #include <polly/ScopInfo.h>
+#include <llvm/Analysis/RegionInfo.h>
 
 using namespace llvm;
 using namespace polly;
@@ -34,4 +35,27 @@ void molly::collectScopStmts(polly::Scop *scop, llvm::SmallVectorImpl<polly::Sco
     ScopStmt* stmt = *it;
     list.push_back(stmt);
   }
+}
+
+
+void molly::collectAllRegions(llvm::RegionInfo *regionInfo, llvm::SmallVectorImpl<llvm::Region*> &dstList) {
+  collectAllRegions(regionInfo->getTopLevelRegion(), dstList);
+}
+
+
+void molly::collectAllRegions(llvm::Region *region, llvm::SmallVectorImpl<llvm::Region*> &dstList) {
+  dstList.push_back(region);
+  for (auto it = region->begin(), end = region->end(); it!=end;++it) {
+    auto subregion = *it;
+    collectAllRegions(subregion, dstList);
+  }
+}
+
+
+llvm::Pass *molly::createPassFromId(const void *passId) {
+  auto passRegistry = PassRegistry::getPassRegistry();
+  auto passInfo = passRegistry->getPassInfo(passId);
+  auto passIsAnalysis = passInfo->isAnalysis();
+  auto pass = passInfo->createPass();
+  return pass;
 }

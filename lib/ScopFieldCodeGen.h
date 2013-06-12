@@ -12,6 +12,7 @@ namespace polly {
 
 
 namespace molly {
+  extern char &ScopFieldCodeGenPassID;
   polly::ScopPass *createScopFieldCodeGenPass();
 } // namespace molly
 #endif /* MOLLY_SCOPFIELDCODEGEN_H */

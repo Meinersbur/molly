@@ -28,12 +28,14 @@ namespace molly {
   public:
     static char ID;
     MollyContextPass();
+    ~MollyContextPass();
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
       AU.setPreservesAll();
     }
 
-    virtual bool runOnModule(llvm::Module &M);
+    virtual void releaseMemory() LLVM_OVERRIDE;
+    virtual bool runOnModule(llvm::Module &M) LLVM_OVERRIDE;
 
     MollyContext *getMollyContext() { return context; }
     isl::Ctx *getIslContext();
@@ -48,8 +50,9 @@ namespace molly {
     int getClusterLength(int d) const;
 
     isl::MultiAff getMasterRank(); /* { -> 0 } */
-  };
-}
+  }; // class MollyContextPass
 
+   extern const char &MollyContextPassID;
 
+} // namespace molly
 #endif /* MOLLY_MOLLYCONTEXTPASS_H */

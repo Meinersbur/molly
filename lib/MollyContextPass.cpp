@@ -6,6 +6,7 @@
 
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Debug.h>
 
 using namespace llvm;
 using namespace molly;
@@ -21,6 +22,7 @@ char MollyContextPass::ID;
 
 
 MollyContextPass::MollyContextPass() : ModulePass(ID) {
+  DEBUG(llvm::dbgs() << "Creating a MollyContextPass\n");
   context = MollyContext::create(NULL); //TODO: Who owns it?
 
   string shape = MollyShape;
@@ -35,6 +37,16 @@ MollyContextPass::MollyContextPass() : ModulePass(ID) {
     clusterLengths.push_back(len);
   }
   clusterShape = getIslContext()->createRectangularSet(clusterLengths);
+}
+
+
+MollyContextPass::~MollyContextPass() {
+  //DEBUG(llvm::dbgs() << "Destroying a MollyContextPass\n");
+}
+
+
+void MollyContextPass::releaseMemory() {
+  //DEBUG(llvm::dbgs() << "Releasing a MollyContextPass\n");
 }
 
 
@@ -88,4 +100,5 @@ isl::MultiAff MollyContextPass:: getMasterRank() {
 }
 
 
+const char &molly::MollyContextPassID = MollyContextPass::ID;
 static RegisterPass<MollyContextPass> FieldAnalysisRegistration("molly-context", "Molly - Context", false, true);

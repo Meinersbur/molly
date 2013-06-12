@@ -1,6 +1,6 @@
 #include "ScopDistribution.h"
 
-#include "molly/FieldDetection.h"
+#include "FieldDetection.h"
 #include "MollyFieldAccess.h"
 #include "islpp/Map.h"
 #include "MollyContextPass.h"
@@ -26,6 +26,7 @@ namespace molly {
   class ScopDistribution : public polly::ScopPass {
   private:
     bool changed;
+    Scop *scop;
     FieldDetectionAnalysis *Fields;
     Dependences *Deps;
     MollyContextPass *Ctx;
@@ -33,8 +34,11 @@ namespace molly {
     ScalarEvolution *SE;
 
   protected:
-   void modified() {
+    void modifiedIR() {
       changed = true;
+    }
+   void modifiedScop() {
+     scop->setCodegenPending(true);
     }
 
   public:
@@ -44,6 +48,7 @@ namespace molly {
 
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+      AU.addRequired<ScopInfo>(); // because it's a ScopPass
       AU.addRequired<molly::FieldDetectionAnalysis>();
       //AU.addRequired<ScopDetection>();
       AU.addRequired<polly::Dependences>();
@@ -156,6 +161,7 @@ namespace molly {
         result = union_(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
         result = union_(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
         stmt->setWhereMap(result.take());
+        modifiedScop();
     }
 
 
@@ -169,6 +175,7 @@ namespace molly {
 
     virtual bool runOnScop(Scop &S) {
       changed = false;
+      this->scop = &S;
       Fields = &getAnalysis<molly::FieldDetectionAnalysis>();
       Deps = &getAnalysis<polly::Dependences>();
       Ctx = &getAnalysis<molly::MollyContextPass>(); 
@@ -176,7 +183,9 @@ namespace molly {
       islctx = Ctx->getIslContext();
 
       processScop(&S);
-      return false;
+
+       this->scop = nullptr;
+      return changed;
     }
 
   }; // class ScopDistribution

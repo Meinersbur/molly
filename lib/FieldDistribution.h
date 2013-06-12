@@ -8,7 +8,7 @@ namespace llvm {
 
 namespace molly {
   class FieldDistributionPass;
-  extern char &FieldDistributionPassID;
+  extern const char &FieldDistributionPassID;
   llvm::ModulePass *createFieldDistributionPass();
 } // namespace molly
 

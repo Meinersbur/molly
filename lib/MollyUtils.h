@@ -1,6 +1,7 @@
 #ifndef MOLLY_MOLLYUTILS_H
 #define MOLLY_MOLLYUTILS_H
 
+#pragma region Includes and forward declarations
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/ilist.h>
 
@@ -9,12 +10,16 @@ namespace llvm {
   class Instruction;
   template<typename T> class SmallVectorImpl;
   class BasicBlock;
+  class Region;
+  class RegionInfo;
+  class Pass;
 } // namespace llvm
 
 namespace polly {
   class Scop;
   class ScopStmt;
 } // namespace polly
+#pragma endregion
 
 
 namespace molly {
@@ -53,6 +58,18 @@ void collect(TargetList &dstList, const llvm::iplist<T> &srcList) {
   }
 }
 */
+
+void collectAllRegions(llvm::RegionInfo *, llvm::SmallVectorImpl<llvm::Region*> &dstList);
+void collectAllRegions(llvm::Region *region, llvm::SmallVectorImpl<llvm::Region*> &dstList);
+
+
+llvm::Pass *createPassFromId(const void *id);
+static inline llvm::Pass *createPassFromId(const char &id) { return createPassFromId(&id); }
+
+template<typename T>
+static inline T *createPass() {
+  return static_cast<T*>(createPassFromId(T::ID));
+}
 
 } // namespace molly
 #endif /* MOLLY_MOLLYUTILS_H */

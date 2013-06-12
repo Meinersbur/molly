@@ -18,11 +18,11 @@ int main2() { Foo<int, float> f; Bar(f); }
 //molly::array<int, 4> My1DField;
 //molly::array<int, 4, 4> My2DField;
 //molly::array<int, 4, 4, 4> My3DField;
-molly::array<int, 4, 4, 4, 4> My4DField;
+//molly::array<int, 4, 4, 4, 4> My4DField;
 //std::vector<int> vec;
 
 //#pragma layout interchange(0,1)
-//molly::array<int, 128> MyField;
+molly::array<int, 128> MyField;
 //molly::array<int, 44> MySecondField;
 
 
@@ -49,15 +49,16 @@ int main(int argc, char *argv[]) {
      int *a = &MyField[i];
      int *b = a + 1;
 
-     auto ptr = __builtin_molly_ptr(&MyField, i);
-     *ptr = i+2;
+     //auto ptr = __builtin_molly_ptr(&MyField, i);
+     //*ptr = i+2;
 
-     auto x = *ptr;
+     //auto x = *ptr;
 
     //*MySecondField.ptr(i) = i+2;
     //MySecondField[i] = i+2;
   }
 
+#if 0
   for (int i = 0; i < LowLoval; i++) {
      // MPI
   }
@@ -75,6 +76,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < 2; i+=1) {
 	  MyField[i+len/2] = i+len/2+1;
   }
+#endif
 
   auto val = MyField[len/2];
 

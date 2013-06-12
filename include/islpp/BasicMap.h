@@ -202,8 +202,8 @@ namespace isl {
    PwMultiAff partialLexminPwMultiAff(BasicMap &&bmap, BasicSet &&dom, Set &empty);
    PwMultiAff partialLexmaxPwMultiAff(BasicMap &&bmap, BasicSet &&dom, Set &empty);
 
-  static inline PwMultiAff lexminPwMultiAff(BasicMap &&bmap);
-  static inline PwMultiAff lexmaxPwMultiAff(BasicMap &&bmap);
+  PwMultiAff lexminPwMultiAff(BasicMap &&bmap);
+  PwMultiAff lexmaxPwMultiAff(BasicMap &&bmap);
 
   static inline BasicMap product(BasicMap &&bmap1, BasicMap &&bmap2) { return BasicMap::wrap(isl_basic_map_product(bmap1.take(), bmap2.take())); }
   static inline BasicMap domainProduct(BasicMap &&bmap1, BasicMap &&bmap2) { return BasicMap::wrap(isl_basic_map_domain_product(bmap1.take(), bmap2.take())); }
@@ -235,7 +235,7 @@ namespace isl {
   static inline BasicMap curry(BasicMap &&bmap) { return enwrap(isl_basic_map_curry(bmap.take())); }
   static inline BasicMap uncurry(BasicMap &&bmap) { return enwrap(isl_basic_map_uncurry(bmap.take())); }
 
-  static inline Map computeDivs(BasicMap &&bmap);
+  Map computeDivs(BasicMap &&bmap);
   static inline BasicMap dropConstraintsInvolvingDims(BasicMap &&bmap, isl_dim_type type, unsigned first, unsigned n) { return enwrap(isl_basic_map_drop_constraints_involving_dims(bmap.take(), type, first, n)); }
 
   static inline BasicMap gist(BasicMap &&bmap, BasicMap &&context) { return enwrap(isl_basic_map_gist(bmap.take(), context.take())); }

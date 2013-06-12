@@ -43,38 +43,39 @@ namespace molly {
 
       AU.addPreserved<MollyContextPass>();
       AU.addPreserved<FieldDetectionAnalysis>();
+      //AU.addPreserved<Fie
     }
 
 #if 0
     // Not possible because we cannot determine the element type
     Function *emitPtr(Module &M, FieldType *ftype) {
-		// Resolve to nothing; loads and stores should have been resolved
-		auto &context = M.getContext();
-		auto llvmTy = ftype->getType();
-		auto nDims = ftype->getNumDimensions();
-		auto intTy = Type::getInt32Ty(context);
-		auto rtnTy = ftype->getEltPtrType();
+    // Resolve to nothing; loads and stores should have been resolved
+    auto &context = M.getContext();
+    auto llvmTy = ftype->getType();
+    auto nDims = ftype->getNumDimensions();
+    auto intTy = Type::getInt32Ty(context);
+    auto rtnTy = ftype->getEltPtrType();
 
-		// Built function type
-		SmallVector<Type*, 5> argTys;
-		argTys.push_back(PointerType::getUnqual(llvmTy));
-		for (auto i = nDims - nDims; i < nDims; i += 1) {
-			argTys.push_back(intTy);
-		}
-		auto ptrFuncTy = FunctionType::get(rtnTy, argTys, false);
+    // Built function type
+    SmallVector<Type*, 5> argTys;
+    argTys.push_back(PointerType::getUnqual(llvmTy));
+    for (auto i = nDims - nDims; i < nDims; i += 1) {
+      argTys.push_back(intTy);
+    }
+    auto ptrFuncTy = FunctionType::get(rtnTy, argTys, false);
 
-		// Create function
-		auto ptrFunc = Function::Create(ptrFuncTy, GlobalValue::InternalLinkage, "molly_ptr", &M);
-		auto entryBB = BasicBlock::Create(context, "Entry", ptrFunc);
+    // Create function
+    auto ptrFunc = Function::Create(ptrFuncTy, GlobalValue::InternalLinkage, "molly_ptr", &M);
+    auto entryBB = BasicBlock::Create(context, "Entry", ptrFunc);
 
-		// Build body
-		IRBuilder<> builder(entryBB);
-		builder.SetInsertPoint(entryBB);
-		builder.CreateRet(llvm::UndefValue::get(rtnTy));
+    // Build body
+    IRBuilder<> builder(entryBB);
+    builder.SetInsertPoint(entryBB);
+    builder.CreateRet(llvm::UndefValue::get(rtnTy));
 
-		changed = true;
-		return ptrFunc;
-	}
+    changed = true;
+    return ptrFunc;
+  }
 #endif
 
     Function *emitLocalLength(Module &M, FieldType *ftype) {
@@ -108,17 +109,18 @@ namespace molly {
       DEBUG(llvm::dbgs() << nDims << " Cases\n");
       auto sw = builder.CreateSwitch(dimArg, defaultBB, nDims);
       for (auto d = nDims-nDims; d<nDims; d+=1) {
-    	  DEBUG(llvm::dbgs() << "Case " << d << "\n");
-    	  auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc);
-    	  ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d] / molly->getClusterLength(d)/*FIXME: wrong if nondivisible*/), caseBB);
+        DEBUG(llvm::dbgs() << "Case " << d << "\n");
+        auto caseBB = BasicBlock::Create(context, "Case_dim" + Twine(d), localLengthFunc);
+        ReturnInst::Create(context, ConstantInt::get(intTy, lengths[d] / molly->getClusterLength(d)/*FIXME: wrong if nondivisible*/), caseBB);
 
-    	  sw->addCase(ConstantInt::get(intTy, d), caseBB);
+        sw->addCase(ConstantInt::get(intTy, d), caseBB);
       }
 
       changed = true;
       ftype->setLocalLengthFunc(localLengthFunc);
       return localLengthFunc;
     }
+
 
     void runOnFieldType(Module &M, FieldType *ftype) {
       emitLocalLength(M, ftype);
@@ -173,35 +175,35 @@ namespace molly {
 
 
     void emitMollyGlobalVars() {
-    	auto &context = module->getContext();
-    	auto intTy = Type::getInt32Ty(context);
-    	auto intPtrTy = Type::getInt32PtrTy(context);
-    	auto molly = &getAnalysis<MollyContextPass>();
+      auto &context = module->getContext();
+      auto intTy = Type::getInt32Ty(context);
+      auto intPtrTy = Type::getInt32PtrTy(context);
+      auto molly = &getAnalysis<MollyContextPass>();
 
-    	new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterDims()), "__molly_cluster_dims");
-    	new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterSize()), "__molly_cluster_size");
+      new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterDims()), "__molly_cluster_dims");
+      new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterSize()), "__molly_cluster_size");
 
-    	auto &lengths = molly->getClusterLengths();
-    	auto nDims = lengths.size();
+      auto &lengths = molly->getClusterLengths();
+      auto nDims = lengths.size();
 
-    	SmallVector<Constant*, 4> lengthConsts;
-    	SmallVector<Constant*, 4> periodicConsts;
-    	for (auto d=nDims-nDims; d<nDims; d+=1) {
-    		lengthConsts.push_back(ConstantInt::get(intTy, lengths[d]));
-    		periodicConsts.push_back(ConstantInt::get(intTy, true));//FIXME: Determine whether periodicity is really needed
-    	}
-    	lengthConsts.push_back(ConstantInt::get(intTy, 0));
-    	periodicConsts.push_back(ConstantInt::get(intTy, -1));
-    	auto clusterLengthsConstsTy = ArrayType::get(intTy, nDims+1);
-    	auto glengths = ConstantArray::get(clusterLengthsConstsTy, lengthConsts);
-    	auto clusterLengthsGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, glengths);
-    	new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clusterLengthsGlobArr, "__molly_cluster_lengths");
+      SmallVector<Constant*, 4> lengthConsts;
+      SmallVector<Constant*, 4> periodicConsts;
+      for (auto d=nDims-nDims; d<nDims; d+=1) {
+        lengthConsts.push_back(ConstantInt::get(intTy, lengths[d]));
+        periodicConsts.push_back(ConstantInt::get(intTy, true));//FIXME: Determine whether periodicity is really needed
+      }
+      lengthConsts.push_back(ConstantInt::get(intTy, 0));
+      periodicConsts.push_back(ConstantInt::get(intTy, -1));
+      auto clusterLengthsConstsTy = ArrayType::get(intTy, nDims+1);
+      auto glengths = ConstantArray::get(clusterLengthsConstsTy, lengthConsts);
+      auto clusterLengthsGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, glengths);
+      new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clusterLengthsGlobArr, "__molly_cluster_lengths");
 
-    	auto gperiodic = ConstantArray::get(clusterLengthsConstsTy, periodicConsts);
-    	auto clustePeriodicGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, gperiodic);
-    	new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clustePeriodicGlobArr, "__molly_cluster_periodic");
+      auto gperiodic = ConstantArray::get(clusterLengthsConstsTy, periodicConsts);
+      auto clustePeriodicGlobArr = new GlobalVariable(*module, clusterLengthsConstsTy, true, GlobalValue::InternalLinkage, gperiodic);
+      new GlobalVariable(*module, PointerType::getUnqual(clusterLengthsConstsTy), true, GlobalValue::ExternalLinkage, clustePeriodicGlobArr, "__molly_cluster_periodic");
 
-    	DEBUG(llvm::dbgs() << "Emitted __molly_cluster_dims\n");
+      DEBUG(llvm::dbgs() << "Emitted __molly_cluster_dims\n");
     }
 
 
@@ -224,17 +226,19 @@ namespace molly {
       return changed;
     }
   }; // class ModuleFieldGen
+  } // namespace molly
 
 
-  llvm::ModulePass *createModuleFieldGenPass() {
+  llvm::ModulePass *molly::createModuleFieldGenPass() {
     return new ModuleFieldGen();
   }
 
   char ModuleFieldGen::ID = 0;
-  static RegisterPass<ModuleFieldGen> ModuleFieldGenRegistration("molly-modulegen", "Molly - Code generation per module", false, false);
+  const char &molly::ModuleFieldGenPassID = ModuleFieldGen::ID;
+  static RegisterPass<ModuleFieldGen> ModuleFieldGenRegistration("molly-modulegen", "Molly - ModuleFieldGen", false, false);
 
 
-
+  namespace molly {
   class FieldCodeGen : public FunctionPass {
   private:
     bool changed;
@@ -300,6 +304,9 @@ namespace molly {
       AU.addRequired<MollyContextPass>();
       //AU.addRequiredID(FieldDistributionPassID); 
       AU.addRequired<FieldDetectionAnalysis>();
+
+      AU.addPreserved<MollyContextPass>();
+      AU.addPreserved<FieldDetectionAnalysis>();
     }
 
     void emitRead(MollyFieldAccess &access);
@@ -314,8 +321,6 @@ namespace molly {
     bool emitFieldFunctions();
 
   }; // FieldCodeGen
-
-
 } // namespace molly
 
 
@@ -492,7 +497,9 @@ bool FieldCodeGen::emitFieldFunctions() {
 }
 
 
+
 char FieldCodeGen::ID = 0;
+const char &molly::FieldCodeGenPassID = FieldCodeGen::ID;
 static RegisterPass<FieldCodeGen> FieldCodeGenRegistration("molly-fieldcodegen", "Molly - Code generation", false, false);
 
 

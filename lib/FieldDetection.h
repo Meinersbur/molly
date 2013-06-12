@@ -72,6 +72,8 @@ namespace molly {
     MollyFieldAccess getFieldAccess(const llvm::Instruction *inst);
     MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc);
   }; // class FieldDetectionAnalysis
+
+  extern const char &FieldDetectionAnalysisPassID;
 } // namespace molly
 
 

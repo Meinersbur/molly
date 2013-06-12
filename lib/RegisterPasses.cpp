@@ -1,10 +1,9 @@
 
 #include "molly/RegisterPasses.h"
 #include "molly/LinkAllPasses.h"
-#include "molly/FieldCodeGen.h"
+#include "FieldCodeGen.h"
 #include "ScopStmtSplit.h"
 #include "MollyInlinePrepa.h"
-//#include "MollyPassManager.h"
 #include "ScopDistribution.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -20,13 +19,18 @@
 #include <llvm/Transforms/Scalar.h>
 #include <polly/ScopPass.h>
 #include "ScopFieldCodeGen.h"
+#include "GlobalPassManager.h"
+#include <polly/RegisterPasses.h>
+#include <polly/ScopInfo.h>
+#include "MollyUtils.h"
+#include "MollyContextPass.h"
+#include "FieldDetection.h"
 
 using namespace llvm;
 using namespace std;
 
 
 static cl::opt<bool> MollyEnabled("molly", cl::desc("Molly - Enable by default in -O3"), cl::init(false), cl::Optional);
-
 static cl::opt<int> dbranch("malt", cl::desc("Debug Branch"), cl::init(0), cl::Optional);
 
 
@@ -245,18 +249,101 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //PM.add(polly::createDependencesPass());
   //PM.add(new PatternSearchAnalysis());
 
-  // Find a home location for all the data
-  PM.add(molly::createFieldDistributionPass());
+  // Decide where to natively store values (home node)
+  //PM.add(molly::createFieldDistributionPass());
 
-  //auto MollyPM = MollyPassManager::create();
-  //MollyPM.add(molly::createFieldDistributionPass());
-  //PM.add(MollyPM);
-  PM.add(molly::createScopDistributionPass());
+  // PM.add(molly::createScopDistributionPass());
 
+  // Emit builtin functions
+  //PM.add(molly::createModuleFieldGenPass());
+  //PM.add(molly::createScopFieldCodeGenPass());
+  //PM.add(molly::createFieldCodeGenPass());
 
-  PM.add(molly::createModuleFieldGenPass());
-  PM.add(molly::createScopFieldCodeGenPass());
-  PM.add(molly::createFieldCodeGenPass());
+  //TODO: Adjust to OptLevel
+  //auto gpm = createGlobalPassManager();
+
+  //gpm->addPass<molly::MollyContextPass>(); // ModulePass (should be preserved until the end of the Molly chains)
+  auto mollyContextPass = createPass<molly::MollyContextPass>();
+  PM.add(mollyContextPass);
+  //gpm->addPass<molly::FieldDetectionAnalysis>(); // ModulePass
+  auto fieldDetectionPass = molly::createFieldDetectionAnalysisPass();
+  PM.add(fieldDetectionPass);
+
+  // Schedule before because IndependentBlocks invalidates all the Field passes
+  //PM.add(createIndependentBlocksPass()); // FunctionPass
+
+  // Decide where to natively store values (home node)
+  //gpm->addPassID(FieldDistributionPassID); // ModulePass
+  PM.add(createPassFromId(FieldDistributionPassID));
+
+  // Emit builtin_molly_ functions and replace main
+  //gpm->addPassID(ModuleFieldGenPassID); // ModulePass
+  PM.add(createPassFromId(ModuleFieldGenPassID));
+
+  // SCoPs are detected from here on; It must be preserved until the CodeGeneration passes, otherwise changes made to will be forgotten
+  //gpm->addPass<polly::ScopInfo>(); // RegionPass
+  PM.add(createPassFromId(ScopInfo::ID));
+
+  // Decide where to execute statements
+  //gpm->addPassID(ScopDistributionPassID); // ScopPass
+  PM.add(createPassFromId(ScopDistributionPassID));
+
+  // Insert communication code into SCoP and restrict instruction to their node where are are executed
+  //gpm->addPassID(ScopFieldCodeGenPassID); // ScopPass
+  PM.add(createPassFromId(ScopFieldCodeGenPassID));
+
+#pragma region Polly
+  // These are polly's optimization and code generation phases; They are fed using the modified SCoPs from Molly
+  // FIXME: Improve interaction between Polly and Molly
+
+  switch (Optimizer) {
+  case OPTIMIZER_NONE:
+    break; /* Do nothing */
+
+#ifdef SCOPLIB_FOUND
+  case OPTIMIZER_POCC:
+    PM.add(polly::createPoccPass());
+    break;
+#endif
+
+#ifdef PLUTO_FOUND
+  case OPTIMIZER_PLUTO:
+    PM.add(polly::createPlutoOptimizerPass());
+    break;
+#endif
+
+  case OPTIMIZER_ISL:
+    PM.add(polly::createIslScheduleOptimizerPass());
+    break;
+  }
+
+  switch (CodeGenerator) {
+#ifdef CLOOG_FOUND
+  case CODEGEN_CLOOG:
+    PM.add(polly::createCodeGenerationPass());
+    if (PollyVectorizerChoice == VECTORIZER_BB) {
+      VectorizeConfig C;
+      C.FastDep = true;
+      PM.add(createBBVectorizePass(C));
+    }
+    break;
+#endif
+  case CODEGEN_ISL:
+    PM.add(polly::createIslCodeGenerationPass());
+    break;
+  case CODEGEN_NONE:
+    break;
+  }
+#pragma endregion
+
+  // Replace all remaining field accesses by calls to runtime
+  //gpm->addPassID(FieldCodeGenPassID); // FunctionPass
+  PM.add(createPassFromId(FieldCodeGenPassID));
+
+  //PM.unpreserve(mollyContextPass);
+  //PM.unpreserve(fieldDetectionPass);
+
+  //PM.add(gpm); //TODO: GlobalPassManager knows which ModuleAnalyses it could need and ask PM for it
 }
 
 
@@ -275,7 +362,7 @@ static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &B
 namespace molly {
   ModulePass *createFieldDetectionAnalysisPass();
 
-  extern char &FieldDetectionAnalysisID;
+  //extern char &FieldDetectionAnalysisID;
 }
 
 
@@ -301,4 +388,4 @@ namespace molly {
     USE(NoOptPassRegister);
     USE(MollyEnabled);
   }
-}
+} // namespace molly

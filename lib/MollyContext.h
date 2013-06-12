@@ -39,7 +39,6 @@ namespace molly {
     llvm::LLVMContext *getLLVMContext() { return llvmContext; }
     isl::Ctx *getIslContext() { return islCtx.get(); }
     //llvm::Module *getModule() { return module; }
-
   }; // class MollyContext
 } // namespace molly
 #endif /* MOLLY_MOLLYCONTEXT_H */

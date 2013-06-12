@@ -1,5 +1,5 @@
 #define DEBUG_TYPE "molly"
-#include "molly/FieldDetection.h"
+#include "FieldDetection.h"
 
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/Statistic.h"
@@ -27,7 +27,7 @@ static RegisterPass<FieldDetectionAnalysis> FieldAnalysisRegistration("molly-det
 STATISTIC(NumGlobalFields, "Number of detected global fields");
 
 char FieldDetectionAnalysis::ID = 0;
-char &molly::FieldDetectionAnalysisID = FieldDetectionAnalysis::ID;
+//char &molly::FieldDetectionAnalysisID = FieldDetectionAnalysis::ID;
 
 //static RegisterPass<FieldDetectionAnalysis> FieldDetectionRegistration("molly-detect", "Molly - Find fields", false, true);
 //INITIALIZE_PASS_BEGIN(FieldDetectionAnalysis, "molly-detect", "Molly - Find fields", false, false)
@@ -90,11 +90,13 @@ FieldType *FieldDetectionAnalysis::lookupFieldType(llvm::StructType *ty) {
 
 FieldType *FieldDetectionAnalysis::getFieldType(llvm::StructType *ty) {
   auto result = lookupFieldType(ty);
-  if (result)
-    return result;
-  result = FieldType::create(mollyContext, ty); // TODO: Don't create here, all field types should have been added to llvm.fields NamedMD
-  fieldTypes[ty] = result;
+  assert(result);
   return result;
+  //if (result)
+  //  return result;
+  //result = FieldType::create(mollyContext, ty); // TODO: Don't create here, all field types should have been added to llvm.fields NamedMD
+  //fieldTypes[ty] = result;
+  //return result;
 }
 
 
@@ -207,6 +209,7 @@ MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *mem
 }
 
 
+const char &molly::FieldDetectionAnalysisPassID = FieldDetectionAnalysis::ID;
 ModulePass *molly::createFieldDetectionAnalysisPass() {
   return new FieldDetectionAnalysis();
 }

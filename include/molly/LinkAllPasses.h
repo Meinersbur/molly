@@ -14,27 +14,29 @@ namespace llvm {
 using namespace llvm;
 
 namespace molly {
-	ModulePass *createFieldDetectionAnalysisPass();
-	ModulePass *createFieldDistributionPass();
+  ModulePass *createFieldDetectionAnalysisPass();
 
-	extern char &FieldDetectionAnalysisID;
+extern const char &FieldDistributionPassID;
+  ModulePass *createFieldDistributionPass();
+
+  //extern char &FieldDetectionAnalysisID;
 }
 
 using namespace molly;
 
 namespace {
   struct MollyForcePassLinking {
-	MollyForcePassLinking() {
-	  // We must reference the passes in such a way that compilers will not
-	  // delete it all as dead code, even with whole program optimization,
-	  // yet is effectively a NO-OP. As the compiler isn't smart enough
-	  // to know that getenv() never returns -1, this will do the job.
-	  if (std::getenv("bar") != (char*) -1)
-		return;
+  MollyForcePassLinking() {
+    // We must reference the passes in such a way that compilers will not
+    // delete it all as dead code, even with whole program optimization,
+    // yet is effectively a NO-OP. As the compiler isn't smart enough
+    // to know that getenv() never returns -1, this will do the job.
+    if (std::getenv("bar") != (char*) -1)
+    return;
 
-	   //createAffSCEVItTesterPass();
-	  molly::createFieldDetectionAnalysisPass();
-	}
+     //createAffSCEVItTesterPass();
+    molly::createFieldDetectionAnalysisPass();
+  }
   } MollyForcePassLinking; // Force link by creating a global definition.
 }
 

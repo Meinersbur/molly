@@ -6,11 +6,11 @@
 
 #include "islpp/Isl.h"
 
-#include "molly/FieldDetection.h"
+#include "FieldDetection.h"
 #include "FieldVariable.h"
 #include "FieldType.h"
 #include "MollyContextPass.h"
-#include "molly/FieldDistribution.h"
+#include "FieldDistribution.h"
 
 using namespace llvm;
 using namespace molly;
@@ -198,7 +198,7 @@ bool FieldDistribution::runOnModule(Module &M) {
 
 
 char FieldDistribution::ID = 0;
-char &molly::FieldDistributionPassID = FieldDistribution::ID;
+const char &molly::FieldDistributionPassID = FieldDistribution::ID;
 static RegisterPass<FieldDistribution> FieldDistributionRegistration("moly-distr", "Molly - Field Distribution");
 
 

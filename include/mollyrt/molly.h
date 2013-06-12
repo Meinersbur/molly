@@ -629,7 +629,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   /// L = sizes of dimensions (each >= 1)
   // TODO: Support sizeof...(L)==0
   template<typename T, int... L>
-  class CXX11ATTRIBUTE(molly::field/*, molly::lengths(L...)*/) array: public field<T, sizeof...(L)> {
+  class CXX11ATTRIBUTE(molly::field, molly::lengths(L...)) array: public field<T, sizeof...(L)> {
     size_t localelts;
     T *localdata;
 
@@ -837,7 +837,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     private:
       int localoffset(int d) { return __builtin_molly_localoffset(this, d); }
       int locallength(int d) { return __builtin_molly_locallength(this, d); }
-  } MOLLYATTR(lengths(clazz, L)); // class array
+  } /*MOLLYATTR(lengths(localdata, L))*/; // class array
 
 
   /// A multi-dimensional array, but its dimensions are not known ar compile-time

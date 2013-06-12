@@ -86,10 +86,6 @@ namespace molly {
       return new FieldType(mollyContext, module, metadata);
     }
 
-    static FieldType *create(molly::MollyContext *mollyContext, llvm::StructType *ty, llvm::MDNode *metadata = NULL) {
-      return new FieldType(mollyContext, NULL, metadata);
-    }
-
     void dump();
 
     unsigned getNumDimensions() {

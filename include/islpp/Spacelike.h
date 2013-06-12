@@ -21,7 +21,7 @@ namespace isl {
     virtual Ctx *getCtx() const = 0;
 
   public:
-    //virtual ~Spacelike2() {}
+    virtual ~Spacelike2() {} // To silence compiler warnings
 
     virtual unsigned dim(isl_dim_type type) const = 0;  
     unsigned getParamDimCount() { return dim(isl_dim_param); }

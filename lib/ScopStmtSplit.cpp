@@ -5,7 +5,7 @@
 #include <polly/ScopInfo.h>
 #include <llvm/ADT/SmallVector.h>
 #include "MollyFieldAccess.h"
-#include "molly/FieldDetection.h"
+#include "FieldDetection.h"
 #include "MollyUtils.h"
 #include <polly/Dependences.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>

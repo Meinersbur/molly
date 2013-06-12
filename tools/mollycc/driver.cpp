@@ -1,11 +1,3 @@
-// BEGIN Molly
-#include "molly/LinkAllPasses.h"
-#include "molly/RegisterPasses.h"
-
-#include "polly/LinkAllPasses.h"
-#include "polly/RegisterPasses.h"
-// END Molly
-
 //===-- driver.cpp - Clang GCC-Compatible Driver --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -346,11 +338,9 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
     ArgVector.insert(it,
       SaveStringInSet(SavedStrings, std::string("-target")));
   }
-}  
-  
+}
+
 int main(int argc_, const char **argv_) {
-  //__debugbreak();//("c");
-  llvm::DisablePrettyStackTrace = true;
   llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram X(argc_, argv_);
 
@@ -383,6 +373,32 @@ int main(int argc_, const char **argv_) {
     }
   }
 
+  // Handle QA_OVERRIDE_GCC3_OPTIONS and CCC_ADD_ARGS, used for editing a
+  // command line behind the scenes.
+  if (const char *OverrideStr = ::getenv("QA_OVERRIDE_GCC3_OPTIONS")) {
+    // FIXME: Driver shouldn't take extra initial argument.
+    ApplyQAOverride(argv, OverrideStr, SavedStrings);
+  } else if (const char *Cur = ::getenv("CCC_ADD_ARGS")) {
+    // FIXME: Driver shouldn't take extra initial argument.
+    std::vector<const char*> ExtraArgs;
+
+    for (;;) {
+      const char *Next = strchr(Cur, ',');
+
+      if (Next) {
+        ExtraArgs.push_back(SaveStringInSet(SavedStrings,
+                                            std::string(Cur, Next)));
+        Cur = Next + 1;
+      } else {
+        if (*Cur != '\0')
+          ExtraArgs.push_back(SaveStringInSet(SavedStrings, Cur));
+        break;
+      }
+    }
+
+    argv.insert(&argv[1], ExtraArgs.begin(), ExtraArgs.end());
+  }
+
   llvm::sys::Path Path = GetExecutablePath(argv[0], CanonicalPrefixes);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions;
@@ -401,7 +417,7 @@ int main(int argc_, const char **argv_) {
   // DiagnosticOptions instance.
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  DiagClient->setPrefix(llvm::sys::path::stem(Path.str()));
+  DiagClient->setPrefix(llvm::sys::path::filename(Path.str()));
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
@@ -433,7 +449,6 @@ int main(int argc_, const char **argv_) {
   llvm::InitializeAllTargets();
   ParseProgName(argv, SavedStrings, TheDriver);
 
-
   // Handle CC_PRINT_OPTIONS and CC_PRINT_OPTIONS_FILE.
   TheDriver.CCPrintOptions = !!::getenv("CC_PRINT_OPTIONS");
   if (TheDriver.CCPrintOptions)
@@ -448,32 +463,6 @@ int main(int argc_, const char **argv_) {
   TheDriver.CCLogDiagnostics = !!::getenv("CC_LOG_DIAGNOSTICS");
   if (TheDriver.CCLogDiagnostics)
     TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
-
-  // Handle QA_OVERRIDE_GCC3_OPTIONS and CCC_ADD_ARGS, used for editing a
-  // command line behind the scenes.
-  if (const char *OverrideStr = ::getenv("QA_OVERRIDE_GCC3_OPTIONS")) {
-    // FIXME: Driver shouldn't take extra initial argument.
-    ApplyQAOverride(argv, OverrideStr, SavedStrings);
-  } else if (const char *Cur = ::getenv("CCC_ADD_ARGS")) {
-    // FIXME: Driver shouldn't take extra initial argument.
-    std::vector<const char*> ExtraArgs;
-
-    for (;;) {
-      const char *Next = strchr(Cur, ',');
-
-      if (Next) {
-        ExtraArgs.push_back(SaveStringInSet(SavedStrings,
-                                            std::string(Cur, Next)));
-        Cur = Next + 1;
-      } else {
-        if (*Cur != '\0')
-          ExtraArgs.push_back(SaveStringInSet(SavedStrings, Cur));
-        break;
-      }
-    }
-
-    argv.insert(&argv[1], ExtraArgs.begin(), ExtraArgs.end());
-  }
 
 // BEGIN Molly
   // Molly: The simple way, only works for mingw
@@ -509,9 +498,6 @@ int main(int argc_, const char **argv_) {
     // In these cases, generate additional diagnostic information if possible.
     if (CommandRes < 0 || CommandRes == 70) {
       TheDriver.generateCompilationDiagnostics(*C, FailingCommand);
-
-      // FIXME: generateCompilationDiagnostics() needs to be tested when there
-      // are multiple failing commands.
       break;
     }
   }
