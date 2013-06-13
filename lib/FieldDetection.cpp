@@ -42,6 +42,7 @@ void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 
 
 bool FieldDetectionAnalysis::runOnModule(Module &M) {
+  DEBUG(llvm::dbgs() << "run FieldDetectionAnalysis\n");
   mollyContext = getAnalysis<MollyContextPass>().getMollyContext();
   assert(mollyContext);
 

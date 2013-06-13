@@ -397,7 +397,7 @@ void FieldCodeGen::emitAccess(MollyFieldAccess &access) {
 
 
 bool FieldCodeGen::runOnFunction(Function &F) {
-  if (F.getName() == "main" || F.getName() == "__molly_orig_main") {
+  if (F.getName() == "test") {
     int a = 0;
     DEBUG(llvm::dbgs() << "### before FieldCodeGen ########\n");
     DEBUG(llvm::dbgs() << F);

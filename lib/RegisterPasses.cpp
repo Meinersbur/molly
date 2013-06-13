@@ -25,6 +25,7 @@
 #include "MollyUtils.h"
 #include "MollyContextPass.h"
 #include "FieldDetection.h"
+#include "llvm/Assembly/PrintModulePass.h"
 
 using namespace llvm;
 using namespace std;
@@ -228,9 +229,21 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 
   //PM.add(molly::createFieldDetectionAnalysisPass());
 
+  std::string infoDummy;
+  auto  OSorig = new raw_fd_ostream("0_orig.ll", infoDummy);
+  PM.add(llvm::createPrintModulePass(OSorig, false, "Before ani Molly-specific passes\n\n"));
+
   // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
   PM.add(molly::createMollyInlinePass()); 
+
+  auto OSafterinline = new raw_fd_ostream("1_inlined.ll", infoDummy);
+  PM.add(llvm::createPrintModulePass(OSafterinline, false, "After MollyInline pass\n\n"));
+
   PM.add(llvm::createCFGSimplificationPass()); // calls to __builtin_molly_ptr and load/store instructions must be in same BB
+  PM.add(llvm::createPromoteMemoryToRegisterPass()); // Canonical inductionvar must be a register
+
+  auto OStidy = new raw_fd_ostream("2_tidied.ll", infoDummy);
+  PM.add(llvm::createPrintModulePass(OStidy, false, "After general cleanup necessary to recognize scop\n\n"));
 
   // Cleanup after inlining
   //FIXME: Which is the correct one?

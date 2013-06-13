@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "ScopDistribution.h"
 
 #include "FieldDetection.h"
@@ -13,6 +14,7 @@
 #include <polly/ScopInfo.h>
 #include <polly/Dependences.h>
 #include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/Support/Debug.h>
 
 using namespace molly;
 using namespace polly;
@@ -48,14 +50,11 @@ namespace molly {
 
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
-      AU.addRequired<ScopInfo>(); // because it's a ScopPass
+      ScopPass::getAnalysisUsage(AU); // Calls AU.setPreservesAll();
       AU.addRequired<molly::FieldDetectionAnalysis>();
       //AU.addRequired<ScopDetection>();
       AU.addRequired<polly::Dependences>();
       AU.addRequired<ScalarEvolution>();
-
-      // This Pass only modifies the ScopInfo
-      AU.setPreservesAll();
     }
 
 #if 0
@@ -174,6 +173,8 @@ namespace molly {
 
 
     virtual bool runOnScop(Scop &S) {
+      DEBUG(llvm::dbgs() << "run Scopdistribution\n");
+
       changed = false;
       this->scop = &S;
       Fields = &getAnalysis<molly::FieldDetectionAnalysis>();

@@ -54,20 +54,20 @@ typedef struct { long double x, y; } __float128;
 extern int _debugindention;
 
 static inline const char *extractFilename(const char *filename) {
-	const char *lastAfterSlash = filename;
-	const char *pos = filename;
-	while (true) {
-		auto ch = *pos;
-		pos+=1;
+  const char *lastAfterSlash = filename;
+  const char *pos = filename;
+  while (true) {
+    auto ch = *pos;
+    pos+=1;
 
-		switch(ch) {
-		case '/':
-			lastAfterSlash = pos;
-			break;
-		case '\0':
-			return lastAfterSlash;
-		}
-	}
+    switch(ch) {
+    case '/':
+      lastAfterSlash = pos;
+      break;
+    case '\0':
+      return lastAfterSlash;
+    }
+  }
 }
 
 
@@ -84,86 +84,86 @@ static void dbgPrintVars_inner(const char *varnames) {}
 
 template<typename First>
 static void dbgPrintVars_inner(const char *varnames, const First &first) {
-	std::cerr << ' ';
-	auto argsnames=varnames;
+  std::cerr << ' ';
+  auto argsnames=varnames;
 
-	// Skip leading space
-	while (true) {
-		auto ch = *argsnames;
-		switch (ch) {
-		case ' ':
-			argsnames +=1;
-			break;
-		}
-		break;
-	}
+  // Skip leading space
+  while (true) {
+    auto ch = *argsnames;
+    switch (ch) {
+    case ' ':
+      argsnames +=1;
+      break;
+    }
+    break;
+  }
 
-	while (true) {
-		auto ch = *argsnames;
-		switch (ch) {
-		case ',':
-			argsnames +=1;
-			break;
-		case '\0':
-			break;
-		default:
-			std::cerr<<ch;
-			argsnames +=1;
-			continue;
-		}
-		break;
-	}
-	std::cerr << '=' << first;
+  while (true) {
+    auto ch = *argsnames;
+    switch (ch) {
+    case ',':
+      argsnames +=1;
+      break;
+    case '\0':
+      break;
+    default:
+      std::cerr<<ch;
+      argsnames +=1;
+      continue;
+    }
+    break;
+  }
+  std::cerr << '=' << first;
 }
 
 template<typename First, typename... Args>
 static void dbgPrintVars_inner(const char *varnames, const First &first, const Args&... args) {
-	std::cerr << ' ';
-	auto argsnames=varnames;
+  std::cerr << ' ';
+  auto argsnames=varnames;
 
-	// Skip leading space
-	while (true) {
-		auto ch = *argsnames;
-		switch (ch) {
-		case ' ':
-			argsnames +=1;
-			break;
-		}
-		break;
-	}
+  // Skip leading space
+  while (true) {
+    auto ch = *argsnames;
+    switch (ch) {
+    case ' ':
+      argsnames +=1;
+      break;
+    }
+    break;
+  }
 
-	while (true) {
-		auto ch = *argsnames;
-		switch (ch) {
-		case ',':
-			argsnames +=1;
-			break;
-		case '\0':
-			break;
-		default:
-			std::cerr<<ch;
-			argsnames +=1;
-			continue;
-		}
-		break;
-	}
-	std::cerr << '=' << first;
+  while (true) {
+    auto ch = *argsnames;
+    switch (ch) {
+    case ',':
+      argsnames +=1;
+      break;
+    case '\0':
+      break;
+    default:
+      std::cerr<<ch;
+      argsnames +=1;
+      continue;
+    }
+    break;
+  }
+  std::cerr << '=' << first;
 
-	dbgPrintVars_inner(argsnames, args...);
+  dbgPrintVars_inner(argsnames, args...);
 }
 
 template<typename... Args>
 static void dbgPrintVars(const char *file, int line, const char *varnames, const Args&... args) {
-	if (!__molly_isMaster())
-		return;
+  if (!__molly_isMaster())
+    return;
 
-	for (int i = _debugindention; i > 0; i-=1) {
-	  std::cerr << "  ";
-	}
-	std::cerr << extractFilename(file) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << line << std::resetiosflags(std::ios::left);
+  for (int i = _debugindention; i > 0; i-=1) {
+    std::cerr << "  ";
+  }
+  std::cerr << extractFilename(file) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << line << std::resetiosflags(std::ios::left);
 
-	dbgPrintVars_inner(varnames, args...);
-	std::cerr << std::endl;
+  dbgPrintVars_inner(varnames, args...);
+  std::cerr << std::endl;
 }
 
 //TODO: improve:
@@ -177,16 +177,16 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 // - redirect to a file for each rank
 #define MOLLY_DEBUG(...) \
   do { \
-	if (__molly_isMaster()) { \
+  if (__molly_isMaster()) { \
     for (int i = _debugindention; i > 0; i-=1) { \
       std::cerr << "  "; \
     } \
     std::cerr << extractFilename(__FILE__) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << __LINE__ << " " << std::resetiosflags(std::ios::left) << __VA_ARGS__ << std::endl; \
-	} \
+  } \
   } while (0)
 
 #define MOLLY_VAR(...) \
-		dbgPrintVars(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
+    dbgPrintVars(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
 
 #define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
 #else
@@ -200,17 +200,17 @@ class DebugFunctionScope {
   const char *funcname;
 public:
   DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
-	  if (!__molly_isMaster())
-		  return;
-	    for (int i = _debugindention; i > 0; i-=1) {
-	      std::cerr << "  ";
-	    }
-	    std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
+    if (!__molly_isMaster())
+      return;
+      for (int i = _debugindention; i > 0; i-=1) {
+        std::cerr << "  ";
+      }
+      std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
     _debugindention += 1;
   }
   ~DebugFunctionScope() {
-	  if (!__molly_isMaster())
-	  		  return;
+    if (!__molly_isMaster())
+          return;
     _debugindention -= 1;
     for (int i = _debugindention; i > 0; i-=1) {
       std::cerr << "  ";
@@ -511,13 +511,13 @@ namespace molly {
 
 template<typename... Args>
 std::ostream &operator<<(std::ostream &stream, const out_parampack_impl<Args...> &ob) {
-	ob.print(stream);
-	return stream;
+  ob.print(stream);
+  return stream;
 }
 
 template<typename... Args>
 static inline out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
-	return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
+  return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
 }
 #endif
 #pragma endregion
@@ -618,6 +618,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #pragma endregion
 
 
+  extern int dummyint;
+
   template<typename T, int Dims>
   class CXX11ATTRIBUTE(molly::field, molly::dimensions(Dims)) field {
   public:
@@ -629,7 +631,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   /// L = sizes of dimensions (each >= 1)
   // TODO: Support sizeof...(L)==0
   template<typename T, int... L>
-  class CXX11ATTRIBUTE(molly::field, molly::lengths(L...)) array: public field<T, sizeof...(L)> {
+  class CXX11ATTRIBUTE(molly::field) array: public field<T, sizeof...(L)> {
     size_t localelts;
     T *localdata;
 
@@ -667,23 +669,23 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     /// Compute the rank which stores a specific value
     rank_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
-    	MOLLY_DEBUG("coords2rank(" << out_parampack(", ", coords...) << ")");
-    	rank_t rank = 0;
-    	for (auto d = Dims-Dims; d<Dims; d+=1) {
-    		auto len = _select(d, L...);
-    		auto locallen = __builtin_molly_locallength(this, d);
-    		auto coord = _select(d, coords...);
-    		auto clustercoord = coord / locallen;
-    		auto clusterlen = (len / locallen) + 1;
-    		assert(clustercoord < clusterlen);
-    		rank = (rank * clusterlen) + clustercoord;
-    	}
-    	return rank;
+      MOLLY_DEBUG("coords2rank(" << out_parampack(", ", coords...) << ")");
+      rank_t rank = 0;
+      for (auto d = Dims-Dims; d<Dims; d+=1) {
+        auto len = _select(d, L...);
+        auto locallen = __builtin_molly_locallength(this, d);
+        auto coord = _select(d, coords...);
+        auto clustercoord = coord / locallen;
+        auto clusterlen = (len / locallen) + 1;
+        assert(clustercoord < clusterlen);
+        rank = (rank * clusterlen) + clustercoord;
+      }
+      return rank;
     }
 
 
     bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
-    	auto expRank = coords2rank(coords...);
+      auto expRank = coords2rank(coords...);
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
         auto locallen = __builtin_molly_locallength(this, d);
@@ -721,7 +723,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
-    	auto locallen = __builtin_molly_locallength(this, d);
+      auto locallen = __builtin_molly_locallength(this, d);
         MOLLY_DEBUG("__builtin_molly_locallength(this, "<<d<<")=" << locallen);
         localelts *= locallen;
       }
@@ -766,7 +768,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      operator[](int i) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
+      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -776,7 +778,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      operator[](int i) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
+      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
         assert(0 <= i);
         assert(i < _unqueue<L...>::value);
         return subty(this, i);
@@ -837,8 +839,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     private:
       int localoffset(int d) { return __builtin_molly_localoffset(this, d); }
       int locallength(int d) { return __builtin_molly_locallength(this, d); }
-  } /*MOLLYATTR(lengths(localdata, L))*/; // class array
-
+  } MOLLYATTR(lengths(L))/* NOTE: clang doesn't parse the whatever in [[molly::length(whatever)]] at all*/; // class array
 
   /// A multi-dimensional array, but its dimensions are not known ar compile-time
   /// T = underlaying type

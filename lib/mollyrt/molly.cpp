@@ -233,6 +233,7 @@ int molly::getClusterLength(int d) {
   return _cart_lengths[d];
 }
 
+ int dummyint;
 
 
 //static Communicator communicator;

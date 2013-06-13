@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "ScopFieldCodeGen.h"
 
 #include <polly/ScopPass.h>
@@ -7,6 +8,7 @@
 //#include <llvm/Analysis/ScalarEvolution.h>
 #include <polly/ScopInfo.h>
 #include "ScopUtils.h"
+#include <llvm/Support/Debug.h>
 
 using namespace molly;
 using namespace llvm;
@@ -53,12 +55,16 @@ namespace molly {
 
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;
-
       }
-
     }
 
     virtual bool runOnScop(Scop &S) {
+      auto &F = *S.getRegion().getEntry()->getParent();
+      DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << S.getNameStr() << " in func " << F.getName() << "\n");
+      if (F.getName() == "test") {
+        int a = 0;
+      }
+
       changed = false;
       Ctx = &getAnalysis<MollyContextPass>();
       Fields = &getAnalysis<FieldDetectionAnalysis>();
