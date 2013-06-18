@@ -19,7 +19,7 @@ using namespace std;
 
 
 Aff isl::div(Aff &&aff1, const Int &divisor) {
-  return div(move(aff1), aff1.getSpace().createConstantAff(divisor));
+  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(divisor));
 }
 
 
@@ -32,6 +32,9 @@ void Aff::give(isl_aff *aff) {
   if (this->aff)
     isl_aff_free(this->aff);
   this->aff = aff;
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
 
 
@@ -69,11 +72,14 @@ void Aff::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
-std::string Aff::toString() const{
+std::string Aff::toString() const {
   std::string buf;
-  llvm::raw_string_ostream out(buf);
-  print(out);
-  return out.str();
+  if (aff) {
+    llvm::raw_string_ostream out(buf);
+    print(out);
+    out.flush();
+  }
+  return buf;
 }
 void Aff::dump() const{
   print(llvm::errs());

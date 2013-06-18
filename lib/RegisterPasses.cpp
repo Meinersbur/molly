@@ -26,6 +26,7 @@
 #include "MollyContextPass.h"
 #include "FieldDetection.h"
 #include "llvm/Assembly/PrintModulePass.h"
+#include <polly/PollyContextPass.h>
 
 using namespace llvm;
 using namespace std;
@@ -275,6 +276,8 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //TODO: Adjust to OptLevel
   //auto gpm = createGlobalPassManager();
 
+  PM.add(createPollyContextPass(true));
+
   //gpm->addPass<molly::MollyContextPass>(); // ModulePass (should be preserved until the end of the Molly chains)
   auto mollyContextPass = createPass<molly::MollyContextPass>();
   PM.add(mollyContextPass);
@@ -352,6 +355,8 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // Replace all remaining field accesses by calls to runtime
   //gpm->addPassID(FieldCodeGenPassID); // FunctionPass
   PM.add(createPassFromId(FieldCodeGenPassID));
+
+  PM.add(createPollyContextRelease());
 
   //PM.unpreserve(mollyContextPass);
   //PM.unpreserve(fieldDetectionPass);

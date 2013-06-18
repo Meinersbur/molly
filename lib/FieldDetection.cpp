@@ -43,7 +43,7 @@ void FieldDetectionAnalysis::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
 
 bool FieldDetectionAnalysis::runOnModule(Module &M) {
   DEBUG(llvm::dbgs() << "run FieldDetectionAnalysis\n");
-  mollyContext = getAnalysis<MollyContextPass>().getMollyContext();
+  mollyContext = &getAnalysis<MollyContextPass>();
   assert(mollyContext);
 
   auto &glist = M.getGlobalList();
@@ -195,22 +195,24 @@ FieldVariable *FieldDetectionAnalysis::getFromAccess(Instruction *inst) {
 
 MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(const llvm::Instruction *instr) {
   auto result = MollyFieldAccess::fromAccessInstruction(const_cast<Instruction*>(instr));
-  if (result.isNull())
-    return MollyFieldAccess();
-  auto base = result.getBaseField();
-  result.fieldvar = getFieldVariable(dyn_cast<GlobalVariable>(base));
+  //if (result.isNull())
+  //  return MollyFieldAccess();
+  //auto base = result.getBaseField();
+  //result.fieldvar = getFieldVariable(dyn_cast<GlobalVariable>(base));
+  result.augmentFieldDetection(this);
   return result;
 }
 
 
 MollyFieldAccess FieldDetectionAnalysis::getFieldAccess(polly::MemoryAccess *memacc) {
   MollyFieldAccess result = MollyFieldAccess::fromMemoryAccess(memacc);
+  result.augmentFieldDetection(this);
   //result.augmentFieldVariable();
   return result;
 }
 
 
-const char &molly::FieldDetectionAnalysisPassID = FieldDetectionAnalysis::ID;
+char &molly::FieldDetectionAnalysisPassID = FieldDetectionAnalysis::ID;
 ModulePass *molly::createFieldDetectionAnalysisPass() {
   return new FieldDetectionAnalysis();
 }

@@ -7,9 +7,9 @@
 using namespace isl;
 
 
- Map Multi<PwAff>::toMap() const {
-   return Map::fromMultiPwAff(this->copy());
- }
+Map Multi<PwAff>::toMap() const {
+  return Map::fromMultiPwAff(this->copy());
+}
 
 
 void Multi<PwAff>::print(llvm::raw_ostream &out) const{
@@ -17,7 +17,9 @@ void Multi<PwAff>::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
-std::string Multi<PwAff>::toString() const{
+std::string Multi<PwAff>::toString() const {
+  if (!keep())
+    return std::string();
   std::string buf;
   llvm::raw_string_ostream out(buf);
   print(out);

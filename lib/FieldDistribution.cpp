@@ -21,7 +21,7 @@ namespace molly {
 
 namespace {
 
-  class FieldDistribution : public ModulePass {
+  class FieldDistribution LLVM_FINAL : public ModulePass {
   private:
     FieldDetectionAnalysis *fa;
 
@@ -36,9 +36,7 @@ namespace {
     FieldDistribution() : ModulePass(ID) {
     }
 
-    virtual const char *getPassName() const {
-      return ModulePass::getPassName();
-    }
+    const char *getPassName() const LLVM_OVERRIDE { return "FieldDistribution"; }
 
     virtual bool doInitialization(Module &M)  { 
       return ModulePass::doInitialization(M);

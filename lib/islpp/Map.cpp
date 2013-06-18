@@ -20,9 +20,12 @@ isl_map *Map::takeCopy() const {
 
 
 void Map::give(isl_map *map) {
-  if (this->map)
+  if (this->map && this->map != map)
     isl_map_free(this->map);
   this->map = map;
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
 
 
@@ -63,10 +66,12 @@ void Map::print(llvm::raw_ostream &out) const {
   printer.print(out);
 }
 std::string Map::toString() const {
+  if (!keep())
+    return string();
   std::string buf;
   llvm::raw_string_ostream stream(buf);
   print(stream);
-  return buf;
+  return stream.str();
 }
 void Map::dump() const {
   print(llvm::errs());

@@ -23,7 +23,12 @@ struct isl_multi_pw_aff;
 
 namespace isl {
   template<>
-  class Multi<PwAff> final : public Spacelike {
+  class Multi<PwAff> LLVM_FINAL : public Spacelike {
+#ifndef NDEBUG
+  private:
+    std::string _printed;
+#endif
+
   public:
     typedef isl_multi_pw_aff IslType;
     typedef PwAff EltType;
@@ -38,17 +43,21 @@ namespace isl {
     IslType *takeCopy() const { assert(multi); return isl_multi_pw_aff_copy(multi); }
     IslType *keep() const { assert(multi); return multi; }
   protected:
-    void give(IslType *multi) { assert(multi); if (this->multi) isl_multi_pw_aff_free(this->multi); this->multi = multi; }
+    void give(IslType *multi) { assert(multi); if (this->multi) isl_multi_pw_aff_free(this->multi); this->multi = multi;
+#ifndef NDEBUG
+    this->_printed = toString();
+#endif
+    }
 
-    explicit Multi(IslType *multi) : multi(multi) { }
+    //explicit Multi(IslType *multi) : multi(multi) { }
   public:
-    static MultiType wrap(IslType *multi) { return MultiType(multi); }
+    static MultiType wrap(IslType *multi) { MultiType result; result.give(multi); return result; }
 #pragma endregion
 
   public:
     Multi() : multi(nullptr) {}
-    Multi(const MultiType &that) : multi(that.takeCopy()) {}
-    Multi(MultiType &&that) : multi(that.take()) {}
+    Multi(const MultiType &that) : multi(nullptr) {give(that.takeCopy());}
+    Multi(MultiType &&that) : multi(nullptr) { give(that.take()); }
     ~Multi() {
       if (this->multi)
         isl_multi_pw_aff_free(this->multi); 
@@ -72,6 +81,7 @@ namespace isl {
 
 #pragma region Creational
     //static MultiType fromAff(Aff &&aff) { return wrap(isl_multi_pw_aff_from_aff(aff.take())); }
+    //static MultiType create(Space &&space) { return wrap(isl_multi_pw_aff_alloc(space.take()) ); }
     static MultiType createZero(Space &&space) { return wrap(isl_multi_pw_aff_zero(space.take())); }
     static MultiType createIdentity(Space &&space) { return wrap(isl_multi_pw_aff_identity(space.take())); }
 
@@ -123,6 +133,9 @@ namespace isl {
 
 #pragma region Multi
     EltType getPwAff(int pos) const { return EltType::wrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
+    MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::wrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos,  el.take())); }
+    void setPwAff_inplace(int pos, PwAff &&el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos,  el.take())); }
+
     void push_back(PwAff &&);
 #pragma endregion
 

@@ -40,7 +40,12 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet final : public Spacelike2<BasicSet> {
+  class BasicSet LLVM_FINAL : public Spacelike2<BasicSet> {
+#ifndef NDEBUG
+  private:
+    std::string _printed;
+#endif
+
 #pragma region Low-level
   private:
     isl_basic_set *set;
@@ -59,10 +64,10 @@ namespace isl {
 
 
   public:
-    BasicSet(void) : set(nullptr) { }
-    BasicSet(const BasicSet &that) : set(that.takeCopy()) {}
-    BasicSet(BasicSet &&that) : set(that.take()) { }
-    ~BasicSet(void);
+    BasicSet() : set(nullptr) { }
+    BasicSet(const BasicSet &that) : set(nullptr) { give(that.takeCopy()); }
+    BasicSet(BasicSet &&that) : set(nullptr) { give(that.take()); }
+    ~BasicSet();
 
     const BasicSet &operator=(const BasicSet &that) { give(that.takeCopy()); return *this; }
     const BasicSet &operator=(BasicSet &&that) { give(that.take()); return *this; }

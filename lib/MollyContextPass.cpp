@@ -3,31 +3,29 @@
 #include "MollyContext.h"
 #include "islpp/Space.h"
 #include "islpp/MultiAff.h"
+#include "ClusterConfig.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
+#include <polly/PollyContextPass.h>
 
 using namespace llvm;
 using namespace molly;
 using namespace std;
+using namespace polly;
 
 
 static cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
 
 
 
-
-char MollyContextPass::ID;
-
-
-MollyContextPass::MollyContextPass() : ModulePass(ID) {
-  DEBUG(llvm::dbgs() << "Creating a MollyContextPass\n");
-  context = MollyContext::create(NULL); //TODO: Who owns it?
-
+void MollyContextPass::initClusterConf() {
   string shape = MollyShape;
   SmallVector<StringRef, 4> shapeLengths;
+  SmallVector<unsigned, 4> clusterLengths;
   StringRef(shape).split(shapeLengths, "x");
+
 
   for (auto it = shapeLengths.begin(), end = shapeLengths.end(); it != end; ++it) {
     auto slen = *it;
@@ -36,61 +34,78 @@ MollyContextPass::MollyContextPass() : ModulePass(ID) {
     assert(retval==false);
     clusterLengths.push_back(len);
   }
-  clusterShape = getIslContext()->createRectangularSet(clusterLengths);
+
+  clusterConf.reset(new ClusterConfig(getIslContext()));
+  clusterConf->setClusterLengths(clusterLengths);
+}
+
+
+MollyContextPass::MollyContextPass() : ModulePass(ID) {
+  DEBUG(llvm::dbgs() << "Creating a MollyContextPass\n");
+  islctx = nullptr;
+  llvmContext = nullptr;
+  fieldDetection = nullptr;
+  //context = MollyContext::create(NULL); 
 }
 
 
 MollyContextPass::~MollyContextPass() {
   //DEBUG(llvm::dbgs() << "Destroying a MollyContextPass\n");
+  releaseMemory();
 }
+
+
+    void MollyContextPass::getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+      AU.addRequired<PollyContextPass>();
+      AU.setPreservesAll();
+    }
 
 
 void MollyContextPass::releaseMemory() {
   //DEBUG(llvm::dbgs() << "Releasing a MollyContextPass\n");
+  clusterConf.reset();
 }
 
 
 bool MollyContextPass::runOnModule(Module &M) {
-  auto &llvmCtx = M.getContext();
-  context->setLLVMContext(&llvmCtx);
+  llvmContext = &M.getContext();
+  auto pollyCtx = &getAnalysis<PollyContextPass>();
+  islctx = isl::Ctx::wrap(pollyCtx->getIslCtx());
+  //context->setLLVMContext(&llvmCtx);
+  initClusterConf();
 
   return false;
 }
 
 
 isl::Space MollyContextPass::getClusterSpace() {
-  auto result = getIslContext()->createSetSpace(0, clusterLengths.size());
-  return result;
+  return clusterConf->getClusterSpace();
+}
+
+isl::BasicSet MollyContextPass::getClusterShape() { 
+  return clusterConf->getClusterShape(); 
 }
 
 
-isl::Ctx *MollyContextPass::getIslContext() {
-  return context->getIslContext();
+llvm::ArrayRef<unsigned> MollyContextPass::getClusterLengths() { 
+  return clusterConf->getClusterLengths(); 
 }
 
 
 int MollyContextPass::getClusterDims() const {
-	return clusterLengths.size();
+  return clusterConf->getClusterDims();
 }
 
 
 int MollyContextPass::getClusterSize() const {
-	int result = 1;
-	for (auto it = clusterLengths.begin(), end = clusterLengths.end(); it != end; ++it) {
-		auto len = *it;
-		result *= len;
-	}
-	assert(result >= 1);
-	return result;
+  return clusterConf->getClusterSize();
 }
 
+
 int MollyContextPass::getClusterLength(int d) const {
-	assert(d >= 0);
-	if (d < clusterLengths.size()) {
-		return clusterLengths[d];
-	}
-	return 1;
+  return clusterConf->getClusterLength(d);
 }
+
 
 isl::MultiAff MollyContextPass:: getMasterRank() {
   auto islctx = getIslContext();
@@ -100,5 +115,6 @@ isl::MultiAff MollyContextPass:: getMasterRank() {
 }
 
 
-const char &molly::MollyContextPassID = MollyContextPass::ID;
-static RegisterPass<MollyContextPass> FieldAnalysisRegistration("molly-context", "Molly - Context", false, true);
+char molly::MollyContextPass::ID;
+char &molly::MollyContextPassID = MollyContextPass::ID;
+static RegisterPass<MollyContextPass> MollyContextPassRegistration("molly-context", "Molly - Context");

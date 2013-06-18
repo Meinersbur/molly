@@ -14,10 +14,13 @@ isl_multi_aff *Multi<Aff>::takeCopy() const {
 }
 
 
-void Multi<Aff>::give(isl_multi_aff *aff) {
+void Multi<Aff>::give(isl_multi_aff *maff) {
   if (this->maff)
     isl_multi_aff_free(this->maff);
   this->maff = maff;
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
 
 
@@ -41,15 +44,23 @@ void Multi<Aff>::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
-std::string Multi<Aff>::toString() const{
+
+
+std::string Multi<Aff>::toString() const {
+  if (!maff)
+    return std::string();
   std::string buf;
   llvm::raw_string_ostream out(buf);
   print(out);
   return out.str();
 }
+
+
 void Multi<Aff>::dump() const { 
   isl_multi_aff_dump(keep()); 
 }
+
+
 void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);

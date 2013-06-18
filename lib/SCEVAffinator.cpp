@@ -15,13 +15,23 @@
 using namespace llvm;
 using namespace polly;
 
+struct isl_pw_aff;
+
 
 /// Translate a SCEVExpression into an isl_pw_aff object.
-struct SCEVAffinator : public SCEVVisitor<SCEVAffinator, isl_pw_aff *> {
+struct Affinator : public SCEVVisitor<Affinator, isl_pw_aff *> {
 private:
   isl_ctx *Ctx;
   int NbLoopSpaces;
   const Scop *S;
+  isl_space *space;
+
+  isl_space *getInSpace() {
+    return isl_space_copy(space);
+    //auto result = inStmt->getDomainSpace();
+    //assert(isl_space_dim(result, isl_dim_out) == 0);
+    //return result;
+  }
 
 public:
   isl_pw_aff *visit(const SCEV *Scev) {
@@ -30,7 +40,8 @@ public:
     // to treat subexpressions that we cannot translate into an piecewise affine
     // expression, as constant parameters of the piecewise affine expression.
     if (isl_id *Id = S->getIdForParam(Scev)) {
-      isl_space *Space = isl_space_set_alloc(Ctx, 1, NbLoopSpaces);
+      isl_space *Space = getInSpace();// isl_space_set_alloc(Ctx, 1, NbLoopSpaces);
+      Space = isl_space_insert_dims(Space, isl_dim_param, 0, 1);
       Space = isl_space_set_dim_id(Space, isl_dim_param, 0, Id);
 
       isl_set *Domain = isl_set_universe(isl_space_copy(Space));
@@ -41,12 +52,22 @@ public:
       return isl_pw_aff_alloc(Domain, Affine);
     }
 
-    return SCEVVisitor<SCEVAffinator, isl_pw_aff *>::visit(Scev);
+    return SCEVVisitor<Affinator, isl_pw_aff *>::visit(Scev);
   }
 
-  SCEVAffinator(const ScopStmt *Stmt)
+  Affinator(const ScopStmt *Stmt, isl_space *space)
     : Ctx(Stmt->getIslCtx()), NbLoopSpaces(Stmt->getNumIterators()),
-    S(Stmt->getParent()) {}
+    S(Stmt->getParent()) {
+      if (space)
+        this->space = isl_space_copy(space);
+      else
+        this->space = isl_space_set_alloc(Ctx, 0, NbLoopSpaces);
+  }
+
+  ~Affinator() {
+    isl_space_free(space);
+    space = nullptr;
+  }
 
   __isl_give isl_pw_aff *visitConstant(const SCEVConstant *Constant) {
     ConstantInt *Value = Constant->getValue();
@@ -65,7 +86,7 @@ public:
     //    this constant correctly.
     MPZ_from_APInt(v, Value->getValue(), /* isSigned */ true);
 
-    isl_space *Space = isl_space_set_alloc(Ctx, 0, NbLoopSpaces);
+    isl_space *Space = getInSpace();//isl_space_set_alloc(Ctx, 0, NbLoopSpaces);
     isl_local_space *ls = isl_local_space_from_space(isl_space_copy(Space));
     isl_aff *Affine = isl_aff_zero_on_domain(ls);
     isl_set *Domain = isl_set_universe(Space);
@@ -140,7 +161,7 @@ public:
 
     isl_pw_aff *Start = visit(Expr->getStart());
     isl_pw_aff *Step = visit(Expr->getOperand(1));
-    isl_space *Space = isl_space_set_alloc(Ctx, 0, NbLoopSpaces);
+    isl_space *Space =  getInSpace(); //isl_space_set_alloc(Ctx, 0, NbLoopSpaces);
     isl_local_space *LocalSpace = isl_local_space_from_space(Space);
 
     int loopDimension = getLoopDepth(Expr->getLoop());
@@ -171,16 +192,18 @@ public:
   __isl_give isl_pw_aff *visitUnknown(const SCEVUnknown *Expr) {
     llvm_unreachable("Unknowns are always parameters");
   }
-}; // class SCEVAffinator
+}; // class Affinator
 
 
 isl::PwAff molly::convertScEvToAffine(ScopStmt *Stmt, const SCEV *se) {
+  //auto dom = Stmt->getDomain();
+  //auto iterDomain = getIterationDomain(Stmt);
   Scop *S = Stmt->getParent();
   const Region *Reg = &S->getRegion();
 
   S->addParams(getParamsInAffineExpr(Reg, se, *S->getSE()));
 
-  SCEVAffinator Affinator(Stmt);
+  Affinator Affinator(Stmt, Stmt->getDomainSpace());
   auto pwaff = Affinator.visit(se);
   return isl::PwAff::wrap(pwaff);
 }

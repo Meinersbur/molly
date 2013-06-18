@@ -22,6 +22,7 @@ namespace molly {
   class FieldVariable;
   class FieldType;
   class MollyContext;
+  class MollyContextPass;
   class MollyFieldAccess;
 } // namespace molly
 
@@ -30,12 +31,12 @@ namespace molly {
 namespace molly {
   class MollyContextPass;
 
-  class FieldDetectionAnalysis : public llvm::ModulePass {
+  class FieldDetectionAnalysis LLVM_FINAL : public llvm::ModulePass {
   private:
     llvm::DenseMap<llvm::GlobalVariable*, FieldVariable*> fieldVars; // obsolete; currently we do not collect instances of fields
     llvm::DenseMap<llvm::StructType*, FieldType*> fieldTypes;
 
-    MollyContext *mollyContext;
+    MollyContextPass *mollyContext;
     llvm::Module *module;
 
   public:
@@ -43,10 +44,7 @@ namespace molly {
     FieldDetectionAnalysis() : ModulePass(ID) {
     }
 
-    virtual const char *getPassName() const {
-      return ModulePass::getPassName();
-    }
-
+    const char *getPassName() const LLVM_OVERRIDE { return "FieldDetectionAnalysis"; }
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     virtual bool runOnModule(llvm::Module &M);
@@ -73,7 +71,7 @@ namespace molly {
     MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc);
   }; // class FieldDetectionAnalysis
 
-  extern const char &FieldDetectionAnalysisPassID;
+  extern char &FieldDetectionAnalysisPassID;
 } // namespace molly
 
 

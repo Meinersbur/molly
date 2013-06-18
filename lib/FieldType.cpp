@@ -2,6 +2,7 @@
 #include "FieldType.h"
 
 #include "MollyContext.h"
+#include "MollyContextPass.h"
 #include "islpp/Ctx.h"
 #include "islpp/Set.h"
 #include "islpp/Space.h"
@@ -58,7 +59,7 @@ isl::BasicSet FieldType::getLogicalIndexset() {
   auto ctx = getIslContext();
 
   auto dims = getNumDimensions();
-  auto space = ctx->createSetSpace(0, dims);
+  auto space = ctx->createSetSpace(0, dims); //TODO: Assign an id to the tuple
   auto set = isl::BasicSet::create(space.copy());
 
   for (auto d = dims-dims; d < dims; d+=1) {
@@ -199,18 +200,21 @@ isl::Map FieldType::getLocalIndexset(const isl::BasicSet &clusterSet) {
 /// { globalcoord -> nodecoord } where the value is stored between distributed SCoPs
 isl::PwMultiAff FieldType::getHomeAff() {
   assert(isDistributed());
-  isl::MultiAff maff;
-  auto gcoordSpace = getLogicalIndexsetSpace();
+  auto coordSpace = getLogicalIndexsetSpace();
+   //auto gcoordSpace = getLogicalIndexsetSpace();
 
   auto nDims = getNumDimensions();
+ auto maff = getIslContext()->createMapSpace(coordSpace, nDims).createZeroMultiAff();
+  auto i = 0;
   for (auto d = nDims-nDims; d<nDims; d+=1) {
     auto globalLen = getGlobalLength(d);
     auto localLen = getLocalLength(d);
     auto clusterLen = (globalLen + localLen - 1) / localLen;
 
     // [globalcoordinate/len]
-    auto aff = gcoordSpace.createVarAff(isl_dim_in, d).divBy(localLen);
-    maff.push_back(aff);
+    auto aff = floor(div(coordSpace.createVarAff(isl_dim_set, d), localLen));
+    maff.setAff_inline(i, aff.move());
+   i += 1;
   }
 
   return maff.restrictDomain(getLogicalIndexset());

@@ -34,6 +34,7 @@ namespace isl {
   class Id;
   class Val;
   class Vec;
+  class Space;
 
   template<typename T>
   class List;
@@ -92,9 +93,10 @@ namespace isl {
     static Printer createToFile(Ctx *ctx, FILE *file);
     static Printer createToStr(Ctx *ctx);
     //TODO: This would be better if we had a Printer that prints to an llvm::raw_ostream or std::ostream
-    // But we'd to modify ISL such that it calls some callback if new chars arrive 
+    // But we'd need to modify ISL such that it calls some callback if new chars arrive 
 #pragma endregion
 
+    //FIXME: Overloaded print with different meaning
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
@@ -132,6 +134,7 @@ namespace isl {
     void print(const Id &id);
     void print(const Val &v);
     void print(const Vec &v);
+    void print(const Space &space);
 
     void flush();
   }; // class Printer

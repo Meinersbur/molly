@@ -44,10 +44,14 @@ void Set::give(isl_set *set) {
   if (this->set)
     isl_set_free(this->set);
   this->set = set; 
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
 
 
-Set::Set(BasicSet &&that) : set(isl_set_from_basic_set(that.take())) {
+Set::Set(BasicSet &&that) : set(nullptr) {
+  give(isl_set_from_basic_set(that.take()));
 }
 
 
@@ -57,7 +61,8 @@ const Set &Set::operator=(BasicSet &&that) {
 }
 
 
-Set::Set(const BasicSet &that) : set(isl_set_from_basic_set(that.takeCopy())) {
+Set::Set(const BasicSet &that) : set(nullptr) {
+  give(isl_set_from_basic_set(that.takeCopy()));
 }
 
 
@@ -72,9 +77,9 @@ Set Set::createFromParams(Set &&set) {
 }
 
 
-    Set Set::createFromPwMultiAff(PwMultiAff &&aff) { 
-      return wrap(isl_set_from_pw_multi_aff(aff.take()));
-    }
+Set Set::createFromPwMultiAff(PwMultiAff &&aff) { 
+  return wrap(isl_set_from_pw_multi_aff(aff.take()));
+}
 
 
 Set Set::createFromPoint(Point &&point) {
@@ -334,9 +339,12 @@ void Set::printPovray(llvm::raw_ostream &out) const {
 }
 
 
-std::string Set::toString() const { 
+std::string Set::toString() const {
+  if (!keep())
+    return string();  
   std::string buf;
   llvm::raw_string_ostream stream(buf);
+  print(stream);
   return stream.str();
 }
 

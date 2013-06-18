@@ -1,6 +1,7 @@
 #ifndef ISLPP_ISLPP_COMMON_H
 #define ISLPP_ISLPP_COMMON_H
 
+#include <llvm/Support/Compiler.h> // LLVM_FINAL, LLVM_OVERRIDE
 #include <type_traits> // std::remove_reference
 //#include <llvm/Support/CommandLine.h>
 

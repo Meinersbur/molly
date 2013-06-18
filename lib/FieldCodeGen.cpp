@@ -19,16 +19,15 @@
 #include <llvm/IR/Intrinsics.h>
 //#include <llvm/Transforms/Utils/ModuleUtils.h> // appendToGlobalCtors
 #include <llvm/Support/Debug.h>
+#include <polly/PollyContextPass.h>
 
 using namespace llvm;
 using namespace molly;
-
-using polly::ScopPass;
-using polly::Scop;
+using namespace polly;
 
 
 namespace molly {
-  class ModuleFieldGen : public ModulePass {
+  class ModuleFieldGen LLVM_FINAL : public ModulePass {
   private:
     bool changed;
   public:
@@ -36,11 +35,12 @@ namespace molly {
     ModuleFieldGen() : ModulePass(ID) {
     }
 
-
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+    const char *getPassName() const LLVM_OVERRIDE { return "ModuleFieldGen"; }
+    void getAnalysisUsage(AnalysisUsage &AU) const LLVM_OVERRIDE {
       AU.addRequired<MollyContextPass>();
       AU.addRequired<FieldDetectionAnalysis>();
 
+      AU.addPreserved<PollyContextPass>();
       AU.addPreserved<MollyContextPass>();
       AU.addPreserved<FieldDetectionAnalysis>();
       //AU.addPreserved<Fie
@@ -239,7 +239,7 @@ namespace molly {
 
 
   namespace molly {
-  class FieldCodeGen : public FunctionPass {
+  class FieldCodeGen LLVM_FINAL : public FunctionPass {
   private:
     bool changed;
 
@@ -296,7 +296,7 @@ namespace molly {
     FieldCodeGen() : FunctionPass(ID) {
     }
 
-    virtual const char *getPassName() const {
+    const char *getPassName() const LLVM_OVERRIDE {
       return "FieldCodeGen";
     }
 
@@ -305,6 +305,7 @@ namespace molly {
       //AU.addRequiredID(FieldDistributionPassID); 
       AU.addRequired<FieldDetectionAnalysis>();
 
+      AU.addPreserved<PollyContextPass>();
       AU.addPreserved<MollyContextPass>();
       AU.addPreserved<FieldDetectionAnalysis>();
     }
@@ -501,8 +502,6 @@ bool FieldCodeGen::emitFieldFunctions() {
 char FieldCodeGen::ID = 0;
 const char &molly::FieldCodeGenPassID = FieldCodeGen::ID;
 static RegisterPass<FieldCodeGen> FieldCodeGenRegistration("molly-fieldcodegen", "Molly - Code generation", false, false);
-
-
 FunctionPass *molly::createFieldCodeGenPass() {
   return new FieldCodeGen();
 }

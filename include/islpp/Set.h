@@ -41,7 +41,12 @@ namespace isl {
   typedef int (*BasicSetCallback)(isl_basic_set *bset, void *user);
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
-  class Set final {
+  class Set LLVM_FINAL {
+#ifndef NDEBUG
+  private:
+    std::string _printed;
+#endif
+
 #pragma region Low-level functions
   private:
     isl_set *set;
@@ -59,9 +64,9 @@ namespace isl {
 #pragma endregion
 
   public:
-    Set() : set(nullptr) {}
-    Set(const Set &that) : set(that.takeCopy()) {}
-    Set(Set &&that) : set(that.take()) { }
+    Set() : set(nullptr) { }
+    Set(const Set &that) : set(nullptr) { give(that.takeCopy()); }
+    Set(Set &&that) : set(nullptr) { give(that.take()); }
     ~Set() { give(nullptr); }
 
     const Set &operator=(const Set &that) { give(that.takeCopy()); return *this; }

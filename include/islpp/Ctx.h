@@ -43,7 +43,7 @@ namespace isl {
   class Owning;
 
   /// All manipulations of integer sets and relations occur within the context of an isl_ctx. A given isl_ctx can only be used within a single thread. All arguments of a function are required to have been allocated within the same context. There are currently no functions available for moving an object from one isl_ctx to another isl_ctx. This means that there is currently no way of safely moving an object from one thread to another, unless the whole isl_ctx is moved.
-  class Ctx final {
+  class Ctx LLVM_FINAL {
   private:
     Ctx() LLVM_DELETED_FUNCTION;
     Ctx(const Ctx &) LLVM_DELETED_FUNCTION;
@@ -78,6 +78,10 @@ namespace isl {
 #pragma region Create spaces
      Space createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
      Space createMapSpace(Space &&domain, Space &&range);
+     Space createMapSpace(Space &&domain, unsigned n_out);
+     Space createMapSpace(const Space &domain, unsigned n_out);
+     Space createMapSpace(unsigned n_in, Space &&range);
+     Space createMapSpace(unsigned n_in, const Space &range);
 
      Space createParamsSpace(unsigned nparam);
      Space createSetSpace(unsigned nparam, unsigned dim);

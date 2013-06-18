@@ -8,6 +8,10 @@ namespace isl {
   class Map;
 } // namespace isl
 
+namespace molly {
+  class FieldDetectionAnalysis;
+} // namespace molly
+
 
 namespace molly {
   class MollyFieldAccess : public polly::FieldAccess {
@@ -23,6 +27,7 @@ namespace molly {
       this->scopAccess = nullptr; 
     }
 
+   
   public:
     MollyFieldAccess() {
       this->fieldvar = nullptr;
@@ -32,8 +37,9 @@ namespace molly {
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
     static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc);
 
-    void augmentMemoryAccess(polly::MemoryAccess *acc);
-    void augmentFieldVariable(FieldVariable *fieldvar);
+     void augmentFieldDetection(FieldDetectionAnalysis *fields);
+    //void augmentMemoryAccess(polly::MemoryAccess *acc);
+    //void augmentFieldVariable(FieldVariable *fieldvar);
     //void augmentScEv(llvm::ScalarEvolution *se) {}
 
     FieldVariable *getFieldVariable() { return fieldvar; }

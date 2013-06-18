@@ -37,6 +37,10 @@ namespace isl {
 
   template<>
   class Multi<Aff> final : public Spacelike {
+#ifndef NDEBUG
+    std::string _printed;
+#endif 
+
   public:
     typedef isl_multi_pw_aff IslType;
     typedef PwAff EltType;
@@ -47,7 +51,7 @@ namespace isl {
     isl_multi_aff *maff;
 
   public: // Public because otherwise we had to add a lot of friends
-    isl_multi_aff *take() { assert(maff); isl_multi_aff *result = maff; maff = nullptr; return result; }
+    isl_multi_aff *take() { assert(this->maff); isl_multi_aff *result = this->maff; this->maff = nullptr; return result; }
     isl_multi_aff *takeCopy() const;
     isl_multi_aff *keep() const { return maff; }
   protected:
@@ -55,13 +59,13 @@ namespace isl {
 
     explicit Multi(isl_multi_aff *maff) : maff(maff) { }
   public:
-    static Multi<Aff> wrap(isl_multi_aff *maff) { return Multi<Aff>(maff); }
+    static Multi<Aff> wrap(isl_multi_aff *maff) { Multi<Aff> result; result.give(maff); return result; }
 #pragma endregion
 
   public:
     Multi() : maff(nullptr) {}
-    Multi(const Multi<Aff> &that) : maff(that.takeCopy()) {}
-    Multi(Multi<Aff> &&that) : maff(that.take()) {}
+    Multi(const Multi<Aff> &that) : maff(nullptr) { give(that.takeCopy()); }
+    Multi(Multi<Aff> &&that) : maff(nullptr) { give(that.take()); }
     ~Multi();
 
     const Multi<Aff> &operator=(const Multi<Aff> &that) { give(that.takeCopy()); return *this; }
@@ -133,6 +137,8 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::wrap(isl_multi_aff_get_aff(keep(), pos)); }
+    void setAff_inline(int pos, Aff &&el) { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
+    MultiAff setAff(int pos, Aff &&el) { return MultiAff::wrap(isl_multi_aff_set_aff(take(), pos, el.take())); }
     void push_back(Aff &&aff);
     void push_back(const Aff &aff) { return push_back(aff.copy()); }
 #pragma endregion

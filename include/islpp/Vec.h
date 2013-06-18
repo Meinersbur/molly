@@ -14,7 +14,7 @@ namespace llvm {
 
 
 namespace isl {
-  class Vec final : public Obj2<isl_vec> {
+  class Vec LLVM_FINAL : public Obj2<isl_vec> {
 #pragma region Low-level
     typedef isl_vec StructTy;
     typedef Obj2<isl_vec> ObjTy;
@@ -24,7 +24,7 @@ namespace isl {
     void release() { isl_vec_free(take()); }
 
   public:
-    StructTy *takeCopy() const { return isl_vec_copy(keep()); }
+    StructTy *takeCopyOrNull() const LLVM_OVERRIDE { return isl_vec_copy(keep()); }
 
   public:
     ~Vec() { release(); }

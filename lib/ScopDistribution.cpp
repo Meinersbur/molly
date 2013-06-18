@@ -15,6 +15,7 @@
 #include <polly/Dependences.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/Support/Debug.h>
+#include <polly/PollyContextPass.h>
 
 using namespace molly;
 using namespace polly;
@@ -39,22 +40,26 @@ namespace molly {
     void modifiedIR() {
       changed = true;
     }
-   void modifiedScop() {
-     scop->setCodegenPending(true);
+    void modifiedScop() {
+      scop->setCodegenPending(true);
     }
 
   public:
     static char ID;
-        ScopDistribution() : ScopPass(ID) {
+    ScopDistribution() : ScopPass(ID) {
     }
 
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
       ScopPass::getAnalysisUsage(AU); // Calls AU.setPreservesAll();
+      AU.addRequired<MollyContextPass>();
       AU.addRequired<molly::FieldDetectionAnalysis>();
       //AU.addRequired<ScopDetection>();
-      AU.addRequired<polly::Dependences>();
-      AU.addRequired<ScalarEvolution>();
+
+      AU.addPreserved<polly::Dependences>();
+      AU.addPreserved<ScalarEvolution>();
+      AU.addPreserved<polly::ScopInfo>();
+      AU.addPreserved<polly::PollyContextPass>();
     }
 
 #if 0
@@ -71,7 +76,7 @@ namespace molly {
         assert(result.isNull() && "Just one FieldAccess allowed per ScopStmt");
         result = acc;
 #ifdef NDEBUG
-       break;
+        break;
 #endif
       }
       return result;
@@ -90,8 +95,8 @@ namespace molly {
 
       // Use the following rules to determine where to execute it
 
-       for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
-           auto memacc = *itAcc;
+      for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
+        auto memacc = *itAcc;
         MollyFieldAccess acc = MollyFieldAccess::fromMemoryAccess(memacc);
         if (!acc.isValid())
           continue;
@@ -110,31 +115,31 @@ namespace molly {
           auto fieldcoord2nodecoord = nodecoord2fieldcoordset.reverse(); // { fieldcoord -> nodecoord where it is local }
           auto itercoord2nodecoord = rel.applyRange(fieldcoord2nodecoord);
         }
-       }
-    
+      }
 
-       return result;
+
+      return result;
     }
 #endif
 
 
     void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
-        auto fieldVar = acc.getFieldVariable();
-        auto fieldTy = acc.getFieldType();
-        auto stmt = acc.getPollyScopStmt();
-        auto scop = stmt->getParent();
+      auto fieldVar = acc.getFieldVariable();
+      auto fieldTy = acc.getFieldType();
+      auto stmt = acc.getPollyScopStmt();
+      auto scop = stmt->getParent();
 
-        auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
-        auto home = fieldTy->getHomeAff(); /* field coord -> cluster coord */
-        auto it2rank = rel.toMap().applyRange(home.toMap());
+      auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
+      auto home = fieldTy->getHomeAff(); /* field coord -> cluster coord */
+      auto it2rank = rel.toMap().applyRange(home.toMap());
 
-        if (acc.isRead()) {
-           executeWhereRead = union_(executeWhereRead.substractDomain(it2rank.getDomain()), it2rank);
-        }
+      if (acc.isRead()) {
+        executeWhereRead = union_(executeWhereRead.substractDomain(it2rank.getDomain()), it2rank);
+      }
 
-        if (acc.isWrite()) {
-          executeWhereWrite = union_(executeWhereWrite.substractDomain(it2rank.getDomain()), it2rank);
-        }
+      if (acc.isWrite()) {
+        executeWhereWrite = union_(executeWhereWrite.substractDomain(it2rank.getDomain()), it2rank);
+      }
     }
 
 
@@ -147,20 +152,21 @@ namespace molly {
       auto executeEverywhere = islctx->createAlltoallMap(itDomain, Ctx->getClusterShape());
       auto executeMaster = islctx->createAlltoallMap(itDomain, Ctx->getMasterRank().toMap().getRange());
 
-        for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
-           auto memacc = *itAcc;
-        MollyFieldAccess acc = MollyFieldAccess::fromMemoryAccess(memacc);
+      for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
+        auto memacc = *itAcc;
+        auto acc = Fields->getFieldAccess(memacc);
         if (!acc.isValid())
           continue;
 
         processFieldAccess(acc, executeWhereWrite, executeWhereRead);
-        }
+      }
 
-        auto result = executeEverywhere;
-        result = union_(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
-        result = union_(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
-        stmt->setWhereMap(result.take());
-        modifiedScop();
+      auto result = executeEverywhere;
+      result = union_(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
+      result = union_(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
+      stmt->setWhereMap(result.take());
+
+      modifiedScop();
     }
 
 
@@ -185,7 +191,7 @@ namespace molly {
 
       processScop(&S);
 
-       this->scop = nullptr;
+      this->scop = nullptr;
       return changed;
     }
 
@@ -198,6 +204,6 @@ char &molly::ScopDistributionPassID = ScopDistribution::ID;
 static RegisterPass<ScopDistribution> ScopDistributionRegistration("molly-scopdistr", "Molly - Modify SCoP according value distribution");
 
 
- ScopPass *molly::createScopDistributionPass() {
-   return new ScopDistribution();
- }
+ScopPass *molly::createScopDistributionPass() {
+  return new ScopDistribution();
+}

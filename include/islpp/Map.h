@@ -59,12 +59,25 @@ namespace isl {
 
   //TODO: Investigate how useful LLVM_HAS_RVALUE_REFERENCE_THIS could be
   class Map final : public Spacelike /* TODO: What are the costs of making this virtual? */ {
+#ifndef NDEBUG
+    std::string _printed;
+#endif
+
 #pragma region Low-level
   private:
     isl_map *map;
 
   public: // Public because otherwise we had to add a lot of friends
-    isl_map *take() { assert(map); isl_map *result = map; map = nullptr; return result; }
+    isl_map *take() { 
+      assert(map); 
+      isl_map *result = map; 
+      map = nullptr; 
+#ifndef NDEBUG
+      _printed.clear();
+#endif
+      return result; 
+    }
+
     isl_map *takeCopy() const;
     isl_map *keep() const { return map; }
   protected:
@@ -76,8 +89,8 @@ namespace isl {
 
   public:
     Map() : map(nullptr) {}
-    Map(const Map &that) : map(that.takeCopy()) { }
-    Map(Map &&that) : map(that.take()) { }
+    Map(const Map &that) : map(nullptr) { give(that.takeCopy()); }
+    Map(Map &&that) : map(nullptr) { give(that.take()); }
     virtual ~Map() { give(nullptr); }
 
     const Map &operator=(const Map &that) { give(that.takeCopy()); return *this; }

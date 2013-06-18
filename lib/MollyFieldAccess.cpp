@@ -9,12 +9,28 @@
 #include "islpp/Space.h"
 #include "islpp/Map.h"
 #include "SCEVAffinator.h"
+#include "ScopUtils.h"
+#include "FieldType.h"
 
 #include <llvm/Analysis/ScalarEvolution.h>
+#include "FieldDetection.h"
 
 using std::move;
 using namespace llvm;
 using namespace molly;
+
+
+void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
+  assert(fields);
+  if (isNull())
+    return;
+
+  auto base = getBaseField();
+  auto globalbase = dyn_cast<GlobalVariable>(base);
+  assert(globalbase && "Currently only global fields supported");
+  auto gvar = fields->getFieldVariable(globalbase);
+  this->fieldvar = gvar;
+}
 
 
 MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *instr) {
@@ -25,13 +41,15 @@ MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *inst
 
 
 MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc) {
+  assert(acc);
   auto instr = const_cast<Instruction*>(acc->getAccessInstruction());
   auto result = fromAccessInstruction(instr);
-  result.augmentMemoryAccess(acc);
+  result.scopAccess = acc;
+  //result.augmentMemoryAccess(acc);
   return result;
 }
 
-
+#if 0
 void MollyFieldAccess::augmentMemoryAccess(polly::MemoryAccess *acc) {
   assert(acc);
   assert(acc->getAccessInstruction() == getAccessor());
@@ -44,9 +62,10 @@ void MollyFieldAccess::augmentFieldVariable(FieldVariable *fieldvar) {
   assert(!this->fieldvar || this->fieldvar == fieldvar);
   this->fieldvar = fieldvar;
 }
+#endif
 
-
-FieldType *MollyFieldAccess::getFieldType() {
+FieldType *MollyFieldAccess::getFieldType() { 
+  assert(fieldvar);
   return fieldvar->getFieldType();
 }
 
@@ -75,13 +94,17 @@ isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
   getCoordinates(coords);
   auto scopStmt = getPollyScopStmt();
 
-  isl::MultiPwAff result;
+  auto iterDomain = molly::getIterationDomain(getPollyScopStmt());
+  auto indexDomain = getFieldType()->getGlobalIndexset();
+  auto result = isl::Space::createMapFromDomainAndRange(iterDomain.getSpace(), indexDomain.getSpace()).createZeroMultiPwAff();
+  auto i = 0;
   for (auto it = coords.begin(), end = coords.end(); it!=end; ++it) {
     auto coordVal = *it;
     auto coordSCEV = se->getSCEV(coordVal);
 
     auto aff = convertScEvToAffine(scopStmt, coordSCEV);
-    result.push_back(move(aff));
+    result.setPwAff_inplace(i, aff.move());
+    i+=1;
   }
 
   return result;

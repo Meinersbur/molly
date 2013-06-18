@@ -27,14 +27,14 @@ namespace isl {
 }
 
 namespace molly {
-  class MollyContext;
+  class MollyContextPass;
 }
 
 
 namespace molly {
   class FieldType {
   private:
-    molly::MollyContext *mollyContext;
+    molly::MollyContextPass *mollyContext;
     llvm::Module *module;
 
     clang::CodeGen::FieldTypeMetadata metadata;
@@ -57,7 +57,7 @@ namespace molly {
     //llvm::Function *islocalfunc;
 
   protected:
-    FieldType(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
+    FieldType(molly::MollyContextPass *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       assert(mollyContext);
       assert(module);
       assert(metadata);
@@ -82,7 +82,7 @@ namespace molly {
   public:
     ~FieldType();
 
-    static FieldType *createFromMetadata(molly::MollyContext *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
+    static FieldType *createFromMetadata(molly::MollyContextPass *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
       return new FieldType(mollyContext, module, metadata);
     }
 

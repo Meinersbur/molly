@@ -10,7 +10,7 @@ using namespace isl;
 using namespace llvm;
 
 
-void PwMultiAff::release() { isl_pw_multi_aff_free(take()); }
+void PwMultiAff::release() { isl_pw_multi_aff_free(takeOrNull()); }
 
 PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) { return enwrap(isl_pw_multi_aff_alloc(set.take(), maff.take())); }
 PwMultiAff PwMultiAff::createIdentity(Space &&space) { return enwrap(isl_pw_multi_aff_identity(space.take())); }

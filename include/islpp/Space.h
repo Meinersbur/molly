@@ -6,8 +6,13 @@
 #include <isl/space.h> // enum isl_dim_type;
 
 #include "Ctx.h"
+#include "Multi.h"
 
 struct isl_space;
+
+namespace llvm {
+  class raw_ostream;
+} // namespace llvm
 
 namespace isl {
   class Ctx;
@@ -22,28 +27,31 @@ namespace isl {
 
 namespace isl {
   /// Whenever a new set, relation or similiar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
-  class Space final {
+  class Space LLVM_FINAL {
+#ifndef NDEBUG
+    std::string _printed;
+#endif
 
 #pragma region Low-Level
   private:
     isl_space *space;
 
   protected:
-    explicit Space(isl_space *space);
+    //explicit Space(isl_space *space);
 
   public:
     isl_space *take() { assert(space); isl_space *result = space; space = nullptr; return result; }
     isl_space *takeCopy() const;
     isl_space *keep() const { return space; }
-    void give(isl_space *space) { assert(!this->space); this->space = space; }
+    void give(isl_space *space);
 
-    static Space wrap(isl_space *space) { return Space(space); }
+    static Space wrap(isl_space *space) { Space result; result.give(space); return result; }
 #pragma endregion
 
   public:
     Space() : space(nullptr) {};
-    /* implicit */ Space(Space &&that) : space(that.take()) { }
-    /* implicit */ Space(const Space &that) : space(that.takeCopy()) {  }
+    /* implicit */ Space(Space &&that) : space(nullptr) { give(that.take()); }
+    /* implicit */ Space(const Space &that) : space(nullptr) { give(that.takeCopy()); }
     ~Space();
 
     const Space &operator=(const Space &that) { give(that.takeCopy()); return *this; }
@@ -60,7 +68,14 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region Create Sets/Maps using this map
+#pragma region Printing
+    void print(llvm::raw_ostream &out) const;
+    std::string toString() const;
+    void dump() const;
+#pragma endregion
+
+
+#pragma region Create Sets/Maps etc. using this map
     Set emptySet() const;
     Set universeSet() const;
 
@@ -70,6 +85,9 @@ namespace isl {
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
     Aff createVarAff(isl_dim_type type, unsigned pos) const;
+
+    MultiAff createZeroMultiAff() const;
+    MultiPwAff createZeroMultiPwAff() const;
 #pragma endregion
 
     Ctx *getCtx() const { return enwrap(isl_space_get_ctx(keep())); }

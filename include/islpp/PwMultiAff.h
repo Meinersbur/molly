@@ -29,12 +29,12 @@ namespace llvm {
 
 namespace isl {
   template<>
-  class Pw<MultiAff> final : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
+  class Pw<MultiAff> LLVM_FINAL : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
 #pragma region Low-level
   public:
-    virtual isl_pw_multi_aff *takeCopy() const override { return isl_pw_multi_aff_copy(keep()); }
+    isl_pw_multi_aff *takeCopyOrNull() const LLVM_OVERRIDE { return isl_pw_multi_aff_copy(keep()); }
   protected:
-    virtual void release() override;
+    void release() LLVM_OVERRIDE;
   public:
     ~Pw() { release(); }
     Pw() : Obj2() { }

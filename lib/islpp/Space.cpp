@@ -6,6 +6,8 @@
 #include "islpp/BasicSet.h"
 #include "islpp/Map.h"
 #include "islpp/BasicMap.h"
+#include "cstdiofile.h"
+#include "islpp/MultiPwAff.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -14,18 +16,47 @@
 using namespace isl;
 using namespace std;
 
-Space::Space(isl_space *space) {
-  this->space = space;
-}
-
 
 isl_space *Space::takeCopy() const {
   return isl_space_copy(space);
 }
 
 
+void Space::give(isl_space *space) {
+  assert(space);
+  if (this->space)
+    isl_space_free(this->space);
+  this->space = space;
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
+}
+
+
 Space::~Space() {
   if (space) isl_space_free(space);
+}
+
+
+void Space::print(llvm::raw_ostream &out) const {
+  auto printer = isl::Printer::createToStr(getCtx());
+  printer.print(*this);
+  printer.print(out);
+}
+
+
+std::string Space::toString() const {
+  if (!keep())
+    return string();  
+  std::string buf;
+  llvm::raw_string_ostream stream(buf);
+  print(stream);
+  return stream.str();
+}
+
+
+void Space::dump() const {
+  isl_space_dump(keep());
 }
 
 
@@ -73,6 +104,16 @@ Aff Space::createConstantAff(const Int &c) const {
 
 Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
   return enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
+}
+
+
+MultiAff Space::createZeroMultiAff() const {
+  return MultiAff::wrap(isl_multi_aff_zero(takeCopy()));
+}
+
+
+MultiPwAff Space::createZeroMultiPwAff() const {
+  return MultiPwAff::wrap(isl_multi_pw_aff_zero(takeCopy()));
 }
 
 
@@ -244,19 +285,19 @@ void Space::uncurry(){
 
 
 Set Space::createUniverseSet() const {
-  return enwrap(isl_set_universe(keep()));
+  return enwrap(isl_set_universe(takeCopy()));
 }
 
 BasicSet Space::createUniverseBasicSet() const {
-  return enwrap(isl_basic_set_universe(keep()));
+  return enwrap(isl_basic_set_universe(takeCopy()));
 }
 
 Map Space::createUniverseMap() const {
-  return enwrap(isl_map_universe(keep()));
+  return enwrap(isl_map_universe(takeCopy()));
 }
 
 BasicMap Space::createUniverseBasicMap() const {
-  return enwrap(isl_basic_map_universe(keep()));
+  return enwrap(isl_basic_map_universe(takeCopy()));
 }
 
 

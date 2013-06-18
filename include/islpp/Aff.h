@@ -32,7 +32,11 @@ namespace isl {
 
   Aff div(Aff &&, const Int &);
 
-  class Aff final {
+  class Aff LLVM_FINAL {
+#ifndef NDEBUG
+    std::string _printed;
+#endif
+
 #pragma region Low-level
   private:
     isl_aff *aff;
@@ -51,8 +55,8 @@ namespace isl {
 
   public:
     Aff(void) : aff(nullptr) {}
-    /* implicit */ Aff(const Aff &that) : aff(that.takeCopy()) {}
-    /* implicit */ Aff(Aff &&that) : aff(that.take()) { }
+    /* implicit */ Aff(const Aff &that) : aff(nullptr) { give(that.takeCopy()); }
+    /* implicit */ Aff(Aff &&that) : aff(nullptr) { give(that.take()); }
     ~Aff(void);
 
     const Aff &operator=(const Aff &that) { give(that.takeCopy()); return *this; }
@@ -151,7 +155,8 @@ namespace isl {
   static inline Aff div(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
   static inline Aff add(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
 
-
+  static inline Aff floor(Aff &&aff) { return Aff::wrap(isl_aff_floor(aff.take())); }
+  static inline Aff floor(const Aff &aff) { return Aff::wrap(isl_aff_floor(aff.takeCopy())); }
 
   BasicSet zeroBasicSet(Aff &&aff);
   BasicSet negBasicSet(Aff &&aff);

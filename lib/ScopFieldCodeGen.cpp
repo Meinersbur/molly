@@ -9,6 +9,7 @@
 #include <polly/ScopInfo.h>
 #include "ScopUtils.h"
 #include <llvm/Support/Debug.h>
+#include <polly/PollyContextPass.h>
 
 using namespace molly;
 using namespace llvm;
@@ -41,6 +42,7 @@ namespace molly {
       AU.addRequired<MollyContextPass>();
       AU.addRequired<FieldDetectionAnalysis>();
 
+      AU.addPreserved<PollyContextPass>();
       AU.addPreserved<MollyContextPass>();
       AU.addPreserved<FieldDetectionAnalysis>();
       AU.addPreserved<polly::ScopInfo>(); //FIXME: Which other analyses must be transitively preserved? (ScopDetection,TempScopInfo,RegionInfo,NaturalLoop,...)

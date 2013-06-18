@@ -11,7 +11,9 @@ using isl::enwrap;
 
 isl::Set molly::getIterationDomain(polly::ScopStmt *stmt) {
   auto dom = stmt->getDomain();
-  return enwrap(dom);
+  auto result = enwrap(dom);
+  //result.dump();
+  return result;
 }
 
 

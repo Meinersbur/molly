@@ -28,7 +28,11 @@ namespace isl {
 
 namespace isl {
   template<>
-  class Pw<Aff> final {
+  class Pw<Aff> LLVM_FINAL {
+#ifndef NDEBUG
+    std::string _printed;
+#endif
+
 #pragma region Low-level
   private:
     isl_pw_aff *aff;
@@ -46,8 +50,8 @@ namespace isl {
 
   public:
     Pw(void) : aff(nullptr) {}
-    /* implicit */ Pw(const PwAff &that) : aff(that.takeCopy()) {}
-    /* implicit */ Pw(PwAff &&that) : aff(that.take()) { }
+    /* implicit */ Pw(const PwAff &that) : aff(nullptr) { give(that.takeCopy()); }
+    /* implicit */ Pw(PwAff &&that) : aff(nullptr) { give(that.take()); }
     ~Pw(void);
 
     const PwAff &operator=(const PwAff &that) { give(that.takeCopy()); return *this; }

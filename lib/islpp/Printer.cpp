@@ -199,6 +199,12 @@ void Printer::print(const Vec &v) {
   give(isl_printer_print_vec(take(), v.keep()));
 }
 
+
+void Printer::print(const Space &space) {
+  give(isl_printer_print_space(take(), space.keep()));
+}
+
+
 void Printer::flush(){
   give(isl_printer_flush(take()));
 }

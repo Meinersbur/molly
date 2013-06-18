@@ -33,7 +33,11 @@ void BasicSet::give(isl_basic_set *set) {
   if (this->set)
     isl_basic_set_free(this->set);
   this->set = set; 
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
+
 
 BasicSet::~BasicSet() { 
   if (set) 
@@ -92,11 +96,13 @@ BasicSet BasicSet::readFromStr(Ctx *ctx, const char *str) {
 
 void BasicSet::print(llvm::raw_ostream &out) const { 
   molly::CstdioFile tmp;
-  isl_basic_set_print(this->keep(), tmp.getFileDescriptor(), 0, "prefix", "suffic", ISL_FORMAT_ISL);
+  isl_basic_set_print(this->keep(), tmp.getFileDescriptor(), 0, "prefix", "suffix", ISL_FORMAT_ISL);
   out << tmp.readAsStringAndClose();
 }
 
 std::string BasicSet::toString() const { 
+  if (!keep())
+    return std::string();
   std::string buf;
   llvm::raw_string_ostream stream(buf);
   return stream.str();

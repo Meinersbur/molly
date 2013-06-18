@@ -26,6 +26,9 @@ void PwAff::give(isl_pw_aff *aff) {
   if (this->aff)
     isl_pw_aff_free(this->aff);
   this->aff = aff;
+#ifndef NDEBUG
+  this->_printed = toString();
+#endif
 }
 
 PwAff::~PwAff(void) {
@@ -66,6 +69,8 @@ void PwAff::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 std::string PwAff::toString() const{
+  if (!keep())
+    return std::string();
   std::string buf;
   llvm::raw_string_ostream out(buf);
   print(out);
