@@ -1,3 +1,6 @@
+#include "molly/LinkAllPasses.h"
+#include "molly/RegisterPasses.h"
+
 //===-- cc1_main.cpp - Clang CC1 Compiler Frontend ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -13,12 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "molly/LinkAllPasses.h"
-#include "molly/RegisterPasses.h"
-#include "clang/Driver/Arg.h"
-#include "clang/Driver/ArgList.h"
+#include "llvm/Option/Arg.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/OptTable.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -28,6 +27,8 @@
 #include "clang/FrontendTool/Utils.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 using namespace clang;
+using namespace llvm::opt;
 
 //===----------------------------------------------------------------------===//
 // Main driver
@@ -93,14 +95,6 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   llvm::install_fatal_error_handler(LLVMErrorHandler,
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
-// BEGIN Molly
-#if 0
-  if (Clang->getLangOpts().CPlusPlus) {
-    Clang->getHeaderSearchOpts().AddPath("C:/Users/Meinersbur/src/molly/molly/include/mollyrt/", frontend::CXXSystem, false, false);
-  }
-#endif
-  Clang->getPreprocessorOpts().addMacroDef("__mollycc__");
-// END Molly
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)
     return 1;

@@ -1,7 +1,9 @@
 #ifndef ISLPP_UNIONSET_H
 #define ISLPP_UNIONSET_H
 
+#include "islpp_common.h"
 #include <cassert>
+#include "Union.h"
 
 struct isl_union_set;
 
@@ -13,7 +15,8 @@ namespace isl {
 
 
 namespace isl {
-  class UnionSet final {
+  template<>
+  class Union<Set> LLVM_FINAL {
 #pragma region Low-level
   private:
     isl_union_set *set;
@@ -30,10 +33,10 @@ namespace isl {
 #pragma endregion
 
   public:
-    UnionSet(void) : set(nullptr) {}
-    /* implicit */ UnionSet(const UnionSet &that) : set(that.takeCopy()) {}
-    /* implicit */ UnionSet(UnionSet &&that) : set(that.take()) { }
-    ~UnionSet(void);
+    Union(void) : set(nullptr) {}
+    /* implicit */ Union(const UnionSet &that) : set(that.takeCopy()) {}
+    /* implicit */ Union(UnionSet &&that) : set(that.take()) { }
+    ~Union(void);
 
     const UnionSet &operator=(const UnionSet &that) { give(that.takeCopy()); return *this; }
     const UnionSet &operator=(UnionSet &&that) { give(that.take()); return *this; }

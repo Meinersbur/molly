@@ -22,6 +22,7 @@ namespace isl {
   class Map;
   class BasicMap;
   class Int;
+  class Point;
 } // namespace isl
 
 
@@ -61,7 +62,11 @@ namespace isl {
     static Space createMapSpace(const Ctx *ctx, unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
     static Space createParamsSpace(const Ctx *ctx, unsigned nparam);
     static Space createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
+
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
+    static Space createMapFromDomainAndRange( Space &&domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.take(), range.takeCopy())); }
+    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.take())); }
+    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
 
     Space copy() const { return Space::wrap(takeCopy()); }
     Space &&move() { return std::move(*this); }
@@ -81,6 +86,8 @@ namespace isl {
 
     Map emptyMap() const;
     Map universeMap() const;
+    Map createMapFromAff(PwAff &&aff) const;
+    Map createMapFromAff(const PwAff &aff) const;
 
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
@@ -88,7 +95,10 @@ namespace isl {
 
     MultiAff createZeroMultiAff() const;
     MultiPwAff createZeroMultiPwAff() const;
+
+    Point createZeroPoint() const;
 #pragma endregion
+
 
     Ctx *getCtx() const { return enwrap(isl_space_get_ctx(keep())); }
 
@@ -111,7 +121,7 @@ namespace isl {
     int findDimById(isl_dim_type type, const Id &id)const;
     int findDimByName(isl_dim_type, const char *name)const;
 
-    void setTupleId(isl_dim_type type,  Id &&id);
+    void setTupleId(isl_dim_type type, Id &&id);
     void resetTupleId(isl_dim_type type);
     bool hasTupleId(isl_dim_type type) const;
     Id getTupleId(isl_dim_type type) const;
@@ -155,6 +165,12 @@ namespace isl {
 
   Space join(Space &&left, Space &&right);
   Space alignParams(Space &&space1, Space &&space2);
+
+  Space setTupleId(Space &&space, isl_dim_type type, Id &&id);
+  Space setTupleId(Space &&space, isl_dim_type type, const Id &id);
+  Space setTupleId(const Space &space, isl_dim_type type, Id &&id);
+  Space setTupleId(const Space &space, isl_dim_type type, const Id &id);
+
 } // namespace isl
 
 #endif /* ISLPP_SPACE_H */

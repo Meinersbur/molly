@@ -145,7 +145,7 @@ namespace isl {
 
 
     void scale(Int f) { give(isl_multi_aff_scale(take(), f.keep())); };
-    void scaleVec(Vec &&v) { give(isl_multi_aff_scale_vec(take(), v.take())); }
+    //void scaleVec(Vec &&v) { give(isl_multi_aff_scale_vec(take(), v.take())); }
 
     void alignParams(Space &&model) { give(isl_multi_aff_align_params(take(), model.take())); }
     void gistParams(Set &&context) { give(isl_multi_aff_gist_params(take(), context.take())); }

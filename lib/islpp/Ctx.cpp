@@ -8,6 +8,7 @@
 #include "islpp/Map.h"
 #include "islpp/BasicMap.h"
 #include "islpp/Aff.h"
+#include "islpp/Id.h"
 
 #include <isl/ctx.h>
 #include <isl/options.h>
@@ -218,4 +219,9 @@ BasicMap Ctx::createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigne
 BasicMap Ctx::createUniverseBasicMap(Space &&space) {
   assert(space.getCtx() == this);
   return enwrap(isl_basic_map_universe(space.take()));
+}
+
+
+Id Ctx::createId(const char *name, void *user) {
+  return Id::wrap(isl_id_alloc(keep(), name, user));
 }

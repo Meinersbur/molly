@@ -4,10 +4,12 @@
 #include "islpp_common.h"
 #include "Multi.h"
 #include "Pw.h"
+#include "Id.h"
 #include <cassert>
 #include <string>
 #include <functional>
 #include <isl/space.h> // enum isl_dim_type;
+#include <isl/aff.h>
 
 struct isl_pw_aff;
 
@@ -27,8 +29,10 @@ namespace isl {
 
 
 namespace isl {
-  template<>
-  class Pw<Aff> LLVM_FINAL {
+
+#define PwAff Pw<Aff> LLVM_FINAL
+  template<> class PwAff {
+#undef PwAff
 #ifndef NDEBUG
     std::string _printed;
 #endif
@@ -57,6 +61,7 @@ namespace isl {
     const PwAff &operator=(const PwAff &that) { give(that.takeCopy()); return *this; }
     const PwAff &operator=(PwAff &&that) { give(that.take()); return *this; }
 
+
 #pragma region Creational
     static PwAff createFromAff(Aff &&aff); 
     static PwAff createEmpty(Space &&space);
@@ -71,11 +76,13 @@ namespace isl {
     PwAff &&move() { return std::move(*this); }
 #pragma endregion
 
+
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
 #pragma endregion
+
 
     Ctx *getCtx() const;
     Space getDomainSpace() const;
@@ -136,8 +143,40 @@ namespace isl {
   PwAff max(PwAff &&pwaff1, PwAff &&pwaff2);
   PwAff mul(PwAff &&pwaff1, PwAff &&pwaff2);
   PwAff div(PwAff &&pwaff1, PwAff &&pwaff2);
-  PwAff add(PwAff &&pwaff1, PwAff &&pwaff2);
+
+  static inline PwAff add(PwAff &&pwaff1, PwAff &&pwaff2) { return PwAff::wrap(isl_pw_aff_add(pwaff1.take(), pwaff2.take())); }
+  static inline PwAff add(PwAff &&pwaff1, const PwAff &pwaff2) { return PwAff::wrap(isl_pw_aff_add(pwaff1.take(), pwaff2.takeCopy())); }
+  static inline  PwAff add(const PwAff &pwaff1, PwAff &&pwaff2) { return PwAff::wrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.take())); }
+  static inline   PwAff add(const PwAff &pwaff1, const PwAff &pwaff2) { return PwAff::wrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.takeCopy())); }
+  PwAff add(PwAff &&pwaff1, int pwaff2);
+  static inline PwAff add(const PwAff &lhs, int rhs) {  return add(lhs.copy(), rhs);  }
+  static inline PwAff add(int lhs, PwAff && rhs) {  return add(std::move(rhs), lhs);  }
+  static inline PwAff add(int lhs, const PwAff & rhs) {  return add(rhs, lhs);  }
+  static inline PwAff operator+(PwAff &&pwaff1, PwAff &&pwaff2) { return add(std::move(pwaff1), std::move(pwaff2)); }
+  static inline PwAff operator+(PwAff &&pwaff1, const PwAff &pwaff2) { return add(std::move(pwaff1), pwaff2); }
+  static inline PwAff operator+(const PwAff &pwaff1, PwAff &&pwaff2) { return add(pwaff1, std::move(pwaff2)); }
+  static inline PwAff operator+(const PwAff &pwaff1, const PwAff &pwaff2) { return add(pwaff1, pwaff2); }
+  static inline PwAff operator+(PwAff &&lhs, int rhs) { return add(std::move(lhs), rhs); }
+  static inline PwAff operator+(const PwAff &lhs, int rhs) { return add(lhs, rhs); }
+  static inline PwAff operator+(int lhs, PwAff && rhs) {  return add(lhs, std::move(rhs));  }
+  static inline PwAff operator+(int lhs, const PwAff & rhs) {  return add(lhs, rhs);  }
+
   PwAff sub(PwAff &&pwaff1, PwAff &&pwaff2);
+  PwAff sub(const PwAff &pwaff1, PwAff &&pwaff2);
+  PwAff sub(PwAff &&pwaff1, const PwAff &pwaff2);
+  PwAff sub(const PwAff &pwaff1, const PwAff &pwaff2);
+  PwAff sub(PwAff &&lhs, int rhs);
+  static inline PwAff sub(const PwAff &lhs, int rhs) {  return sub(lhs, rhs);  }
+  static inline PwAff sub(int lhs, PwAff &&rhs){  return sub(lhs, std::move(rhs));  }
+  static inline PwAff sub(int lhs, const PwAff & rhs) {  return sub(lhs, rhs);  }
+  static inline PwAff operator-(PwAff &&pwaff1, PwAff &&pwaff2) { return sub(std::move(pwaff1), std::move(pwaff2)); }
+  static inline PwAff operator-(PwAff &&pwaff1, const PwAff &pwaff2) { return sub(std::move(pwaff1), pwaff2); }
+  static inline PwAff operator-(const PwAff &pwaff1, PwAff &&pwaff2) { return sub(pwaff1, std::move(pwaff2)); }
+  static inline PwAff operator-(const PwAff &pwaff1, const PwAff &pwaff2) { return sub(pwaff1, pwaff2); }
+  static inline PwAff operator-(PwAff &&lhs, int rhs) { return sub(std::move(lhs), rhs); }
+  static inline PwAff operator-(const PwAff &lhs, int rhs) { return sub(lhs, rhs); }
+  static inline PwAff operator-(int lhs, PwAff && rhs) {  return sub(lhs, std::move(rhs));  }
+  static inline PwAff operator-(int lhs, const PwAff & rhs) {  return sub(lhs, rhs);  }
 
   PwAff tdivQ(PwAff &&pa1, PwAff &&pa2);
   PwAff tdivR(PwAff &&pa1, PwAff &&pa2);
@@ -156,10 +195,6 @@ namespace isl {
   Set geSet(PwAff &&pwaff1, PwAff &&pwaff2);
   Set gtSet(PwAff &&pwaff1, PwAff &&pwaff2);
 
-  static inline PwAff operator-(PwAff &&lhs, PwAff &&rhs) { return sub(lhs.move(),rhs.move()); }
-  static inline PwAff operator-(const PwAff &lhs, PwAff &&rhs) { return sub(lhs.copy(),rhs.move()); }
-  static inline PwAff operator-(PwAff &&lhs, const PwAff &rhs) { return sub(lhs.move(),rhs.copy()); }
-  static inline PwAff operator-(const PwAff &lhs, const PwAff &rhs) { return sub(lhs.copy(),rhs.copy()); }
-
+  static inline PwAff setTupleId(PwAff &&pwaff, isl_dim_type type, Id &&id) { return PwAff::wrap(isl_pw_aff_set_tuple_id(pwaff.take(), type, id.take())); }
 } // namespace isl
 #endif /* ISLPP_PWAFF_H */

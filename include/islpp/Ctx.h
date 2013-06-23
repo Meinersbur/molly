@@ -24,6 +24,7 @@ namespace isl {
   class Printer;
   class BasicMap;
   class Aff;
+  class Id;
 } // namespace isl
 
 
@@ -43,7 +44,9 @@ namespace isl {
   class Owning;
 
   /// All manipulations of integer sets and relations occur within the context of an isl_ctx. A given isl_ctx can only be used within a single thread. All arguments of a function are required to have been allocated within the same context. There are currently no functions available for moving an object from one isl_ctx to another isl_ctx. This means that there is currently no way of safely moving an object from one thread to another, unless the whole isl_ctx is moved.
-  class Ctx LLVM_FINAL {
+#define Ctx Ctx LLVM_FINAL
+  class Ctx {
+#undef Ctx
   private:
     Ctx() LLVM_DELETED_FUNCTION;
     Ctx(const Ctx &) LLVM_DELETED_FUNCTION;
@@ -97,10 +100,12 @@ namespace isl {
 //     LocalSpace createMapLocalSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/, unsigned divs);
 //#pragma endregion
 
+
 #pragma region Create BasicSets
          BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
           BasicSet readBasicSet(const char *str);
 #pragma endregion
+
 
 #pragma region Create Maps
     Map createMap(unsigned nparam, unsigned in, unsigned out, int n/*number of BasicMaps*/, unsigned flags = 0);
@@ -117,10 +122,14 @@ namespace isl {
     Map createAlltoallMap(const Set &domain, const Set &range);
 #pragma endregion
 
+
 #pragma region Create BasicMaps
     BasicMap createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq);
     BasicMap createUniverseBasicMap(Space &&space);
 #pragma endregion
+
+
+    Id createId(const char *name = nullptr, void *user = nullptr);
   }; // class Ctx
 
   static inline Ctx *enwrap(isl_ctx *ctx) { return Ctx::wrap(ctx); }

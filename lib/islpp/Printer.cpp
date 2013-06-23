@@ -205,6 +205,11 @@ void Printer::print(const Space &space) {
 }
 
 
+void Printer::print(const MultiVal &space) {
+  give(isl_printer_print_multi_val);
+}
+
+
 void Printer::flush(){
   give(isl_printer_flush(take()));
 }

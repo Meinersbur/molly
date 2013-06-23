@@ -4,6 +4,8 @@
 #include "islpp_common.h"
 #include <cassert>
 #include <isl/space.h> // enum isl_dim_type;
+#include <isl/point.h>
+#include "islpp/Int.h"
 
 struct isl_point;
 
@@ -18,7 +20,10 @@ namespace isl {
 
 
 namespace isl {
-  class Point final {
+#define Point Point LLVM_FINAL
+  class Point {
+#undef Point
+
 #pragma region Low-level
   private:
     isl_point *point;
@@ -42,11 +47,13 @@ namespace isl {
     const Point &operator=(const Point &that) { give(that.takeCopy()); return *this; }
     const Point &operator=(Point &&that) { give(that.take()); return *this; }
 
+
 #pragma region Creational
     static Point createZero(Space &&space);
 
     Point copy() const { return Point::wrap(takeCopy()); }
 #pragma endregion
+
 
     Space getSpace() const;
     Ctx *getCtx() const;
@@ -58,5 +65,12 @@ namespace isl {
     void add(isl_dim_type type, int pos, unsigned val);
     void sub(isl_dim_type type, int pos, unsigned val);
   }; // class Point
+
+
+  static inline Point enwrap(isl_point *obj) { return Point::wrap(obj); }
+
+  static inline Point setCoordinate(Point &&point, isl_dim_type type, int pos, const Int &val) { return Point::wrap(isl_point_set_coordinate(point.take(), type, pos, val.keep())); }
+  static inline Point setCoordinate(const Point &point, isl_dim_type type, int pos, const Int &val) { return Point::wrap(isl_point_set_coordinate(point.takeCopy(), type, pos, val.keep())); }
+
 } // namespace isl
 #endif /* ISLPP_POINT_H */

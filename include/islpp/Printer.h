@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <string>
 #include <isl/printer.h>
+#include "Union.h"
 
 struct isl_printer;
 
@@ -22,8 +23,6 @@ namespace isl {
   class Set;
   class BasicSet;
   class Map;
-  class UnionSet;
-  class UnionMap;
   class UnionPwMultiAff;
   class QPolynomial;
   class PwQPolynomial;
@@ -61,7 +60,10 @@ namespace isl {
     static const FormatEnum Latex = FormatLatex;
   }
 
-  class Printer final {
+
+#define Printer Printer LLVM_FINAL
+  class Printer {
+#undef Printer
 #pragma region Low-level
   private:
     isl_printer *printer;
@@ -96,7 +98,7 @@ namespace isl {
     // But we'd need to modify ISL such that it calls some callback if new chars arrive 
 #pragma endregion
 
-    //FIXME: Overloaded print with different meaning
+    //FIXME: Overloaded print with different meaning ("printTo")
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
@@ -135,6 +137,7 @@ namespace isl {
     void print(const Val &v);
     void print(const Vec &v);
     void print(const Space &space);
+    void print(const MultiVal &space);
 
     void flush();
   }; // class Printer

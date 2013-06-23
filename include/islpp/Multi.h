@@ -1,9 +1,13 @@
 #ifndef ISLPP_MULTI_H
 #define ISLPP_MULTI_H
 
+#pragma region Forward declarations
 namespace isl {
   // Aff.h
   class Aff;
+
+  // Val.h
+  class Val;
 
   // Pw.h
   template<typename> 
@@ -14,6 +18,7 @@ namespace isl {
   class Pw<Aff>;
   typedef Pw<Aff> PwAff;
 } // namespace isl
+#pragma endregion
 
 
 namespace isl {
@@ -27,5 +32,9 @@ namespace isl {
   template<> 
   class Multi<PwAff>;
   typedef Multi<PwAff> MultiPwAff;
+
+  template<> 
+  class Multi<Val>;
+  typedef Multi<Val> MultiVal;
 } // namespace isl
 #endif /* ISLPP_MULTI_H */

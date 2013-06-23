@@ -18,7 +18,10 @@ namespace isl {
 
 
 namespace isl {
-  class Id final {
+
+#define Id Id LLVM_FINAL
+  class Id {
+#undef Id
 #pragma region Low-level functions
   private:
     isl_id *id;

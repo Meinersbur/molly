@@ -32,7 +32,9 @@ namespace isl {
 
   Aff div(Aff &&, const Int &);
 
-  class Aff LLVM_FINAL {
+#define Aff Aff LLVM_FINAL
+  class Aff {
+#undef Aff
 #ifndef NDEBUG
     std::string _printed;
 #endif
@@ -54,10 +56,10 @@ namespace isl {
 #pragma endregion
 
   public:
-    Aff(void) : aff(nullptr) {}
+    Aff() : aff(nullptr) {}
     /* implicit */ Aff(const Aff &that) : aff(nullptr) { give(that.takeCopy()); }
     /* implicit */ Aff(Aff &&that) : aff(nullptr) { give(that.take()); }
-    ~Aff(void);
+    ~Aff();
 
     const Aff &operator=(const Aff &that) { give(that.takeCopy()); return *this; }
     const Aff &operator=(Aff &&that) { give(that.take()); return *this; }
@@ -68,9 +70,10 @@ namespace isl {
 
     static Aff readFromString(Ctx *ctx, const char *str);
 
-    Aff copy() const { return wrap(isl_aff_copy(keep())); }
+    Aff copy() const { return Aff::wrap(isl_aff_copy(keep())); }
     Aff &&move() { return std::move(*this); }
 #pragma endregion
+
 
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;
@@ -78,6 +81,7 @@ namespace isl {
     void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
 #pragma endregion
+
 
     Ctx *getCtx() const;
     int dim(isl_dim_type type) const;

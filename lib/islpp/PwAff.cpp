@@ -229,12 +229,33 @@ PwAff isl::mul(PwAff &&pwaff1, PwAff &&pwaff2){
 PwAff isl::div(PwAff &&pwaff1, PwAff &&pwaff2){
   return PwAff::wrap(isl_pw_aff_div(pwaff1.take(), pwaff2.take()));
 }
-PwAff isl::add(PwAff &&pwaff1, PwAff &&pwaff2){
-  return PwAff::wrap(isl_pw_aff_add(pwaff1.take(), pwaff2.take()));
+
+
+PwAff isl::add(PwAff &&lhs, int rhs) {
+  auto zero = isl_aff_zero_on_domain(isl_local_space_from_space(isl_pw_aff_get_domain_space(lhs.keep())));
+  auto cst = isl_aff_set_constant_si(zero, rhs);
+  return PwAff::wrap(isl_pw_aff_add(lhs.take(), isl_pw_aff_from_aff(cst)));
 }
-PwAff isl::sub(PwAff &&pwaff1, PwAff &&pwaff2){
+
+
+PwAff isl::sub(PwAff &&pwaff1, PwAff &&pwaff2) {
   return PwAff::wrap(isl_pw_aff_sub(pwaff1.take(), pwaff2.take()));
 }
+PwAff isl::sub(const PwAff &pwaff1, PwAff &&pwaff2) {
+  return PwAff::wrap(isl_pw_aff_sub(pwaff1.takeCopy(), pwaff2.take()));
+}
+PwAff isl::sub(PwAff &&pwaff1, const PwAff &pwaff2) {
+  return PwAff::wrap(isl_pw_aff_sub(pwaff1.take(), pwaff2.takeCopy()));
+}
+PwAff isl::sub(const PwAff &pwaff1,const  PwAff &pwaff2) {
+  return PwAff::wrap(isl_pw_aff_sub(pwaff1.takeCopy(), pwaff2.takeCopy()));
+}
+PwAff isl::sub(PwAff &&lhs, int rhs) {
+  auto zero = isl_aff_zero_on_domain(isl_local_space_from_space(isl_pw_aff_get_domain_space(lhs.keep())));
+  auto cst = isl_aff_set_constant_si(zero, rhs);
+  return PwAff::wrap(isl_pw_aff_sub(lhs.take(), isl_pw_aff_from_aff(cst)));
+}
+
 
 PwAff isl::tdivQ(PwAff &&pa1, PwAff &&pa2){
   return PwAff::wrap(isl_pw_aff_tdiv_q(pa1.take(), pa2.take()));

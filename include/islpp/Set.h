@@ -41,7 +41,9 @@ namespace isl {
   typedef int (*BasicSetCallback)(isl_basic_set *bset, void *user);
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
-  class Set LLVM_FINAL {
+#define Set Set LLVM_FINAL
+  class Set  {
+#undef Set
 #ifndef NDEBUG
   private:
     std::string _printed;
@@ -245,7 +247,12 @@ namespace isl {
   Set intersect(Set &&set1, Set &&set2);
   Set union_(Set &&set1, Set &&set2);
   Set subtract(Set &&set1, Set &&set2);
+
   Set apply(Set &&set, Map &&map);
+  Set apply(const Set &set, Map &&map);
+  Set apply(Set &&set, const Map &map);
+  Set apply(const Set &set, const Map &map);
+
   Set preimage(Set &&set, MultiAff &&ma);
   Set preimage(Set &&set, PwMultiAff &&ma);
   /// @brief Cartesian product

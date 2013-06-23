@@ -40,7 +40,10 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet LLVM_FINAL : public Spacelike2<BasicSet> {
+#define BasicSet BasicSet LLVM_FINAL
+  class BasicSet  
+#undef BasicSet
+    : public Spacelike2<BasicSet> {
 #ifndef NDEBUG
   private:
     std::string _printed;
@@ -141,6 +144,7 @@ namespace isl {
     Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4) const;
     Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4) const;
 #pragma endregion
+
 
     void projectOut(isl_dim_type type, unsigned first, unsigned n);
     void params();

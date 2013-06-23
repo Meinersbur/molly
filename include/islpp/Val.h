@@ -23,7 +23,7 @@ namespace isl {
 #pragma region Low-level
   public: // Public because otherwise we had to add a lot of friends
     //isl_pw_multi_aff *take() { assert(pwmaff); isl_pw_multi_aff *result = pwmaff; pwmaff = nullptr; return result; }
-    isl_val *takeCopyOrNull() const LLVM_OVERRIDE { return isl_val_copy(keep()); }
+    isl_val *takeCopy() const LLVM_OVERRIDE { return isl_val_copy(keep()); }
 
     // isl_pw_multi_aff *keep() const { assert(pwmaff); return pwmaff; }
   protected:

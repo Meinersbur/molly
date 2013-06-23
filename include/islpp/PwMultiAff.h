@@ -32,7 +32,7 @@ namespace isl {
   class Pw<MultiAff> LLVM_FINAL : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
 #pragma region Low-level
   public:
-    isl_pw_multi_aff *takeCopyOrNull() const LLVM_OVERRIDE { return isl_pw_multi_aff_copy(keep()); }
+    isl_pw_multi_aff *takeCopy() const LLVM_OVERRIDE { return isl_pw_multi_aff_copy(keep()); }
   protected:
     void release() LLVM_OVERRIDE;
   public:
@@ -61,8 +61,8 @@ namespace isl {
 
 
 #pragma region Conversion
-    /* implicit */ Pw(const PwMultiAff &that) : Obj2(that.takeCopy()) { }
-    /* implicit */ Pw(PwMultiAff &&that) : Obj2(that.take()) { }
+    /* implicit */ Pw(const PwMultiAff &that) : Obj2() { give(that.takeCopy()); }
+    /* implicit */ Pw(PwMultiAff &&that) : Obj2() { give(that.take()); }
     const PwMultiAff &operator=(const PwMultiAff &that) { give(that.takeCopy()); return *this; }
     const PwMultiAff &operator=(PwMultiAff &&that) { give(that.take()); return *this; }
 
@@ -109,7 +109,7 @@ namespace isl {
 
     Set domain() const { return Set::wrap(isl_pw_multi_aff_domain(takeCopy())); }
     PwMultiAff scale(Val &&v) const { return enwrap(isl_pw_multi_aff_scale_val(takeCopy(), v.take())); }
-    PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_vec(takeCopy(), v.take())); }
+    //PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_multi_val(takeCopy(), v.take())); }
 
     PwMultiAff projectDomainOnParams() const { return enwrap(isl_pw_multi_aff_project_domain_on_params(takeCopy())); }
     PwMultiAff alignParams(Space &&model) const { return enwrap(isl_pw_multi_aff_align_params(takeCopy(), model.take())); }

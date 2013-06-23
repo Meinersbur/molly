@@ -40,6 +40,8 @@ add_molly_library(Islpp
     PwAffList.cpp
     Val.cpp
     Union.cpp
+    Obj.cpp
+    MultiVal.cpp
   HEADER_DIRS
     "${MOLLY_SOURCE_DIR}/include/islpp"
     "${MOLLY_SOURCE_DIR}/lib/islpp"

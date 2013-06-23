@@ -37,7 +37,6 @@ namespace isl {
   class Set;
   class Mat;
   class Aff;
-  class UnionMap;
 } // namespace isl
 
 
@@ -56,9 +55,9 @@ namespace isl {
     Rough
   };
 
-
-  //TODO: Investigate how useful LLVM_HAS_RVALUE_REFERENCE_THIS could be
-  class Map final : public Spacelike /* TODO: What are the costs of making this virtual? */ {
+#define Map Map LLVM_FINAL
+  class Map : public Spacelike {
+#undef Map
 #ifndef NDEBUG
     std::string _printed;
 #endif

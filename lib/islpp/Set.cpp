@@ -675,9 +675,22 @@ Set isl::union_(Set &&set1, Set &&set2){
 Set isl::subtract(Set &&set1, Set &&set2){
   return Set::wrap(isl_set_subtract (set1.take(), set2.take()));
 }
+
+
 Set isl::apply(Set &&set, Map &&map){
   return Set::wrap(isl_set_apply(set.take(), map.take()));
 }
+Set isl::apply(const Set &set, Map &&map){
+  return Set::wrap(isl_set_apply(set.takeCopy(), map.take()));
+}
+Set isl::apply(Set &&set, const Map &map){
+  return Set::wrap(isl_set_apply(set.take(), map.takeCopy()));
+}
+Set isl::apply(const Set &set, const Map &map){
+  return Set::wrap(isl_set_apply(set.takeCopy(), map.takeCopy()));
+}
+
+
 Set isl::preimage(Set &&set, MultiAff &&ma){
   return Set::wrap(isl_set_preimage_multi_aff(set.take(), ma.take()));
 }

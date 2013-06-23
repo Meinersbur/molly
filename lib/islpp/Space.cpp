@@ -8,6 +8,8 @@
 #include "islpp/BasicMap.h"
 #include "cstdiofile.h"
 #include "islpp/MultiPwAff.h"
+#include "islpp/Point.h"
+#include "islpp/Id.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -90,6 +92,23 @@ Map Space::universeMap() const {
 }
 
 
+Map Space::createMapFromAff(PwAff &&aff) const {
+  auto alignedAff = isl_pw_aff_align_params(aff.take(), keep());
+  alignedAff = isl_pw_aff_set_tuple_id(alignedAff, isl_dim_in, isl_space_get_tuple_id(keep(), isl_dim_in));
+  alignedAff = isl_pw_aff_set_tuple_id(alignedAff, isl_dim_out, isl_space_get_tuple_id(keep(), isl_dim_out));
+
+  auto map = isl_map_from_pw_aff(alignedAff);
+  map = isl_map_align_params(map, takeCopy()); // redundant?
+  assert(isl_space_is_equal( keep(), isl_map_get_space(map) ));
+  return Map::wrap(map);
+}
+
+
+Map Space::createMapFromAff(const PwAff &aff) const { 
+  return createMapFromAff(aff.copy()); 
+}
+
+
 Aff  Space::createZeroAff() const {
   return enwrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
@@ -114,6 +133,11 @@ MultiAff Space::createZeroMultiAff() const {
 
 MultiPwAff Space::createZeroMultiPwAff() const {
   return MultiPwAff::wrap(isl_multi_pw_aff_zero(takeCopy()));
+}
+
+
+Point Space::createZeroPoint() const {
+  return Point::wrap(isl_point_zero(keep()));
 }
 
 
@@ -316,4 +340,18 @@ Space isl::join(Space &&left, Space &&right){
 }
 Space isl::alignParams(Space &&space1, Space &&space2){
   return Space::wrap(isl_space_align_params(space1.take(), space2.take()));
+}
+
+
+Space isl::setTupleId(Space &&space, isl_dim_type type, Id &&id) {
+  return Space::wrap(isl_space_set_tuple_id(space.take(), type, id.take()));
+}
+Space isl::setTupleId(Space &&space, isl_dim_type type, const Id &id) {
+  return Space::wrap(isl_space_set_tuple_id(space.take(), type, id.takeCopy()));
+}
+Space isl::setTupleId(const Space &space, isl_dim_type type, Id &&id) {
+  return Space::wrap(isl_space_set_tuple_id(space.takeCopy(), type, id.take()));
+}
+Space isl::setTupleId(const Space &space, isl_dim_type type, const Id &id) {
+  return Space::wrap(isl_space_set_tuple_id(space.takeCopy(), type, id.takeCopy()));
 }
