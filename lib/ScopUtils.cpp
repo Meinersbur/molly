@@ -5,6 +5,7 @@
 #include <islpp/Set.h>
 #include <islpp/Map.h>
 #include <islpp/UnionMap.h>
+#include <islpp/Space.h>
 
 using namespace molly;
 using namespace polly;
@@ -22,6 +23,16 @@ isl::Map molly::getScattering(polly::ScopStmt *stmt) {
   auto scat = stmt->getScattering();
   return enwrap(scat);
 }
+
+
+ isl::Space molly::getScatteringSpace(polly::Scop *scop) {
+   return enwrap(scop->getScatteringSpace());
+ }
+
+
+  isl::Space molly::getScatteringSpace(polly::ScopStmt *stmt) {
+    return getScatteringSpace(stmt->getParent());
+  }
 
 
 isl::Map molly::getWhereMap(polly::ScopStmt *stmt) {

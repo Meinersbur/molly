@@ -80,7 +80,7 @@ polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
   return scopAccess;
 }
 
- 
+
 polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
   assert(scopAccess && "Need to augment the access using SCoP");
   auto result = scopAccess->getStatement();
@@ -118,5 +118,15 @@ isl::Map MollyFieldAccess::getAccessRelation() {
 
 
 isl::Set MollyFieldAccess::getAccessedRegion() {
-  return getAccessRelation().getRange();
+  auto result = getAccessRelation().getRange();
+  assert(result.getSpace() == getIndexsetSpace());
+  return result;
+}
+
+
+isl::Space MollyFieldAccess::getIndexsetSpace() {
+  auto memacc = getPollyMemoryAccess();
+  assert(memacc);
+  auto map = isl::enwrap(memacc->getAccessRelation());
+  return map.getRangeSpace();
 }

@@ -52,6 +52,10 @@ namespace molly {
     isl::MultiPwAff getAffineAccess(llvm::ScalarEvolution *se);
     isl::Map/*iteration coord -> field coord*/ getAccessRelation();
     isl::Set getAccessedRegion();
+
+    // Currently this is taken from polly::MemoryAccess
+    // But in the lang term, we want to get it from molly::FieldType
+    isl::Space getIndexsetSpace();
   }; // class MollyFieldAccess
 
 } // namespace molly

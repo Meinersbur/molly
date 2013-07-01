@@ -71,10 +71,11 @@ namespace molly {
       auto domainSpace = islctx->createSetSpace(0, 0);
       auto logueId = islctx->createId("proepilogue");
       domainSpace = setTupleId(domainSpace.move(), isl_dim_set, logueId); // Must give it a id otherwise isl may interpret it as nonexisting instead of 0-dimension space
+      auto scatterRangeSpace = getScatteringSpace(scop);
+      auto scatterDim = scatterRangeSpace.getSetDims();
+      assert(scatterRangeSpace.isSetSpace());
 
-      DenseSet<FieldVariable *> accessedFields;
-      auto scatterDim = scop->getScatterDim();
-      auto scatterRangeSpace = islctx->createSetSpace(0, scatterDim);
+      DenseMap<FieldVariable *, isl::Set> accessedFields;
       auto scatterRange = scatterRangeSpace.emptySet();
       auto nScatterRangeDims = scatterRangeSpace.getSetDims();
       auto scatterSpace = isl::Space::createMapFromDomainAndRange(domainSpace, scatterRangeSpace);
@@ -90,7 +91,14 @@ namespace molly {
             continue; // Not a field, cannot handle
 
           auto fvar = facc.getFieldVariable();
-          accessedFields.insert(fvar);
+          auto indexsetSpace = facc.getIndexsetSpace();
+          auto accessRegion = facc.getAccessedRegion();
+          auto &accessSet = accessedFields[fvar];
+          if (accessSet.isNull()) {
+            accessSet = accessRegion;
+          } else {
+            accessSet.union_inplace(accessRegion);
+          }
         }
 
         auto domain = getIterationDomain(stmt);
@@ -122,6 +130,7 @@ namespace molly {
       // Insert fake write access before scop
       auto prologueScatter = min.toMap();// scatterSpace.createMapFromAff(min);
       prologueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
+      prologueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
       prologueScatter = intersect(prologueScatter.move(), mapToZero);
 
       auto prologueStmt = new ScopStmt(scop,  nullptr/*Maybe need to create a dummy BB*/, "scop.prologue", region, ArrayRef<Loop*>(), domain.takeCopy(), prologueScatter.take()); 
@@ -131,6 +140,7 @@ namespace molly {
       // Insert fake read access after scop
       auto epilogueScatter = max.toMap(); //scatterSpace.createMapFromAff(max);
       epilogueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
+      epilogueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
       epilogueScatter = intersect(epilogueScatter.move(), mapToZero.move());
 
       auto epilogueStmt = new ScopStmt(scop, nullptr/*Maybe need to create a dummy BB*/, "scop.epilogie", region, ArrayRef<Loop*>(), domain.takeCopy(), epilogueScatter.take()); 
@@ -138,11 +148,12 @@ namespace molly {
 
       // Insert dummy memory accesses for all fields
       for (auto it = accessedFields.begin(), end = accessedFields.end(); it!=end; ++it) {
-        auto fvar = *it;
+        auto fvar = it->first;
         auto fty = fvar->getFieldType();
+        auto region = it->second.move(); 
 
-        auto accessSpace = isl::Space::createMapFromDomainAndRange(domainSpace, fty->getLogicalIndexsetSpace());
-        isl::Map allacc /* { domain () -> shape } */ = islctx->createAlltoallMap(domain, fty->getLogicalIndexset());
+        auto accessSpace = isl::Space::createMapFromDomainAndRange(domainSpace, region.getSpace());
+        isl::Map allacc /* { domain () -> shape } */ = islctx->createAlltoallMap(domain, region.move());
 
         prologueStmt->addAccess(MemoryAccess::MustWrite, fvar->getVariable(), allacc.takeCopy(), nullptr);
         epilogueStmt->addAccess(MemoryAccess::Read, fvar->getVariable(), allacc.take(), nullptr);

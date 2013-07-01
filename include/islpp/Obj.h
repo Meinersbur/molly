@@ -167,12 +167,9 @@ namespace isl {
         getDerived()->release(); 
 
 #ifndef NDEBUG
-      if (this->obj) 
-        this->_printed = std::move(that._printed);
-      else
-        this->_printed.clear();
+      this->_printed = std::move(that._printed);
 #endif
-      this->obj = that.takeOrNull();  
+      this->obj = that.takeOrNull();
     }
 
   public:
@@ -227,7 +224,7 @@ namespace isl {
 
 #ifndef NDEBUG
     explicit Obj3(ObjTy &&that) : obj(that.keepOrNull()), _printed(std::move(that._printed)) { that.takeOrNull(); }
-    explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()), _printed(that._printed) { }
+    explicit Obj3(const ObjTy &that) : obj(that.takeCopyOrNull()), _printed(that._printed) { }
 #else
     explicit Obj3(ObjTy &&that) : obj(that.takeOrNull()) { }
     explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()) { }

@@ -1,3 +1,4 @@
+#include "islpp_impl_common.h"
 #include "islpp/Set.h"
 
 #include "islpp/BasicSet.h"
@@ -34,8 +35,7 @@ using namespace isl;
 using namespace std;
 
 
-isl_set *Set::takeCopy() const {
-  assert(set); 
+isl_set *Set::takeCopyOrNull() const {
   return isl_set_copy(this->set);
 }
 

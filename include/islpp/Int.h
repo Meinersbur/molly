@@ -66,7 +66,8 @@ namespace isl {
 #endif
     }
     /* implicit */ Int(Int &&v) {
-      isl_int_swap(v.val, this->val);
+      isl_int_init(this->val);
+      isl_int_swap(this->val, v.val);
 #ifndef NDEBUG
       this->_printed = std::move(v._printed);
 #endif
@@ -144,6 +145,7 @@ namespace isl {
 #endif
       return *this;
     }
+
 
     void print(llvm::raw_ostream &out, int base = 10) const {
       char *s = mpz_get_str(0, base, keep());

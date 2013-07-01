@@ -188,6 +188,8 @@ namespace isl {
   }; // class Space
 
 
+  static inline Space enwrap(isl_space *obj) { return Space::wrap(obj); }
+
   bool isEqual(const Space &space1, const Space &space2);
   /// checks whether the first argument is equal to the domain of the second argument. This requires in particular that the first argument is a set space and that the second argument is a map space.
   bool isDomain(const Space &space1, const Space &space2);
@@ -200,6 +202,9 @@ namespace isl {
   Space setTupleId(Space &&space, isl_dim_type type, const Id &id);
   Space setTupleId(const Space &space, isl_dim_type type, Id &&id);
   Space setTupleId(const Space &space, isl_dim_type type, const Id &id);
+
+  static inline bool operator==(const Space &lhs, const Space &rhs) { return isEqual(lhs, rhs); }
+  static inline bool operator!=(const Space &lhs, const Space &rhs) { return !isEqual(lhs, rhs); }
 
 } // namespace isl
 

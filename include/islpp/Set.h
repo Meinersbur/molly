@@ -12,6 +12,7 @@
 #include <vector>
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/lp.h> // enum isl_lp_result;
+#include <isl/set.h>
 
 struct isl_set;
 struct isl_basic_set;
@@ -55,7 +56,9 @@ namespace isl {
 
   public: // Public because otherwise we had to add a lot of friends
     isl_set *take() { assert(set); isl_set *result = set; set = nullptr; return result; }
-    isl_set *takeCopy() const;
+    isl_set *takeOrNull() { isl_set *result = set; set = nullptr; return result; }
+    isl_set *takeCopyOrNull() const;
+    isl_set *takeCopy() const { assert(set); return takeCopyOrNull(); }
     isl_set *keep() const { return set; }
     isl_set **change() { return &set; }
   protected:
@@ -63,22 +66,25 @@ namespace isl {
 
   public:
     static Set wrap(isl_set *set) { Set result; result.give(set); return result; }
+
+    bool isValid() const { return set; }
+    bool isNull() const { return !set; }
 #pragma endregion
 
   public:
     Set() : set(nullptr) { }
-    Set(const Set &that) : set(nullptr) { give(that.takeCopy()); }
-    Set(Set &&that) : set(nullptr) { give(that.take()); }
+    Set(const Set &that) : set(nullptr) { give(that.takeCopyOrNull()); }
+    Set(Set &&that) : set(nullptr) { give(that.takeOrNull()); }
     ~Set() { give(nullptr); }
 
-    const Set &operator=(const Set &that) { give(that.takeCopy()); return *this; }
-    const Set &operator=(Set &&that) { give(that.take()); return *this; }
+    const Set &operator=(const Set &that) { give(that.takeCopyOrNull()); return *this; }
+    const Set &operator=(Set &&that) { give(that.takeOrNull()); return *this; }
 
 
 #pragma region Conversion
     /* implicit */ Set(BasicSet &&set);
     const Set &operator=(BasicSet &&that);
-     /* implicit */ Set(const BasicSet &set);
+    /* implicit */ Set(const BasicSet &set);
     const Set &operator=(const BasicSet &that);
 #pragma endregion
 
@@ -187,7 +193,7 @@ namespace isl {
 
     /// Remove any internal structure of domain (and range) of the given set or relation. If there is any such internal structure in the input, then the name of the space is also removed.
     void flatten();
-    
+
     /// Lift the input set to a space with extra dimensions corresponding to the existentially quantified variables in the input. In particular, the result lives in a wrapped map where the domain is the original space and the range corresponds to the original existentially quantified variables.
     void lift();
 
@@ -195,6 +201,9 @@ namespace isl {
     PwAff dimMin(const Dim &dim) const;
     PwAff dimMax(int pos) const;
     PwAff dimMax(const Dim &dim) const;
+
+    void union_inplace(Set &&that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.take())); }
+    void union_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.takeCopy())); }
   }; // class Set
 
   static inline Set enwrap(isl_set *obj) { return Set::wrap(obj); }

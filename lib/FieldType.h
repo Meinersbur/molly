@@ -24,6 +24,7 @@ namespace isl {
   class Set;
   class BasicSet;
   class Map;
+  class Space;
 } // namespace isl
 
 namespace molly {

@@ -81,7 +81,9 @@ isl::BasicSet FieldType::getLogicalIndexset() {
 isl::Space FieldType::getLogicalIndexsetSpace() {
   auto islctx = getIslContext(); 
   auto dims = getNumDimensions();
-  return islctx->createSetSpace(0, dims);
+  auto result = islctx->createSetSpace(0, dims);
+  //result.setTupleId
+  return result;
 }
 
 

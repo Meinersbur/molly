@@ -184,6 +184,8 @@ namespace isl {
 
     //Ctx *getCtx() const;
     Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
+    Space getDomainSpace() const { return Space::wrap(isl_space_domain(isl_map_get_space(keep()))); }
+    Space getRangeSpace() const { return Space::wrap(isl_space_range(isl_map_get_space(keep()))); }
     Space getSpacelike() const { return getSpace(); }
 
     bool isEmpty() const;
