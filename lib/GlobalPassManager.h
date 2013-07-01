@@ -27,7 +27,7 @@ namespace molly {
 
 
   /// A pass manager that remembers the result of analyses of smaller units (e.g. ModulePass using a RegionPass)
-  class GlobalPassManager : public llvm::ModulePass {
+  class GlobalPassManager LLVM_FINAL : public llvm::ModulePass {
   private:
     llvm::Module *currentModule;
 

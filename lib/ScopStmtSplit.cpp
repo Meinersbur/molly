@@ -324,12 +324,12 @@ namespace molly {
       SmallVector<Loop*, 8> loopHierachy;
       auto depth = oldStmt->getNumIterators();
       for (auto i = depth-depth; i < depth; i+=1) {
-        auto loop = const_cast<Loop*>( oldStmt->getLoopForDimension(i));
+        auto loop = const_cast<Loop*>(oldStmt->getLoopForDimension(i));
         loopHierachy.push_back(loop);
       }
 
       auto oldScatter = isl::Map::wrap(oldStmt->getScattering());
-      auto dim = oldScatter.addOutDim();
+      auto dim = oldScatter.addOutDim_inplace();
       auto newScatter = oldScatter.copy();
 
       oldScatter.fix(dim, 0);

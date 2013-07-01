@@ -14,12 +14,9 @@
 
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Driver/ArgList.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/OptTable.h"
-#include "clang/Driver/Option.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -28,12 +25,16 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PathV1.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/system_error.h"
 using namespace clang;
 using namespace clang::driver;
+using namespace llvm::opt;
 
 llvm::sys::Path GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   if (!CanonicalPrefixes)
@@ -434,10 +436,10 @@ int main(int argc_, const char **argv_) {
 
     // Do a PATH lookup, if there are no directory components.
     if (llvm::sys::path::filename(InstalledPath) == InstalledPath) {
-      llvm::sys::Path Tmp = llvm::sys::Program::FindProgramByName(
+      std::string Tmp = llvm::sys::FindProgramByName(
         llvm::sys::path::filename(InstalledPath.str()));
       if (!Tmp.empty())
-        InstalledPath = Tmp.str();
+        InstalledPath = Tmp;
     }
     llvm::sys::fs::make_absolute(InstalledPath);
     InstalledPath = llvm::sys::path::parent_path(InstalledPath);
@@ -464,15 +466,6 @@ int main(int argc_, const char **argv_) {
   if (TheDriver.CCLogDiagnostics)
     TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
 
-// BEGIN Molly
-  // Molly: The simple way, only works for mingw
-  // TODO: LIBPATH? Or just let the user handle it all by himself?
-  // TODO: Just do it manually
-  //argv.push_back("-L/c/Users/Meinersbur/src/molly/build32_mingw/lib");
-  //argv.push_back("-lMollyRT");
-  TheDriver.CCCIsCXX = true; // Molly is always C++
-  TheDriver.CCCIsCPP = false;
-// END Molly
   OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;
   SmallVector<std::pair<int, const Command *>, 4> FailingCommands;

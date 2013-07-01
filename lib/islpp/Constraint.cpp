@@ -14,7 +14,7 @@
 using namespace isl;
 using namespace std;
 
-
+#if 0
 isl_constraint *Constraint::takeCopy() const {
   return isl_constraint_copy(constraint);
 }
@@ -25,21 +25,22 @@ void Constraint::give(isl_constraint *constraint) {
     isl_constraint_free(this->constraint); 
   this->constraint = constraint;
 }
+#endif
 
-
+#if 0
 Constraint::~Constraint() {
   if (this->constraint) 
     isl_constraint_free(this->constraint); 
 }
-
+#endif
 
 Constraint Constraint::createEquality(LocalSpace &&space) {
-  return Constraint::wrap(isl_equality_alloc(space.take()));
+  return Constraint::enwrap(isl_equality_alloc(space.take()));
 }
 
 
 Constraint Constraint::createInequality(LocalSpace &&space) {
-  return Constraint::wrap(isl_inequality_alloc(space.take()));
+  return Constraint::enwrap(isl_inequality_alloc(space.take()));
 }
 
 
@@ -49,17 +50,19 @@ void Constraint::print(llvm::raw_ostream &out) const {
   out << printer.getString();
 }
 
-
+#if 0
 std::string Constraint::toString() const { 
   std::string buf;
   llvm::raw_string_ostream stream(buf);
   return stream.str();
 }
+#endif
 
-
+#if 0
 void Constraint::dump() const { 
   print(llvm::errs());
 }
+#endif
 
 struct indent_helper {
   int count;
@@ -202,30 +205,31 @@ void Constraint::printProperties(llvm::raw_ostream &out, int depth, int indentco
   }
 }
 
+#if 0
 Ctx *Constraint::getCtx() const {
   return Ctx::wrap(isl_constraint_get_ctx(keep()));
 }
+#endif
 
 LocalSpace Constraint::getLocalSpace() const {
   return LocalSpace::wrap(isl_constraint_get_local_space(keep()));
 }
 
-void  Constraint::setConstant(const Int &v) {
+void  Constraint::setConstant_inplace(const Int &v) ISLPP_INPLACE_QUALIFIER {
   give(isl_constraint_set_constant(take(), v.keep() ) );
 }
 
-void Constraint::setConstant(int v) {
+void Constraint::setConstant_inplace(int v) ISLPP_INPLACE_QUALIFIER {
   give(isl_constraint_set_constant_si(take(), v));
 }
 
 
-
-void Constraint::setCoefficient(isl_dim_type type, int pos, const Int & v) {
+void Constraint::setCoefficient_inplace(isl_dim_type type, int pos, const Int & v) ISLPP_INPLACE_QUALIFIER {
   give(isl_constraint_set_coefficient(take(), type, pos, v.keep()));
 }
 
 
-void Constraint::setCoefficient( isl_dim_type type, int pos, int v) {
+void Constraint::setCoefficient_inplace( isl_dim_type type, int pos, int v) ISLPP_INPLACE_QUALIFIER {
   give(isl_constraint_set_coefficient_si(take(), type, pos, v));
 }
 
@@ -263,4 +267,12 @@ Aff Constraint::getBound(isl_dim_type type, int pos) const{
 }
 Aff Constraint::getAff() const {
   return Aff::wrap(isl_constraint_get_aff(keep()));
+}
+
+Constraint isl::makeLtConstaint(const Constraint &lhs, const Constraint &rhs) {
+  return makeGeConstraint( rhs, lhs);
+}
+
+Constraint isl::makeLrConstaint(const Constraint &lhs, const Constraint &rhs) {
+  return makeGtConstraint( rhs, lhs);
 }

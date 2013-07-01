@@ -120,7 +120,7 @@ namespace isl {
      void setTupleName_inplace(const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_name(take(), s)); }
 
     //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_id(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_basic_set_get_dim_id(keep(), type, pos)); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), type, pos)); }
     void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing API function"); }
     //bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_name(keep(), type, pos); }
     const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_get_dim_name(keep(), type, pos); }

@@ -26,7 +26,7 @@ using namespace std;
 namespace molly {
 
   /// Decide for every statement on which node to execute it
-  class ScopDistribution : public polly::ScopPass {
+  class ScopDistribution LLVM_FINAL : public polly::ScopPass {
   private:
     bool changed;
     Scop *scop;
@@ -50,16 +50,20 @@ namespace molly {
     }
 
 
-    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const LLVM_OVERRIDE {
       ScopPass::getAnalysisUsage(AU); // Calls AU.setPreservesAll();
-      AU.addRequired<MollyContextPass>();
+      AU.addRequired<polly::PollyContextPass>();
+      AU.addRequired<molly::MollyContextPass>();
       AU.addRequired<molly::FieldDetectionAnalysis>();
-      //AU.addRequired<ScopDetection>();
+      AU.addRequired<polly::Dependences>();
+      AU.addRequired<polly::ScopInfo>();
+      AU.addRequired<llvm::ScalarEvolution>();
 
-      AU.addPreserved<polly::Dependences>();
-      AU.addPreserved<ScalarEvolution>();
-      AU.addPreserved<polly::ScopInfo>();
-      AU.addPreserved<polly::PollyContextPass>();
+      //AU.addPreserved<polly::Dependences>();
+      //AU.addPreserved<ScalarEvolution>();
+      //AU.addPreserved<polly::ScopInfo>();
+      //AU.addPreserved<polly::PollyContextPass>();
+      //AU.setPreservesAll();
     }
 
 #if 0

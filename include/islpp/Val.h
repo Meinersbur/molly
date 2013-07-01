@@ -19,7 +19,7 @@ namespace llvm {
 
 
 namespace isl {
-  class Val LLVM_FINAL : public Obj2<isl_val> {
+  class Val : public Obj2<isl_val> {
 #pragma region Low-level
   public: // Public because otherwise we had to add a lot of friends
     //isl_pw_multi_aff *take() { assert(pwmaff); isl_pw_multi_aff *result = pwmaff; pwmaff = nullptr; return result; }
@@ -46,7 +46,7 @@ namespace isl {
 #pragma endregion
   }; // class Val
 
-  inline Val enwrap(isl_val *val) { Val::enwrap(val); }
+  static inline Val enwrap(isl_val *val) { return Val::enwrap(val); }
 
 } // namespace isl
 #endif /* ISLPP_VAL_H */

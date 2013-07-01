@@ -15,7 +15,7 @@ namespace llvm {
 
 namespace isl {
 #define Vec Vec LLVM_FINAL
-  class Vec LLVM_FINAL : public Obj2<isl_vec> {
+  class Vec : public Obj2<isl_vec> {
 #undef Vec 
 
 #pragma region Low-level

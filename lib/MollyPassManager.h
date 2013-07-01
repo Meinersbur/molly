@@ -6,25 +6,16 @@
 #ifndef MOLLY_MOLLYPASSMANAGER_H
 #define MOLLY_MOLLYPASSMANAGER_H
 
-#include <llvm/Pass.h>
+namespace llvm {
+  //#include <llvm/Pass.h>
+  class ModulePass;
+} // namespace molly
+
+namespace polly {
+} // namespace polly
 
 namespace molly {
-  class MollyPassManager : public llvm::ModulePass {
-  private:
-
-  public:
-    static char ID;
-    MollyPassManager();
-
-    static MollyPassManager *create();
-
-    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
-    virtual bool runOnModule(llvm::Module &M);
-
-    void add(llvm::Pass *pass);
-
-  }; // class MollyPassManager
-
-   MollyPassManager *createMollyPassManager();
+  extern char &MollyPassManagerID;
+  llvm::ModulePass *createMollyPassManager();
 } // namespace molly
 #endif /* MOLLY_MOLLYPASSMANAGER_H */

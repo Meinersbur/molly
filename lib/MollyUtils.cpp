@@ -55,6 +55,7 @@ void molly::collectAllRegions(llvm::Region *region, llvm::SmallVectorImpl<llvm::
 llvm::Pass *molly::createPassFromId(const void *passId) {
   auto passRegistry = PassRegistry::getPassRegistry();
   auto passInfo = passRegistry->getPassInfo(passId);
+  assert(passInfo);
   auto passIsAnalysis = passInfo->isAnalysis();
   auto pass = passInfo->createPass();
   return pass;

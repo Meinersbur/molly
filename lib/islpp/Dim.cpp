@@ -1,12 +1,23 @@
+#include "islpp_impl_common.h"
 #include "islpp/Dim.h"
 
 #include "islpp/Spacelike.h"
-
+#include "islpp/Space.h"
+#include "islpp/LocalSpace.h"
 #include <isl/space.h>
 #include <isl/map.h>
 #include <llvm/Support/ErrorHandling.h>
 
 using namespace isl;
+
+
+     Dim Dim:: enwrap(Space space, isl_dim_type type, unsigned pos) {
+      return Dim(space.takeCopy(), type, pos);
+    }
+
+         Dim Dim::enwrap(LocalSpace localspace, isl_dim_type type, unsigned pos) {
+      return Dim(localspace.takeCopy(), type, pos);
+    }
 
 #if 0
 Dim Dim::wrap(__isl_keep isl_space *space, isl_dim_type type, unsigned pos) {
@@ -31,7 +42,7 @@ Dim Dim::wrap(__isl_keep isl_space *space, isl_dim_type type, unsigned pos) {
 }
 #endif
 
-
+#if 0
 Dim Dim::wrap(__isl_keep isl_local_space *space, isl_dim_type type, unsigned pos) {
   assert(space);
 
@@ -45,9 +56,9 @@ Dim Dim::wrap(__isl_keep isl_local_space *space, isl_dim_type type, unsigned pos
     llvm_unreachable("Unsupported dim");
   }
 
-  return Dim(type, pos, Id::wrap(isl_local_space_get_dim_id(space, type, pos)), isl_local_space_dim(space, type));
+  return Dim(type, pos, Id::enwrap(isl_local_space_get_dim_id(space, type, pos)), isl_local_space_dim(space, type));
 }
-
+#endif
 
 #if 0
 Dim Dim::wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos) { 
@@ -76,7 +87,7 @@ Dim Dim::wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos) {
 }
 #endif
 
-
+#if 0
  Dim Dim::wrap(const Spacelike &spacelike, isl_dim_type type, unsigned pos) {
   switch (type) {
   case isl_dim_param:
@@ -91,7 +102,7 @@ Dim Dim::wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos) {
 
   return Dim(type, pos, spacelike.getDimIdOrNull(type, pos), spacelike.dim(type));
  }
-
+#endif
 
 #if 0
 class DimBase : public Dim {

@@ -8,17 +8,19 @@ add_molly_library(LLVMMolly
     FieldVariable.cpp
     FieldCodeGen.cpp
     ScopDistribution.cpp
-    MollyContext.cpp
     MollyContextPass.cpp
     ScopUtils.cpp
     ScopFieldCodeGen.cpp
+    InsertInOut.cpp
+    ClusterConfig.cpp
+    MollyFieldAccess.cpp
     
+    MollyContext.cpp
     Nodegrid.cpp  # Obsolete?
     ValueSourceAnalysis.cpp
     ScopStmtSplit.cpp
     MollyUtils.cpp
     MollyInlinePrepa.cpp # Obsolete?
-    MollyFieldAccess.cpp
     PatternSearchAnalysis.cpp # Obsolete
     GlobalPassManager.cpp
     MollyPassManager.cpp # Obsolete
@@ -33,7 +35,6 @@ add_molly_library(LLVMMolly
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
     FlattenMapping.cpp
-    ClusterConfig.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

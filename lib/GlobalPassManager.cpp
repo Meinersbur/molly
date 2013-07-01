@@ -172,13 +172,13 @@ void GlobalPassManager::removeObsoletedAnalyses(llvm::Pass *pass) {
     return;
 
   auto &preserved = AU.getPreservedSet();
-  DenseSet<AnalysisID> preservedSet ;
+  DenseSet<AnalysisID> preservedSet;
   for (auto it = preserved.begin(), end = preserved.end(); it!=end; ++it) {
     auto preservedID = *it;
     preservedSet.insert(preservedID);
   }
 
-  decltype(currentModuleAnalyses) rescuedModuleAnalyses ;
+  decltype(currentModuleAnalyses) rescuedModuleAnalyses;
   for (auto it = currentModuleAnalyses.begin(), end = currentModuleAnalyses.end(); it!=end; ++it) {
     auto module = it->first.first;
     auto moduleAnalysisID = it->first.second;

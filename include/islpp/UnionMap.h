@@ -45,17 +45,11 @@ namespace isl {
 
   public:
      Union() {}
-#ifndef NDEBUG
-    /* implicit */ Union(const ObjTy &that) : Obj3(that.takeCopyOrNull(), _printed) { }
-    /* implicit */ Union(ObjTy &&that) : Obj3(that.takeOrNull(), _printed/*WARNING: takeOrNull() will clear _printed, so evaluation order matters*/) { }
-    const ObjTy &operator=(const ObjTy &that) { reset(that.takeCopyOrNull(), that._printed); return *this; }
-    const ObjTy &operator=(ObjTy &&that) { reset(that.takeOrNull(), that._printed/*WARNING: takeOrNull() will clear _printed, so evaluation order matters*/); return *this; }
-#else
-    /* implicit */ Union(const ObjTy &that) : Obj3(that.takeCopyOrNull()) { }
-    /* implicit */ Union(ObjTy &&that) : Obj3(that.takeOrNull()) { }
-    const ObjTy &operator=(const ObjTy &that) { reset(that.takeCopyOrNull()); return *this; }
-    const ObjTy &operator=(ObjTy &&that) { reset(that.takeOrNull()); return *this; }
-#endif
+
+    /* implicit */ Union(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Union(ObjTy &&that) : Obj3(std::move(that)) { }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
     StructTy *takeCopyOrNull() const { return isl_union_map_copy(keep()); }
     static UnionTy enwrap(StructTy *map) { ObjTy result; result.give(map); return result; }
@@ -159,7 +153,7 @@ namespace isl {
   static inline UnionMap enwrap(isl_union_map *map) { return UnionMap::enwrap(map); }
 
   static inline Set params(UnionMap &&umap) { return Set::wrap(isl_union_map_params(umap.take())); }
-  static  inline UnionSet domain(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_domain(umap.take())); }
+  static inline UnionSet domain(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_domain(umap.take())); }
   static inline UnionSet range(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_range(umap.take())); }
 
   static inline UnionMap union_(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_union(umap1.take(), umap2.take())); } //TODO: rename to unit?
@@ -170,7 +164,7 @@ namespace isl {
   static inline UnionMap rangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_range_product(umap1.take(), umap2.take())); }
   static inline UnionMap flatRangeProduct(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_flat_range_product(umap1.take(), umap2.take())); }
 
-  static inline  UnionMap applyDomain(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_apply_domain(umap1.take(), umap2.take())); }
+  static inline UnionMap applyDomain(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_apply_domain(umap1.take(), umap2.take())); }
   static inline UnionMap applyRange(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_apply_range(umap1.take(), umap2.take())); }
 
   static  inline UnionSet deltas(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_deltas(umap.take())); }
@@ -179,13 +173,13 @@ namespace isl {
   static inline  bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
   static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
 
-  static inline  Map extractMap(const UnionMap &umap, Space &&dim) { return Map::wrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
+  static inline Map extractMap(const UnionMap &umap, Space &&dim) { return Map::wrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
 
-  static inline  BasicMap sample(UnionMap &&umap) { return BasicMap::wrap(isl_union_map_sample(umap.take())); }
+  static inline BasicMap sample(UnionMap &&umap) { return BasicMap::enwrap(isl_union_map_sample(umap.take())); }
 
   static inline UnionMap lexLt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_lt_union_map(umap1.take(), umap2.take())); }
-  static inline  UnionMap lexLe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_le_union_map(umap1.take(), umap2.take())); }
-  static inline  UnionMap lexGt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_gt_union_map(umap1.take(), umap2.take())); }
+  static inline UnionMap lexLe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_le_union_map(umap1.take(), umap2.take())); }
+  static inline UnionMap lexGt(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_gt_union_map(umap1.take(), umap2.take())); }
   static inline UnionMap lexGe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_ge_union_map(umap1.take(), umap2.take())); }
 
   static inline UnionSet wrap(UnionMap &&umap) { return UnionSet::wrap(isl_union_map_wrap(umap.take())); }//TODO: Unfortunate overloading

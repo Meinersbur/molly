@@ -74,12 +74,12 @@ namespace isl {
     unsigned dim(isl_dim_type type) const { return isl_pw_multi_aff_dim(keep(), type); }
 
     bool hasTupleId(isl_dim_type type) const { return isl_pw_multi_aff_has_tuple_id(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { return Id::wrap(isl_pw_multi_aff_get_tuple_id(keep(), type)); }
+    Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_pw_multi_aff_get_tuple_id(keep(), type)); }
     void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER{ give(isl_pw_multi_aff_set_tuple_id(take(), type, id.take())); }
     bool hasTupleName(isl_dim_type type) const { return isl_pw_multi_aff_has_tuple_name(keep(), type); }
     const char *getTupleName(isl_dim_type type) const { return isl_pw_multi_aff_get_tuple_name(keep(), type);  }
 
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_pw_multi_aff_get_dim_id(keep(), type, pos)); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_pw_multi_aff_get_dim_id(keep(), type, pos)); }
     void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_set_dim_id(take(), type, pos, id.take())); }
     const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_pw_multi_aff_get_dim_name(keep(), type, pos); }
 

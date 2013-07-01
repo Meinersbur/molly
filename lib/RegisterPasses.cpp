@@ -1,5 +1,6 @@
-
+#define DEBUG_TYPE "molly"
 #include "molly/RegisterPasses.h"
+
 #include "molly/LinkAllPasses.h"
 #include "FieldCodeGen.h"
 #include "ScopStmtSplit.h"
@@ -27,13 +28,16 @@
 #include "FieldDetection.h"
 #include "llvm/Assembly/PrintModulePass.h"
 #include <polly/PollyContextPass.h>
+#include "InsertInOut.h"
 
 using namespace llvm;
 using namespace std;
 
 
-static cl::opt<bool> MollyEnabled("molly", cl::desc("Molly - Enable by default in -O3"), cl::init(false), cl::Optional);
-static cl::opt<int> dbranch("malt", cl::desc("Debug Branch"), cl::init(0), cl::Optional);
+cl::OptionCategory MollyCategory("Molly Options", "Configure memory optimizations");
+
+static cl::opt<bool> MollyEnabled("molly", cl::desc("Molly - Enable by default in -O3"), cl::init(false), cl::Optional, cl::cat(MollyCategory));
+static cl::opt<int> dbranch("malt", cl::desc("Debug Branch"), cl::init(0), cl::Optional, cl::cat(MollyCategory));
 
 
 static void initializeMollyPasses(PassRegistry &Registry) {
@@ -299,6 +303,8 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // SCoPs are detected from here on; It must be preserved until the CodeGeneration passes, otherwise changes made to will be forgotten
   //gpm->addPass<polly::ScopInfo>(); // RegionPass
   PM.add(createPassFromId(ScopInfo::ID));
+
+  PM.add(createPassFromId(molly::InsertInOutPassID));
 
   // Decide where to execute statements
   //gpm->addPassID(ScopDistributionPassID); // ScopPass

@@ -25,6 +25,7 @@ namespace isl {
   class LocalSpace;
   class Id;
   class Int;
+  class Map;
 } // namespace isl
 
 
@@ -74,6 +75,11 @@ namespace isl {
 
     PwAff copy() const { return PwAff::wrap(takeCopy()); }
     PwAff &&move() { return std::move(*this); }
+#pragma endregion
+
+
+#pragma region Conversion
+    Map toMap() const;
 #pragma endregion
 
 

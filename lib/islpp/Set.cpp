@@ -447,7 +447,7 @@ bool Set::hasTupleId() const {
 }
 
 Id Set::getTupleId() const {
-  return Id::wrap(isl_set_get_tuple_id(keep()));
+  return Id::enwrap(isl_set_get_tuple_id(keep()));
 }
 
 bool Set::hasTupleName() const {
@@ -469,7 +469,7 @@ bool Set::hasDimId(isl_dim_type type, unsigned pos) const {
 
 
 Id Set::getDimId(isl_dim_type type, unsigned pos) const {
-  return Id::wrap(isl_set_get_dim_id(keep(), type, pos));
+  return Id::enwrap(isl_set_get_dim_id(keep(), type, pos));
 }
 
 int Set::findDimById(isl_dim_type type, const Id &id) const {

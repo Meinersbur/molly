@@ -121,8 +121,6 @@ Aff Ctx::createZeroAff(LocalSpace &&space) {
 }
 
 
-
-
 BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths) {
   auto dims = lengths.size();
   Space space = createSetSpace(0, dims);
@@ -130,13 +128,13 @@ BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &length
 
   for (auto d = dims-dims; d < dims; d+=1) {
     auto ge = Constraint::createInequality(space.copy());
-    ge.setConstant(0);
-    ge.setCoefficient(isl_dim_set, 0, 1);
+    ge.setConstant_inplace(0);
+    ge.setCoefficient_inplace(isl_dim_set, 0, 1);
     set.addConstraint(move(ge));
 
     auto lt = Constraint::createInequality(move(space));
-    lt.setConstant(lengths[d]);
-    lt.setCoefficient(isl_dim_set, 0, -1);
+    lt.setConstant_inplace(lengths[d]);
+    lt.setCoefficient_inplace(isl_dim_set, 0, -1);
     set.addConstraint(move(lt));
   }
   return set;
@@ -223,5 +221,5 @@ BasicMap Ctx::createUniverseBasicMap(Space &&space) {
 
 
 Id Ctx::createId(const char *name, void *user) {
-  return Id::wrap(isl_id_alloc(keep(), name, user));
+  return Id::enwrap(isl_id_alloc(keep(), name, user));
 }

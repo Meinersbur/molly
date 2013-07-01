@@ -34,6 +34,7 @@ namespace isl {
   class Val;
   class Vec;
   class Space;
+  class BasicMap;
 
   template<typename T>
   class List;
@@ -138,6 +139,7 @@ namespace isl {
     void print(const Vec &v);
     void print(const Space &space);
     void print(const MultiVal &space);
+    void print(const BasicMap &space);
 
     void flush();
   }; // class Printer

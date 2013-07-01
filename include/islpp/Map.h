@@ -22,6 +22,7 @@
 #include <llvm/Support/ErrorHandling.h>
 #include "Ctx.h"
 #include "Spacelike.h" // class Spacelike (base of Map)
+#include "Obj.h"
 
 struct isl_map;
 
@@ -55,9 +56,32 @@ namespace isl {
     Rough
   };
 
-#define Map Map LLVM_FINAL
-  class Map : public Spacelike {
-#undef Map
+
+  class Map : public Obj3<Map,isl_map>, public Spacelike3<Map> {
+
+#pragma region isl::Obj
+    friend class isl::Obj3<ObjTy, StructTy>;
+  protected:
+    void release() { isl_map_free(takeOrNull()); }
+
+  public:
+    ObjTy() { }
+    static ObjTy wrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
+
+    /* implicit */ ObjTy(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ ObjTy(ObjTy &&that) : Obj3(std::move(that)) { }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+
+  public:
+    StructTy *takeCopyOrNull() const { return isl_map_copy(keepOrNull()); }
+
+    Ctx *getCtx() const { return Ctx::wrap(isl_map_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_map_dump(keep()); }
+#pragma endregion
+
+#if 0
 #ifndef NDEBUG
     std::string _printed;
 #endif
@@ -94,11 +118,17 @@ namespace isl {
 
     const Map &operator=(const Map &that) { give(that.takeCopy()); return *this; }
     const Map &operator=(Map &&that) { give(that.take()); return *this; }
+#endif
 
 
 #pragma region Conversion
-    Map(const MultiAff &maff) : map(isl_map_from_multi_aff(maff.takeCopy())) {}
-    Map(MultiAff &&maff) : map(isl_map_from_multi_aff(maff.take())) {}
+    Map(const BasicMap &bmap) : Obj3(isl_map_from_basic_map(bmap.takeCopy())) {}
+    Map(BasicMap &&bmap) : Obj3(isl_map_from_basic_map(bmap.take())) {}
+    const Map &operator=(const BasicMap &bmap) { give(isl_map_from_basic_map(bmap.takeCopy())); return *this; }
+    const Map &operator=(BasicMap &&bmap) { give(isl_map_from_basic_map(bmap.take())); return *this; }
+
+    Map(const MultiAff &maff) : Obj3(isl_map_from_multi_aff(maff.takeCopy())) {}
+    Map(MultiAff &&maff) : Obj3(isl_map_from_multi_aff(maff.take())) {}
 #pragma endregion
 
 
@@ -140,19 +170,21 @@ namespace isl {
     static Map createFromUnionMap(UnionMap &&umap);
 
 
-    Map copy() const { return wrap(takeCopy()); }
-    Map &&move() { return std::move(*this); }
+    //Map copy() const { return wrap(takeCopy()); }
+    //Map &&move() { return std::move(*this); }
 #pragma endregion
 
-
+#if 0
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;
     std::string toString() const;
     void dump() const;
 #pragma endregion
+#endif
 
-    Ctx *getCtx() const;
+    //Ctx *getCtx() const;
     Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
+    Space getSpacelike() const { return getSpace(); }
 
     bool isEmpty() const;
 
@@ -166,7 +198,7 @@ namespace isl {
     void setTupleName(isl_dim_type type, const char *s) { give(isl_map_set_tuple_name(take(), type, s)); }
 
     bool hasTupleId(isl_dim_type type) const { return isl_map_has_tuple_id(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { return Id::wrap(isl_map_get_tuple_id(keep(), type)); }
+    Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_map_get_tuple_id(keep(), type)); }
     void setTupleId(isl_dim_type type, Id &&id) { give(isl_map_set_tuple_id(take(), type, id.take())); }
 
     bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_map_has_dim_name(keep(), type, pos); }
@@ -175,7 +207,7 @@ namespace isl {
     int findDimByName(isl_dim_type type, const char *name) const { return isl_map_find_dim_by_name(keep(), type, name); }
 
     bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_map_has_dim_id(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_map_get_dim_id(keep(), type, pos)); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_map_get_dim_id(keep(), type, pos)); }
     void setDimId(isl_dim_type type, unsigned pos, Id &&id) { give(isl_map_set_dim_id(take(), type, pos, id.take())); }
     int findDimById(isl_dim_type type, const Id &id) const { return isl_map_find_dim_by_id(keep(), type, id.keep()); }
 
@@ -259,7 +291,7 @@ namespace isl {
     void deltasMap() { give(isl_map_deltas_map(take())); }
     void detectEqualities() { give(isl_map_detect_equalities(take())); }
 
-    void addDims(isl_dim_type type, unsigned n) { give(isl_map_add_dims(take(), type, n)); }
+    void addDims_inplace(isl_dim_type type, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_map_add_dims(take(), type, n)); }
 
     void insertDims(isl_dim_type type, unsigned pos, unsigned n) { give(isl_map_insert_dims(take(), type, pos, n)); }
     void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
@@ -374,8 +406,8 @@ namespace isl {
   static inline Map intersectDomain(Map &&map, Set &&set) { return enwrap(isl_map_intersect_domain(map.take(), set.take())); }
   static inline Map intersectRange(Map &&map, Set &&set) { return enwrap(isl_map_intersect_range(map.take(), set.take())); }
 
-  static  inline BasicMap simpleHull(Map &&map)  { return BasicMap::wrap(isl_map_simple_hull(map.take())); }
-  static  inline BasicMap unshiftedSimpleHull(Map &&map)  { return BasicMap::wrap(isl_map_unshifted_simple_hull(map.take())); }
+  static  inline BasicMap simpleHull(Map &&map)  { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
+  static  inline BasicMap unshiftedSimpleHull(Map &&map)  { return BasicMap::enwrap(isl_map_unshifted_simple_hull(map.take())); }
   static  inline Map sum(Map &&map1, Map &&map2) { return Map::wrap(isl_map_sum(map1.take(), map2.take())); }
 
   static  inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 
@@ -387,39 +419,39 @@ namespace isl {
   static inline Map union_(const Map &map1, const Map &&map2) { return Map::wrap(isl_map_union(map1.takeCopy(), map2.takeCopy())); }
   static inline Map union_(const Map &map1, const Map &map2) { return Map::wrap(isl_map_union(map1.takeCopy(), map2.takeCopy())); }
 
-  static  inline Map applyDomain(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_domain(map1.take(), map2.take())); }
-  static  inline Map applyRange(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_range(map1.take(), map2.take())); }
-  static   inline Map domainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_domain_product(map1.take(), map2.take())); }
-  static   inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_range_product(map1.take(), map2.take())); }
-  static  inline Map flatProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_product(map1.take(), map2.take())); }
-  static  inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
-  static  inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_range_product(map1.take(), map2.take())); }
+  static inline Map applyDomain(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_domain(map1.take(), map2.take())); }
+  static inline Map applyRange(Map &&map1, Map &&map2) { return Map::wrap(isl_map_apply_range(map1.take(), map2.take())); }
+  static inline Map domainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_domain_product(map1.take(), map2.take())); }
+  static inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_range_product(map1.take(), map2.take())); }
+  static inline Map flatProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_product(map1.take(), map2.take())); }
+  static inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
+  static inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::wrap(isl_map_flat_range_product(map1.take(), map2.take())); }
   static inline Map intersect(Map &&map1, Map &&map2) { return Map::wrap(isl_map_intersect(map1.take(), map2.take())); }
-  static  inline Map substract(Map &&map1, Map &&map2) { return Map::wrap(isl_map_subtract(map1.take(), map2.take())); }
+  static inline Map substract(Map &&map1, Map &&map2) { return Map::wrap(isl_map_subtract(map1.take(), map2.take())); }
 
   static inline Set deltas(Map &&map) { return Set::wrap(isl_map_deltas(map.take())); }
-  static inline BasicMap affineHull(Map &&map) { return BasicMap::wrap(isl_map_affine_hull(map.take()));}  
-  static inline BasicMap convexHull(Map &&map) { return BasicMap::wrap(isl_map_convex_hull(map.take()));} 
-  static inline BasicMap polyhedralHull(Map &&map) { return BasicMap::wrap(isl_map_polyhedral_hull(map.take()));} 
+  static inline BasicMap affineHull(Map &&map) { return BasicMap::enwrap(isl_map_affine_hull(map.take()));}  
+  static inline BasicMap convexHull(Map &&map) { return BasicMap::enwrap(isl_map_convex_hull(map.take()));} 
+  static inline BasicMap polyhedralHull(Map &&map) { return BasicMap::enwrap(isl_map_polyhedral_hull(map.take()));} 
 
-  static  inline Set wrap(Map &&map) { return Set::wrap(isl_map_wrap(map.take()));} 
+  static inline Set wrap(Map &&map) { return Set::wrap(isl_map_wrap(map.take()));} 
 
   static inline Set params(Map &&map) { return Set::wrap(isl_map_params(map.take()));}
   static inline Set domain(Map &&map) { return Set::wrap(isl_map_domain(map.take()));}
-  static  inline Set range(Map &&map) { return Set::wrap(isl_map_range(map.take()));}
+  static inline Set range(Map &&map) { return Set::wrap(isl_map_range(map.take()));}
 
 
-  static  inline BasicMap sample(Map &&map) { return BasicMap::wrap(isl_map_sample(map.take())); }
+  static inline BasicMap sample(Map &&map) { return BasicMap::enwrap(isl_map_sample(map.take())); }
 
-  static  inline bool isSubset(const Map &map1, const Map &map2) { return isl_map_is_subset(map1.keep(), map2.keep()); }
-  static  inline bool isStrictSubset(const Map &map1, const Map &map2) { return isl_map_is_strict_subset(map1.keep(), map2.keep()); }
+  static inline bool isSubset(const Map &map1, const Map &map2) { return isl_map_is_subset(map1.keep(), map2.keep()); }
+  static inline bool isStrictSubset(const Map &map1, const Map &map2) { return isl_map_is_strict_subset(map1.keep(), map2.keep()); }
 
-  static   inline bool isDisjoint(const Map &map1, const Map &map2) { return isl_map_is_disjoint(map1.keep(), map2.keep()); }
+  static inline bool isDisjoint(const Map &map1, const Map &map2) { return isl_map_is_disjoint(map1.keep(), map2.keep()); }
 
-  static  inline bool hasEqualSpace(const Map &map1, const Map &map2) { return isl_map_has_equal_space(map1.keep(), map2.keep()); }
-  static  inline bool plainIsEqual(const Map &map1, const Map &map2) { return isl_map_plain_is_equal(map1.keep(), map2.keep()); }
-  static  inline bool fastIsEqual(const Map &map1, const Map &map2) { return isl_map_fast_is_equal(map1.keep(), map2.keep()); }
-  static  inline bool isEqual(const Map &map1, const Map &map2) { return isl_map_is_equal(map1.keep(), map2.keep()); }
+  static inline bool hasEqualSpace(const Map &map1, const Map &map2) { return isl_map_has_equal_space(map1.keep(), map2.keep()); }
+  static inline bool plainIsEqual(const Map &map1, const Map &map2) { return isl_map_plain_is_equal(map1.keep(), map2.keep()); }
+  static inline bool fastIsEqual(const Map &map1, const Map &map2) { return isl_map_fast_is_equal(map1.keep(), map2.keep()); }
+  static inline bool isEqual(const Map &map1, const Map &map2) { return isl_map_is_equal(map1.keep(), map2.keep()); }
 
   static inline Tribool isEqual(const Map &map1, const Map &map2, Accuracy accuracy) {
     switch (accuracy) {

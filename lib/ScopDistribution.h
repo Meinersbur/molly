@@ -12,7 +12,6 @@ namespace polly {
 
 namespace molly {
   extern char &ScopDistributionPassID;
-
   polly::ScopPass *createScopDistributionPass(); 
 } // namespace molly
 

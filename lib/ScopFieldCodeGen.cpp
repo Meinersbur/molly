@@ -10,6 +10,8 @@
 #include "ScopUtils.h"
 #include <llvm/Support/Debug.h>
 #include <polly/PollyContextPass.h>
+#include <islpp/Map.h>
+#include <islpp/UnionMap.h>
 
 using namespace molly;
 using namespace llvm;
@@ -17,7 +19,7 @@ using namespace polly;
 
 
 namespace molly {
-  class ScopFieldCodeGen final : public polly::ScopPass {
+  class ScopFieldCodeGen LLVM_FINAL : public polly::ScopPass {
   private:
     bool changed;
     FieldDetectionAnalysis *Fields;
@@ -26,30 +28,50 @@ namespace molly {
     isl::Ctx *islctx;
     //ScalarEvolution *SE;
 
+    isl::UnionMap flowDeps;
+
+  protected:
+    void modifiedIR() {
+    changed = true;
+    }
+
+    void modifiedScop() {
+    }
+
   public:
     static char ID;
     ScopFieldCodeGen() : ScopPass(ID) {
     }
 
 
-    virtual const char *getPassName() const {
+    const char *getPassName() const LLVM_OVERRIDE {
       return "ScopFieldCodeGen";
     }
 
 
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+    void getAnalysisUsage(AnalysisUsage &AU) const LLVM_OVERRIDE {
+      ScopPass::getAnalysisUsage(AU); // Calls AU.setPreservesAll()
       AU.addRequired<ScopInfo>(); // because it's a ScopPass
       AU.addRequired<MollyContextPass>();
       AU.addRequired<FieldDetectionAnalysis>();
+      AU.addRequired<polly::Dependences>();
 
       AU.addPreserved<PollyContextPass>();
       AU.addPreserved<MollyContextPass>();
       AU.addPreserved<FieldDetectionAnalysis>();
       AU.addPreserved<polly::ScopInfo>(); //FIXME: Which other analyses must be transitively preserved? (ScopDetection,TempScopInfo,RegionInfo,NaturalLoop,...)
       // It actually preserves everything except polly::Dependences (???)
+      AU.addPreserved<polly::Dependences>();
     }
-    virtual void releaseMemory() {
+    void releaseMemory() LLVM_OVERRIDE {
     }
+
+
+    void processScopStmt(ScopStmt *stmt) {
+      auto where = getWhereMap(stmt);
+     
+    }
+
 
     void processScop(Scop *scop) {
       auto flowDeps = getFlowDependences(Deps);
@@ -57,10 +79,12 @@ namespace molly {
 
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;
+        processScopStmt(stmt);
       }
     }
 
-    virtual bool runOnScop(Scop &S) {
+
+    bool runOnScop(Scop &S) LLVM_OVERRIDE {
       auto &F = *S.getRegion().getEntry()->getParent();
       DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << S.getNameStr() << " in func " << F.getName() << "\n");
       if (F.getName() == "test") {
@@ -69,9 +93,11 @@ namespace molly {
 
       changed = false;
       Ctx = &getAnalysis<MollyContextPass>();
+      islctx = Ctx->getIslContext();
       Fields = &getAnalysis<FieldDetectionAnalysis>();
       Deps = &getAnalysis<Dependences>();
-      islctx = Ctx->getIslContext();
+      
+      flowDeps = getFlowDependences(Deps);
 
       processScop(&S);
 
@@ -84,7 +110,7 @@ namespace molly {
 
 char ScopFieldCodeGen::ID = 0;
 char &molly::ScopFieldCodeGenPassID = ScopFieldCodeGen::ID;
-static RegisterPass<ScopFieldCodeGen> FieldScopCodeGenRegistration("molly-scopfieldcodegen", "Molly - Modify SCoPs", false, false);
+static RegisterPass<ScopFieldCodeGen> FieldScopCodeGenRegistration("molly-scopfieldcodegen", "Molly - Modify SCoPs");
 
 polly::ScopPass *molly::createScopFieldCodeGenPass() {
   return new ScopFieldCodeGen();

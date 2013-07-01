@@ -24,15 +24,17 @@ namespace isl {
   class Set;
   class BasicSet;
   class Map;
-}
+} // namespace isl
 
 namespace molly {
   class MollyContextPass;
-}
+} // namespace molly
 
 
 namespace molly {
+#define FieldType FieldType LLVM_FINAL
   class FieldType {
+#undef FieldType
   private:
     molly::MollyContextPass *mollyContext;
     llvm::Module *module;

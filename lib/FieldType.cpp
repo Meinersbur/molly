@@ -64,13 +64,13 @@ isl::BasicSet FieldType::getLogicalIndexset() {
 
   for (auto d = dims-dims; d < dims; d+=1) {
     auto ge = isl::Constraint::createInequality(space.copy());
-    ge.setConstant(0);
-    ge.setCoefficient(isl_dim_set, 0, 1);
+    ge.setConstant_inplace(0);
+    ge.setCoefficient_inplace(isl_dim_set, 0, 1);
     set.addConstraint(move(ge));
 
     auto lt = isl::Constraint::createInequality(move(space));
-    lt.setConstant(getLengths()[d]);
-    lt.setCoefficient(isl_dim_set, 0, -1);
+    lt.setConstant_inplace(getLengths()[d]);
+    lt.setCoefficient_inplace(isl_dim_set, 0, -1);
     set.addConstraint(move(lt));
   }
 
@@ -149,8 +149,6 @@ SmallVector<T*,4> iplistToSmallVector(iplist<T> &list) {
 }
 
 
-
-
 isl::Set FieldType::getGlobalIndexset() {
   return getLogicalIndexset();
 }
@@ -181,16 +179,16 @@ isl::Map FieldType::getLocalIndexset(const isl::BasicSet &clusterSet) {
 
     // globalCoord_low <= clustercoord * clusterLen
     auto c_low = isl::Constraint::createInequality(result.getSpace());
-    c_low.setCoefficient(isl_dim_in, d, clusterLen);
-    c_low.setCoefficient(isl_dim_out, d, -1);
-    c_low.setConstant(0);
+    c_low.setCoefficient_inplace(isl_dim_in, d, clusterLen);
+    c_low.setCoefficient_inplace(isl_dim_out, d, -1);
+    c_low.setConstant_inplace(0);
 
     // (clustercoord + 1) * clusterLen < globalCoord_hi
     // clustercoord * clusterLen + clusterLen < globalCoord_hi
     auto c_hi = isl::Constraint::createInequality(result.getSpace());
-    c_hi.setCoefficient(isl_dim_in, d, clusterLen);
-    c_hi.setCoefficient(isl_dim_out, d, -1);
-    c_hi.setConstant(clusterLen);
+    c_hi.setCoefficient_inplace(isl_dim_in, d, clusterLen);
+    c_hi.setCoefficient_inplace(isl_dim_out, d, -1);
+    c_hi.setConstant_inplace(clusterLen);
   }
 
   return result.toMap();

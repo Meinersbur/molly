@@ -12,7 +12,7 @@ using namespace isl;
 using namespace llvm;
 using namespace std;
 
-
+#if 0
 isl_map *Map::takeCopy() const {
   assert(map);
   return isl_map_copy(map);
@@ -27,7 +27,7 @@ void Map::give(isl_map *map) {
   this->_printed = toString();
 #endif
 }
-
+#endif
 
 Map Map::readFrom(Ctx *ctx, const char *str) {
   return Map::wrap(isl_map_read_from_str(ctx->keep() , str));
@@ -65,6 +65,8 @@ void Map::print(llvm::raw_ostream &out) const {
   printer.print(*this);
   printer.print(out);
 }
+
+#if 0
 std::string Map::toString() const {
   if (!keep())
     return string();
@@ -76,17 +78,17 @@ std::string Map::toString() const {
 void Map::dump() const {
   print(llvm::errs());
 }
-
+#endif
 
 Map Map::createFromUnionMap(UnionMap &&umap) {
   return Map::wrap(isl_map_from_union_map(umap.take()));
 }
-
-
+ 
+#if 0
 Ctx *Map::getCtx() const {
   return Ctx::wrap(isl_map_get_ctx(map));
 }
-
+#endif
 
 bool Map::isEmpty() const {
   return isl_map_is_empty(keep());
@@ -96,7 +98,7 @@ bool Map::isEmpty() const {
 static int foearchBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(BasicMap&&)>*>(user);
-  auto retval = func( BasicMap::wrap(bmap) );
+  auto retval = func( BasicMap::enwrap(bmap) );
   return retval ? -1 : 0;
 }
 bool Map::foreachBasicMap(std::function<bool(BasicMap&&)> func) const {
@@ -106,5 +108,5 @@ bool Map::foreachBasicMap(std::function<bool(BasicMap&&)> func) const {
 
 
 Map BasicMap::toMap() const {
-  return enwrap(isl_map_from_basic_map(takeCopy()));
+  return Map::wrap(isl_map_from_basic_map(takeCopy()));
 }

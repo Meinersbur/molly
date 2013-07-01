@@ -1,8 +1,11 @@
 #ifndef MOLLY_SCOPEDITOR_H
-#define MOLLY_SCOPEDITOR_H 1
+#define MOLLY_SCOPEDITOR_H
 /// Tools for changing statements in SCoPs
 
 namespace molly {
 
+
+  
+
 } // namespace molly
-#ifndef /* MOLLY_SCOPEDITOR_H /*
+#endif /* MOLLY_SCOPEDITOR_H */

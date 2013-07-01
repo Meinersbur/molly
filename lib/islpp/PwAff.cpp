@@ -9,6 +9,7 @@
 #include "islpp/Id.h"
 #include "islpp/MultiAff.h"
 #include "islpp/PwMultiAff.h"
+#include "islpp/Map.h"
 
 #include <isl/aff.h>
 #include <llvm/Support/raw_ostream.h>
@@ -61,6 +62,9 @@ PwAff PwAff::readFromStr(Ctx *ctx, const char *str) {
 }
 
 
+ Map PwAff::toMap() const { 
+   return Map::wrap(isl_map_from_pw_aff(takeCopy())) ;
+ }
 
 
 void PwAff::print(llvm::raw_ostream &out) const{
@@ -98,7 +102,7 @@ bool PwAff::hasDimId(isl_dim_type type, unsigned pos) const {
   return isl_pw_aff_has_dim_id(keep(), type, pos);
 }
 Id PwAff::getDimId(isl_dim_type type, unsigned pos) const {
-  return Id::wrap(isl_pw_aff_get_dim_id(keep(),type,pos));
+  return Id::enwrap(isl_pw_aff_get_dim_id(keep(),type,pos));
 }
 void PwAff::setDimId(isl_dim_type type, unsigned pos, Id &&id){
   give(isl_pw_aff_set_dim_id(take(), type, pos, id.take()));
@@ -124,7 +128,7 @@ void PwAff::alignParams(Space &&model) {
 }
 
 Id PwAff::getTupleId(isl_dim_type type) {
-  return Id::wrap(isl_pw_aff_get_tuple_id(keep(), type));
+  return Id::enwrap(isl_pw_aff_get_tuple_id(keep(), type));
 }
 void PwAff::setTupleId(isl_dim_type type, Id &&id) {
   give(isl_pw_aff_set_tuple_id(take(), type, id.take()));

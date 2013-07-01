@@ -2,98 +2,76 @@
 #define ISLPP_ID_H
 
 #include "islpp_common.h"
-#include <cassert>
-#include <string>
-#include <isl/ctx.h>
+#include "Obj.h" // baseclass of Id
 
+// #include <isl/id.h>
 struct isl_id;
 
 namespace llvm {
+  // #include <llvm/Support/raw_ostream.h>
   class raw_ostream;
 } // namespace llvm
 
 namespace isl {
+  // #include "Ctx.h"
   class Ctx;
 } // namespace isl
 
 
 namespace isl {
 
-#define Id Id LLVM_FINAL
-  class Id {
-#undef Id
-#pragma region Low-level functions
-  private:
-    isl_id *id;
+  class Id : public Obj3<Id, isl_id> {
 
-  public: // Public because otherwise we had to add a lot of friends
-    isl_id *takeOrNull() { isl_id *result = id; id = nullptr; return result; }
-    isl_id *take() { assert(id); isl_id *result = id; id = nullptr; return result; }
-    isl_id *takeCopyOrNull() const;
-    isl_id *takeCopy() const { assert(id); return takeCopyOrNull(); }
-    isl_id *keepOrNull() const { return id; }
-    isl_id *keep() const { assert(id); return id; }
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
   protected:
-    void giveOrNull(isl_id *id = NULL);
-    void give(isl_id *id) { assert(id); giveOrNull(id); }
+    void release() ;
 
   public:
-    static Id wrap(isl_id *id) { Id result; result.giveOrNull(id); return result; }
-#pragma endregion
+    Id() { }
+    static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
+
+    /* implicit */ Id(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Id(ObjTy &&that) : Obj3(std::move(that)) { }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
   public:
-    ~Id() ;
+    StructTy *takeCopyOrNull() const;
 
-    Id() : id(NULL) {}
-    Id(Id &&that) : id(that.takeOrNull()) { }
-    Id(const Id &that) : id(that.takeCopyOrNull()) { }
-
-    const Id &operator=(Id &&that) { giveOrNull(that.takeOrNull()); return *this; }
-    const Id &operator=(const Id &that) { give(that.takeCopyOrNull()); return *this; }
-
-    //explicit operator bool() const { return id!=NULL; }
-    bool isNull() const { return id==NULL; }
-    bool isValid() const { return id!=NULL; }
-
-  public:
-#pragma region Creational
-    static Id create(Ctx *ctx, const char *name, void *user = NULL) ;
-    static Id createAndFreeUser(Ctx *ctx, const char *name, void *user);
-
-  private:
-    template<typename T>
-    static void deleteUser(void *user) {
-      delete static_cast<T*>(user);
-    }
-  public:
-    template<typename T>
-    static Id createAndDeleteUser(Ctx *ctx, const char *name, T *user) {
-      auto result = create(ctx, name, user);
-      //isl_id *result = isl_id_alloc(ctx->keep(), name, user);
-      result = isl_id_set_free_user(result->keep(), &deleteUser<T>);
-      return result;
-    }
-
-    Id copy() const { return Id::wrap(takeCopy()); }
-#pragma endregion
-
-#pragma region Printing
+    Ctx *getCtx() const;
     void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
     void dump() const;
 #pragma endregion
 
-    Ctx *getCtx() const;
-    void *getUser() const;
-    const char *getName() const;
 
-    void setFreeUser(void (*freefunc)(void *));
+#pragma region Creational
+  public:
+    static Id create(Ctx *ctx, const char *name, void *user = nullptr) ;
+#pragma endregion
+
+
+#pragma region Properties
+    const char *getName() const;
+    void *getUser() const ;
+
+    void setFreeUser_inline(void (*freefunc)(void *));
+    Id setFreeUser(void (*freefunc)(void *));
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Id setFreeUser(void (*freefunc)(void *)) && ;
+#endif
+#pragma endregion
   }; // class Id
 
-  static inline Id enwrap(__isl_take isl_id *id) { return Id::wrap(id); }
-   
+
+  static inline Id enwrap(__isl_take isl_id *id) { return Id::enwrap(id); }
+
+  Id setFreeUser(const Id &id, void (*freefunc)(void *)) ;
+  Id setFreeUser(Id &&id, void (*freefunc)(void *)) ;
+
   static inline bool operator==(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()==rhs.keepOrNull(); }
   static inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
+  static inline void swap(isl::Id &lhs, isl::Id &rhs) { isl::Id::swap(lhs, lhs); }
 } // namespace isl
 #endif /* ISLPP_ID_H */

@@ -7,6 +7,8 @@
 
 #include "Ctx.h"
 #include "Multi.h"
+#include "Id.h"
+#include "Expr.h"
 
 struct isl_space;
 
@@ -23,12 +25,16 @@ namespace isl {
   class BasicMap;
   class Int;
   class Point;
+  class Constraint;
 } // namespace isl
 
 
 namespace isl {
   /// Whenever a new set, relation or similiar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
-  class Space LLVM_FINAL {
+#define Space Space LLVM_FINAL
+  class Space {
+#undef Space
+
 #ifndef NDEBUG
     std::string _printed;
 #endif
@@ -86,8 +92,8 @@ namespace isl {
 
     Map emptyMap() const;
     Map universeMap() const;
-    Map createMapFromAff(PwAff &&aff) const;
-    Map createMapFromAff(const PwAff &aff) const;
+    //Map createMapFromAff(PwAff &&aff) const;
+    //Map createMapFromAff(const PwAff &aff) const;
 
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
@@ -97,6 +103,23 @@ namespace isl {
     MultiPwAff createZeroMultiPwAff() const;
 
     Point createZeroPoint() const;
+
+
+    Constraint createZeroConstraint() const;
+    Constraint createConstantConstraint(int) const;
+    Constraint createVarConstraint(isl_dim_type type, int pos) const;
+
+    Constraint createEqualityConstraint() const;
+    Constraint createInequalityConstraint() const;
+
+    Constraint createLtConstraint(Aff &&lhs, Aff &&rhs) const;
+    Constraint createLeConstraint(Aff &&lhs, Aff &&rhs) const;
+    Constraint createEqConstraint(Aff &&lhs, Aff &&rhs) const;
+    Constraint createEqConstraint(Aff &&lhs, int rhs) const;
+    Constraint createGeConstraint(Aff &&lhs, Aff &&rhs) const;
+    Constraint createGtConstraint(Aff &&lhs, Aff &&rhs) const;
+
+    Expr createVarExpr(isl_dim_type type, int pos) const;
 #pragma endregion
 
 
@@ -125,6 +148,11 @@ namespace isl {
     void resetTupleId(isl_dim_type type);
     bool hasTupleId(isl_dim_type type) const;
     Id getTupleId(isl_dim_type type) const;
+    Id getTupleIdOrNull(isl_dim_type type) const {
+      if (hasTupleId(type))
+        return getTupleId(type);
+      return Id();
+    }
     void setTupleName(isl_dim_type type, const char *s);
     bool hasTupleName(isl_dim_type type) const;
     const char *getTupleName(isl_dim_type type) const;
@@ -155,6 +183,8 @@ namespace isl {
     Map createUniverseMap() const;
     BasicMap createUniverseBasicMap() const;
 #pragma endregion
+
+    LocalSpace asLocalSpace() const;
   }; // class Space
 
 

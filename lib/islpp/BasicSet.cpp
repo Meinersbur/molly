@@ -132,7 +132,7 @@ bool BasicSet::foreachConstraint(ConstraintCallback fn, void *user) const {
 
 static int constraintcallback(__isl_take isl_constraint *constraint, void *user) {
   auto fn = *static_cast<std::function<bool(Constraint)>*>(user);
-  auto dobreak = fn(Constraint::wrap(constraint));
+  auto dobreak = fn(Constraint::enwrap(constraint));
   return dobreak ? -1 : 0;
 }
 bool BasicSet::foreachConstraint(std::function<bool(Constraint)> fn) const {
@@ -286,7 +286,7 @@ bool isl::isSubset(const BasicSet &bset1, const BasicSet &bset2) {
 }
 
 BasicMap isl::unwrap(BasicSet &&bset) {
-  return BasicMap::wrap(isl_basic_set_unwrap(bset.take()));
+  return BasicMap::enwrap(isl_basic_set_unwrap(bset.take()));
 }
 
 

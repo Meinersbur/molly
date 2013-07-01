@@ -1,3 +1,4 @@
+#include "islpp_impl_common.h"
 #include "islpp/Spacelike.h"
 
 #include "islpp/Dim.h"
@@ -17,7 +18,8 @@ Id Spacelike::getDimIdOrNull(isl_dim_type type, unsigned pos) const {
 
 Dim Spacelike::addDim(isl_dim_type type) {
   addDims(type, 1);
-  return Dim::wrap(*this, type, dim(type)-1);
+  auto pos = dim(type)-1;
+  return Dim::enwrap(getSpace(), type, pos);
 }
 
 
@@ -48,7 +50,7 @@ bool Spacelike::findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
     pos = dim.getPos();
 
     // Consistency check
-    if (this->dim(type) != dim.getTypeDims())
+    if (this->dim(type) != dim.getTupleDims())
       return false; // These are different spaces
 
 #ifndef NDEBUG

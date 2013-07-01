@@ -51,7 +51,7 @@ void Printer::give(isl_printer *printer, bool ownsFile) {
   }
   this->printer = printer;
   this->ownsFile = ownsFile;
-}
+} 
 
 Printer::~Printer() {
   if (printer) {
@@ -78,7 +78,7 @@ Printer Printer::createToStr(Ctx *ctx) {
 
 
  void Printer::print(llvm::raw_ostream &out) const { 
-   //TODO: Can we somwhow avoid that isl makes an extra copy?
+   //TODO: Can we somehow avoid that isl makes an extra copy?
    char *pchar = isl_printer_get_str(printer);
    out << pchar;
    free(pchar);
@@ -206,7 +206,12 @@ void Printer::print(const Space &space) {
 
 
 void Printer::print(const MultiVal &space) {
-  give(isl_printer_print_multi_val);
+  //give(isl_printer_print_multi_val);
+}
+
+
+void Printer::print(const BasicMap &space) {
+  give(isl_printer_print_basic_map(take(), space.keep()));
 }
 
 

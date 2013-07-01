@@ -16,6 +16,18 @@ namespace isl {
   class Ctx;
 } // namespace isl
 
+#ifndef __isl_keep
+#define __isl_keep
+#endif
+
+#ifndef __isl_take
+#define __isl_take
+#endif
+
+#ifndef __isl_give
+#define __isl_give
+#endif
+
 
 namespace isl {
 
@@ -80,7 +92,13 @@ namespace isl {
       getDerived()->release();
       this->obj = obj;
 #ifndef NDEBUG
-      this->_printed = getDerived()->toString();
+      if (obj) {
+        llvm::raw_string_ostream stream(this->_printed);
+        getDerived()->print(stream);
+        //stream.flush();
+      } else {
+        this->_printed.clear();
+      }
 #endif
     }
 
@@ -100,22 +118,82 @@ namespace isl {
     }
 #endif
 
+  protected:
+    void obj_give(const Obj3<D,S> &that) {
+      if (&that == this)
+        return;
 
+      if (this->obj)
+        getDerived()->release(); 
+
+      this->obj = that.takeCopy(); 
+#ifndef NDEBUG
+      this->_printed = that._printed;
+#endif
+    }
+
+    void obj_give(Obj3<D,S> &&that) {
+      assert(&that != this);
+
+      if (this->obj)
+        getDerived()->release(); 
+
+#ifndef NDEBUG
+      this->_printed = std::move(that._printed);
+#endif
+      this->obj = that.take(); 
+    }
+
+    void obj_reset(const ObjTy &that) {
+      if (&that == this)
+        return;
+
+      if (this->obj)
+        getDerived()->release(); 
+
+      this->obj = that.takeCopyOrNull(); 
+#ifndef NDEBUG
+      if (this->obj) 
+        this->_printed = that._printed;
+      else
+        this->_printed.clear();
+#endif
+    }
+
+    void obj_reset(ObjTy &&that) {
+      assert (&that != this);
+
+      if (this->obj)
+        getDerived()->release(); 
+
+#ifndef NDEBUG
+      if (this->obj) 
+        this->_printed = std::move(that._printed);
+      else
+        this->_printed.clear();
+#endif
+      this->obj = that.takeOrNull();  
+    }
+
+  public:
     void reset(StructTy *obj = nullptr) {
       if (obj)
-      getDerived()->release();
+        getDerived()->release();
 #ifndef NDEBUG
-      if (obj)
-        this->_printed = getDerived()->toString();
-      else
+      if (obj) {
+        llvm::raw_string_ostream stream(this->_printed);
+        getDerived()->print(stream);
+        //stream.flush();
+      } else
         this->_printed .clear();
 #endif
     }
 
+#if 0
 #ifndef NDEBUG
     void reset(StructTy *obj, const std::string &printed) {
       if (obj)
-      getDerived()->release(); 
+        getDerived()->release(); 
       this->obj = obj; 
       if (obj) 
         this->_printed = printed;
@@ -125,13 +203,14 @@ namespace isl {
 
     void reset(StructTy *obj, std::string &&printed) {
       if (obj)
-      getDerived()->release();
+        getDerived()->release();
       this->obj = obj; 
       if (obj) 
         this->_printed = std::move(printed);
       else
         this->_printed .clear();
     }
+#endif
 #endif
 
   public:
@@ -143,20 +222,32 @@ namespace isl {
     }
 
 
-
+  protected:
     Obj3() : obj(nullptr) {  }
+
+#ifndef NDEBUG
+    explicit Obj3(ObjTy &&that) : obj(that.keepOrNull()), _printed(std::move(that._printed)) { that.takeOrNull(); }
+    explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()), _printed(that._printed) { }
+#else
+    explicit Obj3(ObjTy &&that) : obj(that.takeOrNull()) { }
+    explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()) { }
+#endif
+
     explicit Obj3(StructTy *obj) : obj(obj) {
 #ifndef NDEBUG
       if (obj) {
         llvm::raw_string_ostream stream(_printed);
         getDerived()->print(stream);
-        stream.flush();
+        //stream.flush();
       }
 #endif
     }
+
+#if 0
 #ifndef NDEBUG
     Obj3(StructTy *obj, const std::string &printed) : _printed(printed), obj(obj) { }
-    Obj3(StructTy *obj,  std::string &&printed) : _printed(std::move(printed)), obj(obj) { }
+    Obj3(StructTy *obj, std::string &&printed) : _printed(std::move(printed)), obj(obj) { }
+#endif
 #endif
 
   public:
@@ -167,11 +258,39 @@ namespace isl {
     std::string toString() {
       std::string buf;
       if (obj) {
-        llvm::raw_string_ostream stream(_printed);
+        llvm::raw_string_ostream stream(buf);
         getDerived()->print(stream);
-        stream.flush();
+        //stream.flush();
       }
       return buf;
+    }
+
+    // Necessary, since we have move ctor/assignment?
+    static void swap(ObjTy &lhs, ObjTy &rhs) {
+      std::swap(lhs.obj, rhs.obj);
+#ifndef NDEBUG
+      std::swap(lhs._printed, rhs._printed);
+#endif
+    }
+
+    ObjTy copy() const { 
+      ObjTy result;
+      result.obj_give(*this);
+      return result;
+    }
+    ObjTy &&move() { 
+      return std::move(*getDerived()); 
+    }
+
+    static ObjTy enwrap(StructTy *obj) {
+      ObjTy result;
+      result.give(obj);
+      return result;
+    }
+
+    // Default implementation if superclass doesn't provide one
+    void dump() const {
+      getDerived()->print( llvm::errs() );
     }
   }; // class Obj3
 
@@ -337,5 +456,6 @@ namespace isl {
     virtual ~Obj() {}
     virtual Ctx *getCtx() const = 0;
   }; // class Obj
+
 } // namepspace isl
 #endif /* ISLPP_OBJ_H */

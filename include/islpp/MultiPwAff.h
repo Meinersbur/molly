@@ -23,7 +23,7 @@ struct isl_multi_pw_aff;
 
 namespace isl {
   template<>
-  class Multi<PwAff> LLVM_FINAL : public Spacelike {
+  class Multi<PwAff> : public Spacelike {
 #ifndef NDEBUG
   private:
     std::string _printed;

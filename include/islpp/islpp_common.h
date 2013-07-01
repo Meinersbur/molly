@@ -27,11 +27,12 @@
 #if __has_extension(cxx_reference_qualified_functions) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 8) || (_GNUC__ == 4 && __GNUC_MINOR__ == 8 && __GNUC_PATCHLEVEL__ >= 1)
 // Supported since GCC 8.4.1 (http://gcc.gnu.org/projects/cxx0x.html)
 #define ISLPP_HAS_RVALUE_THIS_QUALIFIER 1
-#define ISLPP_INPLACE_QUALIFIER &
+#define ISLPP_MUTATE_QUALIFIER &
 #else
 #define ISLPP_HAS_RVALUE_THIS_QUALIFIER 0
-#define ISLPP_INPLACE_QUALIFIER 
+#define ISLPP_MUTATE_QUALIFIER 
 #endif
+#define ISLPP_INPLACE_QUALIFIER ISLPP_MUTATE_QUALIFIER /* obsoltete */
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__)
 #define ISLPP_INLINE_DECLARATION extern inline

@@ -20,7 +20,7 @@ using std::move;
 
 
 // Missing in isl
-__isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
+static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
 	if (!mpwaff)
 		return NULL;
 

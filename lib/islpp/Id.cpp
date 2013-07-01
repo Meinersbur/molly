@@ -1,43 +1,28 @@
+#include "islpp_impl_common.h"
 #include "islpp/Id.h"
 
 #include "islpp/Ctx.h"
 #include "islpp/Printer.h"
 
-#include <isl/id.h>
 #include <llvm/Support/raw_ostream.h>
+#include <isl/id.h>
 
 using namespace isl;
+using namespace llvm;
 
+//namespace isl {
 
-isl_id *Id::takeCopyOrNull() const {
-  return isl_id_copy(id);
+void Id::release() {
+  isl_id_free(takeOrNull());
 }
 
 
-void Id::giveOrNull(isl_id *id) { 
-  if (this->id && this->id!=id) 
-    isl_id_free(this->id); 
-  this->id = id;
+Id::StructTy *Id::takeCopyOrNull() const { 
+  return isl_id_copy(keep()); 
 }
 
-
-Id::~Id() {
-  if (this->id) isl_id_free(this->id);
-#ifndef NDEBUG
-  this->id = NULL;
-#endif
-}
-
-
-Id Id::create(Ctx *ctx, const char *name, void *user) {
-  return Id::wrap(isl_id_alloc(ctx->keep(), name, user));
-}
-
-
-Id Id::createAndFreeUser(Ctx *ctx, const char *name, void *user) {
-  isl_id *result = isl_id_alloc(ctx->keep(), name, user);
-  result = isl_id_set_free_user(result, &free);
-  return Id::wrap(result);
+Ctx *Id::getCtx() const { 
+  return Ctx::wrap(isl_id_get_ctx(keep()));
 }
 
 
@@ -46,36 +31,38 @@ void Id::print(llvm::raw_ostream &out) const {
   printer.print(*this);
   printer.print(out);
 }
+void Id::dump() const { isl_id_dump(keep()); }
 
 
-std::string Id::toString() const {
-  std::string buf;
-  llvm::raw_string_ostream stream(buf);
-  print(stream);
-  return buf;
-}
-
-
-void Id::dump() const {
-  print(llvm::errs());
-}
-
-
-Ctx *Id::getCtx() const { 
-  return Ctx::wrap(isl_id_get_ctx(keep()));
-}
-
-
-void *Id::getUser() const {
-  return isl_id_get_user(keep());
+Id Id::create(Ctx *ctx, const char *name, void *user) {
+  return Id::enwrap(isl_id_alloc(ctx->keep(), name, user));
 }
 
 
 const char *Id::getName() const { 
   return isl_id_get_name(keepOrNull()); 
 }
-
-
-void Id::setFreeUser( void (*freefunc)(void *))  { 
-  give(isl_id_set_free_user(take(),freefunc)); 
+void *Id::getUser() const { 
+  return isl_id_get_user(keep()); 
 }
+
+void Id::setFreeUser_inline(void (*freefunc)(void *)) {
+  give(isl_id_set_free_user(keep(), freefunc)); 
+}
+Id Id::setFreeUser(void (*freefunc)(void *)) { 
+  return Id::enwrap(isl_id_set_free_user(keep(), freefunc)); 
+}
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+Id Id::setFreeUser(void (*freefunc)(void *)) && { 
+  return Id::enwrap(isl_id_set_free_user(take(), freefunc));
+}
+#endif
+
+ Id isl::setFreeUser(const Id &id, void (*freefunc)(void *)) {
+   return Id::enwrap(isl_id_set_free_user(id.keep(), freefunc)); 
+ }
+   Id isl::setFreeUser(Id &&id, void (*freefunc)(void *)) {
+     return Id::enwrap(isl_id_set_free_user(id.take(), freefunc)); 
+   }
+
+//} // namespace isl

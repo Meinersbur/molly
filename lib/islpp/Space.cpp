@@ -10,6 +10,7 @@
 #include "islpp/MultiPwAff.h"
 #include "islpp/Point.h"
 #include "islpp/Id.h"
+#include "islpp/Constraint.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -92,23 +93,6 @@ Map Space::universeMap() const {
 }
 
 
-Map Space::createMapFromAff(PwAff &&aff) const {
-  auto alignedAff = isl_pw_aff_align_params(aff.take(), keep());
-  alignedAff = isl_pw_aff_set_tuple_id(alignedAff, isl_dim_in, isl_space_get_tuple_id(keep(), isl_dim_in));
-  alignedAff = isl_pw_aff_set_tuple_id(alignedAff, isl_dim_out, isl_space_get_tuple_id(keep(), isl_dim_out));
-
-  auto map = isl_map_from_pw_aff(alignedAff);
-  map = isl_map_align_params(map, takeCopy()); // redundant?
-  assert(isl_space_is_equal( keep(), isl_map_get_space(map) ));
-  return Map::wrap(map);
-}
-
-
-Map Space::createMapFromAff(const PwAff &aff) const { 
-  return createMapFromAff(aff.copy()); 
-}
-
-
 Aff  Space::createZeroAff() const {
   return enwrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
@@ -122,6 +106,7 @@ Aff Space::createConstantAff(const Int &c) const {
 
 
 Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
+  assert(isSetSpace());
   return enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
 }
 
@@ -140,6 +125,66 @@ Point Space::createZeroPoint() const {
   return Point::wrap(isl_point_zero(keep()));
 }
 
+Constraint Space::createZeroConstraint() const {
+  return Constraint::enwrap(isl_equality_alloc(isl_local_space_from_space(takeCopy())));
+}
+
+Constraint Space::createConstantConstraint(int v) const {
+  auto result = isl_equality_alloc(isl_local_space_from_space(takeCopy()));
+  result = isl_constraint_set_constant_si(result, v);
+  return Constraint::enwrap(result);
+}
+Constraint Space::createVarConstraint(isl_dim_type type, int pos) const {
+  auto result = isl_equality_alloc(isl_local_space_from_space(takeCopy()));
+  result = isl_constraint_set_coefficient_si(result, type, pos, 1);
+  return Constraint::enwrap(result);
+}
+
+
+Constraint Space::createEqualityConstraint() const {
+  return Constraint::enwrap( isl_equality_alloc(isl_local_space_from_space(takeCopy())) );
+}
+
+Constraint Space::createInequalityConstraint() const {
+  return Constraint::enwrap( isl_inequality_alloc(isl_local_space_from_space(takeCopy())) );
+}
+
+Constraint Space::createLtConstraint(Aff &&lhs, Aff &&rhs) const {
+  assert(isEqual(lhs.getLocalSpace(), rhs.getLocalSpace()));
+  return createGeConstraint(std::move(lhs), std::move(rhs));
+}
+Constraint Space::createLeConstraint(Aff &&lhs, Aff &&rhs) const {
+  assert(isEqual(lhs.getLocalSpace(), rhs.getLocalSpace()));
+  return createGtConstraint(std::move(lhs), std::move(rhs));
+}
+Constraint Space::createEqConstraint(Aff &&lhs, Aff &&rhs) const {
+  assert(isEqual(lhs.getLocalSpace(), rhs.getLocalSpace()));
+  auto term = isl_aff_sub(lhs.take(), rhs.take());
+  return Constraint::enwrap(isl_equality_from_aff(term));
+}
+
+Constraint Space::createEqConstraint(Aff &&lhs, int rhs) const {
+  return createEqConstraint(std::move(lhs), lhs.getLocalSpace().createConstantAff(rhs));
+}
+
+Constraint Space::createGeConstraint(Aff &&lhs, Aff &&rhs) const {
+  assert(isEqual(lhs.getLocalSpace(), rhs.getLocalSpace()));
+  auto term = isl_aff_sub(lhs.take(), rhs.take()); // lhs - rhs >= 0
+  auto c = isl_inequality_from_aff(term); // TODO: Confirm
+  return Constraint::enwrap(c);
+}
+Constraint Space::createGtConstraint(Aff &&lhs, Aff &&rhs) const {
+  assert(isEqual(lhs.getLocalSpace(), rhs.getLocalSpace()));
+  auto term = isl_aff_sub(lhs.take(), rhs.take()); // lhs - rhs > 0
+  term = isl_aff_add_constant_si(term, -1); // lhs - rhs - 1 >= 0
+  auto c = isl_inequality_from_aff(term);
+  return Constraint::enwrap(c);
+}
+
+
+Expr Space::createVarExpr(isl_dim_type type, int pos) const {
+  return Expr::createVar(this->asLocalSpace(), type, pos);
+}
 
 Set Space::emptySet() const {
   assert(dim(isl_dim_in) == 0);
@@ -186,13 +231,16 @@ unsigned Space::getTotalDims() const {
 }
 
 
-bool Space::isParamsSpace() const{
+bool Space::isParamsSpace() const {
+  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_params(keep());
 }
-bool Space::isSetSpace() const{
+bool Space::isSetSpace() const {
+  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_set(keep());
 }
-bool Space::isMapSpace() const{
+bool Space::isMapSpace() const {
+  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_map(keep());
 }
 
@@ -205,7 +253,7 @@ void Space::setDimId(isl_dim_type type, unsigned pos, Id &&id){
   give(isl_space_set_dim_id(take(), type, pos, id.take()));
 }
 Id Space::getDimId(isl_dim_type type, unsigned pos)const{
-  return Id::wrap(isl_space_get_dim_id(keep(), type, pos));
+  return Id::enwrap(isl_space_get_dim_id(keep(), type, pos));
 }
 void Space::setDimName(isl_dim_type type, unsigned pos, const char *name){
   give(isl_space_set_dim_name(take(), type, pos, name));
@@ -234,7 +282,7 @@ bool Space::hasTupleId(isl_dim_type type) const {
   return isl_space_has_tuple_id(keep(), type);
 }
 Id Space::getTupleId(isl_dim_type type) const {
-  return Id::wrap(isl_space_get_tuple_id(keep(), type) );
+  return Id::enwrap(isl_space_get_tuple_id(keep(), type) );
 }
 void Space::setTupleName(isl_dim_type type, const char *s) {
   give(isl_space_set_tuple_name(take(), type, s));
@@ -322,6 +370,10 @@ Map Space::createUniverseMap() const {
 
 BasicMap Space::createUniverseBasicMap() const {
   return enwrap(isl_basic_map_universe(takeCopy()));
+}
+
+LocalSpace Space::asLocalSpace() const {
+  return LocalSpace::wrap(isl_local_space_from_space(takeCopy()));
 }
 
 

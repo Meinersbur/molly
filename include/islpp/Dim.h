@@ -1,9 +1,13 @@
 #ifndef ISLPP_DIM_H
 #define ISLPP_DIM_H
 
+#include "islpp_common.h"
 //#include <cassert>
 #include <isl/space.h> // enum isl_dim_type
-#include "islpp/Id.h" // class Id (member of isl::Dim)
+#include "Id.h" // class Id (member of isl::Dim)
+#include <llvm/Support/ErrorHandling.h>
+#include <isl/space.h>
+#include <isl/local_space.h>
 
 struct isl_space;
 struct isl_local_space;
@@ -14,100 +18,134 @@ struct isl_basic_set;
 
 namespace isl {
   class Spacelike;
+  class Id;
+  class LocalSpace;
+  class Space;
 } // namespace isl
 
 
 namespace isl {
+
+  namespace DimTypeFlags {
+    enum DimTypeFlags {
+      Cst = (1 << isl_dim_cst),
+      Param = (1 << isl_dim_param),
+      In = (1 << isl_dim_in),
+      Out = (1 << isl_dim_out),
+      Set = (1 << isl_dim_set),
+      Div = (1 << isl_dim_div),
+      All = (Cst | Param | In | Out | Set | Div)
+    }; // enum DimTypeFlags
+  } // namespace DimTypeFlags
+  typedef enum DimTypeFlags::DimTypeFlags DimType;
+#if 0
+  namespace DimType {
+    static const DimTypeFlags Cst = DimTypeCst;
+    static const DimTypeFlags Param = DimTypeParam;
+    static const DimTypeFlags Out = DimTypeOut;
+    static const DimTypeFlags Set = DimTypeSet;
+    static const DimTypeFlags Div = DimTypeDiv;
+    static const DimTypeFlags All = DimTypeAll;
+  }
+#endif
+
+
+  /// Encapsulates a (isl_dim_type,pos)-pair or and isl_id
+  /// Also knows what tuple it is part of
   class Dim {
   private:
     isl_dim_type type;
     unsigned pos;
-    Id id;
 
-    unsigned typeDims;
+#if 1
+  private:
+    //TODO: llvm::PointerUnion
+    isl_space *space;
+    isl_local_space *localspace;
 
   protected:
-    Dim(isl_dim_type type, unsigned pos, Id &&id, unsigned typeDims) : type(type), pos(pos), id(std::move(id)), typeDims(typeDims) {}
+    Dim(isl_space *space, isl_dim_type type, unsigned pos) : space(space), localspace(nullptr), type(type), pos(pos) {
+      assert(space || localspace);
+    }
+    Dim(isl_local_space *localspace, isl_dim_type type, unsigned pos) : space(nullptr), localspace(localspace), type(type), pos(pos) {
+       assert(space || localspace);
+    }
+
+  public:
+    bool hasId() const {  
+      if (space) 
+        return isl_space_has_dim_id(space, type, pos);
+      if (localspace)
+        return isl_local_space_has_dim_id(localspace, type, pos);
+      llvm_unreachable("Null dim");
+    }
+
+    Id getId() const {
+      if (space)
+        return Id::enwrap(isl_space_get_dim_id(space, type, pos));
+      if (localspace) 
+        return Id::enwrap(isl_local_space_get_dim_id(localspace, type, pos));
+      llvm_unreachable("Null dim");
+    }
+
+
+    const char *getName() const { 
+      if (space)
+        return isl_space_get_dim_name(space, type, pos);
+      if (localspace) 
+        return isl_local_space_get_dim_name(localspace, type, pos);
+      llvm_unreachable("Null dim");
+    } 
+
+    unsigned getTupleDims() const { 
+      if (space)
+        return isl_space_dim(space, type);
+      if (localspace) 
+        return isl_local_space_dim(localspace, type);
+      llvm_unreachable("Null dim");
+    }
+#else
+  private:
+    Id dimId;
+
+    unsigned tupleDims;
+    Id tupleId;
+
+  protected:
+    Dim(isl_dim_type type, unsigned dimPos, const Id dimId, unsigned tupleDims, const Id &tupleId) : type(type), dimPos(dimPos), dimId(dimId), tupleDims(tupleDims), tupleId(tupleId) {
+      assert(dimPos < tupleDims);
+    }
+
+  public:
+    bool hasId() const { return dimId.isValid(); }
+    Id getId() const { return dimId; }
+    const char *getName() const { return dimId.getName(); } 
+    unsigned getTupleDims() const { return tupleDims; }
+#endif
+
+
 
   public:
     Dim(): type(isl_dim_cst/*Constant dim not valid*/) {}
 
-    //static Dim wrap(__isl_keep isl_space *space, isl_dim_type type, unsigned pos);
-    static Dim wrap(__isl_keep isl_local_space *space, isl_dim_type type, unsigned pos);
-    //static Dim wrap(__isl_keep isl_map *map, isl_dim_type type, unsigned pos);
-    static Dim wrap(const Spacelike &, isl_dim_type type, unsigned pos);
+    static Dim enwrap(Space space, isl_dim_type type, unsigned pos) ;
+    static Dim enwrap(LocalSpace localspace, isl_dim_type type, unsigned pos);
+
+
+  public:
+    isl_dim_type getType() const { return type; }
+    unsigned getPos() const { return pos; }
 
     bool isNull() const { return type==isl_dim_cst; }
     bool isValid() const { return type!=isl_dim_cst; }
 
-    isl_dim_type getType() const { return type; }
-    unsigned getPos() const { return pos; }
-
-    bool hasId() const { return id.isValid(); }
-    Id getId() const { return id; }
-    const char *getName() const { return id.getName(); } 
-
-    unsigned getTypeDims() const { return typeDims; }
-
+    bool isConstantDim() const { return type == isl_dim_cst; }
+    bool isParamDim() const { return type == isl_dim_param; }
+    bool isInDim() const { return type == isl_dim_in; }
+    bool isOutDim() const { return type == isl_dim_out; }
+    bool isSetDim() const { return type == isl_dim_set; }
+    bool isDivDim() const { return type == isl_dim_div; }
   }; // class Dim
+
 } // namespace isl
-
-
-#if 0
-namespace isl {
-  class DimImpl1;
-  class DimImpl2;
-
-  typedef union {
-    isl_space *space;
-    isl_local_space *lspace;
-    isl_map *map;
-    isl_basic_map *bmap;
-    isl_set *set;
-    isl_basic_set *bset;
-  } dim_owner_t;
-
-  class Dim {
-    friend class DimImpl;
-  protected:
-    DimImpl1 *pimpl;
-    dim_owner_t owner;
-    isl_dim_type type;
-    unsigned pos;
-
-  private:
-    Dim() {}
-  protected: 
-    Dim(isl_dim_type type, unsigned pos) : type(type), pos(pos) {}
-
-  public:
-    //void assertOwner(isl_space *space) const { assert(this->ownerSpace); assert(this->ownerSpace == space); }
-    // void assertOwner(isl_local_space *space) const { assert(this->ownerLocalSpace); assert(this->ownerLocalSpace == space); }
-
-    //protected:
-    //  explicit Dim(isl_space *ownerSpace, isl_local_space *ownerLocalSpace, isl_dim_type type, int pos) : ownerSpace(ownerSpace), ownerLocalSpace(ownerLocalSpace), type(type), pos(pos) {}
-
-  public:
-    //static Dim wrap(isl_space *ownerSpace, isl_dim_type type, int pos) { return Dim(ownerSpace, NULL, type, pos); }
-    //static Dim wrap(isl_local_space *ownerSpace, isl_dim_type type, int pos) { return Dim(NULL, ownerSpace, type, pos); }
-    static Dim wrap(isl_map *map, isl_dim_type type, unsigned pos);
-
-    ~Dim();
-
-    isl_dim_type getType() const { return type; }
-    unsigned getPos() const { return pos; }
-
-    Map getOwnerMap() const;
-
-    bool hasName() const;
-    const char *getName() const;
-    bool hasId() const;
-    Id getId() const;
-
-    unsigned getTypeDimCount() const;
-
-  }; // class Dim
-} // namespace isl
-#endif
-
 #endif /* ISLPP_DIM_H */
