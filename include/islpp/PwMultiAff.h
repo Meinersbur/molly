@@ -29,7 +29,7 @@ namespace llvm {
 
 namespace isl {
   template<>
-  class Pw<MultiAff> LLVM_FINAL : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
+  class Pw<MultiAff> : public Obj2<isl_pw_multi_aff>, public Spacelike2<PwMultiAff> {
 #pragma region Low-level
   public:
     isl_pw_multi_aff *takeCopy() const LLVM_OVERRIDE { return isl_pw_multi_aff_copy(keep()); }
@@ -104,7 +104,7 @@ namespace isl {
 #pragma endregion
 
 
-    PwAff getPwAff(int pos) const { return PwAff::wrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
+    PwAff getPwAff(int pos) const { return PwAff::enwrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
     PwMultiAff setPwAff(int pos, PwAff &&pa) const { return enwrap(isl_pw_multi_aff_set_pw_aff(takeCopy(), pos, pa.take())); }
 
     Set domain() const { return Set::wrap(isl_pw_multi_aff_domain(takeCopy())); }

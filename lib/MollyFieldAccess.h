@@ -47,7 +47,7 @@ namespace molly {
 
     isl::Space getLogicalSpace(isl::Ctx *); // returns a set space with getNumDims() dimensions
 
-    polly::MemoryAccess *getPollyMemoryAccess();
+    polly::MemoryAccess *getPollyMemoryAccess() const;
     polly::ScopStmt *getPollyScopStmt();
     isl::MultiPwAff getAffineAccess(llvm::ScalarEvolution *se);
     isl::Map/*iteration coord -> field coord*/ getAccessRelation();
@@ -56,6 +56,8 @@ namespace molly {
     // Currently this is taken from polly::MemoryAccess
     // But in the lang term, we want to get it from molly::FieldType
     isl::Space getIndexsetSpace();
+
+    isl::Id getAccessTupleId() const;
   }; // class MollyFieldAccess
 
 } // namespace molly

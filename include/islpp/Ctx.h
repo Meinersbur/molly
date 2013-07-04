@@ -8,6 +8,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Compiler.h>
 #include <cassert>
+#include "Union.h"
 
 struct isl_ctx;
 
@@ -19,7 +20,7 @@ namespace isl {
   class Set;
   class Map;
   class Space;
-   class LocalSpace;
+  class LocalSpace;
   class BasicSet;
   class Printer;
   class BasicMap;
@@ -63,7 +64,7 @@ namespace isl {
     void operator delete(void*);
     ~Ctx();
 
-   static Ctx *create();
+    static Ctx *create();
 
 #pragma region Error handling
     isl_error getLastError() const;
@@ -72,38 +73,40 @@ namespace isl {
     OnErrorEnum getOnError() const;
 #pragma endregion
 
+
 #pragma region Create printers
     Printer createPrinterToFile(FILE *file);
     Printer createPrinterToFile(const char *filename);
     Printer createPrinterToStr();
 #pragma endregion
 
-#pragma region Create spaces
-     Space createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
-     Space createMapSpace(Space &&domain, Space &&range);
-     Space createMapSpace(Space &&domain, unsigned n_out);
-     Space createMapSpace(const Space &domain, unsigned n_out);
-     Space createMapSpace(unsigned n_in, Space &&range);
-     Space createMapSpace(unsigned n_in, const Space &range);
 
-     Space createParamsSpace(unsigned nparam);
-     Space createSetSpace(unsigned nparam, unsigned dim);
+#pragma region Create spaces
+    Space createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
+    Space createMapSpace(Space &&domain, Space &&range);
+    Space createMapSpace(Space &&domain, unsigned n_out);
+    Space createMapSpace(const Space &domain, unsigned n_out);
+    Space createMapSpace(unsigned n_in, Space &&range);
+    Space createMapSpace(unsigned n_in, const Space &range);
+
+    Space createParamsSpace(unsigned nparam);
+    Space createSetSpace(unsigned nparam, unsigned dim);
 #pragma endregion
 
-     
+
 #pragma region Create affine expressions
     Aff createZeroAff(LocalSpace &&space);
 #pragma endregion
 
-//#pragma region Create local spaces
-//     LocalSpace createSetLocalSpace(unsigned nparam/*params*/, unsigned n, unsigned divs);
-//     LocalSpace createMapLocalSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/, unsigned divs);
-//#pragma endregion
+    //#pragma region Create local spaces
+    //     LocalSpace createSetLocalSpace(unsigned nparam/*params*/, unsigned n, unsigned divs);
+    //     LocalSpace createMapLocalSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/, unsigned divs);
+    //#pragma endregion
 
 
 #pragma region Create BasicSets
-         BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
-          BasicSet readBasicSet(const char *str);
+    BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
+    BasicSet readBasicSet(const char *str);
 #pragma endregion
 
 
@@ -128,6 +131,8 @@ namespace isl {
     BasicMap createUniverseBasicMap(Space &&space);
 #pragma endregion
 
+
+    UnionMap createEmptyUnionMap();
 
     Id createId(const char *name = nullptr, void *user = nullptr);
   }; // class Ctx

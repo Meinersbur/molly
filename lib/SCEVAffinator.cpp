@@ -205,5 +205,5 @@ isl::PwAff molly::convertScEvToAffine(ScopStmt *Stmt, const SCEV *se) {
 
   Affinator Affinator(Stmt, Stmt->getDomainSpace());
   auto pwaff = Affinator.visit(se);
-  return isl::PwAff::wrap(pwaff);
+  return isl::PwAff::enwrap(pwaff);
 }

@@ -155,6 +155,42 @@ namespace isl {
     SpaceTy *getDerived() { return static_cast<D*>(this); }
     const SpaceTy *getDerived() const { return static_cast<const D*>(this); }
 
+#pragma region To be implementend by Derived
+   //friend class isl::Spacelike3<ObjTy>;
+  public:
+    // mandatory
+    //Space getSpace() const;
+    //Space getSpacelike() const;
+    //LocalSpace getSpacelike() const;
+
+  protected:
+    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER;
+    //void setDimId_internal(isl_dim_type type, unsigned, Id &&id) ISLPP_INPLACE_QUALIFIER;
+
+  public:
+    //void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER;
+    //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER;
+    //void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER;
+
+
+    // optional, default implementation exist
+    unsigned dim(isl_dim_type type) const { return getDerived()->getSpacelike().dim(type); }
+    int findDimById(isl_dim_type type, const Id &id) const { return getDerived()->getSpacelike().findDimById(type, id); }
+
+    bool hasTupleId(isl_dim_type type) const { return getDerived()->getSpacelike().hasTupleId(type); }
+    const char *getTupleName(isl_dim_type type) const { return getDerived()->getSpacelike().getTupleName(type); }
+    Id getTupleId(isl_dim_type type) const { return getDerived()->getSpacelike().getTupleId(type); }
+    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_inplace(type, getDerived()->getCtx()->createId(s)); }
+
+    bool hasDimId(isl_dim_type type, unsigned pos) const { return getDerived()->getSpacelike().hasDimId(type, pos); }
+    const char *getDimName(isl_dim_type type, unsigned pos) const { return getDerived()->getSpacelike().getDimName(type, pos); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return getDerived()->getSpacelike().getDimId(type, pos); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_inplace(type, pos, getDerived()->getCtx()->createId(s)); }
+
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { getDerived()->insertDims_inplace(type, dim(type), count); }
+#pragma endregion
+
+
   protected:
     bool findDim(const Dim &dim, isl_dim_type &type, unsigned &pos) {
       type = dim.getType();
@@ -229,6 +265,85 @@ namespace isl {
       return Id();
     }
 
+    Id getInTupleId() const { return getDerived()->getTupleId(isl_dim_in); }
+    Id getOutTupleId() const { return getDerived()->getTupleId(isl_dim_out); }
+    Id getSetTupleId() const { return getDerived()->getTupleId(isl_dim_set); }
+
+    void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, std::move(id)); }
+    void setTupleId_inplace(isl_dim_type type, const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, id.copy()); }
+    SpaceTy setTupleId(isl_dim_type type, Id &&id) { auto result = getDerived()->copy(); result.setTupleId_internal(type, std::move(id)); return std::move(result); }
+    SpaceTy setTupleId(isl_dim_type type, const Id &id) { auto result = getDerived()->copy(); result.setTupleId_internal(type, id.copy()); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setTupleId(isl_dim_type type, Id &&id) && { getDerived()->setTupleId_internal(type, std::move(id)); return std::move(*this); }
+    SpaceTy setTupleId(isl_dim_type type, const Id &id) && { getDerived()->setTupleId_internal(type, id.copy()); return std::move(*this); }
+#endif
+
+    void setInTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_in, std::move(id)); }
+    void setInTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_in, id.copy()); }
+    SpaceTy setInTupleId(Id &&id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, std::move(id)); return std::move(result); }
+    SpaceTy setInTupleId(const Id &id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, id.copy()); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setInTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_in, std::move(id)); return std::move(*this); }
+    SpaceTy setInTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_in, id.copy()); return std::move(*this); }
+#endif
+
+    void setOutTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_out, std::move(id)); }
+    void setOutTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_out, id.copy()); }
+    SpaceTy setOutTupleId(Id &&id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, std::move(id)); return std::move(result); }
+    SpaceTy setOutTupleId(const Id &id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, id.copy()); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setOutTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_out, std::move(id)); return std::move(*this); }
+    SpaceTy setOutTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_out, id.copy()); return std::move(*this); }
+#endif
+
+    void setSetTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_set, std::move(id)); }
+    void setSetTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_set, id.copy()); }
+    SpaceTy setSetTupleId(Id &&id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, std::move(id)); return std::move(result); }
+    SpaceTy setSetTupleId(const Id &id) { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, id.copy()); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setSetTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_set, std::move(id)); return std::move(*this); }
+    SpaceTy setSetTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_set, id.copy()); return std::move(*this); }
+#endif
+
+    SpaceTy setTupleName(isl_dim_type type, const char *s) { auto result = getDerived()->copy(); result.setTupleName_inplace(type, s); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setTupleName(isl_dim_type type, const char *s) && { getDerived()->setTupleName_inplace(type, s); return std::move(*this); }
+#endif
+
+    void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, std::move(id)); }
+    void setDimId_inplace(isl_dim_type type, unsigned pos,const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, id.copy()); }
+    SpaceTy setDimId(isl_dim_type type, unsigned pos,Id &&id) { auto result = getDerived()->copy(); result.setDimId_internal(type, std::move(id)); return std::move(result); }
+    SpaceTy setDimId(isl_dim_type type, unsigned pos,const Id &id) { auto result = getDerived()->copy(); result.setDimId_internal(type, id.copy()); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setDimId(isl_dim_type type, Id &&id) && { getDerived()->setDimId_internal(type, std::move(id)); return std::move(*this); }
+    SpaceTy setDimId(isl_dim_type type, const Id &id) && { getDerived()->setDimId_internal(type, id.copy()); return std::move(*this); }
+#endif
+
+    SpaceTy setDimName(isl_dim_type type,  unsigned pos,const char *s) { auto result = getDerived()->copy(); result.setDimName_inplace(type, pos, s); return std::move(result); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy setDimName(isl_dim_type type,  unsigned pos,const char *s) && { getDerived()->setDimName_inplace(type, pos, s); return std::move(*this); }
+#endif
+
+    SpaceTy addDims(isl_dim_type type, unsigned count) const { auto result = getDerived()->copy(); result.addDims_inplace(type, count); return result; }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy addDims(isl_dim_type type, unsigned count) && { getDerived()->addDims_inplace(type, count); return this->move(); }
+#endif
+
+    SpaceTy insertDims(isl_dim_type type, unsigned count) const { auto result = getDerived()->copy(); result.insertDims_inplace(type, count); return result; }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy insertDims(isl_dim_type type, unsigned count) && { getDerived()->insertDims_inplace(type, count); return this->move(); }
+#endif
+
+    SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count)  { auto result = getDerived()->copy(); result.moveDims_inplace(dst_type, dst_pos, src_pos, count); return result; }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) && { getDerived()->moveDims_inplace(dst_type, dst_pos, src_pos, count); return std::move(*this); }
+#endif
+
+    SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count)  { auto result = getDerived()->copy(); result.removeDims_inplace(type, first, count); return result; }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count) && { getDerived()->removeDims_inplace(type, first, count); return std::move(*this); }
+#endif
+
     Dim addDim_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER {
       getDerived()->addDims_inplace(type, 1);
       auto dims = getDerived()->dim(type);
@@ -238,9 +353,36 @@ namespace isl {
     Dim addOutDim_inplace() ISLPP_INPLACE_QUALIFIER {
       return getDerived()->addDim_inplace(isl_dim_out);
     }
-
   }; // class Spacelike3
 
+
+  template<typename D> D setTupleName(Spacelike3<D> &&spacelike, isl_dim_type type, const char *s) { spacelike.setTupleName_inplace(type, s); return std::move(spacelike); }
+  template<typename D> D setTupleName(const Spacelike3<D> &spacelike, isl_dim_type type, const char *s) { return spacelike.setTupleName(type, s); }
+ 
+    template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, Id &&id) { spacelike.setTupleId_inplace(type, std::move(id)); return std::move(spacelike); }
+  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, Id &&id) { return spacelike.setTupleId(type, std::move(id)); }
+     template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, const Id &id) { spacelike.setTupleId_inplace(type, id.copy()); return std::move(spacelike); }
+  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, const Id &id) { return spacelike.setTupleId(type, id.copy()); }
+ 
+    template<typename D> D setDimName(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const char *s) { spacelike.setDimName_inplace(type, pos, s); return std::move(spacelike); }
+      template<typename D> D setDimName(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const char *s) { return spacelike.setDimName(type, pos, s); }
+
+   template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, Id &&id) { spacelike.setDimId_inplace(type, pos, std::move(id)); return std::move(spacelike); }
+ template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, Id &&id) { return spacelike.setDimId(type, pos, std::move(id)); }
+    template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const Id &id) { spacelike.setDimId_inplace(type, pos, id.copy()); return std::move(spacelike); }
+ template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const Id &id) { return spacelike.setDimId(type, pos, id.copy()); }
+
+  template<typename D> D addDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned count) { spacelike.addDims_inplace(type, count); return std::move(spacelike); }
+  template<typename D> D addDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned count) { return spacelike.addDims(type, count); }
+
+   template<typename D> D insertDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, unsigned count) { spacelike.insertDims_inplace(type, pos, count); return std::move(spacelike); }
+  template<typename D> D insertDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, unsigned count) { return spacelike.insertDims(type, pos, count); }
+
+   template<typename D> D moveDims(Spacelike3<D> &&spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { spacelike.moveDims_inplace(dst_type, dst_pos, src_type, src_pos, count); return std::move(spacelike); }
+ template<typename D> D moveDims(const Spacelike3<D> &spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { return spacelike.moveDims(dst_type, dst_pos, src_type, src_pos, count); }
+ 
+   template<typename D> D removeDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned first, unsigned count) { spacelike.removeDims_inplace(type, first, count); return std::move(spacelike); }
+  template<typename D> D removeDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned first, unsigned count) { return spacelike.removeDims(type, first, count); }
 
 
 
@@ -344,7 +486,7 @@ namespace isl {
     virtual bool hasDimName(isl_dim_type type, unsigned pos) const;
     virtual const char *getDimName(isl_dim_type type, unsigned pos) const;
     virtual void setDimName(isl_dim_type type, unsigned pos, const char *s)  = 0;
-    virtual int findDimByName(isl_dim_type type, const char *name) const;
+    //virtual int findDimByName(isl_dim_type type, const char *name) const;
 
     virtual void insertDims(isl_dim_type type, unsigned pos, unsigned n) = 0;
     virtual void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) = 0;

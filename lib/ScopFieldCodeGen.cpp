@@ -12,10 +12,12 @@
 #include <polly/PollyContextPass.h>
 #include <islpp/Map.h>
 #include <islpp/UnionMap.h>
+#include "MollyFieldAccess.h"
 
 using namespace molly;
 using namespace llvm;
 using namespace polly;
+using isl::enwrap;
 
 
 namespace molly {
@@ -74,8 +76,78 @@ namespace molly {
 
 
     void processScop(Scop *scop) {
+      // Collect information
+      // Like polly::Dependences::collectInfo, but finer granularity (MemoryAccess instead ScopStmt)
+      DenseMap<isl::Id,MollyFieldAccess> tupleToAccess;
+
+      auto space = enwrap(scop->getParamSpace());
+      auto readAccesses = space.createEmptyUnionMap(); /* { stmt[iteration] -> access[indexset] } */
+      auto writeAccesses = readAccesses.copy(); /* { stmt[iteration] -> access[indexset] } */
+      auto schedule = readAccesses.copy(); /* stmt[iteration] -> scattering[] */
+
+      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt ) {
+        auto stmt = *itStmt;
+        auto domain = getIterationDomain(stmt);
+        schedule.addMap_inplace(getScattering(stmt));
+
+        for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) { 
+          auto memacc = *itAcc;
+          if (!memacc->isFieldAccess())
+            continue;
+
+          auto facc = MollyFieldAccess::fromMemoryAccess(memacc);
+          assert(facc.isValid());
+          auto fvar = facc.getFieldVariable();
+          auto fty = facc.getFieldType();
+
+          auto accId = facc.getAccessTupleId();
+          assert(!tupleToAccess.count(accId) && "accId must be unique");
+          tupleToAccess[accId] = facc;
+
+          auto accessRel = facc.getAccessRelation();
+          accessRel.intersectDomain_inplace(domain);
+          accessRel.setOutTupleId_inplace(accId);
+
+          //FIXME: access withing the same stmt are without order, what happens if they depend on each other?
+          // - Such accesses that do not appear outside must be filtered out
+          // - Add another coordinate to give them an order
+          if (facc.isRead()) {
+            readAccesses.addMap_inplace(accessRel);
+          }
+          if (facc.isWrite()) {
+            writeAccesses.addMap_inplace(accessRel);
+          }
+        }
+      }
+
+      // To find the data that needs to be written back after the scop has been executed, we add an artificial stmt that reads all the data after everything has been executed
+      auto epilogueId = islctx->createId("epilogue");
+      auto epilogueDomainSpace = islctx->createSetSpace(0,0).setSetTupleId(epilogueId);
+      auto scatterRangeSpace = getScatteringSpace(scop);
+      assert(scatterRangeSpace.isSetSpace());
+      auto epilogueScatterSpace = isl::Space::createMapFromDomainAndRange(epilogueDomainSpace, scatterRangeSpace);
+
+      auto allIterationDomains = domain(writeAccesses);
+
+
+    // Find the data flows
+
+isl::UnionMap mustFlow;
+isl::UnionMap mayFlow;
+isl::UnionMap mustNosrc;
+isl::UnionMap mayNosrc;
+isl::computeFlow(readAccesses.copy(), writeAccesses.copy(), isl::UnionMap(), schedule.copy(), &mayFlow, &mayFlow, &mustNosrc, &mayNosrc);
+
+
+
+
       auto flowDeps = getFlowDependences(Deps);
-      flowDeps.foreachMap([] (isl::Map map) {return false;} );
+      flowDeps.foreachMap([&] (isl::Map map) -> bool {
+        auto src = scop->getScopStmtBySpace(map.getDomainSpace().keep());
+        auto dst = scop->getScopStmtBySpace(map.getRangeSpace().keep());
+
+        return false;
+        ;});
 
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;

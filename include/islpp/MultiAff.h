@@ -36,7 +36,7 @@ namespace isl {
   typedef Multi<Aff> MultiAff;
 
   template<>
-  class Multi<Aff> final : public Spacelike {
+  class Multi<Aff> : public Spacelike {
 #ifndef NDEBUG
     std::string _printed;
 #endif 

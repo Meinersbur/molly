@@ -10,17 +10,27 @@ struct isl_id;
 namespace llvm {
   // #include <llvm/Support/raw_ostream.h>
   class raw_ostream;
+  template<typename> struct DenseMapInfo;
 } // namespace llvm
 
 namespace isl {
   // #include "Ctx.h"
   class Ctx;
+  class Id;
 } // namespace isl
+
+namespace llvm {
+  template<> class DenseMapInfo<isl::Id>;
+} // namespace llvm
 
 
 namespace isl {
 
   class Id : public Obj3<Id, isl_id> {
+    friend struct llvm::DenseMapInfo<isl::Id>;
+
+    //private:
+    //  Id(isl_id *obj, std::string &&printed) : Obj3(obj, std::move(printed)) {}
 
 #pragma region isl::Obj3
     friend class isl::Obj3<ObjTy, StructTy>;
@@ -73,5 +83,41 @@ namespace isl {
   static inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
   static inline void swap(isl::Id &lhs, isl::Id &rhs) { isl::Id::swap(lhs, lhs); }
+
+
+
 } // namespace isl
+
+
+namespace llvm {
+  // So you can put an isl::Id into a DenseMap
+  template<>
+  struct DenseMapInfo<isl::Id> {
+    static inline isl::Id getEmptyKey() {
+      isl::Id result;
+#ifndef NDEBUG
+      result.reset(reinterpret_cast<isl_id*>(-1), std::string());
+#else
+      result.reset(reinterpret_cast<isl_id*>(-1));
+#endif
+      return result;
+    }
+    static inline isl::Id getTombstoneKey() {
+      isl::Id result;
+#ifndef NDEBUG
+      result.reset(reinterpret_cast<isl_id*>(-2), std::string());
+#else
+      result.reset(reinterpret_cast<isl_id*>(-2));
+#endif
+      return result;
+    }
+    static unsigned getHashValue(const isl::Id& val) {
+      return reinterpret_cast<unsigned>(val.keepOrNull());
+    }
+    static bool isEqual(const isl::Id &LHS, const isl::Id &RHS) {
+      return LHS.keepOrNull() == RHS.keepOrNull();
+    }
+  }; // class DenseMapInfo<isl::Id>
+} // namespace llvm
+
 #endif /* ISLPP_ID_H */

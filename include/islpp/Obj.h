@@ -186,29 +186,23 @@ namespace isl {
 #endif
     }
 
-#if 0
+
 #ifndef NDEBUG
     void reset(StructTy *obj, const std::string &printed) {
       if (obj)
         getDerived()->release(); 
       this->obj = obj; 
-      if (obj) 
-        this->_printed = printed;
-      else
-        this->_printed .clear();
+      this->_printed = printed;
     }
 
     void reset(StructTy *obj, std::string &&printed) {
       if (obj)
         getDerived()->release();
       this->obj = obj; 
-      if (obj) 
-        this->_printed = std::move(printed);
-      else
-        this->_printed .clear();
+      this->_printed = std::move(printed);
     }
 #endif
-#endif
+
 
   public:
     ~Obj3() { 
@@ -223,8 +217,8 @@ namespace isl {
     Obj3() : obj(nullptr) {  }
 
 #ifndef NDEBUG
-    explicit Obj3(ObjTy &&that) : obj(that.keepOrNull()), _printed(std::move(that._printed)) { that.takeOrNull(); }
-    explicit Obj3(const ObjTy &that) : obj(that.takeCopyOrNull()), _printed(that._printed) { }
+    explicit Obj3(ObjTy &&that) : _printed(std::move(that._printed)), obj(that.takeOrNull()) { }
+    explicit Obj3(const ObjTy &that) : _printed(that._printed), obj(that.takeCopyOrNull()) { }
 #else
     explicit Obj3(ObjTy &&that) : obj(that.takeOrNull()) { }
     explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()) { }

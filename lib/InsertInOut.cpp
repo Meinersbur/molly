@@ -21,6 +21,8 @@
 #include "islpp/Expr.h"
 #include "islpp/Constraint.h"
 #include <polly/LinkAllPasses.h>
+#include <llvm/Analysis/LoopInfo.h>
+#include <llvm/Analysis/ScalarEvolution.h>
 using namespace molly;
 using namespace polly;
 using isl::enwrap;
@@ -61,24 +63,40 @@ namespace molly {
       AU.addPreserved<polly::PollyContextPass>();
       AU.addPreserved<molly::MollyContextPass>(); 
       AU.addPreserved<polly::ScopInfo>(); 
+      AU.addPreserved<polly::ScopDetection>(); 
+      //AU.addPreserved<polly::TempScopInfo>(); 
+      AU.addPreserved<llvm::RegionInfo>(); 
+      AU.addPreserved<llvm::LoopInfo>(); 
+      AU.addPreserved<llvm::ScalarEvolution>(); 
       AU.addPreservedID(polly::IndependentBlocksID);
       AU.addPreserved<molly::FieldDetectionAnalysis>();
-      // Does NOT preserve polly::Dependences
+      AU.addPreserved<llvm::DominatorTree>(); 
+      // Does NOT preserve polly::Dependences (but we could make it do so)
     }
 
 
     void processScop(Scop *scop) {
+      auto domainId = islctx->createId("logue");
       auto domainSpace = islctx->createSetSpace(0, 0);
-      auto logueId = islctx->createId("proepilogue");
-      domainSpace = setTupleId(domainSpace.move(), isl_dim_set, logueId); // Must give it a id otherwise isl may interpret it as nonexisting instead of 0-dimension space
+      domainSpace = setTupleId(domainSpace, isl_dim_set, domainId);
+
+      auto prologueId = islctx->createId("prologue");
+      auto prologueDomainSpace = setTupleId(domainSpace, isl_dim_set, prologueId);
+      auto epilogueId = islctx->createId("epilogue");
+      auto epilogueDomainSpace = setTupleId(domainSpace, isl_dim_set, epilogueId);
+
       auto scatterRangeSpace = getScatteringSpace(scop);
-      auto scatterDim = scatterRangeSpace.getSetDims();
+      auto scatterId = scatterRangeSpace.getTupleId(isl_dim_set);
+      auto scatterDim = scatterRangeSpace.getSetDimCount();
       assert(scatterRangeSpace.isSetSpace());
 
       DenseMap<FieldVariable *, isl::Set> accessedFields;
       auto scatterRange = scatterRangeSpace.emptySet();
-      auto nScatterRangeDims = scatterRangeSpace.getSetDims();
+      auto nScatterRangeDims = scatterRangeSpace.getSetDimCount();
       auto scatterSpace = isl::Space::createMapFromDomainAndRange(domainSpace, scatterRangeSpace);
+      auto prologueScatterSpace = isl::Space::createMapFromDomainAndRange(prologueDomainSpace, scatterRangeSpace);
+      auto epilogueScatterSpace = isl::Space::createMapFromDomainAndRange(epilogueDomainSpace, scatterRangeSpace);
+
 
       // Determine which fields are accessed
       for (auto it = scop->begin(), end = scop->end(); it!=end; ++it) {
@@ -110,40 +128,49 @@ namespace molly {
       // Only interested in most significant dimension
       //scatterRange = isl::projectOut(scatterRange.move(), isl_dim_set, 1, scatterDim-1);
       auto min = scatterRange.dimMin(0) - 1;
-      min.setTupleId(isl_dim_in, domainSpace.getTupleId(isl_dim_set));
+      min.setTupleId_inplace(isl_dim_in, domainId);
       auto max = scatterRange.dimMax(0) + 1;
-      max.setTupleId(isl_dim_in, domainSpace.getTupleId(isl_dim_set));
+      max.setTupleId_inplace(isl_dim_in, domainId);
 
       //isl::BasicSet::createFromPoint( setCoordinate(domainSpace.createZeroPoint(), isl_dim_set, 0, 0));
 
       isl::Set domain = domainSpace.universeSet();
+      isl::Set prologueDomain = prologueDomainSpace.universeSet();
+      isl::Set epilogueDomain = epilogueDomainSpace.universeSet();
       auto region = &scop->getRegion();
 
-      auto mapToZero = scatterSpace.createUniverseBasicMap();
+      // isl_basic_map_set_tuple_id does not exist
+      auto prologieMapToZero = prologueScatterSpace.createUniverseBasicMap();
+      auto epilogieMapToZero = epilogueScatterSpace.createUniverseBasicMap();
       for (auto d = 1; d < nScatterRangeDims; d+=1) {
-        //mapToZero.addConstraint_inplace(makeEqConstraint(scatterSpace.createVarConstraint(isl_dim_out, d), 0));
-        mapToZero.addConstraint_inplace(scatterSpace.createVarExpr(isl_dim_out, d) == 0);
-        //addConstraint(mapToZero, scatterSpace.createEqConstraint(scatterRangeSpace.createVarAff(isl_dim_out, d), 0));
+        prologieMapToZero.addConstraint_inplace(prologueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
+        epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
       }
 
 
       // Insert fake write access before scop
       auto prologueScatter = min.toMap();// scatterSpace.createMapFromAff(min);
       prologueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
-      prologueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
-      prologueScatter = intersect(prologueScatter.move(), mapToZero);
+      //prologueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
+      prologueScatter.setInTupleId_inplace(prologueId);
+      prologueScatter.setOutTupleId_inplace(scatterId);
+      prologueScatter = intersect(prologueScatter.move(), prologieMapToZero.move());
 
-      auto prologueStmt = new ScopStmt(scop,  nullptr/*Maybe need to create a dummy BB*/, "scop.prologue", region, ArrayRef<Loop*>(), domain.takeCopy(), prologueScatter.take()); 
+      prologueScatter.setTupleId(isl_dim_in, prologueId.copy());
+      auto prologueStmt = new ScopStmt(scop,  nullptr/*Maybe need to create a dummy BB*/, "scop.prologue", region, ArrayRef<Loop*>(), prologueDomain.take(), prologueScatter.take()); 
       scop->addScopStmt(prologueStmt);
 
 
       // Insert fake read access after scop
       auto epilogueScatter = max.toMap(); //scatterSpace.createMapFromAff(max);
       epilogueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
-      epilogueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
-      epilogueScatter = intersect(epilogueScatter.move(), mapToZero.move());
+      //epilogueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
+      epilogueScatter.setInTupleId_inplace(epilogueId);
+      epilogueScatter.setOutTupleId_inplace(scatterId);
+      epilogueScatter = intersect(epilogueScatter.move(), epilogieMapToZero.move());
 
-      auto epilogueStmt = new ScopStmt(scop, nullptr/*Maybe need to create a dummy BB*/, "scop.epilogie", region, ArrayRef<Loop*>(), domain.takeCopy(), epilogueScatter.take()); 
+      epilogueScatter.setTupleId(isl_dim_in, epilogueId.copy());
+      auto epilogueStmt = new ScopStmt(scop, nullptr/*Maybe need to create a dummy BB*/, "scop.epilogie", region, ArrayRef<Loop*>(), epilogueDomain.take(), epilogueScatter.take()); 
       scop->addScopStmt(epilogueStmt);
 
       // Insert dummy memory accesses for all fields
@@ -155,8 +182,10 @@ namespace molly {
         auto accessSpace = isl::Space::createMapFromDomainAndRange(domainSpace, region.getSpace());
         isl::Map allacc /* { domain () -> shape } */ = islctx->createAlltoallMap(domain, region.move());
 
-        prologueStmt->addAccess(MemoryAccess::MustWrite, fvar->getVariable(), allacc.takeCopy(), nullptr);
-        epilogueStmt->addAccess(MemoryAccess::Read, fvar->getVariable(), allacc.take(), nullptr);
+        auto proAcc = prologueStmt->addAccess(MemoryAccess::MustWrite, fvar->getVariable(), allacc.setTupleId(isl_dim_in, prologueId).take(), nullptr);
+        proAcc->setFieldVariable(fvar);
+        auto epiAcc = epilogueStmt->addAccess(MemoryAccess::Read, fvar->getVariable(), allacc.setTupleId(isl_dim_in, epilogueId).take(),  nullptr);
+        epiAcc->setFieldVariable(fvar);
       }
     }
 

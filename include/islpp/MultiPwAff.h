@@ -132,7 +132,7 @@ namespace isl {
 
 
 #pragma region Multi
-    EltType getPwAff(int pos) const { return EltType::wrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
+    EltType getPwAff(int pos) const { return EltType::enwrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
     MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::wrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos,  el.take())); }
     void setPwAff_inplace(int pos, PwAff &&el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos,  el.take())); }
 

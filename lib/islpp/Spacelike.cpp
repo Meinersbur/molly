@@ -104,6 +104,8 @@ const char *Spacelike::getDimName(isl_dim_type type, unsigned pos) const {
   return getSpace().getDimName(type, pos);
 }
 
+#if 0
 int Spacelike::findDimByName(isl_dim_type type, const char *name) const {
   return getSpace().findDimByName(type, name);
 }
+#endif

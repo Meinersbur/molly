@@ -304,7 +304,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //gpm->addPass<polly::ScopInfo>(); // RegionPass
   PM.add(createPassFromId(ScopInfo::ID));
 
-  PM.add(createPassFromId(molly::InsertInOutPassID));
+  //PM.add(createPassFromId(molly::InsertInOutPassID));
 
   // Decide where to execute statements
   //gpm->addPassID(ScopDistributionPassID); // ScopPass

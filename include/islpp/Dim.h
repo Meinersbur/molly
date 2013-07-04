@@ -64,10 +64,10 @@ namespace isl {
     isl_local_space *localspace;
 
   protected:
-    Dim(isl_space *space, isl_dim_type type, unsigned pos) : space(space), localspace(nullptr), type(type), pos(pos) {
+    Dim(isl_space *space, isl_dim_type type, unsigned pos) :  type(type), pos(pos), space(space), localspace(nullptr) {
       assert(space || localspace);
     }
-    Dim(isl_local_space *localspace, isl_dim_type type, unsigned pos) : space(nullptr), localspace(localspace), type(type), pos(pos) {
+    Dim(isl_local_space *localspace, isl_dim_type type, unsigned pos) : type(type), pos(pos), space(nullptr), localspace(localspace) {
        assert(space || localspace);
     }
 

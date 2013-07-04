@@ -26,7 +26,7 @@ using namespace std;
 namespace molly {
 
   /// Decide for every statement on which node to execute it
-  class ScopDistribution LLVM_FINAL : public polly::ScopPass {
+  class ScopDistribution : public polly::ScopPass {
   private:
     bool changed;
     Scop *scop;
@@ -128,6 +128,10 @@ namespace molly {
 
 
     void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
+      if (acc.isPrologue() || acc.isEpilogue()) {
+        return; // These are not computed anywhere
+      }
+
       auto fieldVar = acc.getFieldVariable();
       auto fieldTy = acc.getFieldType();
       auto stmt = acc.getPollyScopStmt();
@@ -148,9 +152,12 @@ namespace molly {
 
 
     void processScopStmt(ScopStmt *stmt) {
+      if (stmt->isPrologue() || stmt->isEpilogue())
+        return;
+
       auto itDomain = getIterationDomain(stmt);
       auto itSpace = itDomain.getSpace();
-
+      
       auto executeWhereWrite = islctx->createEmptyMap(itSpace, Ctx->getClusterSpace());
       auto executeWhereRead = executeWhereWrite.copy();
       auto executeEverywhere = islctx->createAlltoallMap(itDomain, Ctx->getClusterShape());

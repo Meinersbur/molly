@@ -119,7 +119,7 @@ FieldType *FieldDistribution::getFieldType(StructType *ty) {
 bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
   auto &contextPass = getAnalysis<MollyContextPass>();
   auto lengths = fieldTy->getLengths();
-  auto &cluster = contextPass.getClusterLengths();
+  auto cluster = contextPass.getClusterLengths();
   auto nDims = lengths.size();
 
   SmallVector<int,4> locallengths;
@@ -140,8 +140,8 @@ bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
 bool FieldDistribution::runOnField(FieldVariable *field) {
   auto fieldTy = field->getFieldType();
   auto &contextPass = getAnalysis<MollyContextPass>();
-  auto &clusterShape = contextPass.getClusterShape();
-  auto &clusterLengths = contextPass.getClusterLengths();
+  auto clusterShape = contextPass.getClusterShape();
+  auto clusterLengths = contextPass.getClusterLengths();
 
   auto indexset = fieldTy->getLogicalIndexset();
   auto indexdims = indexset.getSetDimCount();

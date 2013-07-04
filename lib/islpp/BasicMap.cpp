@@ -16,30 +16,6 @@ void BasicMap::print(llvm::raw_ostream &out) const {
 }
 
 
-#if 0
-isl_basic_map *BasicMap::takeCopy() const {
-  assert(map);
-  return isl_basic_map_copy(map);
-}
-
-
-void BasicMap::give(isl_basic_map *map) {
-  assert(map);
-  assert(this->map != map|| !map);
-  if (this->map)
-    isl_basic_map_free(this->map);
-  this->map = map;
-}
-
-
-BasicMap::~BasicMap(){
-  if (map)
-    isl_basic_map_free(map);
-#ifndef NDEBUG
-  this->map = nullptr;
-#endif
-}
-#endif
 
 BasicMap BasicMap::createEmptyLikeMap(Map &&model) { 
   return BasicMap::enwrap(isl_basic_map_empty_like_map(model.take())); 
@@ -50,11 +26,6 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
   return BasicMap::enwrap(isl_basic_map_from_constraint_matrices(space.take(), eq.take(), ineq.take(), c1,c2,c3,c4,c5));
 }
 
-#if 0
-void BasicMap::dump() const { 
-  isl_basic_map_dump(keep());
-}
-#endif
 
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 
   isl_set *rawempty = 0;

@@ -241,9 +241,9 @@ void Set::printPovray(llvm::raw_ostream &out) const {
 
   // Find what we take a X,Y,Z coordinates
   auto space = getSpace();
-  auto params = space.getParamDims();
+  auto params = space.getParamDimCount();
   assert(params == 0);
-  auto dims = space.getSetDims();
+  auto dims = space.getSetDimCount();
   assert(0 < dims && dims <= 3);
   //Int min[3] = { Int(0), Int(0), Int(0) };
   //Int max[3] = {0,0,0};
@@ -586,10 +586,10 @@ BasicSet isl::sample(Set &&set) {
 }
 
 PwAff isl::dimMin(Set &&set, int pos) {
-  return PwAff::wrap(isl_set_dim_min(set.take(), pos));
+  return PwAff::enwrap(isl_set_dim_min(set.take(), pos));
 }
 PwAff isl::dimMax(Set &&set, int pos) {
-  return PwAff::wrap(isl_set_dim_max(set.take(), pos));
+  return PwAff::enwrap(isl_set_dim_max(set.take(), pos));
 }
 
 
@@ -622,24 +622,24 @@ void Set::lift() {
 
 
 PwAff Set::dimMin(int pos) const {
-  return PwAff::wrap(isl_set_dim_min(takeCopy(), pos));   
+  return PwAff::enwrap(isl_set_dim_min(takeCopy(), pos));   
 }
 
 
 PwAff Set::dimMin(const Dim &dim) const {
   assert(dim.getType() == isl_dim_set);
-  return PwAff::wrap(isl_set_dim_min(takeCopy(), dim.getPos()));
+  return PwAff::enwrap(isl_set_dim_min(takeCopy(), dim.getPos()));
 }
 
 
 PwAff Set::dimMax(int pos) const {
-  return PwAff::wrap(isl_set_dim_max(takeCopy(), pos));   
+  return PwAff::enwrap(isl_set_dim_max(takeCopy(), pos));   
 }
 
 
 PwAff Set::dimMax(const Dim &dim) const {
   assert(dim.getType() == isl_dim_set);
-  return PwAff::wrap(isl_set_dim_max(takeCopy(), dim.getPos()));
+  return PwAff::enwrap(isl_set_dim_max(takeCopy(), dim.getPos()));
 }
 
 
@@ -723,7 +723,7 @@ Set isl::lexmax(Set &&set){
   return Set::wrap(isl_set_lexmax(set.take()));
 }
 PwAff isl::indicatorFunction(Set &&set){
-  return PwAff::wrap(isl_set_indicator_function(set.take()));
+  return PwAff::enwrap(isl_set_indicator_function(set.take()));
 }
 
 Point isl::samplePoint(Set &&set) {

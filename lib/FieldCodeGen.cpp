@@ -27,7 +27,7 @@ using namespace polly;
 
 
 namespace molly {
-  class ModuleFieldGen LLVM_FINAL : public ModulePass {
+  class ModuleFieldGen : public ModulePass {
   private:
     bool changed;
   public:
@@ -183,7 +183,7 @@ namespace molly {
       new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterDims()), "__molly_cluster_dims");
       new GlobalVariable(*module, intTy, true, GlobalValue::ExternalLinkage, ConstantInt::get(intTy, molly->getClusterSize()), "__molly_cluster_size");
 
-      auto &lengths = molly->getClusterLengths();
+      auto lengths = molly->getClusterLengths();
       auto nDims = lengths.size();
 
       SmallVector<Constant*, 4> lengthConsts;

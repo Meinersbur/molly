@@ -307,5 +307,9 @@ namespace isl {
   /// This function is useful for sorting isl_sets. The order depends on the internal representation of the inputs. The order is fixed over different calls to the function (assuming the internal representation of the inputs has not changed), but may change over different versions of isl.
   int plainCmp(const Set &lhs, const Set &rhs);
 
+#if 0
+  __isl_give isl_set *isl_set_from_union_set(__isl_take isl_union_set *uset);
+#endif
+
 } // namespace isl
 #endif /* ISLPP_SET_H */

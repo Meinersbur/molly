@@ -18,6 +18,7 @@
 using std::move;
 using namespace llvm;
 using namespace molly;
+using isl::enwrap;
 
 
 void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
@@ -25,11 +26,13 @@ void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
   if (isNull())
     return;
 
-  auto base = getBaseField();
-  auto globalbase = dyn_cast<GlobalVariable>(base);
-  assert(globalbase && "Currently only global fields supported");
-  auto gvar = fields->getFieldVariable(globalbase);
-  this->fieldvar = gvar;
+  if (!fieldvar) {
+    auto base = getBaseField();
+    auto globalbase = dyn_cast<GlobalVariable>(base);
+    assert(globalbase && "Currently only global fields supported");
+    auto gvar = fields->getFieldVariable(globalbase);
+    this->fieldvar = gvar;
+  }
 }
 
 
@@ -43,10 +46,21 @@ MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *inst
 MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc) {
   assert(acc);
   auto instr = const_cast<Instruction*>(acc->getAccessInstruction());
-  auto result = fromAccessInstruction(instr);
-  result.scopAccess = acc;
-  //result.augmentMemoryAccess(acc);
-  return result;
+  if (instr) {
+    auto result = fromAccessInstruction(instr);
+    result.scopAccess = acc;
+    //result.augmentMemoryAccess(acc);
+    return result;
+  } else {
+    // This is a pro- or epilogue dummy stmt
+    MollyFieldAccess result;
+    result.fieldvar = acc->getFieldVariable();
+    assert(result.fieldvar);
+    result.reads = acc->getAccessType() | polly::MemoryAccess::Read;
+    result.writes = (acc->getAccessType() | polly::MemoryAccess::MayWrite) || (acc->getAccessType() | polly::MemoryAccess::MustWrite);
+    result.scopAccess = acc;
+    return result;
+  }
 }
 
 #if 0
@@ -75,7 +89,7 @@ isl::Space MollyFieldAccess::getLogicalSpace(isl::Ctx* ctx) {
 }
 
 
-polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() {
+polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() const {
   assert(scopAccess && "Need to augment the access using SCoP");
   return scopAccess;
 }
@@ -129,4 +143,11 @@ isl::Space MollyFieldAccess::getIndexsetSpace() {
   assert(memacc);
   auto map = isl::enwrap(memacc->getAccessRelation());
   return map.getRangeSpace();
+}
+
+
+isl::Id MollyFieldAccess::getAccessTupleId() const {
+  auto memacc = getPollyMemoryAccess();
+  assert(memacc);
+  return enwrap(memacc->getTupleId());
 }

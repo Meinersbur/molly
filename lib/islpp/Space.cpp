@@ -11,6 +11,7 @@
 #include "islpp/Point.h"
 #include "islpp/Id.h"
 #include "islpp/Constraint.h"
+#include "islpp/UnionMap.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -19,7 +20,7 @@
 using namespace isl;
 using namespace std;
 
-
+#if 0
 isl_space *Space::takeCopy() const {
   return isl_space_copy(space);
 }
@@ -39,7 +40,7 @@ void Space::give(isl_space *space) {
 Space::~Space() {
   if (space) isl_space_free(space);
 }
-
+#endif
 
 void Space::print(llvm::raw_ostream &out) const {
   auto printer = isl::Printer::createToStr(getCtx());
@@ -47,7 +48,7 @@ void Space::print(llvm::raw_ostream &out) const {
   printer.print(out);
 }
 
-
+#if 0
 std::string Space::toString() const {
   if (!keep())
     return string();  
@@ -61,7 +62,7 @@ std::string Space::toString() const {
 void Space::dump() const {
   isl_space_dump(keep());
 }
-
+#endif
 
 Space Space::createMapSpace(const Ctx *ctx, unsigned nparam, unsigned n_in, unsigned n_out) {
   return Space::wrap(isl_space_alloc(ctx->keep(), nparam, n_in, n_out));
@@ -84,17 +85,17 @@ Space Space::createMapFromDomainAndRange(Space &&domain, Space &&range) {
 
 
 Map Space::emptyMap() const {
-  return enwrap(isl_map_empty(takeCopy()));
+  return Map::enwrap(isl_map_empty(takeCopy()));
 }
 
 
 Map Space::universeMap() const {
-  return enwrap(isl_map_universe(takeCopy()));
+  return Map::enwrap(isl_map_universe(takeCopy()));
 }
 
 
-Aff  Space::createZeroAff() const {
-  return enwrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
+Aff Space::createZeroAff() const {
+  return Aff::wrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
 
 
@@ -107,7 +108,7 @@ Aff Space::createConstantAff(const Int &c) const {
 
 Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
   assert(isSetSpace());
-  return enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
+  return Aff::wrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
 }
 
 
@@ -188,16 +189,16 @@ Expr Space::createVarExpr(isl_dim_type type, int pos) const {
 
 Set Space::emptySet() const {
   assert(dim(isl_dim_in) == 0);
-  return enwrap(isl_set_empty(takeCopy()));
+  return Set::wrap(isl_set_empty(takeCopy()));
 }
 
 
 Set Space::universeSet() const {
   assert(dim(isl_dim_in ) == 0);
-  return enwrap(isl_set_universe(takeCopy()));
+  return Set::wrap(isl_set_universe(takeCopy()));
 }
 
-
+#if 0
 unsigned Space::dim(isl_dim_type type) const {
   return isl_space_dim(keep(), type);
 }
@@ -229,7 +230,7 @@ unsigned Space::getOutDims() const{
 unsigned Space::getTotalDims() const {
   return dim(isl_dim_all);
 }
-
+#endif
 
 bool Space::isParamsSpace() const {
   assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
@@ -245,7 +246,7 @@ bool Space::isMapSpace() const {
 }
 
 
-
+#if 0
 bool Space::hasDimId(isl_dim_type type, unsigned pos) const{
   return isl_space_has_dim_id(keep(), type, pos);
 }
@@ -293,7 +294,7 @@ bool Space::hasTupleName(isl_dim_type type) const{
 const char *Space::getTupleName(isl_dim_type type) const {
   return isl_space_get_tuple_name(keep(), type);
 }
-
+#endif
 
 bool Space::isWrapping() const{
   return isl_space_is_wrapping(keep());
@@ -357,20 +358,26 @@ void Space::uncurry(){
 
 
 Set Space::createUniverseSet() const {
-  return enwrap(isl_set_universe(takeCopy()));
+  return Set::wrap(isl_set_universe(takeCopy()));
 }
 
 BasicSet Space::createUniverseBasicSet() const {
-  return enwrap(isl_basic_set_universe(takeCopy()));
+  return BasicSet::wrap(isl_basic_set_universe(takeCopy()));
 }
 
 Map Space::createUniverseMap() const {
-  return enwrap(isl_map_universe(takeCopy()));
+  return Map::enwrap(isl_map_universe(takeCopy()));
 }
 
 BasicMap Space::createUniverseBasicMap() const {
-  return enwrap(isl_basic_map_universe(takeCopy()));
+  return BasicMap::enwrap(isl_basic_map_universe(takeCopy()));
 }
+
+
+ UnionMap Space::createEmptyUnionMap() const {
+   return UnionMap::enwrap(isl_union_map_empty(takeCopy()));
+ }
+
 
 LocalSpace Space::asLocalSpace() const {
   return LocalSpace::wrap(isl_local_space_from_space(takeCopy()));
