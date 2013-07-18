@@ -26,6 +26,7 @@ namespace isl {
   class BasicMap;
   class Aff;
   class Id;
+  //class AstBuild;
 } // namespace isl
 
 
@@ -133,6 +134,9 @@ namespace isl {
 
 
     UnionMap createEmptyUnionMap();
+    //AstBuild createAstBuild();
+   
+
 
     Id createId(const char *name = nullptr, void *user = nullptr);
   }; // class Ctx

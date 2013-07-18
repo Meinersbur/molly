@@ -68,7 +68,7 @@ namespace isl {
    void insert(unsigned pos, Aff &&el) { give(isl_aff_list_insert(take(), pos, el.take())); }
    void drop(unsigned first, unsigned n) { give(isl_aff_list_drop(take(), first, n)); }
 
-   Aff getAff(int index) const { return Aff::wrap(isl_aff_list_get_aff(keep(), index)); }
+   Aff getAff(int index) const { return Aff::enwrap(isl_aff_list_get_aff(keep(), index)); }
    void setAff(int index, Aff &&el) { give(isl_aff_list_set_aff(take(), index, el.take())); }
 
    bool foreach(const std::function<bool(Aff &&)> &);

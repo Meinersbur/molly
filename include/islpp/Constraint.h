@@ -112,6 +112,11 @@ namespace isl {
 #pragma endregion
 
 
+#pragma region Conversion
+BasicSet toBasicSet() const;
+#pragma endregion
+
+
 #pragma region Printing
     //void print(llvm::raw_ostream &out) const;
     //std::string toString() const;

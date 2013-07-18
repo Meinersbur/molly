@@ -43,25 +43,45 @@ MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *inst
 }
 
 
-MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc) {
+MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc, FieldDetectionAnalysis *fields) {
   assert(acc);
   auto instr = const_cast<Instruction*>(acc->getAccessInstruction());
   if (instr) {
     auto result = fromAccessInstruction(instr);
     result.scopAccess = acc;
     //result.augmentMemoryAccess(acc);
+
+      if (!result.fieldvar) {
+    auto base = result.getBaseField();
+    auto globalbase = dyn_cast<GlobalVariable>(base);
+    assert(globalbase && "Currently only global fields supported");
+    auto gvar = fields->getFieldVariable(globalbase);
+    result.fieldvar = gvar;
+  }
+
     return result;
   } else {
     // This is a pro- or epilogue dummy stmt
     MollyFieldAccess result;
     result.fieldvar = acc->getFieldVariable();
     assert(result.fieldvar);
-    result.reads = acc->getAccessType() | polly::MemoryAccess::Read;
-    result.writes = (acc->getAccessType() | polly::MemoryAccess::MayWrite) || (acc->getAccessType() | polly::MemoryAccess::MustWrite);
+    result.reads = acc->getAccessType() | polly::MemoryAccess::READ;
+    result.writes = (acc->getAccessType() | polly::MemoryAccess::MAY_WRITE) || (acc->getAccessType() | polly::MemoryAccess::MUST_WRITE);
     result.scopAccess = acc;
+
+      if (!result.fieldvar) {
+    auto base = result.getBaseField();
+    auto globalbase = dyn_cast<GlobalVariable>(base);
+    assert(globalbase && "Currently only global fields supported");
+    auto gvar = fields->getFieldVariable(globalbase);
+    result.fieldvar = gvar;
+  }
+
     return result;
   }
 }
+
+ 
 
 #if 0
 void MollyFieldAccess::augmentMemoryAccess(polly::MemoryAccess *acc) {
@@ -150,4 +170,11 @@ isl::Id MollyFieldAccess::getAccessTupleId() const {
   auto memacc = getPollyMemoryAccess();
   assert(memacc);
   return enwrap(memacc->getTupleId());
+}
+
+
+isl::Map MollyFieldAccess::getAccessScattering() const {
+  auto scattering = getScattering(const_cast<MollyFieldAccess*>(this)->getPollyScopStmt());
+  scattering.setInTupleId_inplace(getAccessTupleId());
+  return scattering;
 }

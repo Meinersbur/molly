@@ -13,6 +13,7 @@
 #include "islpp/PwMultiAff.h"
 #include "islpp/Point.h"
 #include "islpp/Vertices.h"
+#include "islpp/Map.h"
 #include "cstdiofile.h"
 
 #include <llvm/Support/raw_ostream.h>
@@ -24,6 +25,8 @@
 using namespace isl;
 using namespace std;
 
+
+#if 0
 isl_basic_set *BasicSet::takeCopy() const { 
   assert(set); 
   return isl_basic_set_copy(this->set); 
@@ -43,6 +46,7 @@ BasicSet::~BasicSet() {
   if (set) 
     isl_basic_set_free(set);
 }
+#endif
 
 BasicSet BasicSet::create(const Space &space) {
   return BasicSet::wrap(isl_basic_set_universe(space.copy().take()));
@@ -100,6 +104,7 @@ void BasicSet::print(llvm::raw_ostream &out) const {
   out << tmp.readAsStringAndClose();
 }
 
+#if 0
 std::string BasicSet::toString() const { 
   if (!keep())
     return std::string();
@@ -111,11 +116,9 @@ std::string BasicSet::toString() const {
 void BasicSet::dump() const { 
   print(llvm::errs());
 }
+#endif
 
 
-void BasicSet::addConstraint(Constraint &&constraint) {
-  give( isl_basic_set_add_constraint(this->take(), constraint.take()));
-}
 
 void BasicSet::dropContraint(Constraint &&constraint) {
   give(isl_basic_set_drop_constraint(take(), constraint.take()));
@@ -177,7 +180,7 @@ void BasicSet::affineHull() {
   give(isl_basic_set_affine_hull(take())); 
 }
 
-
+#if 0
 Space BasicSet::getSpace() const {
   return Space::wrap(isl_basic_set_get_space(keep()));
 }
@@ -186,6 +189,7 @@ Space BasicSet::getSpace() const {
 LocalSpace BasicSet::getLocalSpace() const {
   return LocalSpace::wrap(isl_basic_set_get_local_space(keep()));
 }
+#endif
 
 void BasicSet::removeDivs() {
   give(isl_basic_set_remove_divs(take()));
@@ -260,9 +264,19 @@ void BasicSet::moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type s
 }
 
 
-void BasicSet::apply(BasicMap &&bmap){
+void BasicSet::apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER {
   give(isl_basic_set_apply(take(), bmap.take()));
 }
+
+    BasicSet BasicSet::apply(const BasicMap &bmap) const {
+      return BasicSet::enwrap(isl_basic_set_apply(takeCopy(), bmap.takeCopy()));
+    }
+
+
+    Set BasicSet::apply(const Map &map) const {
+      return Set::enwrap(isl_set_apply(isl_set_from_basic_set(takeCopy()), map.takeCopy()));
+    }
+
 
 void BasicSet::preimage(MultiAff &&ma) {
   give(isl_basic_set_preimage_multi_aff(take(), ma.take()));
@@ -296,8 +310,8 @@ BasicSet isl::intersectParams(BasicSet &&bset1, BasicSet &&bset2){
 BasicSet isl::intersect(BasicSet &&bset1, BasicSet &&bset2){
   return BasicSet::wrap( isl_basic_set_intersect(bset1.take(), bset2.take()));
 }
-Set isl::union_(BasicSet &&bset1, BasicSet &&bset2){
-  return Set::wrap( isl_basic_set_union(bset1.take(), bset2.take()));
+Set isl::unite(BasicSet &&bset1, BasicSet &&bset2){
+  return Set::enwrap(isl_basic_set_union(bset1.take(), bset2.take()));
 }
 
 BasicSet isl::flatProduct(BasicSet &&bset1, BasicSet &&bset2) {
@@ -306,10 +320,10 @@ BasicSet isl::flatProduct(BasicSet &&bset1, BasicSet &&bset2) {
 
 
 Set isl::partialLexmin(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
-  return Set::wrap(isl_basic_set_partial_lexmin(bset.take(), dom.take(), empty.change()));
+  return Set::enwrap(isl_basic_set_partial_lexmin(bset.take(), dom.take(), empty.change()));
 }
 Set isl::partialLexmax(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
-  return Set::wrap(isl_basic_set_partial_lexmax(bset.take(), dom.take(), empty.change()));
+  return Set::enwrap(isl_basic_set_partial_lexmax(bset.take(), dom.take(), empty.change()));
 }
 
 PwMultiAff isl::partialLexminPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty){
@@ -320,12 +334,12 @@ PwMultiAff isl::partialLexmaxPwMultiAff(BasicSet &&bset, BasicSet &&dom, /*give*
 }
 
 Set isl::lexmin(BasicSet &&bset){
-  return Set::wrap(isl_basic_set_lexmin(bset.take()));
+  return Set::enwrap(isl_basic_set_lexmin(bset.take()));
 }
 Set isl::lexmax(BasicSet &&bset) {
-  return Set::wrap(isl_basic_set_lexmax(bset.take()));
+  return Set::enwrap(isl_basic_set_lexmax(bset.take()));
 }
 
 Point isl::samplePoint(BasicSet &&bset){
-  return Point::wrap(isl_basic_set_sample_point(bset.take()));
+  return Point::enwrap(isl_basic_set_sample_point(bset.take()));
 }

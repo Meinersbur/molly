@@ -332,8 +332,8 @@ namespace molly {
       auto dim = oldScatter.addOutDim_inplace();
       auto newScatter = oldScatter.copy();
 
-      oldScatter.fix(dim, 0);
-      newScatter.fix(dim, 1);
+      oldScatter.fix_inplace(dim, 0);
+      newScatter.fix_inplace(dim, 1);
 
 
 

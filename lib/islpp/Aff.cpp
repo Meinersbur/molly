@@ -22,7 +22,7 @@ Aff isl::div(Aff &&aff1, const Int &divisor) {
   return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(divisor));
 }
 
-
+#if 0
 isl_aff *Aff::takeCopy() const {
   return isl_aff_copy(keep());
 }
@@ -53,17 +53,17 @@ Aff::~Aff(void) {
   if (this->aff)
     isl_aff_free(this->aff);
 }
-
+#endif
 
 Aff Aff::createZeroOnDomain(LocalSpace &&space) {
-  return Aff::wrap(isl_aff_zero_on_domain(space.take()));
+  return Aff::enwrap(isl_aff_zero_on_domain(space.take()));
 }
 Aff Aff::createVarOnDomain(LocalSpace &&space, isl_dim_type type, unsigned pos) {
-  return Aff::wrap(isl_aff_var_on_domain(space.take(), type, pos));
+  return Aff::enwrap(isl_aff_var_on_domain(space.take(), type, pos));
 }
 
 Aff Aff::readFromString(Ctx *ctx, const char *str) {
-  return Aff::wrap(isl_aff_read_from_str(ctx->keep(), str));
+  return Aff::enwrap(isl_aff_read_from_str(ctx->keep(), str));
 }
 
 
@@ -72,6 +72,7 @@ void Aff::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
+#if 0
 std::string Aff::toString() const {
   std::string buf;
   if (aff) {
@@ -84,6 +85,7 @@ std::string Aff::toString() const {
 void Aff::dump() const{
   print(llvm::errs());
 }
+#endif
 void Aff::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);
@@ -92,7 +94,7 @@ void Aff::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   }
 }
 
-
+#if 0
 Ctx *Aff::getCtx() const {
   return Ctx::wrap(isl_aff_get_ctx(keep()));
 }
@@ -100,25 +102,32 @@ Ctx *Aff::getCtx() const {
 int Aff::dim(isl_dim_type type) const{
   return isl_aff_dim(keep(), type);
 }
+#endif
 bool Aff::involvesDims(isl_dim_type type, unsigned first, unsigned n) const{
   return isl_aff_involves_dims(keep(), type, first, n);
 }
 Space Aff::getDomainSpace() const {
   return Space::wrap(isl_aff_get_domain_space(keep()));
 }
+#if 0
 Space Aff::getSpace() const {
   return Space::wrap(isl_aff_get_space(keep()));
 }
+#endif
 LocalSpace Aff::getDomainLocalSpace() const{
   return LocalSpace::wrap(isl_aff_get_domain_local_space(keep()));
 }
+#if 0
 LocalSpace Aff::getLocalSpace() const {
   return LocalSpace::wrap(isl_aff_get_local_space(keep()));
 }
+#endif
 
+#if 0
 const char *Aff::getDimName( isl_dim_type type, unsigned pos) const {
   return isl_aff_get_dim_name(keep(), type, pos);
 }
+#endif
 Int Aff::getConstant() const {
   Int result;
   isl_aff_get_constant(keep(), result.change());
@@ -170,19 +179,19 @@ void Aff::addCoefficient(isl_dim_type type, unsigned pos, const Int &v) {
 bool Aff::isCst() const {
   return isl_aff_is_cst(keep());
 }
-
+#if 0
 void Aff::setDimName(isl_dim_type type, unsigned pos, const char *s) {
   give(isl_aff_set_dim_name(take(), type, pos, s));
 }
 void Aff::setDimId(isl_dim_type type, unsigned pos, Id &&id) {
   give(isl_aff_set_dim_id(take(), type, pos, id.take()));
 }
-
+#endif
 bool Aff::isPlainZero() const {
   return isl_aff_plain_is_zero(keep());
 }
 Aff Aff::getDiv(int pos) const {
-  return Aff::wrap(isl_aff_get_div(keep(), pos));
+  return Aff::enwrap(isl_aff_get_div(keep(), pos));
 }
 
 void Aff::neg() {

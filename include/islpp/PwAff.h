@@ -14,6 +14,7 @@
 #include "Spacelike.h"
 #include "Ctx.h"
 #include "Space.h"
+#include "Set.h"
 
 struct isl_pw_aff;
 
@@ -129,6 +130,7 @@ namespace isl {
 #pragma region Creational
     static PwAff createFromAff(Aff &&aff); 
     static PwAff createEmpty(Space &&space);
+    static PwAff create(const Set &set, const Aff &aff) { return PwAff::enwrap(isl_pw_aff_alloc(set.takeCopy(), aff.takeCopy())); }
     static PwAff create(Set &&set, Aff &&aff);
     static PwAff createZeroOnDomain(LocalSpace &&space);
     static PwAff createVarOnDomain(LocalSpace &&ls, isl_dim_type type, unsigned pos);
@@ -136,13 +138,15 @@ namespace isl {
 
     static PwAff readFromStr(Ctx *ctx, const char *str);
 
-    PwAff copy() const { return PwAff::enwrap(takeCopy()); }
-    PwAff &&move() { return std::move(*this); }
+    //PwAff copy() const { return PwAff::enwrap(takeCopy()); }
+    //PwAff &&move() { return std::move(*this); }
 #pragma endregion
 
 
 #pragma region Conversion
     Map toMap() const;
+
+    //Expr toExpr() const;
 #pragma endregion
 
 
@@ -201,8 +205,27 @@ namespace isl {
     void pullback(PwMultiAff &&pma);
 
     int nPiece() const;
-    bool foreachPeace(std::function<bool(Set,Aff)> fn) const;
+    bool foreachPiece(std::function<bool(Set,Aff)> fn) const;
+    std::vector<std::pair<Set,Aff>> getPieces() const;
+
+    //void addDisjoint_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_add_disjoint(  )); }
+
+    void unionMin_inplace(const PwAff &pwaff2) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_union_min(take(), pwaff2.takeCopy())); }
+    PwAff unionMin(const PwAff &pwaff2) const { return PwAff::enwrap(isl_pw_aff_union_min(takeCopy(), pwaff2.takeCopy())); }
+
+    void unionMax_inplace(const PwAff &pwaff2) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_union_max(take(), pwaff2.takeCopy())); }
+    PwAff unionMax(const PwAff &pwaff2) const { return PwAff::enwrap(isl_pw_aff_union_max(takeCopy(), pwaff2.takeCopy())); }
+
+    void unionAdd_inplace(const PwAff &pwaff2) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_union_add(take(), pwaff2.takeCopy())); }
+    PwAff unionAdd(const PwAff &pwaff2) const { return PwAff::enwrap(isl_pw_aff_union_add(takeCopy(), pwaff2.takeCopy())); }
+
+    // FIXME: getDomain()?
+    Set domain() const { return Set::enwrap(isl_pw_aff_domain(takeCopy())); }
   }; // class PwAff
+
+
+  static inline PwAff enwrap(__isl_take isl_pw_aff *obj) { return PwAff::enwrap(obj); }
+  static inline PwAff enwrapCopy(__isl_keep isl_pw_aff *obj) { return PwAff::enwrapCopy(obj); }
 
 
   bool plainIsEqual(PwAff pwaff1, PwAff pwaff2);

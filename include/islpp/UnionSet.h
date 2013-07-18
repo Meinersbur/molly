@@ -55,15 +55,22 @@ namespace isl {
     static UnionSet fromSet(const Set &set) { return UnionSet::enwrap(isl_union_set_from_set(set.takeCopy())); }
     static UnionSet empty(const Space &space) { return  UnionSet::enwrap(isl_union_set_empty(space.takeCopy())); }
 
-
     static UnionSet readFromFile(Ctx *ctx, FILE *input) { return UnionSet::enwrap(isl_union_set_read_from_file(ctx->keep(), input)); }
     static UnionSet readFromStr(Ctx *ctx, const char *str) { return UnionSet::enwrap(isl_union_set_read_from_str(ctx->keep(), str)); }
 #pragma endregion
 
 
+#pragma region Conversion
+    Union(Set &&set) : Obj3(isl_union_set_from_set(set.take())) {}
+    Union(const Set &set) : Obj3(isl_union_set_from_set(set.takeCopy())) {}
+    const UnionSet &operator=(Set &&set) { reset(isl_union_set_from_set(set.take())); }
+     const UnionSet &operator=(const Set &set) { reset(isl_union_set_from_set(set.takeCopy())); }
+#pragma endregion
+
+
     Space getSpace() const { return Space::enwrap(isl_union_set_get_space(keep())); }
     UnionSet universe() const { return UnionSet::enwrap(isl_union_set_universe(takeCopy())); }
-    Set params() const { return Set::wrap(isl_union_set_params(takeCopy())); }
+    Set params() const { return Set::enwrap(isl_union_set_params(takeCopy())); }
     UnionSet detectEqualities() const {return UnionSet::enwrap(isl_union_set_detect_equalities(takeCopy())); }
     UnionSet affineHull() const {return UnionSet::enwrap(isl_union_set_affine_hull(takeCopy())); }
     UnionSet polyhedralHull() const {return UnionSet::enwrap(isl_union_set_polyhedral_hull(takeCopy())); }
@@ -99,7 +106,7 @@ namespace isl {
 
     bool contains(const Space &space) const { return isl_union_set_contains(keep(), space.keep()); } 
 
-    Set extractSet(const Space &space) const { return Set::wrap(isl_union_set_extract_set(keep(), space.takeCopy())); }
+    Set extractSet(const Space &space) const { return Set::enwrap(isl_union_set_extract_set(keep(), space.takeCopy())); }
 
     bool foreachPoint(const std::function<bool(isl::Point)> &func) const;
 

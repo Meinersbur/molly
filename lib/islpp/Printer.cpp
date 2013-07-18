@@ -20,6 +20,10 @@
 #include "islpp/Constraint.h"
 #include "islpp/Id.h"
 #include "islpp/Val.h"
+#include "islpp/Point.h"
+#include "islpp/AstExpr.h"
+#include "islpp/AstNode.h"
+#include "islpp/PwAffList.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -28,6 +32,8 @@
 #include <isl/map.h>
 #include <isl/aff.h>
 #include <isl/polynomial.h>
+#include <isl/point.h>
+#include <isl/ast.h>
 
 using namespace isl;
 using namespace llvm;
@@ -37,6 +43,7 @@ using namespace std;
 void Printer::give(isl_printer *printer) {
   give(printer, this->ownsFile);
 }
+
 
 void Printer::give(isl_printer *printer, bool ownsFile) {
   if (this->printer) {
@@ -52,6 +59,7 @@ void Printer::give(isl_printer *printer, bool ownsFile) {
   this->printer = printer;
   this->ownsFile = ownsFile;
 } 
+
 
 Printer::~Printer() {
   if (printer) {
@@ -77,12 +85,12 @@ Printer Printer::createToStr(Ctx *ctx) {
 }
 
 
- void Printer::print(llvm::raw_ostream &out) const { 
-   //TODO: Can we somehow avoid that isl makes an extra copy?
-   char *pchar = isl_printer_get_str(printer);
-   out << pchar;
-   free(pchar);
- }
+void Printer::print(llvm::raw_ostream &out) const { 
+  //TODO: Can we somehow avoid that isl makes an extra copy?
+  char *pchar = isl_printer_get_str(printer);
+  out << pchar;
+  free(pchar);
+}
 
 
 std::string Printer::toString() const { 
@@ -215,7 +223,26 @@ void Printer::print(const BasicMap &space) {
 }
 
 
+void Printer::print(const Point &point) {
+  give(isl_printer_print_point(take(), point.keep()));
+}
+
+
+void Printer::print(const AstExpr &expr) {
+  give(isl_printer_print_ast_expr(take(), expr.keep()));
+}
+
+
+void Printer::print(const AstNode &node) {
+  give(isl_printer_print_ast_node(take(), node.keep()));
+}
+
+
+ void Printer::print(const PwAffList &list) {
+     give(isl_printer_print_pw_aff_list(take(), list.keep()));
+ }
+
+
 void Printer::flush(){
   give(isl_printer_flush(take()));
 }
-

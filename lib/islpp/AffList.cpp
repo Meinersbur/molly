@@ -5,7 +5,7 @@ using namespace isl;
 static int foreachAffCallback(__isl_take isl_aff *el, void *user) {
   assert(user);
   auto &func = *static_cast<const std::function<bool(Aff&&)>*>(user);
-  auto retval = func( Aff::wrap(el) );
+  auto retval = func( Aff::enwrap(el) );
   return retval ? -1 : 0;
 }
 bool List<Aff>::foreach(const std::function<bool(Aff &&)> &func) {
@@ -22,7 +22,7 @@ static int foreachSccAffCallback(__isl_take isl_aff_list *scc, void *user) {
 static int foreachSccAffFollows(__isl_keep isl_aff *a, __isl_keep isl_aff *b, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(const Aff &, const Aff &)>*>(user);
-  auto retval = func( Aff::wrapCopy(a), Aff::wrapCopy(b) );
+  auto retval = func( Aff::enwrapCopy(a), Aff::enwrapCopy(b) );
   return retval ? 1 : 0;
 }
 bool List<Aff>::foreachScc(const std::function<bool(const Aff &, const Aff &)> &followsFunc, const std::function<bool(List<Aff> &&)> &func) {
@@ -35,7 +35,7 @@ bool List<Aff>::foreachScc(const std::function<bool(const Aff &, const Aff &)> &
 
 static int sortAffCallback(__isl_keep isl_aff *el1, __isl_keep isl_aff *el2, void *user) {
   auto &func = *static_cast<const std::function<int(const Aff&, const Aff&)>*>(user);
-  auto retval = func( Aff::wrapCopy(el1), Aff::wrapCopy(el2) );
+  auto retval = func( Aff::enwrapCopy(el1), Aff::enwrapCopy(el2) );
   return retval ? -1 : 0;
 }
 void List<Aff>::sort(const std::function<int(const Aff&, const Aff&)> &func) {

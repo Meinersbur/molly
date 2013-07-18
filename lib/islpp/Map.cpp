@@ -12,22 +12,23 @@ using namespace isl;
 using namespace llvm;
 using namespace std;
 
-#if 0
-isl_map *Map::takeCopy() const {
-  assert(map);
-  return isl_map_copy(map);
-}
+
+  MultiPwAff Map::toMultiPwAff() const {
+    return toPwMultiAff().toMultiPwAff();
+  }
 
 
-void Map::give(isl_map *map) {
-  if (this->map && this->map != map)
-    isl_map_free(this->map);
-  this->map = map;
-#ifndef NDEBUG
-  this->_printed = toString();
+    UnionMap Map::toUnionMap() const {
+      return UnionMap::enwrap(isl_union_map_from_map(takeCopy()));
+    }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+     UnionMap Map::toUnionMap() && {
+     return UnionMap::enwrap(isl_union_map_from_map(take()));
+     }
 #endif
-}
-#endif
+
+
+    
 
 Map Map::readFrom(Ctx *ctx, const char *str) {
   return Map::wrap(isl_map_read_from_str(ctx->keep() , str));
@@ -95,15 +96,29 @@ bool Map::isEmpty() const {
 }
 
 
-static int foearchBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
+static int foreachBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(BasicMap&&)>*>(user);
   auto retval = func( BasicMap::enwrap(bmap) );
   return retval ? -1 : 0;
 }
 bool Map::foreachBasicMap(std::function<bool(BasicMap&&)> func) const {
-  auto retval = isl_map_foreach_basic_map(keep(), foearchBasicMapCallback, &func);
+  auto retval = isl_map_foreach_basic_map(keep(), foreachBasicMapCallback, &func);
   return retval!=0;
+}
+
+
+static int enumBasicMapCallback(__isl_take isl_basic_map *map, void *user) {
+  auto list = static_cast< std::vector<BasicMap> *>(user);
+  list->push_back(BasicMap::enwrap(map));
+  return 0;
+}
+std::vector<BasicMap> Map::getBasicMaps() const {
+  std::vector<BasicMap> result;
+  //result.reserve(isl_map_n_basic_maps(keep()));
+  auto retval = isl_map_foreach_basic_map(keep(), enumBasicMapCallback, &result);
+  assert(retval==0);
+  return result;
 }
 
 

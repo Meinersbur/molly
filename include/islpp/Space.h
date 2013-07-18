@@ -2,6 +2,7 @@
 #define ISLPP_SPACE_H
 
 #include "islpp_common.h"
+#include "Islfwd.h"
 #include <assert.h>
 #include <isl/space.h> // enum isl_dim_type;
 
@@ -28,11 +29,12 @@ namespace isl {
   class Int;
   class Point;
   class Constraint;
+  class AstBuild;
 } // namespace isl
 
 
 namespace isl {
-  /// Whenever a new set, relation or similiar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
+  /// Whenever a new set, relation or similar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
   class Space : public Obj3<Space,isl_space>, public Spacelike3<Space> {
 
 #pragma region isl::Obj3
@@ -148,19 +150,48 @@ namespace isl {
     Set emptySet() const;
     Set universeSet() const;
 
+    BasicSet emptyBasicSet() const;
+    BasicSet universeBasicSet() const;
+
+    BasicMap emptyBasicMap() const;
+    BasicMap universeBasicMap() const;
+
+    /// create a map where the first n_equal dimensions map to equal value
+    BasicMap equalBasicMap(unsigned n_equal) const;
+
+    /// Create a relation the maps a value to everything that is lexically smaller at dimension pos
+    BasicMap lessAtBasicMap(unsigned pos) const;
+
+    /// Create a relation the maps a value to everything that is lexically larger at dimension pos
+    BasicMap moreAtBasicMap(unsigned pos) const;
+
     Map emptyMap() const;
     Map universeMap() const;
-    //Map createMapFromAff(PwAff &&aff) const;
-    //Map createMapFromAff(const PwAff &aff) const;
+   
+    /// Maps vectors to anything that is lexically smaller
+     Map lexLtMap() const;
+
+       /// Maps vectors to anything that is lexically greater
+     Map lexGtMap() const;
+
+     /// Maps vectors to any vector that is lexically less in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
+    Map lexLtFirstMap(unsigned pos) const;
+
+     /// Maps vectors to any vector that is lexically greater in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
+    Map lexGtFirstMap(unsigned pos) const;
 
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
     Aff createVarAff(isl_dim_type type, unsigned pos) const;
 
+    // Piecewise without pieces (i.e. defined on nothing)
+    PwAff createEmptyPwAff() const;
+    PwAff createZeroPwAff() const;
     MultiAff createZeroMultiAff() const;
     MultiPwAff createZeroMultiPwAff() const;
+    PwMultiAff createEmptyPwMultiAff() const;
 
-    Point createZeroPoint() const;
+    Point zeroPoint() const;
 
 
     Constraint createZeroConstraint() const;
@@ -174,6 +205,7 @@ namespace isl {
     Constraint createLeConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createEqConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createEqConstraint(Aff &&lhs, int rhs) const;
+     Constraint createEqConstraint(Aff &&lhs, isl_dim_type type, unsigned pos) const;
     Constraint createGeConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createGtConstraint(Aff &&lhs, Aff &&rhs) const;
 
@@ -248,6 +280,8 @@ namespace isl {
 #pragma endregion
 
     LocalSpace asLocalSpace() const;
+
+    AstBuild createAstBuild() const;
   }; // class Space
 
 

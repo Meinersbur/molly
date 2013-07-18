@@ -42,8 +42,9 @@ static int enumMapCallback(__isl_take isl_map *map, void *user) {
   return 0;
 }
 std::vector<Map> UnionMap::getMaps() const {
-  std::vector<Map> result(isl_union_map_n_map(keep()));
- auto retval = isl_union_map_foreach_map(keep(), enumMapCallback, &result);
- assert(retval==0);
- return result;
+  std::vector<Map> result;
+  result.reserve(isl_union_map_n_map(keep()));
+  auto retval = isl_union_map_foreach_map(keep(), enumMapCallback, &result);
+  assert(retval==0);
+  return result;
 }

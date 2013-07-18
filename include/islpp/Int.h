@@ -251,6 +251,22 @@ namespace isl {
   }
 
 
+    static inline Int operator*(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_mul(*result.change(), lhs.keep(), rhs.keep()); 
+    result.updated();
+    return result;
+  }
+
+
+  static inline Int operator*(const Int &lhs, unsigned long int rhs) {
+    Int result;
+    isl_int_mul_ui(*result.change(), lhs.keep(), rhs); 
+    result.updated();
+    return result;
+  }
+
+
   static inline std::ostream& operator<<(std::ostream &os, const isl::Int &val) {
     val.print(os);
     return os;

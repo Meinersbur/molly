@@ -22,7 +22,7 @@ UnionSet UnionSet::apply(const UnionMap &umap) const {
 static int foreachSetCallback(__isl_take isl_set *set, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(Set)>*>(user);
-  auto retval = func(Set::wrap(set));
+  auto retval = func(Set::enwrap(set));
   return retval ? -1 : 0;
 }
 bool UnionSet::foreachSet(const std::function<bool(isl::Set)> &func) const {
@@ -33,7 +33,7 @@ bool UnionSet::foreachSet(const std::function<bool(isl::Set)> &func) const {
 
 static int enumSetCallback(__isl_take isl_set *set, void *user) {
   std::vector<Set> * list = static_cast< std::vector<Set> *>(user);
-  list->push_back(Set::wrap(set));
+  list->push_back(Set::enwrap(set));
   return 0;
 }
 std::vector<Set> UnionSet::getSets() const {
@@ -47,7 +47,7 @@ std::vector<Set> UnionSet::getSets() const {
 static int foreachPointCallback(__isl_take isl_point *point, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(Point)>*>(user);
-  auto retval = func(Point::wrap(point));
+  auto retval = func(Point::enwrap(point));
   return retval ? -1 : 0;
 }
 bool UnionSet::foreachPoint(const std::function<bool(isl::Point)> &func) const {

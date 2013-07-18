@@ -86,6 +86,16 @@ namespace isl {
       return obj; 
     }
 
+    StructTy **change() LLVM_LVALUE_FUNCTION { 
+       if (!this)
+         return nullptr;
+#ifndef NDEBUG
+       this->_printed = "<outdated>";
+       //TODO: need to run code after the obj has been updated, possibly by returning a proxy object that destructs after the expression
+#endif
+       return &obj; 
+     }
+
   protected:
     void give(StructTy *obj) {
       assert(obj); 
@@ -174,15 +184,16 @@ namespace isl {
 
   public:
     void reset(StructTy *obj = nullptr) {
-      if (obj)
+      if (this->obj)
         getDerived()->release();
+      this->obj = obj;
 #ifndef NDEBUG
       if (obj) {
         llvm::raw_string_ostream stream(this->_printed);
         getDerived()->print(stream);
         //stream.flush();
       } else
-        this->_printed .clear();
+        this->_printed.clear();
 #endif
     }
 
@@ -266,16 +277,24 @@ namespace isl {
 
     ObjTy copy() const { 
       ObjTy result;
-      result.obj_give(*this);
+      result.obj_reset(*getDerived());
       return result;
     }
     ObjTy &&move() { 
       return std::move(*getDerived()); 
     }
 
-    static ObjTy enwrap(StructTy *obj) {
+    static ObjTy enwrap(__isl_take StructTy *obj) {
       ObjTy result;
-      result.give(obj);
+      result.reset(obj);
+      return result;
+    }
+
+    static ObjTy enwrapCopy(__isl_keep StructTy *obj) {
+      ObjTy result;
+      result.reset(obj);
+      // A temporary obj such that we can call its takeCopyOrNull method, no need to require implementors to implement a second version of it
+      result.obj = result.takeCopyOrNull();
       return result;
     }
 

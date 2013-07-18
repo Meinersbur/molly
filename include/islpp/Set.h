@@ -13,11 +13,15 @@
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/lp.h> // enum isl_lp_result;
 #include <isl/set.h>
+#include "Obj.h"
+#include "Spacelike.h"
+#include "Ctx.h"
+#include "Space.h"
+#include "BasicSet.h"
 
 struct isl_set;
 struct isl_basic_set;
 struct isl_point;
-
 
 namespace llvm {
   class raw_ostream;
@@ -42,50 +46,87 @@ namespace isl {
   typedef int (*BasicSetCallback)(isl_basic_set *bset, void *user);
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
-#define Set Set LLVM_FINAL
-  class Set  {
-#undef Set
-#ifndef NDEBUG
-  private:
-    std::string _printed;
-#endif
 
-#pragma region Low-level functions
-  private:
-    isl_set *set;
+  class Set : public Obj3<Set, isl_set>, public Spacelike3<Set> {
 
-  public: // Public because otherwise we had to add a lot of friends
-    isl_set *take() { assert(set); isl_set *result = set; set = nullptr; return result; }
-    isl_set *takeOrNull() { isl_set *result = set; set = nullptr; return result; }
-    isl_set *takeCopyOrNull() const;
-    isl_set *takeCopy() const { assert(set); return takeCopyOrNull(); }
-    isl_set *keep() const { return set; }
-    isl_set **change() { return &set; }
+
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
   protected:
-    void give(isl_set *set);
+    void release() { isl_set_free(takeOrNull()); }
 
   public:
-    static Set wrap(isl_set *set) { Set result; result.give(set); return result; }
+    Set() { }
 
-    bool isValid() const { return set; }
-    bool isNull() const { return !set; }
+    /* implicit */ Set(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Set(const ObjTy &that) : Obj3(that) { }
+      const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+
+  public:
+    StructTy *takeCopyOrNull() const { return isl_set_copy(keepOrNull()); }
+
+    Ctx *getCtx() const { return Ctx::wrap(isl_set_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_set_dump(keep()); }
 #pragma endregion
 
-  public:
-    Set() : set(nullptr) { }
-    Set(const Set &that) : set(nullptr) { give(that.takeCopyOrNull()); }
-    Set(Set &&that) : set(nullptr) { give(that.takeOrNull()); }
-    ~Set() { give(nullptr); }
 
-    const Set &operator=(const Set &that) { give(that.takeCopyOrNull()); return *this; }
-    const Set &operator=(Set &&that) { give(that.takeOrNull()); return *this; }
+#pragma region isl::Spacelike3
+    friend class isl::Spacelike3<ObjTy>;
+  public:
+    Space getSpace() const { return Space::wrap(isl_set_get_space(keep())); }
+    Space getSpacelike() const { return getSpace(); }
+
+  protected:
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
+    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
+
+  public:
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_insert_dims(take(), type, pos, count)); }
+    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_remove_dims(take(), type, first, count)); }
+
+
+    // optional, default implementation exist
+    unsigned dim(isl_dim_type type) const { return isl_set_dim(keep(), type); }
+    int findDimById(isl_dim_type type, const Id &id) const { return isl_set_find_dim_by_id(keep(), type, id.keep()); }
+
+    bool hasTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_has_tuple_id(keep()); }
+    const char *getTupleName(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_get_tuple_name(keep()); }
+    Id getTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return Id::enwrap(isl_set_get_tuple_id(keep())); }
+    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_set_tuple_name(take(), s)); }
+
+    bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_set_has_dim_id(keep(), type, pos); }
+    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_set_get_dim_name(keep(), type, pos); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_set_get_dim_id(keep(), type, pos)); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_name(take(), type, pos, s)); }
+
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_dims(take(), type, count)); }
+#pragma endregion
+
+    bool hasTupleId() const { return isl_set_has_tuple_id(keep()); }
+    const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }
+    Id getTupleId() const { return Id::enwrap(isl_set_get_tuple_id(keep())); }
+
+    void setTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_tuple_id(take(), id.take())); }
+    void setTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_tuple_id(take(), id.takeCopy())); }
+    Set setTupleId(Id &&id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.take())); }
+    Set setTupleId(const Id &id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.takeCopy())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Set setTupleId(Id &&id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.take())); }
+    Set setTupleId(const Id &id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.takeCopy())); }
+#endif
+
+    unsigned getDimCount() const { return isl_set_dim(keep(), isl_dim_set); }
 
 
 #pragma region Conversion
-    /* implicit */ Set(BasicSet &&set);
-    const Set &operator=(BasicSet &&that);
-    /* implicit */ Set(const BasicSet &set);
-    const Set &operator=(const BasicSet &that);
+    // From BasicSet
+    /* implicit */ Set(BasicSet &&set) : Obj3(isl_set_from_basic_set(set.take())) {}
+    /* implicit */ Set(const BasicSet &set) : Obj3(isl_set_from_basic_set(set.takeCopy())) {}
+     const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); }
+    const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); }
 #pragma endregion
 
 
@@ -105,19 +146,19 @@ namespace isl {
     static Set readFrom(Ctx *, FILE *);
     static Set readFrom(Ctx *, const char *);
 
-    Set copy() const { return Set::wrap(takeCopy()); }
-    Set &&move() { return std::move(*this); }
+    //Set copy() const { return Set::enwrap(takeCopy()); }
+    //Set &&move() { return std::move(*this); }
 #pragma endregion
 
 
 #pragma region Printing
-    void print(llvm::raw_ostream &out) const;
+    //void print(llvm::raw_ostream &out) const;
     void printPovray(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
+    //std::string toString() const;
+    //void dump() const;
 #pragma endregion
 
-    Space getSpace() const;
+    //Space getSpace() const;
 
     Set addContraint(Constraint &&) const;
 
@@ -135,28 +176,13 @@ namespace isl {
 
     int getBasicSetCount() const;
 
-    unsigned dim(isl_dim_type) const;
-    unsigned getSetDimCount() const;
+    //unsigned dim(isl_dim_type) const;
+    //unsigned getSetDimCount() const;
     int getInvolvedDims(isl_dim_type, unsigned first, unsigned n) const;
     bool dimHasAnyLowerBound(isl_dim_type, unsigned pos) const;
     bool dimHasAnyUpperBound(isl_dim_type, unsigned pos) const;
     bool dimHasLowerBound(isl_dim_type, unsigned pos) const;
     bool dimHasUpperBound(isl_dim_type, unsigned pos) const;
-
-    void setTupleId(Id&&);
-    void resetTupleId();
-    bool hasTupleId() const;
-    Id getTupleId() const;
-    bool hasTupleName() const;
-    const char *getTupleName() const;
-
-    void setDimId(isl_dim_type type, unsigned pos, Id &&id);
-    bool hasDimId(isl_dim_type type, unsigned pos) const;
-    Id getDimId(isl_dim_type type, unsigned pos) const;
-    int findDimById(isl_dim_type type, const Id &id) const;
-    int findDimByName(isl_dim_type type, const char *name) const;
-    bool dimHasName(isl_dim_type type, unsigned pos) const;
-    const char *getDimName(isl_dim_type type, unsigned pos) const;
 
     bool plainIsEmpty() const;
     bool isEmpty() const;
@@ -202,11 +228,27 @@ namespace isl {
     PwAff dimMax(int pos) const;
     PwAff dimMax(const Dim &dim) const;
 
-    void union_inplace(Set &&that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.take())); }
-    void union_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.takeCopy())); }
-  }; // class Set
+    void unite_inplace(Set &&that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.take())); }
+    void unite_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.takeCopy())); }
+ 
+    void apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER; 
+    void apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER; 
+    Set apply(Map &&map) const ;
+    Set apply(const Map &map) const;
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Set apply(Map &&map) && ;
+    Set apply(const Map &map) &&;
+#endif
 
-  static inline Set enwrap(isl_set *obj) { return Set::wrap(obj); }
+    Set lexmin() const { return Set::enwrap(isl_set_lexmin(takeCopy())); }
+    Set lexmax() const { return Set::enwrap(isl_set_lexmax(takeCopy())); }
+
+    PwMultiAff lexminPwMultiAff() const;
+    PwMultiAff lexmaxPwMultiAff() const;
+ }; // class Set
+
+
+  static inline Set enwrap(isl_set *obj) { return Set::enwrap(obj); }
 
   /// @brief Convex hull
   /// If the input set or relation has any existentially quantified variables, then the result of these operations is currently undefined.
@@ -254,7 +296,12 @@ namespace isl {
 
   Set intersectParams(Set &&set, Set &&params);
   Set intersect(Set &&set1, Set &&set2);
-  Set union_(Set &&set1, Set &&set2);
+
+  static inline Set unite(Set &&set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.take(), set2.take())); }
+    static inline Set unite(Set &&set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.take(), set2.takeCopy())); }
+  static inline Set unite(const Set &set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.take())); }
+ static inline Set unite(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.takeCopy())); }
+
   Set subtract(Set &&set1, Set &&set2);
 
   Set apply(Set &&set, Map &&map);

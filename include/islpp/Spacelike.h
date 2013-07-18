@@ -334,7 +334,7 @@ namespace isl {
     SpaceTy insertDims(isl_dim_type type, unsigned count) && { getDerived()->insertDims_inplace(type, count); return this->move(); }
 #endif
 
-    SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count)  { auto result = getDerived()->copy(); result.moveDims_inplace(dst_type, dst_pos, src_pos, count); return result; }
+    SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count)  { auto result = getDerived()->copy(); result.moveDims_inplace(dst_type, dst_pos, src_type, src_pos, count); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) && { getDerived()->moveDims_inplace(dst_type, dst_pos, src_pos, count); return std::move(*this); }
 #endif
@@ -351,6 +351,9 @@ namespace isl {
     }
 
     Dim addOutDim_inplace() ISLPP_INPLACE_QUALIFIER {
+      return getDerived()->addDim_inplace(isl_dim_out);
+    }
+     Dim addSetDim_inplace() ISLPP_INPLACE_QUALIFIER {
       return getDerived()->addDim_inplace(isl_dim_out);
     }
   }; // class Spacelike3

@@ -144,6 +144,10 @@ namespace molly {
       assert(metadata.funcSetBroadcast);
       return metadata.funcSetBroadcast;
     }
+    llvm::Function *getFuncSetLocal() {
+      assert(metadata.funcSetLocal);
+    return metadata.funcSetLocal;
+    }
 
     llvm::Function *localOffsetFunc;
     llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }

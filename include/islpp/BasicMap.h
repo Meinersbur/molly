@@ -97,7 +97,7 @@ namespace isl {
     unsigned nDiv() const { return isl_basic_map_n_div(keep()); }
     unsigned totalDim() const { return isl_basic_map_total_dim(keep()); }
 
-    Aff getDiv(int pos) const { return Aff::wrap(isl_basic_map_get_div(keep(), pos)); }
+    Aff getDiv(int pos) const { return Aff::enwrap(isl_basic_map_get_div(keep(), pos)); }
 
 
 
@@ -200,6 +200,10 @@ namespace isl {
     BasicMap addContraint(Constraint &&constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.take())); } 
     BasicMap addContraint(const Constraint &constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.takeCopy())); } 
 #endif
+
+
+     bool foreachConstraint(const std::function<bool(Constraint)> &func) const;
+    std::vector<Constraint> getConstraints() const;
   }; // class BasicMap
 
 
@@ -207,7 +211,7 @@ namespace isl {
   static inline BasicMap enwrap(__isl_take isl_basic_map *bmap) { return BasicMap::enwrap(bmap); }
 
   static inline BasicMap intersect(BasicMap &&bmap1, BasicMap &&bmap2) { return BasicMap::enwrap(isl_basic_map_intersect(bmap1.take(), bmap2.take())); }
-  Map union_(BasicMap &&bmap1, BasicMap &&bmap2);
+  Map unite(BasicMap &&bmap1, BasicMap &&bmap2);
   static inline BasicMap applyDomain(BasicMap &&bmap1, BasicMap &&bmap2) { return BasicMap::enwrap(isl_basic_map_apply_domain(bmap1.take(), bmap2.take())); }
   static inline BasicMap applyRange(BasicMap &&bmap1, BasicMap &&bmap2) { return BasicMap::enwrap(isl_basic_map_apply_range(bmap1.take(), bmap2.take())); }
 

@@ -204,12 +204,25 @@ int PwAff::nPiece() const {
 
 static int piececallback(isl_set *set, isl_aff *aff, void *user) {
   auto fn = *static_cast<std::function<bool(Set,Aff)>*>(user);
-  auto retval = fn(Set::wrap(set), Aff::wrap(aff));
+  auto retval = fn(Set::enwrap(set), Aff::enwrap(aff));
   return retval ? -1 : 0;
 }
-bool PwAff::foreachPeace(std::function<bool(Set,Aff)> fn) const {
+bool PwAff::foreachPiece(std::function<bool(Set,Aff)> fn) const {
   auto retval = isl_pw_aff_foreach_piece(keep(), piececallback, &fn);
   return (retval!=0);
+}
+
+
+static int enumPiecesCallback(__isl_take isl_set *set, __isl_take isl_aff *aff, void *user) {
+  auto list = static_cast< std::vector<std::pair<Set,Aff>> *>(user);
+  list->push_back(std::make_pair(Set::enwrap(set), Aff::enwrap(aff)));
+  return 0;
+}
+std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
+  std::vector<std::pair<Set,Aff>> result(isl_pw_aff_n_piece(keep()));
+  auto retval = isl_pw_aff_foreach_piece(keep(), enumPiecesCallback, &result);
+  assert(retval==0);
+  return result;
 }
 
 
@@ -228,7 +241,7 @@ PwAff isl::unionAdd(PwAff &&pwaff1, PwAff &&pwaff2){
 }
 
 Set isl::domain(PwAff &&pwaff) {
-  return Set::wrap(isl_pw_aff_domain(pwaff.take()));
+  return Set::enwrap(isl_pw_aff_domain(pwaff.take()));
 }
 
 PwAff isl::min(PwAff &&pwaff1, PwAff &&pwaff2) {
@@ -284,31 +297,31 @@ PwAff isl::cond(PwAff &&cond, PwAff &&pwaff_true, PwAff &&pwaff_false) {
 
 
 Set isl::nonnegSet(PwAff &pwaff){
-  return Set::wrap(isl_pw_aff_nonneg_set(pwaff.take()));
+  return Set::enwrap(isl_pw_aff_nonneg_set(pwaff.take()));
 }
 Set isl::zeroSet(PwAff &pwaff){
-  return Set::wrap(isl_pw_aff_zero_set(pwaff.take()));
+  return Set::enwrap(isl_pw_aff_zero_set(pwaff.take()));
 }
 Set isl::nonXeroSet(PwAff &pwaff){
-  return Set::wrap(isl_pw_aff_non_zero_set(pwaff.take()));
+  return Set::enwrap(isl_pw_aff_non_zero_set(pwaff.take()));
 }
 
 Set isl::eqSet(PwAff &&pwaff1, PwAff &&pwaff2) {
-  return Set::wrap(isl_pw_aff_eq_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_eq_set(pwaff1.take(), pwaff2.take()));
 }
 
 Set isl::neSet(PwAff &&pwaff1, PwAff &&pwaff2){
-  return Set::wrap(isl_pw_aff_ne_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_ne_set(pwaff1.take(), pwaff2.take()));
 }
 Set isl::leSet(PwAff &&pwaff1, PwAff &&pwaff2){
-  return Set::wrap(isl_pw_aff_le_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_le_set(pwaff1.take(), pwaff2.take()));
 }
 Set isl::ltSet(PwAff &&pwaff1, PwAff &&pwaff2){
-  return Set::wrap(isl_pw_aff_lt_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_lt_set(pwaff1.take(), pwaff2.take()));
 }
 Set isl::geSet(PwAff &&pwaff1, PwAff &&pwaff2){
-  return Set::wrap(isl_pw_aff_ge_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_ge_set(pwaff1.take(), pwaff2.take()));
 }
 Set isl::gtSet(PwAff &&pwaff1, PwAff &&pwaff2){
-  return Set::wrap(isl_pw_aff_gt_set(pwaff1.take(), pwaff2.take()));
+  return Set::enwrap(isl_pw_aff_gt_set(pwaff1.take(), pwaff2.take()));
 }

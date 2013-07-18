@@ -83,33 +83,36 @@ namespace isl {
   static inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
   static inline void swap(isl::Id &lhs, isl::Id &rhs) { isl::Id::swap(lhs, lhs); }
-
-
-
 } // namespace isl
 
 
 namespace llvm {
   // So you can put an isl::Id into a DenseMap
+
+
+
   template<>
   struct DenseMapInfo<isl::Id> {
+  private:
+      class KeyInitializer {
+  private:
+       isl::Ctx *ctx;
+
+  public:
+    KeyInitializer();
+    ~KeyInitializer();
+
+     isl::Id empty;
+     isl::Id tombstone;
+  }; // KeyInitializer
+    static KeyInitializer keys;
+
+  public:
     static inline isl::Id getEmptyKey() {
-      isl::Id result;
-#ifndef NDEBUG
-      result.reset(reinterpret_cast<isl_id*>(-1), std::string());
-#else
-      result.reset(reinterpret_cast<isl_id*>(-1));
-#endif
-      return result;
+      return keys.empty;
     }
     static inline isl::Id getTombstoneKey() {
-      isl::Id result;
-#ifndef NDEBUG
-      result.reset(reinterpret_cast<isl_id*>(-2), std::string());
-#else
-      result.reset(reinterpret_cast<isl_id*>(-2));
-#endif
-      return result;
+     return keys.tombstone;
     }
     static unsigned getHashValue(const isl::Id& val) {
       return reinterpret_cast<unsigned>(val.keepOrNull());
@@ -119,5 +122,6 @@ namespace llvm {
     }
   }; // class DenseMapInfo<isl::Id>
 } // namespace llvm
+
 
 #endif /* ISLPP_ID_H */

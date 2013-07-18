@@ -80,6 +80,12 @@ namespace isl {
 
 
 #pragma region Build something basic from this space
+        BasicSet emptyBasicSet() const;
+    BasicSet universeBasicSet() const;
+
+    BasicMap emptyBasicMap() const;
+    BasicMap universeBasicMap() const;
+
     Aff createZeroAff() const;
     Aff createConstantAff(int) const;
 

@@ -6,6 +6,7 @@
 #include <islpp/Map.h>
 #include <islpp/UnionMap.h>
 #include <islpp/Space.h>
+#include "FieldType.h"
 
 using namespace molly;
 using namespace polly;
@@ -39,6 +40,11 @@ isl::Map molly::getWhereMap(polly::ScopStmt *stmt) {
   auto where = stmt->getWhereMap();
   return enwrap(where);
 }
+
+
+  isl::Set molly::getGlobalIndexset(FieldType *fty) {
+    return fty->getGlobalIndexset();
+  }
 
 
 isl::UnionMap molly::getFlowDependences(polly::Dependences *deps) {

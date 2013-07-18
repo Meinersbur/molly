@@ -142,11 +142,11 @@ namespace molly {
       auto it2rank = rel.toMap().applyRange(home.toMap());
 
       if (acc.isRead()) {
-        executeWhereRead = union_(executeWhereRead.substractDomain(it2rank.getDomain()), it2rank);
+        executeWhereRead = unite(executeWhereRead.substractDomain(it2rank.getDomain()), it2rank);
       }
 
       if (acc.isWrite()) {
-        executeWhereWrite = union_(executeWhereWrite.substractDomain(it2rank.getDomain()), it2rank);
+        executeWhereWrite = unite(executeWhereWrite.substractDomain(it2rank.getDomain()), it2rank);
       }
     }
 
@@ -173,8 +173,8 @@ namespace molly {
       }
 
       auto result = executeEverywhere;
-      result = union_(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
-      result = union_(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
+      result = unite(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
+      result = unite(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
       stmt->setWhereMap(result.take());
 
       modifiedScop();

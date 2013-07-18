@@ -58,11 +58,26 @@ Id Id::setFreeUser(void (*freefunc)(void *)) && {
 }
 #endif
 
- Id isl::setFreeUser(const Id &id, void (*freefunc)(void *)) {
-   return Id::enwrap(isl_id_set_free_user(id.keep(), freefunc)); 
- }
-   Id isl::setFreeUser(Id &&id, void (*freefunc)(void *)) {
-     return Id::enwrap(isl_id_set_free_user(id.take(), freefunc)); 
-   }
+Id isl::setFreeUser(const Id &id, void (*freefunc)(void *)) {
+  return Id::enwrap(isl_id_set_free_user(id.keep(), freefunc)); 
+}
+Id isl::setFreeUser(Id &&id, void (*freefunc)(void *)) {
+  return Id::enwrap(isl_id_set_free_user(id.take(), freefunc)); 
+}
+
+
+llvm::DenseMapInfo<isl::Id>::KeyInitializer::KeyInitializer() : ctx(isl::Ctx::create()) {
+  empty = ctx->createId("empty", &empty);
+  tombstone = ctx->createId("tombstone", &tombstone);
+}
+
+llvm::DenseMapInfo<isl::Id>::KeyInitializer::~KeyInitializer() {
+  empty.reset();
+  tombstone.reset();
+  delete ctx;
+}
+
+llvm::DenseMapInfo<isl::Id>::KeyInitializer llvm::DenseMapInfo<isl::Id> ::keys;
+
 
 //} // namespace isl

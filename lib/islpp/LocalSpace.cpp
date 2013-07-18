@@ -92,7 +92,21 @@ const LocalSpace &LocalSpace::operator=(Space &&that) {
   return *this;
 }
 
+        BasicSet  LocalSpace::emptyBasicSet() const {
+          return BasicSet::enwrap(isl_basic_set_empty(isl_local_space_get_space( takeCopy())));
+        }
 
+    BasicSet  LocalSpace::universeBasicSet() const {
+        return BasicSet::enwrap(isl_basic_set_universe(isl_local_space_get_space( takeCopy())));
+    }
+
+    BasicMap  LocalSpace::emptyBasicMap() const {
+           return BasicMap::enwrap(isl_basic_map_empty(isl_local_space_get_space( takeCopy())));
+    }
+
+    BasicMap  LocalSpace::universeBasicMap() const {
+               return BasicMap::enwrap(isl_basic_map_universe(isl_local_space_get_space( takeCopy())));
+    }
 
 
 Aff LocalSpace::createZeroAff() const {
@@ -100,10 +114,13 @@ Aff LocalSpace::createZeroAff() const {
 }
 
 
+
+
+
  Aff LocalSpace::createConstantAff(int v) const {
   auto result = isl_aff_zero_on_domain(takeCopy());
   result = isl_aff_set_constant_si(result, v);
-  return Aff::wrap(result);
+  return Aff::enwrap(result);
  }
 
 
@@ -148,7 +165,7 @@ Space LocalSpace::getSpace() const {
   return Space::wrap(isl_local_space_get_space(keep()));
 }
 Aff LocalSpace::getDiv(int pos) const {
-  return Aff::wrap(isl_local_space_get_div(keep(), pos));
+  return Aff::enwrap(isl_local_space_get_div(keep(), pos));
 }
 
 

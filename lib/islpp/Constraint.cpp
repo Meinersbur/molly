@@ -6,6 +6,7 @@
 #include "islpp/Printer.h"
 #include "islpp/Ctx.h"
 #include "islpp/Dim.h"
+#include "islpp/BasicSet.h"
 
 #include <isl/constraint.h>
 #include <llvm/Support/ErrorHandling.h>
@@ -175,6 +176,13 @@ static void printPerDim(llvm::raw_ostream &out, int indentcount, const char *pro
 }
 
 
+BasicSet Constraint::toBasicSet() const {
+  auto result = getLocalSpace().universeBasicSet();
+  result.addConstraint_inplace(*this);
+  return result;
+}
+
+
 void Constraint::printProperties(llvm::raw_ostream &out, int depth, int indentcount) const {
   if (depth > 0) {
     auto localSpace = getLocalSpace();
@@ -257,16 +265,16 @@ bool Constraint::involvesDims(isl_dim_type type, unsigned first, unsigned n) con
   return isl_constraint_involves_dims(keep(), type, first, n);
 }
 Aff Constraint::getDiv(int pos) const {
-  return Aff::wrap(isl_constraint_get_div(keep(), pos));
+  return Aff::enwrap(isl_constraint_get_div(keep(), pos));
 }
 const char *Constraint::getDimName(isl_dim_type type, unsigned pos) const {
   return isl_constraint_get_dim_name(keep(), type, pos); 
 }
 Aff Constraint::getBound(isl_dim_type type, int pos) const{
-  return Aff::wrap(isl_constraint_get_bound(keep(), type, pos));
+  return Aff::enwrap(isl_constraint_get_bound(keep(), type, pos));
 }
 Aff Constraint::getAff() const {
-  return Aff::wrap(isl_constraint_get_aff(keep()));
+  return Aff::enwrap(isl_constraint_get_aff(keep()));
 }
 
 Constraint isl::makeLtConstaint(const Constraint &lhs, const Constraint &rhs) {

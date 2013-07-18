@@ -35,7 +35,7 @@ namespace molly {
     }
 
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
-    static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc);
+    static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldDetectionAnalysis * = nullptr);
 
      void augmentFieldDetection(FieldDetectionAnalysis *fields);
     //void augmentMemoryAccess(polly::MemoryAccess *acc);
@@ -58,6 +58,12 @@ namespace molly {
     isl::Space getIndexsetSpace();
 
     isl::Id getAccessTupleId() const;
+
+
+    // { memacc[domain] -> scattering[scatter] }
+    // Mapped to the same location as the Stmt's scattering
+    // Later could also add another dimension to represent the order of the access relative to others
+    isl::Map getAccessScattering() const;
   }; // class MollyFieldAccess
 
 } // namespace molly

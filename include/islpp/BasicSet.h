@@ -14,6 +14,9 @@
 #include <llvm/Support/ErrorHandling.h>
 #include "Ctx.h"
 #include "Id.h"
+#include "Space.h"
+#include "LocalSpace.h"
+#include "Constraint.h"
 
 struct isl_basic_set;
 struct isl_constraint;
@@ -40,10 +43,67 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-#define BasicSet BasicSet LLVM_FINAL
-  class BasicSet  
-#undef BasicSet
-    : public Spacelike2<BasicSet> {
+  class BasicSet : public Obj3<BasicSet,isl_basic_set>, public Spacelike3<BasicSet> {
+
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
+  protected:
+    void release() { isl_basic_set_free(takeOrNull()); }
+
+  public:
+    BasicSet() { }
+    static ObjTy wrap(StructTy *obj) { return BasicSet::enwrap(obj); }// obsolete
+
+    /* implicit */ BasicSet(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ BasicSet(const ObjTy &that) : Obj3(that) { }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+
+  public:
+    StructTy *takeCopyOrNull() const { return isl_basic_set_copy(keepOrNull()); }
+
+    Ctx *getCtx() const { return Ctx::wrap(isl_basic_set_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_basic_set_dump(keep()); }
+#pragma endregion
+
+
+#pragma region isl::Spacelike3
+    friend class isl::Spacelike3<ObjTy>;
+  public:
+    Space getSpace() const { return Space::wrap(isl_basic_set_get_space(keep())); }
+    LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_basic_set_get_local_space(keep())); }
+    LocalSpace getSpacelike() const { return getLocalSpace(); }
+
+  protected:
+    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }
+    //void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_id(take(), type, pos, id.take())); }
+
+  public:
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_insert_dims(take(), type, pos, count)); }
+    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_remove_dims(take(), type, first, count)); }
+
+
+    // optional, default implementation exist
+    unsigned dim(isl_dim_type type) const { return isl_basic_set_dim(keep(), type); }
+    //int findDimById(isl_dim_type type, const Id &id) const { return isl_basic_set_find_dim_by_id(keep(), type, id.keep()); }
+
+    //bool hasTupleId(isl_dim_type type) const { return isl_basic_set_has_tuple_id(keep(), type); }
+    const char *getTupleName(isl_dim_type type) const { assert(type==isl_dim_set); return isl_basic_set_get_tuple_name(keep()); }
+    //Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_basic_set_get_tuple_id(keep(), type)); }
+    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_basic_set_set_tuple_name(take(), s)); }
+
+    //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_id(keep(), type, pos); }
+    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_get_dim_name(keep(), type, pos); }
+    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), type, pos)); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_name(take(), type, pos, s)); }
+
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_dims(take(), type, count)); }
+#pragma endregion
+
+
+#if 0
 #ifndef NDEBUG
   private:
     std::string _printed;
@@ -74,7 +134,7 @@ namespace isl {
 
     const BasicSet &operator=(const BasicSet &that) { give(that.takeCopy()); return *this; }
     const BasicSet &operator=(BasicSet &&that) { give(that.take()); return *this; }
-
+#endif
 
 #pragma region Creational
     static BasicSet create(const Space &space);
@@ -92,18 +152,18 @@ namespace isl {
     static BasicSet readFromFile(Ctx *ctx, FILE *input);
     static BasicSet readFromStr(Ctx *ctx, const char *str);
 
-    BasicSet copy() const { return wrap(isl_basic_set_copy(keep())); }
-    BasicSet &&move() { return std::move(*this); }
+    //BasicSet copy() const { return wrap(isl_basic_set_copy(keep())); }
+    //BasicSet &&move() { return std::move(*this); }
 #pragma endregion
 
 
 #pragma region Printing
-    void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
+    //void print(llvm::raw_ostream &out) const;
+    //std::string toString() const;
+    //void dump() const;
 #pragma endregion
 
-
+#if 0
     Ctx *getCtx() const { return Ctx::wrap(isl_basic_set_get_ctx(keep())); }
 
 
@@ -131,10 +191,19 @@ namespace isl {
  void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
     void removeDims_inplace(isl_dim_type type, unsigned first, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_remove_dims(take(), type, first, n)); }
 #pragma endregion
+#endif
 
 
 #pragma region Constraints
-    void addConstraint(Constraint &&constraint);
+    void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.take())); }
+    void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
+    BasicSet addConstraint(Constraint &&constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.take())); }
+     BasicSet addConstraint(const Constraint &constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.takeCopy())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+         BasicSet addConstraint(Constraint &&constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.take())); }
+     BasicSet addConstraint(const Constraint &constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
+#endif
+
     void dropContraint(Constraint &&constraint);
 
     int getCountConstraints() const;
@@ -156,8 +225,8 @@ namespace isl {
     void removeRedundancies();
     void affineHull();
 
-    Space getSpace() const;
-    LocalSpace getLocalSpace() const;
+    //Space getSpace() const;
+    //LocalSpace getLocalSpace() const;
     void removeDivs();
     void removeDivsInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
     void removeUnknownDivs();
@@ -192,15 +261,29 @@ namespace isl {
     void insertDims(isl_dim_type type, unsigned pos,  unsigned n);
     void moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n);
 
-    void apply(BasicMap &&bmap);
+    void apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER;
+
+    BasicSet apply(const BasicMap &bmap) const;
+    Set apply(const Map &map) const;
+
     void preimage(MultiAff &&ma);
 
     void gist(BasicSet &&context);
     Vertices computeVertices() const;
+
+    void equate_inplace(isl_dim_type type1, unsigned pos1, isl_dim_type type2, unsigned pos2) ISLPP_INPLACE_QUALIFIER {
+      auto result = take();
+      auto c = isl_equality_alloc(isl_basic_set_get_local_space(result));
+      c = isl_constraint_set_coefficient_si(c, type1, pos1, 1);
+      c = isl_constraint_set_coefficient_si(c, type2, pos2, -1);
+      result = isl_basic_set_add_constraint(result, c);
+      give(result);
+    }
+    BasicSet equate(isl_dim_type type1, unsigned pos1, isl_dim_type type2, unsigned pos2) const { auto result = copy(); result.equate_inplace(type1, pos1, type2, pos2); return result; }
   }; // class BasicSet
 
-  static inline BasicSet enwrap(isl_basic_set *bset) { return BasicSet::wrap(bset); }
 
+  static inline BasicSet enwrap(isl_basic_set *bset) { return BasicSet::wrap(bset); }
 
   BasicSet params(BasicSet &&params);
 
@@ -210,7 +293,7 @@ namespace isl {
 
   BasicSet intersectParams(BasicSet &&bset1, BasicSet &&bset2);
   BasicSet intersect(BasicSet &&bset1, BasicSet &&bset2);
-  Set union_(BasicSet &&bset1, BasicSet &&bset2);
+  Set unite(BasicSet &&bset1, BasicSet &&bset2);
   BasicSet flatProduct(BasicSet &&bset1, BasicSet &&bset2);
 
   Set partialLexmin(BasicSet &&bset, BasicSet &&dom, /*give*/ Set &empty);

@@ -115,14 +115,14 @@ namespace molly {
           if (accessSet.isNull()) {
             accessSet = accessRegion;
           } else {
-            accessSet.union_inplace(accessRegion);
+            accessSet.unite_inplace(accessRegion);
           }
         }
 
         auto domain = getIterationDomain(stmt);
         auto scatter = getScattering(stmt);
         auto stmtScatterRange = apply(domain, scatter);
-        scatterRange = union_(scatterRange.move(), stmtScatterRange.move());
+        scatterRange = unite(scatterRange.move(), stmtScatterRange.move());
       }
 
       // Only interested in most significant dimension
@@ -169,7 +169,7 @@ namespace molly {
       epilogueScatter.setOutTupleId_inplace(scatterId);
       epilogueScatter = intersect(epilogueScatter.move(), epilogieMapToZero.move());
 
-      epilogueScatter.setTupleId(isl_dim_in, epilogueId.copy());
+      //epilogueScatter.setTupleId(isl_dim_in, epilogueId.copy());
       auto epilogueStmt = new ScopStmt(scop, nullptr/*Maybe need to create a dummy BB*/, "scop.epilogie", region, ArrayRef<Loop*>(), epilogueDomain.take(), epilogueScatter.take()); 
       scop->addScopStmt(epilogueStmt);
 
@@ -182,9 +182,9 @@ namespace molly {
         auto accessSpace = isl::Space::createMapFromDomainAndRange(domainSpace, region.getSpace());
         isl::Map allacc /* { domain () -> shape } */ = islctx->createAlltoallMap(domain, region.move());
 
-        auto proAcc = prologueStmt->addAccess(MemoryAccess::MustWrite, fvar->getVariable(), allacc.setTupleId(isl_dim_in, prologueId).take(), nullptr);
+        auto proAcc = prologueStmt->addAccess(MemoryAccess::MUST_WRITE, fvar->getVariable(), allacc.setTupleId(isl_dim_in, prologueId).take(), nullptr);
         proAcc->setFieldVariable(fvar);
-        auto epiAcc = epilogueStmt->addAccess(MemoryAccess::Read, fvar->getVariable(), allacc.setTupleId(isl_dim_in, epilogueId).take(),  nullptr);
+        auto epiAcc = epilogueStmt->addAccess(MemoryAccess::READ, fvar->getVariable(), allacc.setTupleId(isl_dim_in, epilogueId).take(), nullptr);
         epiAcc->setFieldVariable(fvar);
       }
     }

@@ -2,8 +2,8 @@
 #define ISLPP_PRINTER_H
 
 #include "islpp_common.h"
-#include "islpp/Multi.h"
 
+#include "islpp/Multi.h"
 #include "Pw.h"
 #include "Multi.h"
 #include <llvm/Support/Compiler.h>
@@ -11,35 +11,13 @@
 #include <string>
 #include <isl/printer.h>
 #include "Union.h"
+#include "Islfwd.h"
 
 struct isl_printer;
 
 namespace llvm {
   class raw_ostream;
 } // namespace llvm
-
-namespace isl {
-  class Ctx;
-  class Set;
-  class BasicSet;
-  class Map;
-  class UnionPwMultiAff;
-  class QPolynomial;
-  class PwQPolynomial;
-  class UnionPwQPolynomial;
-  class PwQPolynomialFold;
-  class UnionPwQPolynomialFold;
-  class Constraint;
-  class Id;
-  class Val;
-  class Vec;
-  class Space;
-  class BasicMap;
-
-  template<typename T>
-  class List;
-} // namespace isl
-
 
 
 namespace isl {
@@ -62,9 +40,8 @@ namespace isl {
   }
 
 
-#define Printer Printer LLVM_FINAL
   class Printer {
-#undef Printer
+
 #pragma region Low-level
   private:
     isl_printer *printer;
@@ -138,8 +115,12 @@ namespace isl {
     void print(const Val &v);
     void print(const Vec &v);
     void print(const Space &space);
-    void print(const MultiVal &space);
-    void print(const BasicMap &space);
+    void print(const MultiVal &);
+    void print(const BasicMap &);
+    void print(const Point &point);
+        void print(const AstExpr &);
+    void print(const AstNode &);
+    void print(const PwAffList &);
 
     void flush();
   }; // class Printer

@@ -8,6 +8,7 @@
 using namespace isl;
 
 
+#if 0
 isl_multi_aff *Multi<Aff>::takeCopy() const {
   assert(this->maff);
   return isl_multi_aff_copy(this->maff);
@@ -32,10 +33,10 @@ Multi<Aff>::~Multi() {
   this->maff = nullptr;
 #endif
 }
-
+#endif
 
 PwMultiAff Multi<Aff>::toPwMultiAff() const {
-  return enwrap(isl_pw_multi_aff_from_multi_aff(takeCopy()));
+  return PwMultiAff::enwrap(isl_pw_multi_aff_from_multi_aff(takeCopy()));
 }
 
 
@@ -45,7 +46,7 @@ void Multi<Aff>::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 
-
+#if 0
 std::string Multi<Aff>::toString() const {
   if (!maff)
     return std::string();
@@ -59,7 +60,7 @@ std::string Multi<Aff>::toString() const {
 void Multi<Aff>::dump() const { 
   isl_multi_aff_dump(keep()); 
 }
-
+#endif
 
 void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
@@ -86,7 +87,6 @@ void Multi<Aff>::push_back(Aff &&aff) {
 }
 
 
-
 // Missing in isl
 static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
   if (!mpwaff)
@@ -108,15 +108,15 @@ static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff
 
 
 BasicMap Multi<Aff>::toBasicMap() const {
-  return enwrap(isl_basic_map_from_multi_aff(takeCopy()));
+  return BasicMap::enwrap(isl_basic_map_from_multi_aff(takeCopy()));
 }
 
 
 Map Multi<Aff>::toMap() const {
-  return enwrap(isl_map_from_multi_aff(takeCopy()));
+  return Map::enwrap(isl_map_from_multi_aff(takeCopy()));
 }
 
 
 PwMultiAff Multi<Aff>::restrictDomain(Set &&set) const {
-  return enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
+  return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
 }

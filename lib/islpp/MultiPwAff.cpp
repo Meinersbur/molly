@@ -17,6 +17,7 @@ void Multi<PwAff>::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
+#if 0
 std::string Multi<PwAff>::toString() const {
   if (!keep())
     return std::string();
@@ -28,6 +29,7 @@ std::string Multi<PwAff>::toString() const {
 void Multi<PwAff>::dump() const { 
   isl_multi_pw_aff_dump(keep()); 
 }
+#endif
 void Multi<PwAff>::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);
