@@ -58,7 +58,7 @@ bool FieldDetectionAnalysis::runOnModule(Module &M) {
 
     for (unsigned i = 0; i < numFields; i+=1) {
       auto fieldMD = fieldsMD->getOperand(i);
-      FieldType *field = FieldType::createFromMetadata(mollyContext, &M, fieldMD);
+      FieldType *field = FieldType::createFromMetadata(mollyContext->getIslContext(), &M, fieldMD);
       fieldTypes[field->getType()] = field;
     }
   }

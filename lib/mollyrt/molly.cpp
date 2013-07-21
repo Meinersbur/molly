@@ -236,6 +236,25 @@ int molly::getClusterLength(int d) {
  int dummyint;
 
 
+
+
+ namespace molly {
+   class CommBuffer {
+   private:
+     size_t size;
+
+   public:
+     CommBuffer(size_t size) : size(size) {
+     }
+   }; // class CommBuffer
+ } // namespace molly
+
+ molly::CommBuffer *__molly_create_commbuf(size_t size) {
+  return new CommBuffer();
+ }
+
+
+
 //static Communicator communicator;
 
 

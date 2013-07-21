@@ -8,6 +8,8 @@
 #include "islpp/Multi.h"
 #include <llvm/ADT/OwningPtr.h>
 #include <llvm/ADT/ArrayRef.h>
+#include <llvm/Support/CommandLine.h>
+#include <string>
 
 namespace llvm {
   class Module;
@@ -23,12 +25,14 @@ namespace molly {
 } // namespace molly
 
 
+extern llvm::cl::opt<std::string> MollyShape; // Initialized in MollyContextPass.cpp
+
 namespace molly {
 
   /// This class preserves information necessary between Molly passes
   /// The pass manager may not discard it between passes, otherwise applied transformations are lost
   /// Currently the llvm PassManaget doesn't support this, therefore all passes in between need to explicitle preserve this pass
-  class MollyContextPass LLVM_FINAL : public llvm::ModulePass {
+  class MollyContextPass : public llvm::ModulePass {
   private:
     //MollyContext *context; // deprecated
 

@@ -22,8 +22,6 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/IRBuilder.h>
-
-
 #include <assert.h>
 
 using namespace llvm;
@@ -32,16 +30,33 @@ using std::move;
 
 
 
+FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) {
+  //assert(mollyContext);
+  assert(islctx);
+  assert(module);
+  assert(metadata);
+
+  //this->mollyContext = mollyContext;
+  this->module = module;
+  this->islctx = islctx;
+
+  localOffsetFunc = NULL;
+  localLengthFunc = NULL;
+  islocalFunc = NULL;
+
+  isdistributed = false;
+  this->metadata.readMetadata(module, metadata);
+}
 
 
 
 isl::Ctx *FieldType::getIslContext() {
-  return mollyContext->getIslContext();
+  return islctx;
 }
 
 
 llvm::LLVMContext *FieldType::getLLVMContext() {
-  return mollyContext->getLLVMContext();
+  return &module->getContext();
 }
 
 
@@ -201,10 +216,10 @@ isl::Map FieldType::getLocalIndexset(const isl::BasicSet &clusterSet) {
 isl::PwMultiAff FieldType::getHomeAff() {
   assert(isDistributed());
   auto coordSpace = getLogicalIndexsetSpace();
-   //auto gcoordSpace = getLogicalIndexsetSpace();
+  //auto gcoordSpace = getLogicalIndexsetSpace();
 
   auto nDims = getNumDimensions();
- auto maff = getIslContext()->createMapSpace(coordSpace, nDims).createZeroMultiAff();
+  auto maff = getIslContext()->createMapSpace(coordSpace, nDims).createZeroMultiAff();
   auto i = 0;
   for (auto d = nDims-nDims; d<nDims; d+=1) {
     auto globalLen = getGlobalLength(d);
@@ -214,7 +229,7 @@ isl::PwMultiAff FieldType::getHomeAff() {
     // [globalcoordinate/len]
     auto aff = floor(div(coordSpace.createVarAff(isl_dim_set, d), localLen));
     maff.setAff_inline(i, aff.move());
-   i += 1;
+    i += 1;
   }
 
   return maff.restrictDomain(getLogicalIndexset());

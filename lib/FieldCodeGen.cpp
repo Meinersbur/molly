@@ -239,7 +239,7 @@ namespace molly {
 
 
   namespace molly {
-  class FieldCodeGen LLVM_FINAL : public FunctionPass {
+  class FieldCodeGen : public FunctionPass {
   private:
     bool changed;
 

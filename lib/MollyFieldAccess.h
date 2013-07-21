@@ -35,6 +35,7 @@ namespace molly {
     }
 
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
+    static MollyFieldAccess create(llvm::Instruction *instr, polly::MemoryAccess *acc, FieldVariable *fvar);
     static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldDetectionAnalysis * = nullptr);
 
      void augmentFieldDetection(FieldDetectionAnalysis *fields);

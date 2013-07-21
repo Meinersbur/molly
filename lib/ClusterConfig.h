@@ -46,6 +46,8 @@ namespace molly {
     unsigned getClusterDims() const { return clusterLengths.size(); }
     unsigned getClusterSize() const;
     unsigned getClusterLength(size_t d) const { assert(0 <= d && d < clusterLengths.size()); return clusterLengths[d]; }
+
+    isl::MultiAff getMasterRank() const;
   }; // class ClusterConfig
 } // namespace molly
 #endif /* MOLLY_CLUSTERCONFIG_H */

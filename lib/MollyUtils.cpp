@@ -60,3 +60,17 @@ llvm::Pass *molly::createPassFromId(const void *passId) {
   auto pass = passInfo->createPass();
   return pass;
 }
+
+
+llvm::Function *molly::getParentFunction(llvm::Function *func) { 
+  return func; 
+}
+llvm::Function *molly::getParentFunction(const llvm::Region *region) {
+  return region->getEntry()->getParent(); 
+}
+llvm::Function *molly::getParentFunction(llvm::BasicBlock *bb) { 
+  return bb->getParent(); 
+}
+llvm::Function *molly::getParentFunction(const polly::Scop *scop) { 
+  return getParentFunction(&scop->getRegion()); 
+}

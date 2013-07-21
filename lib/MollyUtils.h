@@ -71,5 +71,11 @@ static inline T *createPass() {
   return static_cast<T*>(createPassFromId(T::ID));
 }
 
+
+llvm::Function *getParentFunction(llvm::Function *func);
+llvm::Function *getParentFunction(const llvm::Region *region);
+llvm::Function *getParentFunction(llvm::BasicBlock *bb);
+llvm::Function *getParentFunction(const polly::Scop *scop);
+
 } // namespace molly
 #endif /* MOLLY_MOLLYUTILS_H */

@@ -42,6 +42,13 @@ MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *inst
   return mollyFieldAcc;
 }
 
+ MollyFieldAccess  MollyFieldAccess::create(llvm::Instruction *instr, polly::MemoryAccess *acc, FieldVariable *fvar) {
+auto result = fromAccessInstruction(instr);
+result.scopAccess = acc;
+result.fieldvar = fvar;
+return result;
+}
+
 
 MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc, FieldDetectionAnalysis *fields) {
   assert(acc);

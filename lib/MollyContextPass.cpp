@@ -16,7 +16,7 @@ using namespace std;
 using namespace polly;
 
 
-static cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
+cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
 
 
 

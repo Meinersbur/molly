@@ -303,6 +303,14 @@ namespace molly {
          auto writebackLocalStmt = createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.move(), afterWrite.move());
       
 
+         // CodeGen to transfer data to their home location
+
+         // 1. Create a buffer
+         // 2. Write the data into that buffer
+         // 3. Send buffer
+         // 4. Receive buffer
+         // 5. Writeback buffer data to home location
+
 
 
 #pragma endregion

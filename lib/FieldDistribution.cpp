@@ -21,7 +21,7 @@ namespace molly {
 
 namespace {
 
-  class FieldDistribution LLVM_FINAL : public ModulePass {
+  class FieldDistribution : public ModulePass {
   private:
     FieldDetectionAnalysis *fa;
 

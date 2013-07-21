@@ -29,6 +29,7 @@
 #include "llvm/Assembly/PrintModulePass.h"
 #include <polly/PollyContextPass.h>
 #include "InsertInOut.h"
+#include "MollyPassManager.h"
 
 using namespace llvm;
 using namespace std;
@@ -279,7 +280,10 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 
   //TODO: Adjust to OptLevel
   //auto gpm = createGlobalPassManager();
+  
+  PM.add(createMollyPassManager());
 
+#if 0
   PM.add(createPollyContextPass(true));
 
   //gpm->addPass<molly::MollyContextPass>(); // ModulePass (should be preserved until the end of the Molly chains)
@@ -368,6 +372,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //PM.unpreserve(fieldDetectionPass);
 
   //PM.add(gpm); //TODO: GlobalPassManager knows which ModuleAnalyses it could need and ask PM for it
+#endif
 }
 
 

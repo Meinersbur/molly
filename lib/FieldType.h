@@ -6,6 +6,7 @@
 #include <llvm/ADT/ArrayRef.h>
 #include "islpp/Space.h"
 #include "islpp/MultiAff.h"
+#include "islpp/Islfwd.h"
 
 namespace llvm {
   class Module;
@@ -33,11 +34,12 @@ namespace molly {
 
 
 namespace molly {
-#define FieldType FieldType LLVM_FINAL
+
   class FieldType {
-#undef FieldType
+
   private:
-    molly::MollyContextPass *mollyContext;
+    //molly::MollyContextPass *mollyContext;
+    isl::Ctx *islctx;
     llvm::Module *module;
 
     clang::CodeGen::FieldTypeMetadata metadata;
@@ -60,21 +62,7 @@ namespace molly {
     //llvm::Function *islocalfunc;
 
   protected:
-    FieldType(molly::MollyContextPass *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
-      assert(mollyContext);
-      assert(module);
-      assert(metadata);
-
-      this->mollyContext = mollyContext;
-      this->module = module;
-
-      localOffsetFunc = NULL;
-      localLengthFunc = NULL;
-      islocalFunc = NULL;
-
-      isdistributed = false;
-      this->metadata.readMetadata(module, metadata);
-    }
+    FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata);
 
     void readMetadata();
 
@@ -85,8 +73,8 @@ namespace molly {
   public:
     ~FieldType();
 
-    static FieldType *createFromMetadata(molly::MollyContextPass *mollyContext, llvm::Module *module, llvm::MDNode *metadata) {
-      return new FieldType(mollyContext, module, metadata);
+    static FieldType *createFromMetadata(isl::Ctx *islctx, /*molly::MollyContextPass *mollyContext,*/ llvm::Module *module, llvm::MDNode *metadata) {
+      return new FieldType(islctx,/*mollyContext,*/ module, metadata);
     }
 
     void dump();
