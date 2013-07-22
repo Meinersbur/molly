@@ -105,7 +105,7 @@ void MollyFieldAccess::augmentFieldVariable(FieldVariable *fieldvar) {
 }
 #endif
 
-FieldType *MollyFieldAccess::getFieldType() { 
+FieldType *MollyFieldAccess::getFieldType() const { 
   assert(fieldvar);
   return fieldvar->getFieldType();
 }
@@ -152,7 +152,7 @@ isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
 }
 
 
-isl::Map MollyFieldAccess::getAccessRelation() {
+isl::Map MollyFieldAccess::getAccessRelation() const {
   assert(scopAccess);
   return isl::enwrap(scopAccess->getAccessRelation());
 }
@@ -185,3 +185,10 @@ isl::Map MollyFieldAccess::getAccessScattering() const {
   scattering.setInTupleId_inplace(getAccessTupleId());
   return scattering;
 }
+
+
+ isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
+   auto tyHomeAff = getFieldType() ->getHomeAff();
+   tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
+   return tyHomeAff;
+ }

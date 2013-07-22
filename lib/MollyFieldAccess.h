@@ -43,15 +43,15 @@ namespace molly {
     //void augmentFieldVariable(FieldVariable *fieldvar);
     //void augmentScEv(llvm::ScalarEvolution *se) {}
 
-    FieldVariable *getFieldVariable() { return fieldvar; }
-    FieldType *getFieldType();
+    FieldVariable *getFieldVariable() { assert(fieldvar); return fieldvar; }
+    FieldType *getFieldType() const;
 
     isl::Space getLogicalSpace(isl::Ctx *); // returns a set space with getNumDims() dimensions
 
     polly::MemoryAccess *getPollyMemoryAccess() const;
     polly::ScopStmt *getPollyScopStmt();
     isl::MultiPwAff getAffineAccess(llvm::ScalarEvolution *se);
-    isl::Map/*iteration coord -> field coord*/ getAccessRelation();
+    isl::Map/*iteration coord -> field coord*/ getAccessRelation() const;
     isl::Set getAccessedRegion();
 
     // Currently this is taken from polly::MemoryAccess
@@ -65,6 +65,8 @@ namespace molly {
     // Mapped to the same location as the Stmt's scattering
     // Later could also add another dimension to represent the order of the access relative to others
     isl::Map getAccessScattering() const;
+
+    isl::PwMultiAff getHomeAff() const;
   }; // class MollyFieldAccess
 
 } // namespace molly

@@ -137,26 +137,23 @@ namespace molly {
     return metadata.funcSetLocal;
     }
 
-    llvm::Function *localOffsetFunc;
-    llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
-    void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
+    //llvm::Function *localOffsetFunc;
+    //llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
+    //void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
 
     llvm::Function *localLengthFunc;
     llvm::Function *getLocalLengthFunc() { return localLengthFunc; }
     void setLocalLengthFunc(llvm::Function *func) { assert(func); this->localLengthFunc = func; }
 
-    llvm::Function *islocalFunc;
+    //llvm::Function *islocalFunc;
     llvm::Function *getIslocalFunc() { assert(metadata.funcIslocal); return metadata.funcIslocal; }
     //void setIslocalFunc(llvm::Function *func) { assert(func); this->islocalFunc = func; }
 
-    llvm::Function *ptrFunc;
-    llvm::Function *getPtrFunc() { return ptrFunc; }
-    void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
+    //llvm::Function *ptrFunc;
+    //llvm::Function *getPtrFunc() { return ptrFunc; }
+    //void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
-    llvm::Type *getEltType() {
-      assert(metadata.llvmEltType);
-      return metadata.llvmEltType;
-    }
+    llvm::Type *getEltType();
     llvm::PointerType *getEltPtrType();
 
     //TODO: Element length in bytes

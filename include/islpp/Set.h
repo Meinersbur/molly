@@ -245,6 +245,8 @@ namespace isl {
 
     PwMultiAff lexminPwMultiAff() const;
     PwMultiAff lexmaxPwMultiAff() const;
+
+    Set subtract(const Set &that) const { return Set::enwrap(isl_set_subtract(takeCopy(), that.takeCopy())); }
  }; // class Set
 
 

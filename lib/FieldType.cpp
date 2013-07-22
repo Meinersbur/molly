@@ -40,14 +40,13 @@ FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metad
   this->module = module;
   this->islctx = islctx;
 
-  localOffsetFunc = NULL;
+  //localOffsetFunc = NULL;
   localLengthFunc = NULL;
-  islocalFunc = NULL;
+  //islocalFunc = NULL;
 
   isdistributed = false;
   this->metadata.readMetadata(module, metadata);
 }
-
 
 
 isl::Ctx *FieldType::getIslContext() {
@@ -135,11 +134,17 @@ isl::MultiAff FieldType::getDistributionAff() {
 }
 
 
+llvm::Type *FieldType::getEltType() {
+  //FIXME: In future versions, the element type might depend on the element accessed, if there is a struct type in between 
+  assert(metadata.llvmEltType);
+  return metadata.llvmEltType;
+}
+
+
 llvm::PointerType *FieldType::getEltPtrType() {
   auto eltType = getEltType();
   return PointerType::getUnqual(eltType);
 }
-
 
 
 static Value *emit(IRBuilderBase &builder, Value *value) {

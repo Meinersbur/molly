@@ -146,6 +146,13 @@ namespace isl {
 #pragma endregion
 #endif
 
+
+#pragma region Create other spaces
+    Space mapsTo(const Space &range) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
+    Space mapsTo(unsigned nOut) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut) )); }
+#pragma endregion
+
+
 #pragma region Create Sets/Maps etc. using this map
     Set emptySet() const;
     Set universeSet() const;
