@@ -14,29 +14,61 @@ namespace molly {
 
 
 namespace molly {
+
+  /// A utility class to embrace anything that is to know about acessing a field
+  /// Polly requires a subset of this so it knows what are field accesses and what they access
   class MollyFieldAccess : public polly::FieldAccess {
     friend class FieldDetectionAnalysis;
   private:
     FieldVariable *fieldvar;
 
     polly::MemoryAccess *scopAccess;
+    polly::ScopStmt *scopStmt;
 
   protected:
     MollyFieldAccess(const polly::FieldAccess &that) : polly::FieldAccess(that) {
       this->fieldvar = nullptr;
       this->scopAccess = nullptr; 
+      this->scopStmt  = nullptr;
+    }
+
+  private:
+    void clear() {
+       this->fieldvar = nullptr;
+      this->scopAccess = nullptr; 
+      this->scopStmt  = nullptr;
     }
 
    
   public:
     MollyFieldAccess() {
-      this->fieldvar = nullptr;
-      this->scopAccess = nullptr; 
+     clear();
     }
 
-    static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr);
-    static MollyFieldAccess create(llvm::Instruction *instr, polly::MemoryAccess *acc, FieldVariable *fvar);
-    static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldDetectionAnalysis * = nullptr);
+    void loadFromInstruction(llvm::Instruction *instr) LLVM_OVERRIDE {
+       clear();
+      FieldAccess::loadFromInstruction(instr);
+    }
+
+    MollyFieldAccess(llvm::Instruction *instr, polly::MemoryAccess *acc, polly::ScopStmt * scopStmt, FieldVariable *fvar) {
+      loadFromInstruction(instr);
+
+      this->fieldvar = nullptr;
+      this->scopAccess = acc;
+      this->scopStmt = scopStmt;
+    }
+
+  public:
+    void loadFromInstruction(llvm::Instruction *instr, FieldVariable *fvar)  { loadFromInstruction(instr); this->fieldvar = fvar; }
+    void loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * =nullptr);
+    void loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable * =nullptr);
+    void setFieldVariable(FieldVariable *fvar) { assert(!fvar); this->fieldvar= fvar; }
+
+
+    static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr, FieldVariable * =nullptr);
+    //static MollyFieldAccess create(llvm::Instruction *instr, polly::MemoryAccess *acc, polly::ScopStmt * scopStmt, FieldVariable *fvar);
+    static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * =nullptr);
+    static MollyFieldAccess fromScopStmt(polly::ScopStmt *acc, FieldVariable * =nullptr);
 
      void augmentFieldDetection(FieldDetectionAnalysis *fields);
     //void augmentMemoryAccess(polly::MemoryAccess *acc);

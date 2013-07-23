@@ -23,7 +23,7 @@ namespace molly {
 namespace molly {
   isl::Set getIterationDomain(polly::ScopStmt *);
   
-  isl::Map getScattering(polly::ScopStmt *);
+  isl::Map getScattering(polly::ScopStmt *); // rename: getSchedule
   isl::Space getScatteringSpace(polly::Scop *scop);
   isl::Space getScatteringSpace(polly::ScopStmt *stmt);
   

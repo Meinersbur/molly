@@ -36,12 +36,41 @@ void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
 }
 
 
-MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *instr) {
-  auto pollyFieldAcc = polly::FieldAccess::fromAccessInstruction(instr);
-  MollyFieldAccess mollyFieldAcc(pollyFieldAcc);
-  return mollyFieldAcc;
+void MollyFieldAccess::loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * fvar) {
+  assert(acc);
+  loadFromInstruction(const_cast<Instruction*>(acc->getAccessInstruction()));
+  this->scopAccess = acc;
+  this->scopStmt = acc->getStatement();
+  this->fieldvar = fvar;
 }
 
+
+    void MollyFieldAccess::loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
+      assert(stmt);
+      bool found = false;
+      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
+        auto memacc = *it;
+        loadFromMemoryAccess(memacc, fvar);
+        if (isValid()) { // There must be only one MemoryAccess to a field 
+           assert( this->scopStmt == stmt);
+         return;
+        }
+      }
+    }
+
+MollyFieldAccess MollyFieldAccess::fromAccessInstruction(llvm::Instruction *instr,FieldVariable * fvar) {
+ MollyFieldAccess result;
+ result.loadFromInstruction(instr, fvar);
+ return result;
+}
+
+    static MollyFieldAccess fromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
+       MollyFieldAccess result;
+       result.loadFromScopStmt (stmt, fvar);
+ return result;
+    }
+
+#if 0
  MollyFieldAccess  MollyFieldAccess::create(llvm::Instruction *instr, polly::MemoryAccess *acc, FieldVariable *fvar) {
 auto result = fromAccessInstruction(instr);
 result.scopAccess = acc;
@@ -87,7 +116,7 @@ MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc, Fi
     return result;
   }
 }
-
+#endif
  
 
 #if 0

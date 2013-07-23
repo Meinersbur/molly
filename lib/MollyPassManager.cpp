@@ -170,9 +170,9 @@ namespace molly {
 
 #pragma region Scop Distribution
       void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
-        if (acc.isPrologue() || acc.isEpilogue()) {
-          return; // These are not computed anywhere
-        }
+        //if (acc.isPrologue() || acc.isEpilogue()) {
+        //  return; // These are not computed anywhere
+        //}
 
         auto fieldVar = acc.getFieldVariable();
         auto fieldTy = acc.getFieldType();
@@ -269,11 +269,11 @@ namespace molly {
 
       void genCommunication() {
         DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << func->getName() << "\n");
-        if (func->getName() == "test") {
+        if (func->getName() == "sink") {
           int a = 0;
         }
 
-        auto func = scop->getRegion().getEntry()->getParent();
+        //auto func = scop->getRegion().getEntry()->getParent();
         auto &llvmContext = func->getContext();
         auto module = func->getParent();
 
@@ -287,12 +287,12 @@ namespace molly {
         auto space = isl::enwrap(scop->getParamSpace());
         auto readAccesses = space.createEmptyUnionMap(); /* { stmt[iteration] -> access[indexset] } */
         auto writeAccesses = readAccesses.copy(); /* { stmt[iteration] -> access[indexset] } */
-        auto schedule = readAccesses.copy(); /* { stmt[iteration] -> scattering[] } */
+        auto schedule = readAccesses.copy(); /* { stmt[iteration] -> scattering[scatter] } */
 
         for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
           auto stmt = *itStmt;
-          auto domain = getIterationDomain(stmt);
-          auto scattering = getScattering(stmt);
+          auto domain = getIterationDomain(stmt); /* { stmt[domain] } */
+          auto scattering = getScattering(stmt); /* { stmt[domain] -> scattering[scatter] }  */
           scattering.intersectDomain_inplace(domain);
 
           for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) { 
@@ -1553,7 +1553,6 @@ namespace molly {
 
 #pragma region Field Distribution  
     void fieldDistribution_processFieldType(FieldType *fty) {
-      // auto &contextPass = getAnalysis<MollyContextPass>();
       auto lengths = fty->getLengths();
       auto cluster = clusterConf->getClusterLengths();
       auto nDims = lengths.size();
@@ -1564,7 +1563,7 @@ namespace molly {
         auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
 
         assert(len % clusterLen == 0);
-        auto localLen = len / clusterLen;
+        auto localLen = (len + clusterLen - 1) / clusterLen;
         locallengths.push_back(localLen);
       }
       fty->setDistributed();
@@ -1756,39 +1755,36 @@ namespace molly {
       return res;
     }
 
-
-    MollyFieldAccess getFieldAccess(llvm::Instruction *instr) {
-      assert(instr);
-
-      // TODO: Get rid of this tmp
-      auto tmp = MollyFieldAccess::fromAccessInstruction(instr);
-      if (!tmp.isValid())
-        return tmp;
-
-      auto base = tmp.getBaseField();
+    void augmentFieldVariable(MollyFieldAccess &facc) {
+      auto base = facc.getBaseField();
       auto globalbase = dyn_cast<GlobalVariable>(base);
       assert(globalbase && "Currently only global fields supported");
       auto gvar = getFieldVariable(globalbase);
-      auto result =  MollyFieldAccess::create(instr, nullptr, gvar);
+      assert(gvar);
+      facc.setFieldVariable(gvar);
+    }
+
+
+    MollyFieldAccess getFieldAccess(llvm::Instruction *instr) {
+      assert(instr);
+      auto result = MollyFieldAccess::fromAccessInstruction(instr);
+      augmentFieldVariable(result);
+      return result;
+    }
+
+
+    MollyFieldAccess getFieldAccess(ScopStmt *stmt) {
+      assert(stmt);
+      auto result = MollyFieldAccess::fromScopStmt (stmt);
+      augmentFieldVariable(result);
       return result;
     }
 
 
     MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) {
       assert(memacc);
-      auto instr = const_cast<Instruction*>(memacc->getAccessInstruction());
-      assert(instr);
-
-      // TODO: Get rid of this tmp
-      auto tmp = MollyFieldAccess::fromAccessInstruction(instr);
-      if (!tmp.isValid())
-        return tmp;
-
-      auto base = tmp.getBaseField();
-      auto globalbase = dyn_cast<GlobalVariable>(base);
-      assert(globalbase && "Currently only global fields supported");
-      auto gvar = getFieldVariable(globalbase);
-      auto result =  MollyFieldAccess::create(instr, memacc, gvar);
+      auto result = MollyFieldAccess::fromMemoryAccess (memacc);
+      augmentFieldVariable(result);
       return result;
     }
 
@@ -1802,27 +1798,6 @@ namespace molly {
     }
 #pragma endregion 
 
-
-#pragma region Field CodeGen
-    void scopFieldCodeGen() {
-      for (auto it : scops) {
-        auto scopCtx = it.second;
-        scopCtx->genCommunication();
-      }
-    }
-#pragma endregion
-
-
-#pragma region Polly Passes
-    void runPollyPasses() {
-      for (auto scopPair : scops) {
-        auto scop = scopPair.first;
-        auto scopCtx = scopPair.second;
-        //scopCtx->pollyOptimize();
-        scopCtx->pollyCodegen();
-      }
-    }
-#pragma endregion
 
 
 
@@ -1887,11 +1862,18 @@ namespace molly {
       // Decide on which node(s) a ScopStmt should execute 
       scopDistribution();
 
-      // Insert communication between ScopStmt
-      scopFieldCodeGen();
+    
+      for (auto it : scops) {
+        auto scopCtx = it.second;
 
-      // Let polly optimize and and codegen the scops
-      runPollyPasses();
+          // Insert communication between ScopStmt
+        scopCtx->genCommunication();
+
+        // Let polly optimize and and codegen the scops
+        //scopCtx->pollyOptimize();
+        scopCtx->pollyCodegen();
+      }
+
 
       // Replace all remaining accesses by some generated intrinsic
       accessCodeGen();
