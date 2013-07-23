@@ -4,6 +4,8 @@
 #include <llvm/IR/Function.h>
 #include <polly/ScopInfo.h>
 #include <llvm/Analysis/RegionInfo.h>
+#include "MollyFieldAccess.h"
+#include <llvm/IR/Instructions.h>
 
 using namespace llvm;
 using namespace polly;
@@ -63,7 +65,7 @@ llvm::Pass *molly::createPassFromId(const void *passId) {
 
 
 llvm::Function *molly::getParentFunction(llvm::Function *func) { 
-  return func; 
+  return func;
 }
 llvm::Function *molly::getParentFunction(const llvm::Region *region) {
   return region->getEntry()->getParent(); 
@@ -73,4 +75,40 @@ llvm::Function *molly::getParentFunction(llvm::BasicBlock *bb) {
 }
 llvm::Function *molly::getParentFunction(const polly::Scop *scop) { 
   return getParentFunction(&scop->getRegion()); 
+}
+
+
+bool molly::isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt) {
+  return isFieldAccessBasicBlock(scopStmt->getBasicBlock());
+}
+
+
+bool molly::isFieldAccessBasicBlock(llvm::BasicBlock *bb) {
+  assert(bb);
+
+  MollyFieldAccess facc;
+  for (auto &i : *bb) {
+    auto instr = &i;
+    facc = MollyFieldAccess::create(instr, nullptr, nullptr);
+    if (facc.isValid())
+      break;
+  }
+
+  if (!facc.isValid())
+    return false;
+
+
+    for (auto &i : *bb) {
+      auto instr = &i;
+
+      if (instr == facc.getAccessor())
+        continue;
+
+      if (instr == facc.getFieldCall())
+        continue;
+
+      return false;
+    }
+
+    return true;
 }

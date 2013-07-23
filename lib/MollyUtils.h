@@ -4,6 +4,8 @@
 #pragma region Includes and forward declarations
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/ilist.h>
+#include "Pollyfwd.h"
+#include "LLVMfwd.h"
 
 namespace llvm {
   class Function;
@@ -76,6 +78,9 @@ llvm::Function *getParentFunction(llvm::Function *func);
 llvm::Function *getParentFunction(const llvm::Region *region);
 llvm::Function *getParentFunction(llvm::BasicBlock *bb);
 llvm::Function *getParentFunction(const polly::Scop *scop);
+
+bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
+bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);
 
 } // namespace molly
 #endif /* MOLLY_MOLLYUTILS_H */

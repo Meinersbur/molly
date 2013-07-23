@@ -1,6 +1,7 @@
 #define DEBUG_TYPE "molly"
 #include "MollyPassManager.h"
 
+#include <llvm/Support/Debug.h>
 #include <llvm/Pass.h>
 #include <polly/PollyContextPass.h>
 //#include <llvm/IR/Module.h>
@@ -34,6 +35,10 @@
 #include "islpp/UnionMap.h"
 #include "ScopEditor.h"
 #include "islpp/Point.h"
+#include <polly/TempScopInfo.h>
+#include <polly/LinkAllPasses.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <polly/CodeGen/BlockGenerators.h>
 
 using namespace molly;
 using namespace polly;
@@ -43,9 +48,9 @@ using isl::enwrap;
 
 
 namespace molly {
-  class MollyPassManager;
-  class MollyScopContext;
-  class MollyFunctionContext;
+  //class MollyPassManager;
+  //class MollyScopContext;
+  //class MollyFunctionContext;
 
 
 
@@ -79,6 +84,7 @@ namespace molly {
       }
     }; // class MollyResolver
 
+
     class MollyModuleResolver : public MollyResolver {
     protected:
       Pass *getPass(AnalysisID PI, bool ifavailable) const LLVM_OVERRIDE {
@@ -105,6 +111,7 @@ namespace molly {
         assert(func);
       }
     }; // class MollyFunctionResolver
+
 
     class MollyRegionResolver : public MollyResolver {
     private:
@@ -265,7 +272,6 @@ namespace molly {
         if (func->getName() == "test") {
           int a = 0;
         }
-
 
         auto func = scop->getRegion().getEntry()->getParent();
         auto &llvmContext = func->getContext();
@@ -457,8 +463,8 @@ namespace molly {
           auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
           auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
           auto writebackLocalStmt = createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
-          writebackLocalStmt->addAccess(MemoryAccess::READ, 
-          writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
+          //writebackLocalStmt->addAccess(MemoryAccess::READ, 
+          //writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
 
           scop->addScopStmt(writebackLocalStmt);
           modifiedScop();
@@ -643,22 +649,30 @@ namespace molly {
     }; // class MollyScopContext
 
 
-    class MollyFunctionContext {
+    // This is actually not a pass
+    // It used internally for actions on functions and remembering function-specific data
+    // Could be changed to a pass in later versions once we find out how to pass data between passes, without unrelated passes in between destroying them
+    class MollyFunctionContext : public llvm::FunctionPass {
     private:
       MollyPassManager *pm;
       Function *func;
-
 
       void modifiedIR() {
         pm->modifiedIR();
       }
 
     public:
-      MollyFunctionContext(MollyPassManager *pm, Function *func):pm(pm), func(func) {
+      static char ID;
+      MollyFunctionContext(MollyPassManager *pm, Function *func): FunctionPass(ID), pm(pm), func(func) {
         assert(pm);
         assert(func);
+
+        this->setResolver(new MollyFunctionResolver(pm , func));
       }
 
+      bool runOnFunction(Function &F) LLVM_OVERRIDE {
+        llvm_unreachable("This is not a pass");
+      }
 
 #pragma region Access CodeGen
     protected:
@@ -831,6 +845,141 @@ namespace molly {
       }
 
 #pragma endregion
+
+
+      Pass *findOrRunAnalysis(AnalysisID passID) {
+        return pm->findOrRunAnalysis(passID, func, nullptr);
+      }
+
+      template<typename T>
+      T *findOrRunAnalysis() {
+        return pm->findOrRunAnalysis<T>(func, nullptr);
+      }
+
+      void removePass(Pass *pass) {
+        pm->removePass(pass);
+      }
+
+
+      MollyFieldAccess getFieldAccess(Instruction* instr) {
+        return pm->getFieldAccess(instr);
+      }
+
+
+#pragma region Isolate field accesses
+
+      void isolateInBB(MollyFieldAccess &facc) {
+        auto accessInstr = facc.getAccessor();
+        auto callInstr = facc.getFieldCall();
+        auto bb = accessInstr->getParent();
+
+        //SmallVector<Instruction*, 8> isolate;
+
+        //if (callInstr)
+        //  isolate.push_back(accessInstr);
+
+        
+
+        // FIXME: This creates trivial BasicBlocks, only containing PHI instrunctions and/or the callInstr, and arithmetic instructions to compute the coordinate; Those should be moved into the isolated BB
+        if (bb->getFirstNonPHI() != accessInstr) {
+          bb = SplitBlock(bb, accessInstr, this);
+        }
+        auto isolatedBB = bb;
+
+        auto followInstr = accessInstr->getNextNode();
+        if (followInstr && !isa<BranchInst>(followInstr)) {
+          bb = SplitBlock(bb, followInstr, this);
+        }
+
+        auto oldName = isolatedBB->getName();
+        if (oldName.endswith(".split")) 
+          oldName = oldName.drop_back(6);
+        isolatedBB->setName(oldName + ".isolated");
+
+        if (callInstr) {
+          assert(callInstr->hasOneUse());
+          callInstr->moveBefore(accessInstr);
+        }
+#if 0
+        // Move operands into the isolated block
+        // Required to detect the affine access relations
+                SmallVector<Instruction*,8> worklist;
+        worklist.push_back(accessInstr);
+
+        while(!worklist.empty()) {
+          auto instr = worklist.pop_back_val();    // instr is already in isolated block
+    
+          for (auto it = instr->op_begin(), end = instr->op_end(); it!=end; ++it) {
+           assert( it->getUser() == instr);
+           auto val = it->get();
+           if (!isa<Instruction>(val))
+             continue;  // No need to move a constant
+           auto usedInstr = cast<Instruction>(val);
+
+           if (isa<PHINode>(usedInstr)) 
+             continue; // No need to move
+           
+           if (usedInstr->)
+
+          }
+
+        }
+#endif
+      }
+
+      void isolateFieldAccesses() {
+        // "Normalize" existing BasicBlocks
+        auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+        removePass(ib);
+
+        //for (auto &b : *func) {
+        // auto bb = &b;
+
+        bool changed =false;
+        SmallVector<Instruction*, 16> instrs;
+        collectInstructionList(func, instrs);
+        for (auto instr : instrs){
+          auto facc = getFieldAccess(instr);
+          if (!facc.isValid())
+            continue;
+          // Create a distinct BB for this access
+          // polly::IndependentBlocks will then it independent from the other BBs and
+          // polly::ScopInfo create a ScopStmt for it
+          isolateInBB(facc);
+          changed = true;
+        }
+        //}
+
+        if (changed) {
+          // Also make new BBs independent
+          ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+        }
+
+
+        //auto sci = findOrRunAnalysis<TempScopInfo>();
+        //auto sd = findOrRunAnalysis<ScopDetection>();
+        //for (auto region : *sd) {
+        //}
+
+        // Check consistency
+#ifndef NDEBUG
+        for (auto &b : *func) {
+          auto bb = &b;
+
+          for (auto &i : *bb){
+            auto instr = &i;
+            auto facc = getFieldAccess(instr);
+            if (facc.isValid()) {
+              //assert(isFieldAccessBasicBlock(bb));
+              break;
+            }
+          }
+        }
+#endif
+      }
+
+#pragma endregion
+
     }; // class MollyFunctionContext
 
 
@@ -859,6 +1008,44 @@ namespace molly {
     llvm::DenseMap<llvm::AnalysisID, llvm::ModulePass*> currentModuleAnalyses; 
     llvm::DenseMap<std::pair<llvm::AnalysisID, llvm::Function*>, llvm::FunctionPass*> currentFunctionAnalyses; 
     llvm::DenseMap<std::pair<llvm::AnalysisID,llvm::Region*>, llvm::RegionPass*> currentRegionAnalyses; 
+
+    void removePass(Pass *pass) {
+      if (!pass)
+        return;
+
+      //FIXME: Also remove transitively dependent passes
+      //TODO: Can this be done more efficiently?
+      for (auto it = currentModuleAnalyses.begin(), end = currentModuleAnalyses.end(); it!=end; ++it) {
+        auto moduleAnalysisID = it->first;
+        auto moduleAnalysisPass = it->second;
+
+        if (moduleAnalysisPass==pass)
+          currentModuleAnalyses.erase(it);
+      }
+
+      for (auto it = currentFunctionAnalyses.begin(), end = currentFunctionAnalyses.end(); it!=end; ++it) {
+        auto function = it->first.second;
+        auto functionAnalysisID = it->first.first;
+        auto functionAnalysisPass = it->second;
+
+        if (functionAnalysisPass==pass)
+          currentFunctionAnalyses.erase(it);
+      }
+
+      decltype(currentRegionAnalyses) rescuedRegionAnalyses;
+      for (auto it = currentRegionAnalyses.begin(), end = currentRegionAnalyses.end(); it!=end; ++it) {
+        auto region = it->first.second;
+        auto regionAnalysisID = it->first.first;
+        auto regionAnalysisPass = it->second;
+
+        if (regionAnalysisPass==pass)
+          currentRegionAnalyses.erase(it);
+      }
+
+      pass->releaseMemory();
+      delete pass;
+    }
+
 
     void removeUnpreservedAnalyses(const AnalysisUsage &AU, Function *func, Region *inRegion) {
       if (AU.getPreservesAll()) 
@@ -990,48 +1177,12 @@ namespace molly {
       //alwaysPreserve.insert(&molly::MollyContextPassID);
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
       //alwaysPreserve.insert(&polly::IndependentBlocksID);
-
-      switch (Optimizer) {
-#ifdef SCOPLIB_FOUND
-      case OPTIMIZER_POCC:
-        addPollyPass( polly::createPoccPass());
-        break;
-#endif
-#ifdef PLUTO_FOUND
-      case OPTIMIZER_PLUTO:
-        addPollyPass( polly::createPlutoOptimizerPass());
-        break;
-#endif
-      case OPTIMIZER_ISL:
-        addPollyPass(polly::createIslScheduleOptimizerPass());
-        break;
-      case OPTIMIZER_NONE:
-        break; 
-      }
-
-      switch (CodeGenerator) {
-#ifdef CLOOG_FOUND
-      case CODEGEN_CLOOG:
-        addPollyPass(polly::createCodeGenerationPass());
-        if (PollyVectorizerChoice == VECTORIZER_BB) {
-          VectorizeConfig C;
-          C.FastDep = true;
-          addPollyPass(createBBVectorizePass(C));
-        }
-        break;
-#endif
-      case CODEGEN_ISL:
-        addPollyPass(polly::createIslCodeGenerationPass());
-        break;
-      case CODEGEN_NONE:
-        break;
-      }
     }
+
 
     ~MollyPassManager() {
       removeAllAnalyses();
     }
-
 
 
     void runModulePass(llvm::ModulePass *pass, bool permanent = false) {
@@ -1048,6 +1199,12 @@ namespace molly {
         findOrRunAnalysis(requiredID, false);
       }
 
+      // Execute pass
+      pass->setResolver(new MollyModuleResolver(this));
+      bool changed = pass->runOnModule(*module);
+      if (changed)
+        removeUnpreservedAnalyses(AU, nullptr, nullptr);
+
       // Register pass 
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
@@ -1063,13 +1220,8 @@ namespace molly {
       if (permanent) {
         alwaysPreserve.insert(passID);
       }
-      pass->setResolver(new MollyModuleResolver(this));
-
-      // Execute pass
-      bool changed = pass->runOnModule(*module);
-      if (changed)
-        removeUnpreservedAnalyses(AU, nullptr, nullptr);
     }
+
 
     ModulePass *findAnalysis(AnalysisID passID) {
       auto preexisting = Resolver->getAnalysisIfAvailable(passID, true);
@@ -1129,6 +1281,12 @@ namespace molly {
         findOrRunAnalysis(requiredID, func, false);
       }
 
+      // Execute pass
+      pass->setResolver(new MollyFunctionResolver(this, func));
+      bool changed = pass->runOnFunction(*func);
+      if (changed)
+        removeUnpreservedAnalyses(AU, func, nullptr);
+
       // Register pass
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
@@ -1144,12 +1302,6 @@ namespace molly {
       if (permanent) {
         alwaysPreserve.insert(passID);
       }
-
-      // Execute pass
-      pass->setResolver(new MollyFunctionResolver(this, func));
-      bool changed = pass->runOnFunction(*func);
-      if (changed)
-        removeUnpreservedAnalyses(AU, func, nullptr);
     }
 
     Pass *findAnalysis(AnalysisID passID, Function *func) {
@@ -1205,6 +1357,12 @@ namespace molly {
         findOrRunAnalysis(requiredID, region, false);
       }
 
+      // Execute pass
+      pass->setResolver(new MollyRegionResolver(this, region));
+      bool changed = pass->runOnRegion(region, *(static_cast<RGPassManager*>(nullptr)));
+      if (changed)
+        removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
+
       // Add pass info
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
@@ -1219,16 +1377,75 @@ namespace molly {
       currentRegionAnalyses[std::make_pair(passID, region)] = pass;
       if (permanent) {
         alwaysPreserve.insert(passID);
-      }
-      pass->setResolver(new MollyRegionResolver(this, region));
-
-      // Execute pass
-      bool changed = pass->runOnRegion(region, *(static_cast<RGPassManager*>(nullptr)));
-      if (changed)
-        removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
-      //return pass;
+      } 
     }
 
+
+    Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) {
+      if (region && !func) {
+        func = getParentFunction(region);
+      }
+
+      if (region) {
+        auto it = currentRegionAnalyses.find(make_pair(passID, region));
+        if (it != currentRegionAnalyses.end())
+          return it->second;
+      }
+
+      if (func) {
+        auto it = currentFunctionAnalyses.find(make_pair(passID, func));
+        if (it != currentFunctionAnalyses.end())
+          return it->second;
+      }
+
+      auto it = currentModuleAnalyses.find(passID);
+      if (it != currentModuleAnalyses.end())
+        return it->second;
+
+      auto preexisting = Resolver->getAnalysisIfAvailable(passID, true);
+      if (preexisting) {
+        assert(preexisting->getPassKind() == PT_Module);
+        return preexisting;
+      }
+
+      return nullptr;
+    }
+
+    template<typename T>
+    T* findAnalysis(Function *func, Region *region) {
+      auto passID = &T::ID;
+      auto pass = findAnalysis(passID, func. region);
+      return static_cast<T*>(pass->getAdjustedAnalysisPointer(passID));
+    }
+
+
+    Pass *findOrRunAnalysis(AnalysisID passID, Function *func, Region *region) {
+      if (region && !func)
+        func = getParentFunction(region);
+
+      auto foundPass = findAnalysis(passID, func, region);
+      if (foundPass)
+        return foundPass;
+
+      auto newPass = createPassFromId(passID);
+      switch (newPass->getPassKind()) {
+      case PT_Module:
+        runModulePass(static_cast<ModulePass*>(newPass));
+        break;
+      case PT_Function:
+        assert(func);
+        runFunctionPass(static_cast<FunctionPass*>(newPass), func);
+        break;
+      case PT_Region:
+        assert(region);
+        runRegionPass(static_cast<RegionPass*>(newPass), region);
+        break;
+      default:
+        llvm_unreachable("Wrong kind of pass");
+      }
+
+      return newPass;
+    }
 
     Pass *findAnalysis(AnalysisID passID, Region *region) {
       auto it = currentRegionAnalyses.find(make_pair(passID, region));
@@ -1282,10 +1499,11 @@ namespace molly {
     }
 
   private:
-    llvm::OwningPtr< isl::Ctx > islctx;
+    //llvm::OwningPtr< isl::Ctx > islctx;
+    isl::Ctx *islctx;
 
   public:
-    isl::Ctx *getIslContext() { return islctx.get(); }
+    isl::Ctx *getIslContext() { return islctx; }
 
   private:
     llvm::OwningPtr<ClusterConfig> clusterConf;
@@ -1325,7 +1543,7 @@ namespace molly {
 
         for (unsigned i = 0; i < numFields; i+=1) {
           auto fieldMD = fieldsMD->getOperand(i);
-          FieldType *field = FieldType::createFromMetadata(islctx.get(), module, fieldMD);
+          FieldType *field = FieldType::createFromMetadata(islctx, module, fieldMD);
           fieldTypes[field->getType()] = field;
         }
       }
@@ -1461,14 +1679,14 @@ namespace molly {
     MollyFunctionContext *getFuncContext(Function *func) {
       auto &ctx = funcs[func];
       if (!ctx)
-        ctx =  new MollyFunctionContext(this, func);
+        ctx = new MollyFunctionContext(this, func);
       return ctx;
     }
 
     MollyScopContext *getScopContext(Scop *scop) {
       auto &ctx = scops[scop];
       if (!ctx)
-        ctx =  new MollyScopContext(this, scop);
+        ctx = new MollyScopContext(this, scop);
       return ctx;
     }
 
@@ -1637,10 +1855,10 @@ namespace molly {
 
       // PollyContext
       // Need one isl_ctx to combine isl objects from different SCoPs 
-      this->islctx.reset(isl::Ctx::create());
+      this->islctx = isl::Ctx::create();
 
       // Cluster configuration
-      this->clusterConf.reset( new ClusterConfig(islctx.get()));
+      this->clusterConf.reset(new ClusterConfig(islctx));
       parseClusterShape();
 
       // Search fields
@@ -1653,6 +1871,15 @@ namespace molly {
       generateAccessFuncs();
 
       wrapMain();
+
+      for (auto &f : *module) {
+        auto func = &f;
+        if (func->isDeclaration())
+          continue;
+
+        auto funcCtx = getFuncContext(func);
+        funcCtx->isolateFieldAccesses();
+      }
 
       // Find all scops
       runScopDetection();
@@ -1685,3 +1912,6 @@ extern char &molly::MollyPassManagerID = molly::MollyPassManager::ID;
 ModulePass *molly::createMollyPassManager() {
   return new MollyPassManager();
 }
+
+
+char molly::MollyPassManager::MollyFunctionContext::ID;
