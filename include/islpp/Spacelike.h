@@ -147,6 +147,7 @@ namespace isl {
   }
 
 
+  // TODO: Conditionally enable_if Set/Map operations depending on D
   template <typename D>
   class Spacelike3 {
     typedef D SpaceTy;
@@ -164,16 +165,24 @@ namespace isl {
     //LocalSpace getSpacelike() const;
 
   protected:
+    // mandatory
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER;
     //void setDimId_internal(isl_dim_type type, unsigned, Id &&id) ISLPP_INPLACE_QUALIFIER;
 
+    // optional, usually it doesn't make sense to call this of an isl::(Basic)Map or isl::(Basic)Set; used for assertions
+    bool isSet() const { return getDerived()->getSpace().isSetSpace(); }
+    bool isMap() const { return getDerived()->getSpace().isMapSpace(); }
+
   public:
+    // mandatory
+    //void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_tuple_id(take(), type)); }
+    //void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_dim_id(take(), type, pos)); }
+
     //void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER;
     //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER;
     //void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER;
 
-
-    // optional, default implementation exist
+    // optional, default implementations exist
     unsigned dim(isl_dim_type type) const { return getDerived()->getSpacelike().dim(type); }
     int findDimById(isl_dim_type type, const Id &id) const { return getDerived()->getSpacelike().findDimById(type, id); }
 
@@ -238,9 +247,9 @@ namespace isl {
   public:
     //unsigned dim(isl_dim_type type) const;
     unsigned getParamDimCount() const { return getDerived()->dim(isl_dim_param); }
-    unsigned getSetDimCount() const { return getDerived()->dim(isl_dim_set); }
-    unsigned getInDimCount() const { return getDerived()->dim(isl_dim_in); }
-    unsigned getOutDimCount() const { return getDerived()->dim(isl_dim_out); }
+    unsigned getSetDimCount() const { assert(getDerived()->isSet()); return getDerived()->dim(isl_dim_set); }
+    unsigned getInDimCount() const { assert(getDerived()->isMap()); return getDerived()->dim(isl_dim_in); }
+    unsigned getOutDimCount() const { assert(getDerived()->isMap()); return getDerived()->dim(isl_dim_out); }
     unsigned getDivDimCount() const { return getDerived()->dim(isl_dim_div); }
     unsigned getAllDimCount() const { 
       auto result = getDerived()->dim(isl_dim_all);
@@ -264,6 +273,10 @@ namespace isl {
         return getDerived()->getDimId(type, pos);
       return Id();
     }
+
+    bool hasInTupleId() const { assert(getDerived()->isMap()); return hasTupleId(isl_dim_in); }
+    bool hasOutTupleId() const { assert(getDerived()->isMap()); return hasTupleId(isl_dim_out); }
+    bool hasSetTupleId() const { assert(getDerived()->isSet()); return hasTupleId(isl_dim_set); }
 
     Id getInTupleId() const { return getDerived()->getTupleId(isl_dim_in); }
     Id getOutTupleId() const { return getDerived()->getTupleId(isl_dim_out); }

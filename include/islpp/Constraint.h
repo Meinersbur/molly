@@ -36,6 +36,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_constraint_free(takeOrNull()); }
+    StructTy *addref() const { return isl_constraint_copy(keepOrNull()); }
 
   public:
     Constraint() : Obj3() { }
@@ -46,41 +47,12 @@ namespace isl {
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_constraint_copy(keepOrNull()); }
 
-    Ctx *getCtx() const { return Ctx::wrap(isl_constraint_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_constraint_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_constraint_dump(keep()); }
 #pragma endregion
 
-#if 0
-#pragma region Low-level
-  private:
-    //isl_constraint *constraint;
-
-  public: // Public because otherwise we had to add a lot of friends
-    // isl_constraint *take() { assert(constraint); isl_constraint *result = constraint; constraint = nullptr; return result; }
-    isl_constraint *takeCopyOrNull() const { return isl_constraint_free(keepOrNull()); }
-    //isl_constraint *keep() const { return constraint; }
-  protected:
-    void give(isl_constraint *constraint);
-
-  public:
-    static Constraint wrap(isl_constraint *constraint) { Constraint result; result.give(constraint); return result; }
-#pragma endregion
-#endif
-
-#if 0
-  public:
-    Constraint() : constraint(nullptr) {}
-    Constraint(const Constraint &that) : constraint(that.takeCopy()) {}
-    Constraint(Constraint &&that) : constraint(that.take()) { }
-    ~Constraint();
-
-    const Constraint &operator=(const Constraint &that) { give(that.takeCopy()); return *this; }
-    const Constraint &operator=(Constraint &&that) { give(that.take()); return *this; }
-#endif
 
 #pragma region Creational
     static Constraint createEquality(LocalSpace &&);

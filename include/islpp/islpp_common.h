@@ -55,8 +55,5 @@ namespace isl {
     auto imm = isl::union_(std::forward<T>(t), std::forward<U>(u));
     return isl::union_(std::move(imm), std::forward<V>(v));
   }
-
-
 } // namespace isl
-
 #endif /* ISLPP_ISLPP_COMMON_H */

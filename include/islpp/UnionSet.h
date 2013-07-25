@@ -32,6 +32,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_union_set_free(takeOrNull()); }
+    StructTy *addref() const { return isl_union_set_copy(keepOrNull()); }
 
   public:
     Union() { }
@@ -41,10 +42,7 @@ namespace isl {
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_union_set_copy(keepOrNull()); }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_union_set_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_union_set_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_union_set_dump(keep()); }
 #pragma endregion
@@ -63,8 +61,8 @@ namespace isl {
 #pragma region Conversion
     Union(Set &&set) : Obj3(isl_union_set_from_set(set.take())) {}
     Union(const Set &set) : Obj3(isl_union_set_from_set(set.takeCopy())) {}
-    const UnionSet &operator=(Set &&set) { reset(isl_union_set_from_set(set.take())); }
-     const UnionSet &operator=(const Set &set) { reset(isl_union_set_from_set(set.takeCopy())); }
+    const UnionSet &operator=(Set &&set) { reset(isl_union_set_from_set(set.take()));  return *this; }
+    const UnionSet &operator=(const Set &set) { reset(isl_union_set_from_set(set.takeCopy()));  return *this; }
 #pragma endregion
 
 
@@ -81,7 +79,7 @@ namespace isl {
     UnionSet lexmax() const {return UnionSet::enwrap(isl_union_set_lexmax(takeCopy())); }
 
     UnionSet addSet(const Set &set) const { return UnionSet::enwrap(isl_union_set_add_set(takeCopy(), set.takeCopy())); }
-    UnionSet union_(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_union(takeCopy(), uset2.takeCopy())); }
+    UnionSet unite(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_union(takeCopy(), uset2.takeCopy())); }
 
     UnionSet substract(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_subtract(takeCopy(), uset2.takeCopy())); }
     UnionSet intersect(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_intersect(takeCopy(), uset2.takeCopy())); }
@@ -121,5 +119,6 @@ namespace isl {
     UnionSet coefficients() const { return UnionSet::enwrap(isl_union_set_coefficients(takeCopy())); }
     UnionSet solutions() const { return UnionSet::enwrap(isl_union_set_coefficients(takeCopy())); }
   }; // class UnionSet
+
 } // namespace isl
 #endif /* ISLPP_UNIONSET_H */

@@ -36,6 +36,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_basic_map_free(takeOrNull()); }
+    StructTy *addref() const { return isl_basic_map_copy(keepOrNull()); }
 
   public:
     BasicMap() { }
@@ -46,10 +47,7 @@ namespace isl {
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_basic_map_copy(keepOrNull()); }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_basic_map_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_basic_map_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_basic_map_dump(keep()); }
 #pragma endregion

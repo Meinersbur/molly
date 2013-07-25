@@ -27,7 +27,7 @@ namespace isl {
   public:
     static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    Ctx *getCtx() const { return Ctx::wrap(isl_multi_val_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_multi_val_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const {  }
 

@@ -36,7 +36,7 @@ namespace isl {
     static Val enwrap(isl_val *val) { assert(val); Val result; result.give(val); return result; }
 #pragma endregion
 
-    Ctx *getCtx() const { return Ctx::wrap(isl_val_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_val_get_ctx(keep())); }
 
 #pragma region Printing
     void print(llvm::raw_ostream &out) const;

@@ -17,12 +17,13 @@ void Id::release() {
 }
 
 
-Id::StructTy *Id::takeCopyOrNull() const { 
+Id::StructTy *Id::addref() const { 
   return isl_id_copy(keep()); 
 }
 
+
 Ctx *Id::getCtx() const { 
-  return Ctx::wrap(isl_id_get_ctx(keep()));
+  return Ctx::enwrap(isl_id_get_ctx(keep()));
 }
 
 

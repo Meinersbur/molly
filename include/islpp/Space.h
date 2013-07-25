@@ -32,6 +32,11 @@ namespace isl {
   class AstBuild;
 } // namespace isl
 
+extern "C" {
+  // Forgotten declaration is <isl/space.h>
+  __isl_give isl_space *isl_space_reset_dim_id(__isl_take isl_space *space, enum isl_dim_type type, unsigned pos);
+} // extern "C"
+
 
 namespace isl {
   /// Whenever a new set, relation or similar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
@@ -41,6 +46,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_space_free(takeOrNull()); }
+    StructTy *addref() const { return isl_space_copy(keepOrNull()); }
 
   public:
     Space() { }
@@ -51,10 +57,7 @@ namespace isl {
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_space_copy(keepOrNull()); }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_space_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_space_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_space_dump(keep()); }
 #pragma endregion
@@ -70,7 +73,14 @@ namespace isl {
     void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_tuple_id(take(), type, id.take())); }
     void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_dim_id(take(), type, pos, id.take())); }
 
+    // optional
+    bool isSet() const { return isSetSpace(); }
+    bool isMap() const { return isMapSpace(); }
+
   public:
+        void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_tuple_id(take(), type)); }
+        void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_dim_id(take(), type, pos)); }
+
     void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_insert_dims(take(), type, pos, count)); }
     void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
     void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_drop_dims(take(), type, first, count)); }
@@ -219,43 +229,87 @@ namespace isl {
     Expr createVarExpr(isl_dim_type type, int pos) const;
 #pragma endregion
 
-#if 0
-    Ctx *getCtx() const { return enwrap(isl_space_get_ctx(keep())); }
 
-    unsigned dim(isl_dim_type type) const;
-    unsigned getParamDims() const;
-    unsigned getSetDims() const;
-    unsigned getInDims() const;
-    unsigned getOutDims() const;
-    unsigned getTotalDims() const;
-#endif
     bool isParamsSpace() const;
     bool isSetSpace() const;
     bool isMapSpace() const;
 
-    #if 0
-    bool hasDimId(isl_dim_type type, unsigned pos) const;
-    void setDimId(isl_dim_type type, unsigned pos, Id &&id);
-    Id getDimId(isl_dim_type type, unsigned pos) const;
-    void setDimName(isl_dim_type type, unsigned pos, const char *name);
-    bool hasDimName(isl_dim_type type, unsigned pos)const ;
-    const char *getDimName(isl_dim_type type, unsigned pos)const;
-    int findDimById(isl_dim_type type, const Id &id)const;
-    int findDimByName(isl_dim_type, const char *name)const;
 
-    void setTupleId(isl_dim_type type, Id &&id);
-    void resetTupleId(isl_dim_type type);
-    bool hasTupleId(isl_dim_type type) const;
-    Id getTupleId(isl_dim_type type) const;
-    Id getTupleIdOrNull(isl_dim_type type) const {
-      if (hasTupleId(type))
-        return getTupleId(type);
-      return Id();
+#pragma region  Matching spaces
+    bool matchesSetSpace(const Id &id) { 
+      if (!this->isSetSpace())
+        return false;
+      if ( this->getSetTupleId() == id)
+        return false;
+      return true;
     }
-    void setTupleName(isl_dim_type type, const char *s);
-    bool hasTupleName(isl_dim_type type) const;
-    const char *getTupleName(isl_dim_type type) const;
-#endif 
+
+
+    bool matchesSetSpace(const Space &that) {
+      assert(that.isSetSpace());
+
+      if (!this->isSetSpace())
+        return false;
+
+      if (this->getSetDimCount() != that.getSetDimCount())
+        return false;
+
+      auto thisHasTupleId = this->hasTupleId(isl_dim_set);
+      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
+      if (thisHasTupleId != thatHasTupleId)
+        return false;
+
+      if (thisHasTupleId && this->getSetTupleId()!= that.getSetTupleId()) 
+        return false;
+
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Id &rangeId) {
+      if (!this->isMapSpace())
+        return false;
+      if (this->getInTupleId() != domainId)
+        return false;
+      if (this->getOutTupleId() != rangeId)
+        return false;
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) {
+      assert(domainSpace.isSetSpace());
+      assert(rangeSpace.isSetSpace());
+
+      if (!this->isMapSpace())
+        return false;
+
+      if (this->getInDimCount() != domainSpace.getSetDimCount())
+        return false;
+
+      auto thisHasInTupleId = this->hasInTupleId();
+      auto thatDomainHasTupleId = domainSpace.hasSetTupleId();
+      if (thisHasInTupleId !=thatDomainHasTupleId )
+        return false;
+
+      if (this->getOutDimCount() != rangeSpace.getSetDimCount())
+        return false;
+
+      if (thisHasInTupleId && this->getInTupleId()!=domainSpace.getSetTupleId())
+        return false;
+
+      auto thisHasOutTupleId = this->hasOutTupleId();
+      auto thatRangeHasTupleId = rangeSpace.hasSetTupleId();
+      if (thisHasOutTupleId !=thatRangeHasTupleId )
+        return false;
+
+      if (thisHasOutTupleId && this->getOutTupleId()!=rangeSpace.getSetTupleId())
+        return false;
+
+      return true;
+    }
+#pragma endregion
+
 
     bool isWrapping() const;
     void wrap();

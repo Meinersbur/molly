@@ -214,7 +214,7 @@ void Expr::release() {
 }
 
 
-Expr::StructTy *Expr::takeCopyOrNull() const {
+Expr::StructTy *Expr::addref() const {
   auto pimpl = keepOrNull();
   if (pimpl)
     pimpl->addRef();

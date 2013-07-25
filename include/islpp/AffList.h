@@ -58,7 +58,7 @@ namespace isl {
     const List<Aff> &operator=(List<Aff> &&that) { give(that.take()); return *this; }
 
     List<Aff> copy() const { return wrap(takeCopy()); }
-    Ctx *getCtx() const { return Ctx::wrap(isl_aff_list_get_ctx(list)); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_aff_list_get_ctx(list)); }
 
 #pragma region Creational
     static List<Aff> create(Ctx *ctx, int n) { assert(n >= 0); return wrap(isl_aff_list_alloc(ctx->keep(), n)); }

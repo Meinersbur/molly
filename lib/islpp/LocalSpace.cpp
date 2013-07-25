@@ -133,7 +133,7 @@ Aff LocalSpace::createZeroAff() const {
     }
 
 Ctx *LocalSpace::getCtx() const {
-  return Ctx::wrap(isl_local_space_get_ctx(keep()));
+  return Ctx::enwrap(isl_local_space_get_ctx(keep()));
 }
 
 

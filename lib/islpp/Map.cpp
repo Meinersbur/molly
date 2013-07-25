@@ -31,7 +31,7 @@ using namespace std;
     
 
 Map Map::readFrom(Ctx *ctx, const char *str) {
-  return Map::wrap(isl_map_read_from_str(ctx->keep() , str));
+  return Map::enwrap(isl_map_read_from_str(ctx->keep() , str));
 }
 
 
@@ -56,7 +56,7 @@ __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaf
 
 
 Map Map::fromMultiPwAff(MultiPwAff &&mpaff) {
-  return wrap(isl_map_from_multi_pw_aff(mpaff.take()));
+  return Map::enwrap(isl_map_from_multi_pw_aff(mpaff.take()));
 }
 
 
@@ -82,14 +82,9 @@ void Map::dump() const {
 #endif
 
 Map Map::createFromUnionMap(UnionMap &&umap) {
-  return Map::wrap(isl_map_from_union_map(umap.take()));
+  return Map::enwrap(isl_map_from_union_map(umap.take()));
 }
  
-#if 0
-Ctx *Map::getCtx() const {
-  return Ctx::wrap(isl_map_get_ctx(map));
-}
-#endif
 
 bool Map::isEmpty() const {
   return isl_map_is_empty(keep());
@@ -123,5 +118,5 @@ std::vector<BasicMap> Map::getBasicMaps() const {
 
 
 Map BasicMap::toMap() const {
-  return Map::wrap(isl_map_from_basic_map(takeCopy()));
+  return Map::enwrap(isl_map_from_basic_map(takeCopy()));
 }

@@ -7,6 +7,7 @@
 #include <cassert>
 #include <string>
 #include <type_traits>
+#include <llvm/Support/Debug.h>
 
 namespace llvm {
   class raw_ostream;
@@ -36,7 +37,8 @@ namespace isl {
   class Obj3 {
 #ifndef NDEBUG
   public:
-    std::string _printed;
+    std::string _printed; // A cached toString() output to allow readable value inspection during debugging
+    mutable bool _lastWasCopy; // set if the last operation was to make a (logical) copy of it; if the object is freed then this means that it would have been cheaper to move the object instead of making that copy
 #endif
 
   public:
@@ -57,6 +59,7 @@ namespace isl {
       this->obj = nullptr; 
 #ifndef NDEBUG
       this->_printed.clear();
+      this->_lastWasCopy = false;
 #endif
       return result; 
     }
@@ -66,23 +69,36 @@ namespace isl {
       this->obj = nullptr; 
 #ifndef NDEBUG
       this->_printed.clear();
+      this->_lastWasCopy = false;
 #endif
       return result; 
     }
 
     StructTy *takeCopy() const { 
       assert(obj); 
-      return getDerived()->takeCopyOrNull(); 
+      return takeCopyOrNull(); 
     }
 
-    //virtual T *takeCopyOrNull() const = 0;
+    StructTy *takeCopyOrNull() const {
+      auto result = getDerived()->addref();
+#ifndef NDEBUG
+      this->_lastWasCopy = true;
+#endif
+      return result;
+    }
 
     StructTy *keep() const { 
       assert(obj); 
+#ifndef NDEBUG
+      this->_lastWasCopy = false;
+#endif
       return obj;
     }
 
     StructTy *keepOrNull() const { 
+#ifndef NDEBUG
+      this->_lastWasCopy = false;
+#endif
       return obj; 
     }
 
@@ -91,6 +107,7 @@ namespace isl {
          return nullptr;
 #ifndef NDEBUG
        this->_printed = "<outdated>";
+       this->_lastWasCopy = false;
        //TODO: need to run code after the obj has been updated, possibly by returning a proxy object that destructs after the expression
 #endif
        return &obj; 
@@ -109,6 +126,7 @@ namespace isl {
       } else {
         this->_printed.clear();
       }
+      this->_lastWasCopy = false;
 #endif
     }
 
@@ -118,6 +136,7 @@ namespace isl {
       getDerived()->release(); 
       this->obj = obj; 
       this->_printed = printed;
+      this->_lastWasCopy = false;
     }
 
     void give(StructTy *obj, std::string &&printed) {
@@ -125,6 +144,7 @@ namespace isl {
       getDerived()->release(); 
       this->obj = obj; 
       this->_printed = std::move(printed);
+      this->_lastWasCopy = false;
     }
 #endif
 
@@ -139,6 +159,7 @@ namespace isl {
       this->obj = that.takeCopy(); 
 #ifndef NDEBUG
       this->_printed = that._printed;
+      this->_lastWasCopy = false;
 #endif
     }
 
@@ -150,6 +171,7 @@ namespace isl {
 
 #ifndef NDEBUG
       this->_printed = std::move(that._printed);
+      this->_lastWasCopy = false;
 #endif
       this->obj = that.take(); 
     }
@@ -167,6 +189,7 @@ namespace isl {
         this->_printed = that._printed;
       else
         this->_printed.clear();
+      this->_lastWasCopy = false;
 #endif
     }
 
@@ -178,6 +201,7 @@ namespace isl {
 
 #ifndef NDEBUG
       this->_printed = std::move(that._printed);
+      this->_lastWasCopy = false;
 #endif
       this->obj = that.takeOrNull();
     }
@@ -194,6 +218,7 @@ namespace isl {
         //stream.flush();
       } else
         this->_printed.clear();
+      this->_lastWasCopy = false;
 #endif
     }
 
@@ -204,6 +229,7 @@ namespace isl {
         getDerived()->release(); 
       this->obj = obj; 
       this->_printed = printed;
+      this->_lastWasCopy = false;
     }
 
     void reset(StructTy *obj, std::string &&printed) {
@@ -211,12 +237,18 @@ namespace isl {
         getDerived()->release();
       this->obj = obj; 
       this->_printed = std::move(printed);
+      this->_lastWasCopy = false;
     }
 #endif
 
 
   public:
     ~Obj3() { 
+#ifndef NDEBUG
+      if (obj && _lastWasCopy) {
+        llvm::dbgs() << "PerfWarn: isl::Obj " << _printed << " has been copied from, but not reused after that. Try to use _inplace methods or rvalue references.\n";
+      }
+#endif
       getDerived()->release();
 #ifndef NDEBUG
       this->obj = nullptr;
@@ -225,11 +257,15 @@ namespace isl {
 
 
   protected:
+#ifndef NDEBUG
+    Obj3() : _printed(), _lastWasCopy(false), obj(nullptr) {  }
+#else
     Obj3() : obj(nullptr) {  }
+#endif
 
 #ifndef NDEBUG
-    explicit Obj3(ObjTy &&that) : _printed(std::move(that._printed)), obj(that.takeOrNull()) { }
-    explicit Obj3(const ObjTy &that) : _printed(that._printed), obj(that.takeCopyOrNull()) { }
+    explicit Obj3(ObjTy &&that) : _printed(std::move(that._printed)), _lastWasCopy(false), obj(that.takeOrNull()) { }
+    explicit Obj3(const ObjTy &that) : _printed(that._printed), _lastWasCopy(false), obj(that.takeCopyOrNull()) { }
 #else
     explicit Obj3(ObjTy &&that) : obj(that.takeOrNull()) { }
     explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()) { }
@@ -242,15 +278,9 @@ namespace isl {
         getDerived()->print(stream);
         //stream.flush();
       }
+      this->_lastWasCopy = false;
 #endif
     }
-
-#if 0
-#ifndef NDEBUG
-    Obj3(StructTy *obj, const std::string &printed) : _printed(printed), obj(obj) { }
-    Obj3(StructTy *obj, std::string &&printed) : _printed(std::move(printed)), obj(obj) { }
-#endif
-#endif
 
   public:
     bool isValid () const { return obj; }
@@ -272,12 +302,17 @@ namespace isl {
       std::swap(lhs.obj, rhs.obj);
 #ifndef NDEBUG
       std::swap(lhs._printed, rhs._printed);
+      std::swap(lhs._lastWasCopy, rhs._lastWasCopy);
 #endif
     }
 
     ObjTy copy() const { 
       ObjTy result;
       result.obj_reset(*getDerived());
+#ifndef NDEBUG
+      // Should have been done implicitly anyway
+      this->_lastWasCopy = true;
+#endif
       return result;
     }
     ObjTy &&move() { 

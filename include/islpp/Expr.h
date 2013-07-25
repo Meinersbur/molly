@@ -29,6 +29,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release();
+    StructTy *addref() const;
 
   public:
     Expr() { }
@@ -38,9 +39,6 @@ namespace isl {
     /* implicit */ Expr(ObjTy &&that) : Obj3(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
-
-  public:
-    StructTy *takeCopyOrNull() const;
 
     Ctx *getCtx() const;
     void print(llvm::raw_ostream &out) const;

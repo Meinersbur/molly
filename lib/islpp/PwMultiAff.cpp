@@ -26,7 +26,7 @@ PwMultiAff PwMultiAff::createFromMap(Map &&map) { return enwrap(isl_pw_multi_aff
 
 
 Map PwMultiAff::toMap() const {
-  return Map::wrap(isl_map_from_pw_multi_aff(takeCopy()));
+  return Map::enwrap(isl_map_from_pw_multi_aff(takeCopy()));
 }
 
 

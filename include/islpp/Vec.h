@@ -44,7 +44,7 @@ namespace isl {
 
 
 #pragma region Properties
-    Ctx *getCtx() const { return Ctx::wrap(isl_vec_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_vec_get_ctx(keep())); }
 
     int getSize() const { return isl_vec_size(keep()); }
 #pragma endregion

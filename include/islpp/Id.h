@@ -4,7 +4,7 @@
 #include "islpp_common.h"
 #include "Obj.h" // baseclass of Id
 
-// #include <isl/id.h>
+#pragma region Forward declarations
 struct isl_id;
 
 namespace llvm {
@@ -22,20 +22,18 @@ namespace isl {
 namespace llvm {
   template<> class DenseMapInfo<isl::Id>;
 } // namespace llvm
+#pragma endregion
 
 
 namespace isl {
-
   class Id : public Obj3<Id, isl_id> {
     friend struct llvm::DenseMapInfo<isl::Id>;
-
-    //private:
-    //  Id(isl_id *obj, std::string &&printed) : Obj3(obj, std::move(printed)) {}
 
 #pragma region isl::Obj3
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() ;
+    StructTy *addref() const;
 
   public:
     Id() { }
@@ -45,9 +43,6 @@ namespace isl {
     /* implicit */ Id(ObjTy &&that) : Obj3(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
-
-  public:
-    StructTy *takeCopyOrNull() const;
 
     Ctx *getCtx() const;
     void print(llvm::raw_ostream &out) const;
@@ -121,7 +116,6 @@ namespace llvm {
       return LHS.keepOrNull() == RHS.keepOrNull();
     }
   }; // class DenseMapInfo<isl::Id>
+
 } // namespace llvm
-
-
 #endif /* ISLPP_ID_H */

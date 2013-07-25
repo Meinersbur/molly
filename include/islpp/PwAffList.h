@@ -19,6 +19,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_pw_aff_list_free(takeOrNull()); }
+    StructTy *addref() const { return isl_pw_aff_list_copy(keepOrNull()); }
 
   public:
     List() { }
@@ -28,10 +29,7 @@ namespace isl {
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_pw_aff_list_copy(keepOrNull()); }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_pw_aff_list_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_pw_aff_list_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_pw_aff_list_dump(keep()); }
 #pragma endregion
@@ -49,26 +47,26 @@ namespace isl {
     PwAffList drop(unsigned first, unsigned count) const { return PwAffList::enwrap(isl_pw_aff_list_drop(takeCopy(), first, count)); }
 
     void concat_inplace(const PwAffList &rhs) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_concat(take(), rhs.takeCopy())); }
-     PwAffList concat(const PwAffList &rhs) const { return PwAffList::enwrap(isl_pw_aff_list_concat(takeCopy(), rhs.takeCopy())); }
+    PwAffList concat(const PwAffList &rhs) const { return PwAffList::enwrap(isl_pw_aff_list_concat(takeCopy(), rhs.takeCopy())); }
 
-     PwAff getPwAff(int index) const { return PwAff::enwrap(isl_pw_aff_list_get_pw_aff(keep(), index)); }
-     
-     void setPwAff_inplace(int index, PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_set_pw_aff(take(), index, paff.takeCopy())); }
-     PwAffList setPwAff(int index, PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_set_pw_aff(takeCopy(), index, paff.takeCopy())); }
-  
-     bool foreachPwAff(std::function<bool(PwAff)> func) const;
-     std::vector<PwAff> getPwAffs() const;
+    PwAff getPwAff(int index) const { return PwAff::enwrap(isl_pw_aff_list_get_pw_aff(keep(), index)); }
 
-     void sort_inplace(const std::function<int(const PwAff&, const PwAff&)> &func) ISLPP_INPLACE_QUALIFIER;
-     PwAffList sort(const std::function<int(const PwAff&, const PwAff&)> &func) const { auto result = copy(); result.sort_inplace(func); return result; }
- 
+    void setPwAff_inplace(int index, PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_set_pw_aff(take(), index, paff.takeCopy())); }
+    PwAffList setPwAff(int index, PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_set_pw_aff(takeCopy(), index, paff.takeCopy())); }
+
+    bool foreachPwAff(std::function<bool(PwAff)> func) const;
+    std::vector<PwAff> getPwAffs() const;
+
+    void sort_inplace(const std::function<int(const PwAff&, const PwAff&)> &func) ISLPP_INPLACE_QUALIFIER;
+    PwAffList sort(const std::function<int(const PwAff&, const PwAff&)> &func) const { auto result = copy(); result.sort_inplace(func); return result; }
+
     bool foreachScc(const std::function<bool(const PwAff &, const PwAff &)> &followsFunc, const std::function<bool(PwAffList)> &func) const;
   }; // class List<PwAff> 
 
 
-   static inline PwAffList enwrap(isl_pw_aff_list *obj) { return PwAffList::enwrap(obj); }
+  static inline PwAffList enwrap(isl_pw_aff_list *obj) { return PwAffList::enwrap(obj); }
 
-  static inline PwAffList concat(const PwAffList &lhs, const PwAffList &rhs) ISLPP_INPLACE_QUALIFIER { PwAffList::enwrap(isl_pw_aff_list_concat(lhs.takeCopy(), rhs.takeCopy())); }
+  static inline PwAffList concat(const PwAffList &lhs, const PwAffList &rhs) ISLPP_INPLACE_QUALIFIER { return PwAffList::enwrap(isl_pw_aff_list_concat(lhs.takeCopy(), rhs.takeCopy())); }
 
 } // namespace isl
 #endif /* ISLPP_PWAFFLIST_H */

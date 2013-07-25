@@ -36,9 +36,9 @@ Ctx::~Ctx() {
 }
 
 Ctx *Ctx::create() {
-  auto result = wrap(isl_ctx_alloc());
+  auto result = Ctx::enwrap(isl_ctx_alloc());
 #ifndef NDEBUG
-  result->setOnError(OnError::Abort);
+  result->setOnError(OnErrorEnum::Abort);
 #endif
   return result;
 }
@@ -55,7 +55,7 @@ void Ctx::resetLastError() {
 
 
 void Ctx::setOnError(OnErrorEnum val){
-  isl_options_set_on_error(keep(), val);
+  isl_options_set_on_error(keep(), static_cast<int> (val));
 }
 
 
@@ -119,7 +119,7 @@ Space Ctx::createSetSpace(unsigned nparam, unsigned dim) {
 
 
 Aff Ctx::createZeroAff(LocalSpace &&space) {
-  return enwrap(isl_aff_zero_on_domain(space.take()));
+  return Aff::enwrap(isl_aff_zero_on_domain(space.take()));
 }
 
 
@@ -173,7 +173,7 @@ Map Ctx::createAlltoallMap(const Set &domain, const Set &range) { return createA
 
 Map Ctx::createEmptyMap(Space &&space) {
   assert(isl_space_get_ctx(space.keep()) == keep());
-  return enwrap(isl_map_empty(space.take()));
+  return Map::enwrap(isl_map_empty(space.take()));
 }
 
 
@@ -181,7 +181,7 @@ Map Ctx::createEmptyMap(Space &&domainSpace, Space &&rangeSpace) {
   assert(domainSpace.getCtx()->keep() == keep());
   assert(rangeSpace.getCtx()->keep() == keep());
   auto mapspace = isl_space_map_from_domain_and_range(domainSpace.take(), rangeSpace.take());
-  return enwrap(isl_map_empty(mapspace));
+  return Map::enwrap(isl_map_empty(mapspace));
 }
 
 
@@ -189,36 +189,36 @@ Map Ctx::createEmptyMap(const Space &domainSpace, Space &&rangeSpace) {
   assert(domainSpace.getCtx()->keep() == keep());
   assert(rangeSpace.getCtx()->keep() == keep());
   auto mapspace = isl_space_map_from_domain_and_range(domainSpace.takeCopy(), rangeSpace.take());
-  return enwrap(isl_map_empty(mapspace));
+  return Map::enwrap(isl_map_empty(mapspace));
 }
 
 
 Map Ctx::createEmptyMap(const BasicSet &domain, Space &&rangeSpace) {
   auto mapspace = isl_space_map_from_domain_and_range(domain.getSpace().take(), rangeSpace.take());
-  return enwrap(isl_map_empty(mapspace));
+  return Map::enwrap(isl_map_empty(mapspace));
 }
 
 
 Map Ctx::createEmptyMap(const BasicSet &domain, const Set &range) {
   auto mapspace = isl_space_map_from_domain_and_range(domain.getSpace().take(), range.getSpace().take());
-  return enwrap(isl_map_empty(mapspace));
+  return Map::enwrap(isl_map_empty(mapspace));
 }
 
 
 Map Ctx::createEmptyMap(Set &&domain, Set &&range) {
   auto mapspace = isl_space_map_from_domain_and_range(isl_set_get_space(domain.keep()), isl_set_get_space(range.keep()));
-  return enwrap(isl_map_empty(mapspace));
+  return Map::enwrap(isl_map_empty(mapspace));
 }
 
 
 BasicMap Ctx::createBasicMap(unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq) {
-  return enwrap(isl_basic_map_alloc(keep(), nparam, in, out, extra, n_eq, n_ineq));
+  return BasicMap::enwrap(isl_basic_map_alloc(keep(), nparam, in, out, extra, n_eq, n_ineq));
 }
 
 
 BasicMap Ctx::createUniverseBasicMap(Space &&space) {
   assert(space.getCtx() == this);
-  return enwrap(isl_basic_map_universe(space.take()));
+  return BasicMap::enwrap(isl_basic_map_universe(space.take()));
 }
 
 
@@ -227,6 +227,18 @@ BasicMap Ctx::createUniverseBasicMap(Space &&space) {
  }
 
 
-Id Ctx::createId(const char *name, void *user) {
-  return Id::enwrap(isl_id_alloc(keep(), name, user));
+Id Ctx::createId(const char *name, const void *user) {
+  return Id::enwrap(isl_id_alloc(keep(), name, const_cast<void*>(user)));
 }
+
+Id Ctx::createId(const std::string &name, const void *user ){
+  return createId(name.c_str(), user);
+}
+Id Ctx::createId(llvm::StringRef name, const void *user ) {
+   return createId(name.str(), user);
+}
+
+
+  Id Ctx::createId(const llvm::Twine& name, const void *user){
+ return createId(name.str(), user);
+  }

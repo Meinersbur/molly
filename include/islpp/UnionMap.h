@@ -42,6 +42,7 @@ namespace isl {
 #pragma region Low-level
   private:
     void release() { isl_union_map_free(keepOrNull()); }
+    StructTy *addref() const { return isl_union_map_copy(keep()); }
 
   public:
     Union() {}
@@ -51,8 +52,6 @@ namespace isl {
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     
-
-    StructTy *takeCopyOrNull() const { return isl_union_map_copy(keep()); }
     static UnionTy enwrap(StructTy *map) { ObjTy result; result.give(map); return result; }
 #pragma endregion
 
@@ -94,7 +93,7 @@ namespace isl {
 #pragma endregion
 
 
-    Ctx *getCtx() const { return Ctx::wrap(isl_union_map_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_union_map_get_ctx(keep())); }
     Space getSpace() const { return Space::wrap(isl_union_map_get_space(keep())); }
 
     void universe() { give(isl_union_map_universe(take())); } // ???
@@ -213,7 +212,7 @@ namespace isl {
   static inline  bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
   static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
 
-  static inline Map extractMap(const UnionMap &umap, Space &&dim) { return Map::wrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
+  static inline Map extractMap(const UnionMap &umap, Space &&dim) { return Map::enwrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
 
   static inline BasicMap sample(UnionMap &&umap) { return BasicMap::enwrap(isl_union_map_sample(umap.take())); }
 

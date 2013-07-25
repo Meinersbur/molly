@@ -29,7 +29,7 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
 
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 
   isl_set *rawempty = 0;
-  auto result = Map::wrap(isl_basic_map_partial_lexmax(bmap.take(), dom.take(), &rawempty)); 
+  auto result = Map::enwrap(isl_basic_map_partial_lexmax(bmap.take(), dom.take(), &rawempty)); 
   empty = Set::enwrap(rawempty);
   return result;
 }
@@ -37,19 +37,19 @@ Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) {
 
 Map isl::partialLexmin(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 
   isl_set *rawempty = 0;
-  auto result = Map::wrap(isl_basic_map_partial_lexmin(bmap.take(), dom.take(), &rawempty)); 
+  auto result = Map::enwrap(isl_basic_map_partial_lexmin(bmap.take(), dom.take(), &rawempty)); 
   empty = Set::enwrap(rawempty);
   return result;
 }
 
 
 Map isl::lexmin(BasicMap &&bmap) { 
-  return Map::wrap(isl_basic_map_lexmin(bmap.take()));
+  return Map::enwrap(isl_basic_map_lexmin(bmap.take()));
 } 
 
 
 Map isl::lexmax(BasicMap &&bmap) { 
-  return Map::wrap(isl_basic_map_lexmax(bmap.take())); 
+  return Map::enwrap(isl_basic_map_lexmax(bmap.take())); 
 } 
 
 PwMultiAff isl::partialLexminPwMultiAff(BasicMap &&bmap, BasicSet &&dom, Set &empty) {
@@ -71,7 +71,7 @@ PwMultiAff isl::lexmaxPwMultiAff(BasicMap &&bmap) { return enwrap(isl_basic_map_
 
 
 Map isl::unite(BasicMap &&bmap1, BasicMap &&bmap2) { 
-  return Map::wrap(isl_basic_map_union(bmap1.take(), bmap2.take())); 
+  return Map::enwrap(isl_basic_map_union(bmap1.take(), bmap2.take())); 
 }
 
 

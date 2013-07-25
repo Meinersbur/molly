@@ -27,7 +27,7 @@ void UnionMap::dump() const {
 static int foreachMapCallback(__isl_take isl_map *map, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(Map)>*>(user);
-  auto retval = func(Map::wrap(map));
+  auto retval = func(Map::enwrap(map));
   return retval ? -1 : 0;
 }
 bool UnionMap::foreachMap(const std::function<bool(isl::Map)> &func) const {

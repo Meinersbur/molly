@@ -8,39 +8,31 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Compiler.h>
 #include <cassert>
-#include "Union.h"
+#include "Islfwd.h"
 
 struct isl_ctx;
 
 namespace llvm {
   template<typename T> class OwningPtr;
+  class StringRef;
+  class Twine;
 } // namespace llvm
 
-namespace isl {
-  class Set;
-  class Map;
-  class Space;
-  class LocalSpace;
-  class BasicSet;
-  class Printer;
-  class BasicMap;
-  class Aff;
-  class Id;
-  //class AstBuild;
-} // namespace isl
-
 
 namespace isl {
-  enum OnErrorEnum {
-    OnErrorWarn = ISL_ON_ERROR_WARN,
-    OnErrorContinue = ISL_ON_ERROR_CONTINUE,
-    OnErrorAbort = ISL_ON_ERROR_ABORT
+
+
+  enum class OnErrorEnum {
+    Warn = ISL_ON_ERROR_WARN,
+    Continue = ISL_ON_ERROR_CONTINUE,
+    Abort = ISL_ON_ERROR_ABORT
   };
-  namespace OnError {
-    static const OnErrorEnum Warn =  OnErrorWarn;
-    static const OnErrorEnum Continue =  OnErrorContinue;
-    static const OnErrorEnum Abort =  OnErrorAbort;
-  }
+  //namespace OnError {
+  //  static const OnErrorEnum Warn = OnErrorWarn;
+  //  static const OnErrorEnum Continue = OnErrorContinue;
+  //  static const OnErrorEnum Abort = OnErrorAbort;
+  //}
+  static const OnErrorEnum xAbort = isl::OnErrorEnum::Abort;
 
   template <typename T>
   class Owning;
@@ -58,7 +50,7 @@ namespace isl {
   public:
     isl_ctx *keep() const { assert(this); return const_cast<isl_ctx*>(reinterpret_cast<const isl_ctx*>(this)); }
 
-    static Ctx *wrap(isl_ctx *ctx) { return reinterpret_cast<Ctx*>(ctx); }
+    static Ctx *enwrap(isl_ctx *ctx) { return reinterpret_cast<Ctx*>(ctx); }
 #pragma endregion
 
   public:
@@ -138,10 +130,13 @@ namespace isl {
    
 
 
-    Id createId(const char *name = nullptr, void *user = nullptr);
+    Id createId(const char *name = nullptr, const void *user = nullptr);
+      Id createId(const std::string &name, const void *user = nullptr);
+    Id createId(llvm::StringRef name, const void *user = nullptr);
+    Id createId(const llvm::Twine& name, const void *user = nullptr);
   }; // class Ctx
 
-  static inline Ctx *enwrap(isl_ctx *ctx) { return Ctx::wrap(ctx); }
+  static inline Ctx *enwrap(isl_ctx *ctx) { return Ctx::enwrap(ctx); }
 
 } // namespace isl
 #endif /* ISLPP_CTX_H */

@@ -30,47 +30,9 @@
 
 #include <utility>
 
-
 using namespace isl;
 using namespace std;
 
-#if 0
-isl_set *Set::takeCopyOrNull() const {
-  return isl_set_copy(this->set);
-}
-
-
-void Set::give(isl_set *set) { 
-  if (this->set)
-    isl_set_free(this->set);
-  this->set = set; 
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
-
-
-Set::Set(BasicSet &&that) : set(nullptr) {
-  give(isl_set_from_basic_set(that.take()));
-}
-
-
-const Set &Set::operator=(BasicSet &&that) {
-  give(isl_set_from_basic_set(that.take()));
-  return *this;
-}
-
-
-Set::Set(const BasicSet &that) : set(nullptr) {
-  give(isl_set_from_basic_set(that.takeCopy()));
-}
-
-
-const Set &Set::operator=(const BasicSet &that){
-  give(isl_set_from_basic_set(that.takeCopy()));
-  return *this;
-}
-#endif
 
 Set Set::createFromParams(Set &&set) {
   return Set::enwrap(isl_set_from_params(set.take()));
@@ -615,7 +577,7 @@ void Set::flatten() {
 
 
 Map isl::flattenMap(Set &&set) {
-  return Map::wrap(isl_set_flatten_map( set.take()));
+  return Map::enwrap(isl_set_flatten_map( set.take()));
 }
 
 

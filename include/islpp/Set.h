@@ -14,9 +14,9 @@
 #include <isl/lp.h> // enum isl_lp_result;
 #include <isl/set.h>
 #include "Obj.h"
+#include "Space.h"
 #include "Spacelike.h"
 #include "Ctx.h"
-#include "Space.h"
 #include "BasicSet.h"
 
 struct isl_set;
@@ -54,6 +54,7 @@ namespace isl {
     friend class isl::Obj3<ObjTy, StructTy>;
   protected:
     void release() { isl_set_free(takeOrNull()); }
+    StructTy *addref() const { return isl_set_copy(keepOrNull()); }
 
   public:
     Set() { }
@@ -63,10 +64,7 @@ namespace isl {
       const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
-  public:
-    StructTy *takeCopyOrNull() const { return isl_set_copy(keepOrNull()); }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_set_get_ctx(keep())); }
+    Ctx *getCtx() const { return Ctx::enwrap(isl_set_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
     void dump() const { isl_set_dump(keep()); }
 #pragma endregion
@@ -125,8 +123,8 @@ namespace isl {
     // From BasicSet
     /* implicit */ Set(BasicSet &&set) : Obj3(isl_set_from_basic_set(set.take())) {}
     /* implicit */ Set(const BasicSet &set) : Obj3(isl_set_from_basic_set(set.takeCopy())) {}
-     const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); }
-    const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); }
+     const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); return *this; }
+    const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); return *this; }
 #pragma endregion
 
 
