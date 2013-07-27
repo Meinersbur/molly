@@ -328,7 +328,7 @@ namespace molly {
         loopHierachy.push_back(loop);
       }
 
-      auto oldScatter = isl::Map::wrap(oldStmt->getScattering());
+      auto oldScatter = isl::Map::enwrap(oldStmt->getScattering());
       auto dim = oldScatter.addOutDim_inplace();
       auto newScatter = oldScatter.copy();
 

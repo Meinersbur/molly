@@ -621,6 +621,16 @@ PwAff Set::dimMax(const Dim &dim) const {
         PwMultiAff Set::lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmin_pw_multi_aff(takeCopy())); }
     PwMultiAff Set::lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmax_pw_multi_aff(takeCopy())); }
 
+
+     Map Set::unwrap() const {
+       return Map::enwrap(isl_set_unwrap(takeCopy()));
+     }
+
+     Map Set::chain(const Map &map) const{
+      return map.intersectDomain(*this);
+     }
+
+
 Set isl::alignParams(Set &&set, Space &&model) {
   return Set::enwrap(isl_set_align_params(set.take(), model.take()));
 }

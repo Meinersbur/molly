@@ -49,7 +49,7 @@ FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metad
 }
 
 
-isl::Ctx *FieldType::getIslContext() {
+isl::Ctx *FieldType::getIslContext()  const {
   return islctx;
 }
 
@@ -93,12 +93,22 @@ isl::BasicSet FieldType::getLogicalIndexset() {
 
 
 isl::Space FieldType::getLogicalIndexsetSpace() {
-  auto islctx = getIslContext(); 
-  auto dims = getNumDimensions();
-  auto result = islctx->createSetSpace(0, dims);
-  //result.setTupleId
-  return result;
+return getIndexsetSpace();
 }
+
+
+isl::Id FieldType::getIndexsetTuple() const {
+  return getIslContext()->createId(getName() + "_indexset", this);
+}
+
+
+ isl::Space FieldType::getIndexsetSpace() const {
+   auto islctx = getIslContext(); 
+   auto dims = getNumDimensions();
+ auto result = islctx->createSetSpace(0, dims);
+ result.setSetTupleId_inplace(getIndexsetTuple());
+ return result;
+ }
 
 
 void FieldType::dump() {
@@ -238,4 +248,17 @@ isl::PwMultiAff FieldType::getHomeAff() {
   }
 
   return maff.restrictDomain(getLogicalIndexset());
+}
+
+
+isl::Map FieldType::getHomeRel(){
+  return getHomeAff().toMap().reverse().intersectRange(getLogicalIndexset());
+}
+
+
+llvm::StringRef FieldType:: getName() const {
+  auto result = StringRef(metadata.clangTypeName);
+  if (result.empty())
+    result = metadata.llvmType->getName();
+  return result;
 }

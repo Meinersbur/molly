@@ -70,7 +70,7 @@ void MollyContextPass::releaseMemory() {
 bool MollyContextPass::runOnModule(Module &M) {
   llvmContext = &M.getContext();
   auto pollyCtx = &getAnalysis<PollyContextPass>();
-  islctx = isl::Ctx::wrap(pollyCtx->getIslCtx());
+  islctx = isl::Ctx::enwrap(pollyCtx->getIslCtx());
   //context->setLLVMContext(&llvmCtx);
   initClusterConf();
 

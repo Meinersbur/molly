@@ -21,6 +21,7 @@ namespace molly {
   class ClusterConfig {
   private:
     isl::Ctx *islctx;
+    isl::Id nodecoord;
 
     llvm::SmallVector<unsigned,4> clusterLengths;
     isl::BasicSet clusterShape;
@@ -31,7 +32,12 @@ namespace molly {
   public:
     ClusterConfig(isl::Ctx *islctx) : islctx(islctx) {
       assert(islctx);
+      nodecoord = islctx->createId("rank");
     }
+
+    /// TupleId for node coordinates in this cluster 
+    const isl::Id &getClusterTuple() const {return nodecoord;}
+    isl::Space getClusterSpace() const;
     
     void setClusterLengths(llvm::ArrayRef<unsigned> lengths) {
       clusterLengths.clear();
@@ -42,7 +48,7 @@ namespace molly {
 
     llvm::ArrayRef<unsigned> getClusterLengths() const { return clusterLengths; }
     isl::BasicSet getClusterShape() const { return clusterShape; }
-    isl::Space getClusterSpace() const;
+
     unsigned getClusterDims() const { return clusterLengths.size(); }
     unsigned getClusterSize() const;
     unsigned getClusterLength(size_t d) const { assert(0 <= d && d < clusterLengths.size()); return clusterLengths[d]; }

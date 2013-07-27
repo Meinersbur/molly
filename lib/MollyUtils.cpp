@@ -78,6 +78,7 @@ llvm::Function *molly::getParentFunction(const polly::Scop *scop) {
 }
 
 
+#if 0
 bool molly::isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt) {
   return isFieldAccessBasicBlock(scopStmt->getBasicBlock());
 }
@@ -112,3 +113,4 @@ bool molly::isFieldAccessBasicBlock(llvm::BasicBlock *bb) {
 
     return true;
 }
+#endif 

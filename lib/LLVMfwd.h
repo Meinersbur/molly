@@ -5,6 +5,16 @@ namespace llvm {
 
   // llvm/Support/raw_ostream.h
   class raw_ostream;
+  class raw_string_ostream;
+  class raw_svector_ostream;
+  class raw_null_ostream;
+  class raw_fd_ostream;
+
+  // llvm/ADT/StringRef.h
+  class StringRef;
+
+  // llvm/ADT/Twine.h
+  class Twine;
 
   // llvm/ADT/SmallVector.h
   template<typename T> class SmallVectorImpl;

@@ -79,8 +79,8 @@ llvm::Function *getParentFunction(const llvm::Region *region);
 llvm::Function *getParentFunction(llvm::BasicBlock *bb);
 llvm::Function *getParentFunction(const polly::Scop *scop);
 
-bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
-bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);
+//bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
+//bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);
 
 } // namespace molly
 #endif /* MOLLY_MOLLYUTILS_H */

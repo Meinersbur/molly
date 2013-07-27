@@ -66,7 +66,7 @@ namespace molly {
 
     void readMetadata();
 
-    isl::Ctx *getIslContext();
+    isl::Ctx *getIslContext() const;
     llvm::LLVMContext *getLLVMContext();
     llvm::Module *getModule();
 
@@ -79,12 +79,14 @@ namespace molly {
 
     void dump();
 
-    unsigned getNumDimensions() {
+    unsigned getNumDimensions() const {
       return metadata.dimLengths.size();
     }
 
     isl::BasicSet getLogicalIndexset();
     isl::Space getLogicalIndexsetSpace();
+    isl::Id getIndexsetTuple() const; // for global/logical indexset
+    isl::Space getIndexsetSpace() const; 
 
     llvm::StructType *getType() { 
       assert(metadata.llvmType);
@@ -137,6 +139,11 @@ namespace molly {
     return metadata.funcSetLocal;
     }
 
+    llvm::Function *getFuncPtrLocal() {
+      assert(metadata.funcPtrLocal);
+      return metadata.funcPtrLocal;
+    }
+
     //llvm::Function *localOffsetFunc;
     //llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
     //void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
@@ -165,6 +172,9 @@ namespace molly {
 
     /// { globalcoord -> nodecoord } where the value is stored
     isl::PwMultiAff getHomeAff(); 
+    isl::Map getHomeRel(); /* { cluster[nodecoord] -> fty[indexset] } which coordnated are stored at these nodes */
+
+    llvm::StringRef getName() const;
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

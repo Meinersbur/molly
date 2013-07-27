@@ -15,6 +15,7 @@ add_molly_library(LLVMMolly
     ClusterConfig.cpp
     MollyFieldAccess.cpp
     IslExprBuilder.cpp
+    MollyIntrinsics.cpp
     
     MollyContext.cpp
     Nodegrid.cpp  # Obsolete?

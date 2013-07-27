@@ -15,8 +15,7 @@ namespace llvm {
 
 
 namespace molly {
-
+  polly::ScopStmt *replaceScopStmt(polly::ScopStmt *model, llvm::BasicBlock *bb, const std::string &baseName, isl::Map &&);
   polly::ScopStmt *createScopStmt(polly::Scop *parent, llvm::BasicBlock *bb, const llvm::Region *region, const std::string &baseName, llvm::ArrayRef<llvm::Loop*> sourroundingLoops, isl::Set &&domain, isl::Map &&scattering);
-
 } // namespace molly
 #endif /* MOLLY_SCOPEDITOR_H */

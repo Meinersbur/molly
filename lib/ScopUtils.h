@@ -1,7 +1,7 @@
 #ifndef MOLLY_SCOPUTILS_H
 #define MOLLY_SCOPUTILS_H
 
-#include "islpp/Union.h"
+#include "islpp/Islfwd.h"
 
 namespace isl {
   class Set;
@@ -21,6 +21,9 @@ namespace molly {
 
 
 namespace molly {
+  isl::Id getScatterTuple(polly::Scop *); 
+
+  isl::Id getDomainTuple(polly::ScopStmt *);
   isl::Set getIterationDomain(polly::ScopStmt *);
   
   isl::Map getScattering(polly::ScopStmt *); // rename: getSchedule

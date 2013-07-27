@@ -34,19 +34,19 @@ namespace molly {
 
   private:
     void clear() {
-       this->fieldvar = nullptr;
+      this->fieldvar = nullptr;
       this->scopAccess = nullptr; 
       this->scopStmt  = nullptr;
     }
 
-   
+
   public:
     MollyFieldAccess() {
-     clear();
+      clear();
     }
 
     void loadFromInstruction(llvm::Instruction *instr) LLVM_OVERRIDE {
-       clear();
+      clear();
       FieldAccess::loadFromInstruction(instr);
     }
 
@@ -62,15 +62,14 @@ namespace molly {
     void loadFromInstruction(llvm::Instruction *instr, FieldVariable *fvar)  { loadFromInstruction(instr); this->fieldvar = fvar; }
     void loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * =nullptr);
     void loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable * =nullptr);
-    void setFieldVariable(FieldVariable *fvar) { assert(!fvar); this->fieldvar= fvar; }
-
+    void setFieldVariable(FieldVariable *fvar) { assert(fvar); assert(!this->fieldvar); this->fieldvar= fvar; }
 
     static MollyFieldAccess fromAccessInstruction(llvm::Instruction *instr, FieldVariable * =nullptr);
     //static MollyFieldAccess create(llvm::Instruction *instr, polly::MemoryAccess *acc, polly::ScopStmt * scopStmt, FieldVariable *fvar);
     static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * =nullptr);
     static MollyFieldAccess fromScopStmt(polly::ScopStmt *acc, FieldVariable * =nullptr);
 
-     void augmentFieldDetection(FieldDetectionAnalysis *fields);
+    void augmentFieldDetection(FieldDetectionAnalysis *fields);
     //void augmentMemoryAccess(polly::MemoryAccess *acc);
     //void augmentFieldVariable(FieldVariable *fieldvar);
     //void augmentScEv(llvm::ScalarEvolution *se) {}

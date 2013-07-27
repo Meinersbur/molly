@@ -4,6 +4,7 @@
 #include <llvm/Support/Compiler.h> // LLVM_FINAL, LLVM_OVERRIDE
 #include <type_traits> // std::remove_reference
 //#include <llvm/Support/CommandLine.h>
+#include <cassert>
 
 #ifdef __GNUC__
 // Ignore #pragma region
@@ -55,5 +56,15 @@ namespace isl {
     auto imm = isl::union_(std::forward<T>(t), std::forward<U>(u));
     return isl::union_(std::move(imm), std::forward<V>(v));
   }
+
+
+  /// isl returns int for anything boolean (is_empty, is_equal, etc.). On 
+  /// error, it also returns -1. To avoid that this is gets silently converted 
+  /// to true, insert this function
+  static inline bool checkBool(int val) {
+    assert(val == 0 || val == 1);
+    return val;
+  }
+
 } // namespace isl
 #endif /* ISLPP_ISLPP_COMMON_H */

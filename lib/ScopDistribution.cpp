@@ -128,9 +128,9 @@ namespace molly {
 
 
     void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
-      if (acc.isPrologue() || acc.isEpilogue()) {
-        return; // These are not computed anywhere
-      }
+      //if (acc.isPrologue() || acc.isEpilogue()) {
+      //  return; // These are not computed anywhere
+      //}
 
       auto fieldVar = acc.getFieldVariable();
       auto fieldTy = acc.getFieldType();
@@ -142,18 +142,18 @@ namespace molly {
       auto it2rank = rel.toMap().applyRange(home.toMap());
 
       if (acc.isRead()) {
-        executeWhereRead = unite(executeWhereRead.substractDomain(it2rank.getDomain()), it2rank);
+        executeWhereRead = unite(executeWhereRead.subtractDomain(it2rank.getDomain()), it2rank);
       }
 
       if (acc.isWrite()) {
-        executeWhereWrite = unite(executeWhereWrite.substractDomain(it2rank.getDomain()), it2rank);
+        executeWhereWrite = unite(executeWhereWrite.subtractDomain(it2rank.getDomain()), it2rank);
       }
     }
 
 
     void processScopStmt(ScopStmt *stmt) {
-      if (stmt->isPrologue() || stmt->isEpilogue())
-        return;
+      //if (stmt->isPrologue() || stmt->isEpilogue())
+      //  return;
 
       auto itDomain = getIterationDomain(stmt);
       auto itSpace = itDomain.getSpace();
@@ -173,8 +173,8 @@ namespace molly {
       }
 
       auto result = executeEverywhere;
-      result = unite(result.substractDomain(executeWhereRead.getDomain()), executeWhereRead);
-      result = unite(result.substractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
+      result = unite(result.subtractDomain(executeWhereRead.getDomain()), executeWhereRead);
+      result = unite(result.subtractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
       stmt->setWhereMap(result.take());
 
       modifiedScop();

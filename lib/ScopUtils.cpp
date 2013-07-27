@@ -2,16 +2,26 @@
 
 #include <polly/ScopInfo.h>
 #include <polly/Dependences.h>
-#include <islpp/Set.h>
-#include <islpp/Map.h>
-#include <islpp/UnionMap.h>
-#include <islpp/Space.h>
+#include "islpp/Set.h"
+#include "islpp/Map.h"
+#include "islpp/UnionMap.h"
+#include "islpp/Space.h"
 #include "FieldType.h"
+#include "islpp/Ctx.h"
 
 using namespace molly;
 using namespace polly;
-
 using isl::enwrap;
+
+
+ isl::Id molly::getScatterTuple(polly::Scop *scop) {
+ return isl::enwrap(scop->getIslCtx())->createId("scattering");
+ }
+
+
+isl::Id molly::getDomainTuple(ScopStmt *scopStmt) {
+  return enwrap(scopStmt->getTupleId());
+}
 
 
 isl::Set molly::getIterationDomain(polly::ScopStmt *stmt) {
@@ -51,3 +61,5 @@ isl::UnionMap molly::getFlowDependences(polly::Dependences *deps) {
   auto umap = deps->getDependences(Dependences::TYPE_RAW);
   return enwrap(umap);
 }
+
+

@@ -241,7 +241,7 @@ namespace molly {
               auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
         auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
         assert(memaccWrite);
-        auto faccWrite = MollyFieldAccess::fromMemoryAccess(memaccWrite, Fields);
+        auto faccWrite = MollyFieldAccess::fromMemoryAccess(memaccWrite);
         auto stmtWrite = faccWrite.getPollyScopStmt();
         auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
         auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
@@ -321,7 +321,7 @@ namespace molly {
         auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
         auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
         assert(memaccWrite);
-        auto faccWrite = MollyFieldAccess::fromMemoryAccess(memaccWrite, Fields);
+        auto faccWrite = MollyFieldAccess::fromMemoryAccess(memaccWrite);
         auto stmtWrite = faccWrite.getPollyScopStmt();
         auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
         auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */

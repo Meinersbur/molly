@@ -197,7 +197,7 @@ namespace isl {
     Space getRangeSpace() const { return Space::wrap(isl_space_range(isl_map_get_space(keep()))); }
 
 
-    bool isEmpty() const;
+    bool isEmpty() const { return checkBool(isl_map_is_empty(keep())); }
 
 
     void removeRedundancies() { give (isl_map_remove_redundancies(take())); } 
@@ -292,12 +292,15 @@ namespace isl {
 
     void intersectParams(Set &&params) { give(isl_map_intersect_params(take(), params.take())); }
 
-    Map substractDomain(Set &&dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
-    Map substractDomain(const Set &dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.takeCopy())); }
+    Map subtractDomain(Set &&dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
+    Map subtractDomain(const Set &dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.takeCopy())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    Map substractDomain(Set &&dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
-    Map substractDomain(const Set &dom) && { return Map::enwrap(isl_map_subtract_domain(take(), dom.takeCopy())); }
+    Map subtractDomain(Set &&dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
+    Map subtractDomain(const Set &dom) && { return Map::enwrap(isl_map_subtract_domain(take(), dom.takeCopy())); }
 #endif
+
+    void subtract_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { return give(isl_map_subtract(take(), map.takeCopy())); }
+    Map subtract(const Map &map) const { return Map::enwrap(isl_map_subtract(takeCopy(), map.takeCopy())); }
 
     void substractRange(Set &&dom) { give(isl_map_subtract_range(take(), dom.take())); }
     void complement() { give(isl_map_complement(take())); }
@@ -340,12 +343,14 @@ namespace isl {
     void removeDims(isl_dim_type type, unsigned first, unsigned n) { give (isl_map_remove_dims(take(), type, first, n)) ;} 
     void removeDivsInvolvingDims(isl_dim_type type, unsigned first, unsigned n) { give (isl_map_remove_divs_involving_dims(take(), type, first, n)) ;} 
 
-    void equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { give(isl_map_equate(take(), type1, pos1, type2, pos2)); }
-    void oppose(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { give(isl_map_oppose(take(), type1, pos1, type2, pos2)); }
-    void orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { give(isl_map_order_lt(take(), type1, pos1, type2, pos2)); }
-    void orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { give(isl_map_order_gt(take(), type1, pos1, type2, pos2)); }
+    void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_map_equate(take(), type1, pos1, type2, pos2)); }
+    Map equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return Map::enwrap(isl_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
+    Map oppose(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_oppose(take(), type1, pos1, type2, pos2)); }
+    Map orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_order_lt(take(), type1, pos1, type2, pos2)); }
+    Map orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_order_gt(take(), type1, pos1, type2, pos2)); }
 
-    void flatten() { give(isl_map_flatten(take()));} 
+    void flatten_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_flatten(take()));} 
+    Map flatten() const { return Map::enwrap(isl_map_flatten(takeCopy()));} 
 
     Map domainMap() const { return Map::enwrap(isl_map_domain_map(takeCopy())); }
     Map rangeMap() const { return Map::enwrap(isl_map_range_map(takeCopy())); }
@@ -452,7 +457,7 @@ namespace isl {
     void sum_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_map_sum(take(), map.takeCopy() )); }
    Map sum(const Map &map) const { return Map::enwrap(isl_map_sum(takeCopy(), map.takeCopy() )); }
 
-   /// { A -> B } and { B -> C } to { (A -> B) -> C }
+   /// { A -> B } and { B' -> C } to { (A -> B*B') -> C }
    /// Function composition
    /// similar to apply() function, but returns nested domain
    /// Use curry() to get { A -> (B -> C) }

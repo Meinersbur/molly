@@ -342,6 +342,10 @@ namespace isl {
     SpaceTy addDims(isl_dim_type type, unsigned count) && { getDerived()->addDims_inplace(type, count); return this->move(); }
 #endif
 
+    SpaceTy addInDims(unsigned count) const { assert(getDerived()->isMap()); return addDims(isl_dim_in, count); }
+    SpaceTy addOutDims(unsigned count) const { assert(getDerived()->isMap()); return addDims(isl_dim_in, count); }
+    SpaceTy addSetDims(unsigned count) const { assert(getDerived()->isSet()); return addDims(isl_dim_set, count); }
+
     SpaceTy insertDims(isl_dim_type type, unsigned count) const { auto result = getDerived()->copy(); result.insertDims_inplace(type, count); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy insertDims(isl_dim_type type, unsigned count) && { getDerived()->insertDims_inplace(type, count); return this->move(); }
