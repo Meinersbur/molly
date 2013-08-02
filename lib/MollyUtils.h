@@ -6,6 +6,7 @@
 #include <llvm/ADT/ilist.h>
 #include "Pollyfwd.h"
 #include "LLVMfwd.h"
+#include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
   class Function;
@@ -78,9 +79,23 @@ llvm::Function *getParentFunction(llvm::Function *func);
 llvm::Function *getParentFunction(const llvm::Region *region);
 llvm::Function *getParentFunction(llvm::BasicBlock *bb);
 llvm::Function *getParentFunction(const polly::Scop *scop);
+llvm::Function *getParentFunction(llvm::Value *v);
+
+
+const llvm::Module *getParentModule(const llvm::Function *func);
+llvm::Module *getParentModule(llvm::Function *func);
+llvm::Module *getParentModule(polly::Scop *scop);
+const llvm::Module *getParentModule(const llvm::BasicBlock *bb);
+llvm::Module *getParentModule(llvm::BasicBlock *bb);
+const llvm::Module *getParentModule(const llvm::GlobalValue *bb);
+llvm::Module *getParentModule(llvm::GlobalValue *bb);
+llvm::Module *getParentModule(llvm::IRBuilder<> &builder);
 
 //bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
 //bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);
+
+llvm::Function *createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
+llvm::Function *createFunction( llvm::Type *rtnTy, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
 
 } // namespace molly
 #endif /* MOLLY_MOLLYUTILS_H */

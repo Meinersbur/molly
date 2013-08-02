@@ -93,7 +93,7 @@ Space Ctx::createMapSpace(Space &&domain, Space &&range) {
 
 
 Space Ctx::createMapSpace(Space &&domain, unsigned n_out) {
-  return Space::wrap(isl_space_map_from_domain_and_range(domain.take(), isl_space_set_alloc(keep(), 0, n_out )));
+  return Space::enwrap(isl_space_map_from_domain_and_range(domain.take(), isl_space_set_alloc(keep(), 0, n_out )));
 }
 
 
@@ -101,7 +101,7 @@ Space Ctx::createMapSpace(const Space &domain, unsigned n_out) { return createMa
 
 
 Space Ctx::createMapSpace(unsigned n_in, Space &&range) {
-  return Space::wrap(isl_space_map_from_domain_and_range(isl_space_set_alloc(keep(), 0, n_in), range.take()));
+  return Space::enwrap(isl_space_map_from_domain_and_range(isl_space_set_alloc(keep(), 0, n_in), range.take()));
 }
 
 

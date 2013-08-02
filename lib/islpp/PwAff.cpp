@@ -18,25 +18,6 @@ using namespace isl;
 using namespace std;
 using namespace llvm;
 
-#if 0
-isl_pw_aff *PwAff::takeCopy() const {
-  return isl_pw_aff_copy(this->aff);
-}
-
-void PwAff::give(isl_pw_aff *aff) {
-  if (this->aff)
-    isl_pw_aff_free(this->aff);
-  this->aff = aff;
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
-
-PwAff::~PwAff(void) {
-  if (this->aff)
-    isl_pw_aff_free(this->aff);
-}
-#endif
 
 PwAff PwAff::createFromAff(Aff &&aff){
   return PwAff::enwrap(isl_pw_aff_from_aff(aff.take()));
@@ -57,6 +38,7 @@ PwAff PwAff::createIndicatorFunction(Set &&set) {
   return PwAff::enwrap(isl_set_indicator_function(set.take()));
 }
 
+
 PwAff PwAff::readFromStr(Ctx *ctx, const char *str) {
   return PwAff::enwrap(isl_pw_aff_read_from_str(ctx->keep(), str));
 }
@@ -73,57 +55,17 @@ void PwAff::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 
-#if 0
-std::string PwAff::toString() const{
-  if (!keep())
-    return std::string();
-  std::string buf;
-  llvm::raw_string_ostream out(buf);
-  print(out);
-  return out.str();
-}
-void PwAff::dump() const{
-  print(llvm::errs());
-}
-
-Ctx *PwAff::getCtx() const {
-  return Ctx::wrap(isl_pw_aff_get_ctx(keep()));
-}
-#endif
 
 Space PwAff::getDomainSpace() const {
-  return Space::wrap(isl_pw_aff_get_domain_space(keep()));
+  return Space::enwrap(isl_pw_aff_get_domain_space(keep()));
 }
 
-#if 0
-Space PwAff::getSpace() const {
-  return Space::wrap(isl_pw_aff_get_space(keep()));
-}
-
-
-const char *PwAff::getDimName(isl_dim_type type, unsigned pos) const {
-  return isl_pw_aff_get_dim_name(keep(), type, pos);
-}
-bool PwAff::hasDimId(isl_dim_type type, unsigned pos) const {
-  return isl_pw_aff_has_dim_id(keep(), type, pos);
-}
-Id PwAff::getDimId(isl_dim_type type, unsigned pos) const {
-  return Id::enwrap(isl_pw_aff_get_dim_id(keep(),type,pos));
-}
-void PwAff::setDimId(isl_dim_type type, unsigned pos, Id &&id){
-  give(isl_pw_aff_set_dim_id(take(), type, pos, id.take()));
-}
-#endif
 
 bool PwAff::isEmpty() const {
   return isl_pw_aff_is_empty(keep());
 }
 
-#if 0
-unsigned PwAff::dim(isl_dim_type type) const {
-  return isl_pw_aff_dim(keep(), type);
-}
-#endif
+
 bool PwAff::involvesDim(isl_dim_type type, unsigned first, unsigned n) const {
   return isl_pw_aff_involves_dims(keep(), type, first, n);
 }
@@ -135,14 +77,6 @@ void PwAff::alignParams(Space &&model) {
   give(isl_pw_aff_align_params(take(), model.take()));
 }
 
-#if 0
-Id PwAff::getTupleId(isl_dim_type type) {
-  return Id::enwrap(isl_pw_aff_get_tuple_id(keep(), type));
-}
-void PwAff::setTupleId(isl_dim_type type, Id &&id) {
-  give(isl_pw_aff_set_tuple_id(take(), type, id.take()));
-}
-#endif
 
 void PwAff::neg() {
   give(isl_pw_aff_neg(take()));

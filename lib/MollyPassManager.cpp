@@ -40,6 +40,9 @@
 #include <polly/CodeGen/BlockGenerators.h>
 #include "llvm/ADT/StringRef.h"
 #include "MollyIntrinsics.h"
+#include "CommunicationBuffer.h"
+#include <clang/CodeGen/MollyRuntimeMetadata.h>
+#include "IslExprBuilder.h"
 
 using namespace molly;
 using namespace polly;
@@ -251,6 +254,8 @@ namespace molly {
 #pragma endregion
 
 
+
+
 #pragma region Scop CommGen
       static void spreadScatterings(Scop *scop, int multiplier) {
         for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
@@ -295,6 +300,7 @@ namespace molly {
         auto scatterTuple = getScatterTuple(scop);
         auto clusterTuple = pm->clusterConf->getClusterTuple();
         auto nodeSpace = pm->clusterConf->getClusterSpace();
+        auto nodes = pm->clusterConf->getClusterShape();
         auto nClusterDims = nodeSpace.getSetDimCount();
 
         // Make some space between the stmts in which we can insert our communication
@@ -376,6 +382,15 @@ namespace molly {
           epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
         }
 
+        auto min = scatterRange.dimMin(0) - 1;
+        min.setInTupleId_inplace(scatterId);
+        auto beforeScopScatter = scatterRangeSpace.createZeroMultiPwAff();
+        beforeScopScatter.setPwAff_inplace(0, min);
+        auto beforeScopScatterRange = beforeScopScatter.toMap().getRange();
+
+        auto afterBeforeScatter = beforeScopScatter.setPwAff(1, scatterRangeSpace.createConstantAff(1));
+        auto afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
+
         // Insert fake read access after scop
         auto epilogueScatter = max.toMap(); //scatterSpace.createMapFromAff(max);
         epilogueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
@@ -423,19 +438,23 @@ namespace molly {
           auto fieldTuple = dep.getOutTupleId();
           assert(dep.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
 
-            auto stmtRead = tupleToStmt[stmtTuple.keep()];
-            auto domainSpace = enwrap(stmtRead->getDomainSpace());
-            assert(domainSpace.getSetTupleId() == stmtTuple);
- 
+          auto stmtRead = tupleToStmt[stmtTuple.keep()];
+          auto domainSpace = enwrap(stmtRead->getDomainSpace());
+          assert(domainSpace.getSetTupleId() == stmtTuple);
+
           auto facc = getFieldAccess(stmtRead);
           auto fvar = facc.getFieldVariable();
-        auto fty = facc.getFieldType();
-        assert(tupleToFty[fieldTuple.keep()] == fty);
-        auto indexsetSpace = fty->getIndexsetTuple();
-             auto readUsed = facc.getLoadInst();
+          auto fty = facc.getFieldType();
+          assert(tupleToFty[fieldTuple.keep()] == fty);
+          auto indexsetSpace = fty->getIndexsetSpace();
+          auto readUsed = facc.getLoadInst();
+          auto nFieldDims = fty->getNumDimensions();
+          assert(indexsetSpace.getSetDimCount() == nFieldDims);
 
           auto domainRead = dep.getDomain(); /* { stmtRead[domain] } */
           assert(domainRead.getSpace().matchesSetSpace(domainSpace));
+
+          auto scatteringRead = getScattering(stmtRead); /* { stmtRead[domain] -> scattering[scatter] } */
 
           auto accessRel = facc.getAccessRelation(); /* { stmtRead[domain] -> field[indexset] } */
           assert(accessRel.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
@@ -454,25 +473,86 @@ namespace molly {
           // condition: node on which read is executed==node the read value is home
           auto homePairAccesses = c;
           for (auto i = 0; i < nClusterDims; i+=1) {
-            homePairAccesses.equate_inplace(isl_dim_in,  domainRead.getDimCount() + nClusterDims   +i, isl_dim_out, i);
+            homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + nClusterDims   +i, isl_dim_out, i);
           }
           auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
           auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
 
 
-#pragma region CodeGen already Home
+          // CodeGen already home
           if (!alreadyHomeAccesses.isEmpty()) {
             BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
             IRBuilder<> builder(bb);
 
-          auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
-          readUsed->replaceAllUsesWith(val); 
+            auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
+            readUsed->replaceAllUsesWith(val); 
 
-          // TODO: Don't assume every stmt accessed just one value
-          replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
-        }
+            // TODO: Don't assume every stmt accessed just one value
+            auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
+            scop->addScopStmt(replacementStmt);
+          }
 
-#pragma endregion
+          // CodeGen from other nodes
+          if (!notHomeAccesses.isEmpty()) {
+            // Where is the home node?
+            auto notHomeLocation = wherePairsAccesses.intersectDomain(notHomeAccesses.wrap()).curry(); /* { (stmtRead[domain] -> dst[node]) -> (field[indexset] -> src[node]) } */
+            auto instancesRecv = notHomeLocation.getDomain().unwrap(); /* { stmtRead[domain] -> cluster[node] } */
+            auto dataSource = notHomeLocation.getRange().unwrap(); /* { field[indexset] -> cluster[node] } */
+
+            // Create the communication buffer 
+            auto dataToSend = dataSource.reverse(); /* { cluster[node] -> field[indexset] } */
+            auto sendRelPerm = notHomeLocation.curry().getRange().unwrap(); /* { dst[node] -> (field[indexset] -> src[node]) } */
+
+            unsigned perm[] = { nClusterDims+nFieldDims, 0, nClusterDims };
+            auto sendRel = sendRelPerm.wrap().permuteDims(perm).unwrap() ; /* { (src[node] -> dst[node]) -> field[indexset] } */
+            auto combuf = pm->newCommunicationBuffer(fty, sendRel.copy());
+
+
+            ScopEditor editor(scop);
+            // Send on source node
+            // Copy to buffer
+            auto copyArea = product(nodes, combuf->getRelation().getRange()); /* { [cluster,indexset] } */
+            auto copyAreaSpace = copyArea.getSpace();
+            auto copyScattering = islctx->createAlltoallMap(copyArea, beforeScopScatterRange);
+            auto copyWhere = fty->getHomeRel(); // Execute where that value is home
+            auto memmovStmt = editor.createBlock(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
+            BasicBlock *memmovBB = memmovStmt->getBasicBlock();
+
+            //BasicBlock::Create(llvmContext, "memmove_nonhome", func);
+            IRBuilder<> memmovBuilder(memmovBB);
+            auto copyValue = codegenReadLocal(memmovBuilder, fvar, facc.getCoordinates());
+            //auto memmovStmt = createScopStmt(scop, memmovBB, stmtRead->getRegion(), "memmove_nonhome", stmtRead->getLoopNests()/*not accurate*/, );
+            std::map<isl_id *, llvm::Value *> scalarMap;
+            editor.getParamsMap(scalarMap, memmovStmt);
+            combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/ );
+            memmovBuilder.CreateUnreachable(); // Terminator, removed by Scop code generator
+
+            // Execute send
+            auto singletonDomain = islctx->createSetSpace(0, 0).universeBasicSet();
+            auto sendStmtEditor = editor.createStmt( singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain,afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
+            BasicBlock *sendBB = sendStmtEditor.getBasicBlock();
+            IRBuilder<> sendBuilder(sendBB);
+
+            auto nodeCoords =  ArrayRef<Value*>(facc.getCoordinates()).slice(0, nodes.getSetDimCount());
+            auto dstRank = pm->clusterConf->codegenComputeRank(sendBuilder, nodeCoords);
+            codegenSendBuf(sendBuilder, combuf, dstRank);
+            sendBuilder.CreateUnreachable();
+
+            // Execute Recv
+            auto recvDomain = combuf->getRelation().getDomain(); /* { (src[coord], dst[coord]) } */
+            auto recvUserScatter = scatteringRead ;
+            auto recvScatter = recvUserScatter ; /* { (src[coord], dst[coord]) -> scattering[scatter] } */
+            auto recvWhere = recvDomain.unwrap().rangeMap(); /* { (src[coord], dst[coord]) -> dst[coord] } */
+            auto recvStmtEditor = editor.createStmt(recvDomain.copy(), recvScatter.copy(), recvWhere.copy(), "recv_nonhome" );
+
+            // Use the data where needed
+            auto useWhere = notHomeAccesses.getRange().unwrap(); /* { readStmt[domain] -> cluster[coord] } */
+            auto useEditor = editor.replaceStmt(stmtRead,useWhere.copy() , "use_nonhome");
+            IRBuilder<> useBuilder(useEditor.getTerminator());
+            auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
+            auto useLoad = facc.getLoadUse();
+            useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
+          }
         }
 
 
@@ -1271,6 +1351,8 @@ namespace molly {
       //alwaysPreserve.insert(&molly::MollyContextPassID);
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
       //alwaysPreserve.insert(&polly::IndependentBlocksID);
+
+      this->    callToMain = nullptr;
     }
 
 
@@ -1723,6 +1805,8 @@ namespace molly {
       }
     }
 
+  private:
+    CallInst *callToMain;
 
     void wrapMain() {
       auto &context = module->getContext();
@@ -1762,6 +1846,7 @@ namespace molly {
       collect(args, wrapFunc->getArgumentList());
       //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
       auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
+      this->callToMain = ret;
       DEBUG(llvm::dbgs() << ">>>Wrapped main\n");
       modifiedIR();
       builder.CreateRet(ret);
@@ -1783,14 +1868,14 @@ namespace molly {
       return ctx;
     }
 
-    private:
-        DenseMap<ScopStmt*, MollyScopStmtContext*> stmts;
-        public:
+  private:
+    DenseMap<ScopStmt*, MollyScopStmtContext*> stmts;
+  public:
     MollyScopStmtContext *getScopStmtContext(ScopStmt *stmt) {
-       auto &ctx = stmts[stmt];
-       if (!ctx)
-         ctx = new MollyScopStmtContext(this, stmt);
-       return ctx;
+      auto &ctx = stmts[stmt];
+      if (!ctx)
+        ctx = new MollyScopStmtContext(this, stmt);
+      return ctx;
     }
 
 #pragma region Scop Detection
@@ -1890,15 +1975,111 @@ namespace molly {
 
     MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) {
       assert(memacc);
-      auto result = MollyFieldAccess::fromMemoryAccess (memacc);
+      auto result = MollyFieldAccess::fromMemoryAccess(memacc);
       augmentFieldVariable(result);
       return result;
     }
 
 
+#pragma region Communication buffers
+  private:
+    std::vector<CommunicationBuffer *> combufs;
+
+  public :
+    CommunicationBuffer *newCommunicationBuffer(FieldType *fty, isl::Map &&relation) {
+      auto comvar = new GlobalVariable(*module, runtimeMetadata.tyCombuf, false, GlobalValue::PrivateLinkage, nullptr, "combuf");
+      auto result =  CommunicationBuffer::create(comvar, fty, relation.copy());
+      combufs.push_back(result);
+      return result;
+    }
+
+  private:
+    llvm::Function* emitCombufInit(CommunicationBuffer *combuf) {
+      auto &llvmContext = module->getContext();
+      auto func = createFunction(nullptr, module, GlobalValue::PrivateLinkage, "initCombuf");
+      auto bb = BasicBlock::Create(llvmContext, "entry", func);
+      IRBuilder<> builder (bb);
+      auto rtn = builder.CreateRetVoid();
+
+      auto editor = ScopEditor::newScop(rtn, getFuncContext(func));
+      auto scop = editor.getScop();
+      auto scopCtx = getScopContext(scop);
+
+      auto rel = combuf->getRelation(); /* { (src[coord] -> dst[coord]) -> field[indexset] } */
+      auto mapping = combuf->getMapping();
+      auto eltCount = combuf->getEltCount();
+
+      auto scatterTupleId = isl::Space::enwrap( scop->getScatteringSpace() ).getSetTupleId();
+      auto singletonSet = islctx->createSetSpace(0,1).setSetTupleId(scatterTupleId).createUniverseBasicSet().fix(isl_dim_set, 0, 0);
+
+      // Send buffers
+      auto sendWhere = rel.getDomain().unwrap(); /* { src[coord] -> dst[coord] } */ // We are on the src node, send to dst node
+      auto sendDomain = sendWhere.getRange(); /* { dst[coord] }*/
+      auto sendScattering = islctx->createAlltoallMap(sendDomain, singletonSet) ; /* { dst[coord] -> scattering[] } */
+      auto stmtEditor = editor.createStmt(sendDomain.copy(), sendScattering.copy(), sendWhere.copy(), "sendcombuf_create");
+      auto sendStmt = stmtEditor.getStmt();
+      auto sendBB = stmtEditor.getBasicBlock();
+      IRBuilder<> sendBuilder(stmtEditor. getTerminator());
+      auto domainVars = stmtEditor.getDomainValues();
+      auto sendDstRank = clusterConf->codegenComputeRank(sendBuilder,domainVars);
+      std::map<isl_id *, llvm::Value *> sendParams;
+      editor.getParamsMap( sendParams, sendStmt);
+      auto sendSize =  buildIslAff(sendBuilder, eltCount, sendParams);
+      Value* sendArgs[] = { sendDstRank, sendSize };
+      sendBuilder.CreateCall(runtimeMetadata.funcCreateSendCombuf, sendArgs);
+
+      // Receive buffers
+      auto recvWhere = sendWhere.reverse(); /* { src[coord] -> dst[coord] } */ // We are on dst node, recv from src
+      auto recvDomain = recvWhere.getDomain(); /* { src[coord] } */
+      auto recvScatter = islctx->createAlltoallMap(recvDomain, singletonSet) ; /* { src[coord] -> scattering[] } */
+      auto recvEditor = editor.createStmt(sendDomain.copy(), sendScattering.copy(), sendWhere.copy(), "sendcombuf_create");
+      auto recvStmt = recvEditor.getStmt();
+      auto recvBB = recvEditor.getBasicBlock();
+      IRBuilder<> recvBuilder(recvEditor.getTerminator());
+      auto recvVars = recvEditor.getDomainValues();
+      auto recvSrcRank = clusterConf->codegenComputeRank(sendBuilder,recvVars);
+      std::map<isl_id *, llvm::Value *> recvParams;
+      editor.getParamsMap(recvParams, recvStmt);
+      auto recvSize = buildIslAff(recvBuilder, eltCount, recvParams);
+      Value* recvArgs[] = { recvSrcRank, recvSize };
+      sendBuilder.CreateCall(runtimeMetadata.funcCreateRecvCombuf, sendArgs);
+
+      return func;
+    }
 
 
+    Function *emitAllCombufInit() {
+      auto &llvmContext = module->getContext();
+      auto allInitFunc = createFunction(nullptr, module, GlobalValue::PrivateLinkage, "initCombufs");
+      auto bb = BasicBlock::Create(llvmContext, "entry", allInitFunc);
+      IRBuilder<> builder (bb);
 
+      for (auto combuf : combufs) {
+        auto func = emitCombufInit(combuf);
+        builder.CreateCall(func);
+      }
+
+      builder.CreateRetVoid();
+      return allInitFunc;
+    }
+
+
+    void addCallToCombufInit() {
+      auto initFunc = emitAllCombufInit();
+      IRBuilder<> builder(callToMain);
+      builder.CreateCall(initFunc);
+    } 
+#pragma endregion
+
+
+#pragma region Runtime
+  private:
+    clang::CodeGen::MollyRuntimeMetadata runtimeMetadata;
+
+  public:
+    llvm::Type *getCombufType() { return runtimeMetadata.tyCombuf; } 
+    llvm::Function *getCombufSendFunc() { return runtimeMetadata.funcCombufSend; }
+#pragma endregion
 
 
 #pragma region llvm::ModulePass
@@ -1926,10 +2107,13 @@ namespace molly {
       this->clusterConf.reset(new ClusterConfig(islctx));
       parseClusterShape();
 
+      // Get runtime info
+      runtimeMetadata.readMetadata(module);
+
       // Search fields
       fieldDetection();
 
-      // Decide where fields shouold have their home location
+      // Decide where fields should have their home location
       fieldDistribution();
 
       // Generate access functions
@@ -1958,8 +2142,14 @@ namespace molly {
 
         // Insert communication between ScopStmt
         scopCtx->genCommunication();
+      }
 
-        
+      // Create some SCoPs that init the combufs
+      addCallToCombufInit();
+
+      for (auto &it : scops) {
+        auto scop = it.first;
+        auto scopCtx = it.second;
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
           stmtCtx->applyWhere();
@@ -1972,10 +2162,10 @@ namespace molly {
 
 
       // Replace all remaining accesses by some generated intrinsic
-        for (auto &func : *module) {
-          auto funcCtx  = getFuncContext  (&func);
-          funcCtx->replaceRemainaingIntrinsics();
-        }
+      for (auto &func : *module) {
+        auto funcCtx = getFuncContext(&func);
+        funcCtx->replaceRemainaingIntrinsics();
+      }
 
       //FIXME: Find all the leaks
       //this->islctx.reset();

@@ -55,7 +55,7 @@ namespace isl {
 
 #pragma region isl::Spacelike
   public:
-    Space getSpace() const { return Space::wrap(isl_basic_map_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_basic_map_get_space(keep())); }
     LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_basic_map_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
@@ -159,6 +159,7 @@ namespace isl {
     void print(FILE *out, int indent, const char *prefix, const char *suffix, unsigned output_format) const { isl_basic_map_print(keep(), out, indent, prefix, suffix, output_format); }
 
     BasicMap fix(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_fix_si(takeCopy(), type, pos, value)); }
+
     BasicMap lowerBound(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_lower_bound_si(takeCopy(), type, pos, value)); }
     BasicMap upperBound(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_upper_bound_si(takeCopy(), type, pos, value)); }
 

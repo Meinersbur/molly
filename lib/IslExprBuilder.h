@@ -7,5 +7,6 @@
 
 namespace molly {
   llvm::Value* buildIslAff(llvm::IRBuilder<> &builder, const isl::Aff &aff, std::map<isl_id *, llvm::Value *> &values);
+  llvm::Value* buildIslAff(llvm::IRBuilder<> &builder, const isl::PwAff &aff, std::map<isl_id *, llvm::Value *> &values);
 } // namespace molly
 #endif /* MOLLY_ISLEXPRBUILDER_H */

@@ -63,7 +63,7 @@ namespace isl {
 #pragma region isl::Spacelike3
    friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_pw_aff_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_pw_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -94,37 +94,6 @@ namespace isl {
 #pragma endregion
 
 
-#if 0
-#ifndef NDEBUG
-    std::string _printed;
-#endif
-
-#pragma region Low-level
-  private:
-    isl_pw_aff *aff;
-
-  public: // Public because otherwise we had to add a lot of friends
-    isl_pw_aff *take() { assert(aff); isl_pw_aff *result = aff; aff = nullptr; return result; }
-    isl_pw_aff *takeCopy() const;
-    isl_pw_aff *keep() const { return aff; }
-  protected:
-    void give(isl_pw_aff *aff);
-
-  public:
-    static PwAff wrap(isl_pw_aff *aff) { PwAff result; result.give(aff); return result; }
-#pragma endregion
-
-  public:
-    Pw(void) : aff(nullptr) {}
-    /* implicit */ Pw(const PwAff &that) : aff(nullptr) { give(that.takeCopy()); }
-    /* implicit */ Pw(PwAff &&that) : aff(nullptr) { give(that.take()); }
-    ~Pw(void);
-
-    const PwAff &operator=(const PwAff &that) { give(that.takeCopy()); return *this; }
-    const PwAff &operator=(PwAff &&that) { give(that.take()); return *this; }
-#endif
-
-
 #pragma region Creational
     static PwAff createFromAff(Aff &&aff); 
     static PwAff createEmpty(Space &&space);
@@ -142,35 +111,19 @@ namespace isl {
 
 
 #pragma region Conversion
+    // from Aff
+    Pw(const Aff &aff) : Obj3( isl_pw_aff_from_aff(aff.takeCopy()) ) {}
+    Pw(Aff &&aff) : Obj3(isl_pw_aff_from_aff(aff.take())) {}
+    const PwAff &operator=(const Aff &aff) LLVM_LVALUE_FUNCTION { give(isl_pw_aff_from_aff(aff.takeCopy())); return *this; }
+    const PwAff &operator=(Aff &&aff) LLVM_LVALUE_FUNCTION { give(isl_pw_aff_from_aff(aff.take())); return *this; }
+
     Map toMap() const;
 
     //Expr toExpr() const;
 #pragma endregion
 
 
-#if 0
-#pragma region Printing
-    void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
-#pragma endregion
-#endif
-
-#if 0
-    //Ctx *getCtx() const;
-    Space getSpace() const;
-
-    const char *getDimName(isl_dim_type type, unsigned pos) const;
-    bool hasDimId(isl_dim_type type, unsigned pos) const;
-    Id getDimId(isl_dim_type type, unsigned pos) const;
-    void setDimId(isl_dim_type type, unsigned pos, Id &&id);
-
-        Id getTupleId(isl_dim_type type);
-    void setTupleId(isl_dim_type type, Id &&id);
-        unsigned dim(isl_dim_type type) const;
-#endif
-
-          Space getDomainSpace() const;
+    Space getDomainSpace() const;
     bool isEmpty() const;
 
 
@@ -219,6 +172,10 @@ namespace isl {
 
     // FIXME: getDomain()?
     Set domain() const { return Set::enwrap(isl_pw_aff_domain(takeCopy())); }
+    Set getDomain() const { return Set::enwrap(isl_pw_aff_domain(takeCopy())); }
+
+    void mul_inplace (const PwAff &multiplier) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_mul(take(), multiplier.takeCopy())); }
+    PwAff mul(const PwAff &multiplier) const { return PwAff::enwrap(isl_pw_aff_mul(takeCopy(), multiplier.takeCopy())); }
   }; // class PwAff
 
 
@@ -253,8 +210,10 @@ namespace isl {
   static inline PwAff operator+(const PwAff &pwaff1, const PwAff &pwaff2) { return add(pwaff1, pwaff2); }
   static inline PwAff operator+(PwAff &&lhs, int rhs) { return add(std::move(lhs), rhs); }
   static inline PwAff operator+(const PwAff &lhs, int rhs) { return add(lhs, rhs); }
-  static inline PwAff operator+(int lhs, PwAff && rhs) {  return add(lhs, std::move(rhs));  }
-  static inline PwAff operator+(int lhs, const PwAff & rhs) {  return add(lhs, rhs);  }
+  static inline PwAff operator+(int lhs, PwAff && rhs) { return add(lhs, std::move(rhs));  }
+  static inline PwAff operator+(int lhs, const PwAff & rhs) { return add(lhs, rhs);  }
+
+  static inline PwAff &operator+=(PwAff &lhs, const PwAff &rhs) { lhs.give(isl_pw_aff_add(lhs.take(), rhs.takeCopy())); return lhs; }
 
   PwAff sub(PwAff &&pwaff1, PwAff &&pwaff2);
   PwAff sub(const PwAff &pwaff1, PwAff &&pwaff2);
@@ -272,6 +231,11 @@ namespace isl {
   static inline PwAff operator-(const PwAff &lhs, int rhs) { return sub(lhs, rhs); }
   static inline PwAff operator-(int lhs, PwAff && rhs) {  return sub(lhs, std::move(rhs));  }
   static inline PwAff operator-(int lhs, const PwAff & rhs) {  return sub(lhs, rhs);  }
+
+  static inline PwAff operator-(const Aff &lhs, const PwAff &rhs) { return PwAff::enwrap(isl_pw_aff_sub( isl_pw_aff_from_aff(lhs.takeCopy()), rhs.takeCopy() )); }
+
+  static inline const PwAff operator*(const PwAff &lhs, const PwAff &rhs) { return PwAff::enwrap(isl_pw_aff_mul(lhs.takeCopy(), rhs.takeCopy())); }
+  static inline const PwAff &operator*=(PwAff &lhs, const PwAff &rhs) { lhs.mul_inplace(rhs); return lhs; }
 
   PwAff tdivQ(PwAff &&pa1, PwAff &&pa2);
   PwAff tdivR(PwAff &&pa1, PwAff &&pa2);

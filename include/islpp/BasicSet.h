@@ -70,7 +70,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_basic_set_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_basic_set_get_space(keep())); }
     LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_basic_set_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
@@ -102,39 +102,6 @@ namespace isl {
 #pragma endregion
 
 
-#if 0
-#ifndef NDEBUG
-  private:
-    std::string _printed;
-#endif
-
-#pragma region Low-level
-  private:
-    isl_basic_set *set;
-
-  public: // Public because otherwise we had to add a lot of friends
-    isl_basic_set *take() { assert(set); isl_basic_set *result = set; set = nullptr; return result; }
-    isl_basic_set *takeCopy() const;
-    isl_basic_set *keep() const { return set; }
-  protected:
-    void give(isl_basic_set *set);
-
-  public:
-    //TODO: Find better name, 'wrap' means something else for isl
-    static BasicSet wrap(isl_basic_set *set) { BasicSet result; result.give(set); return result; }
-#pragma endregion
-
-
-  public:
-    BasicSet() : set(nullptr) { }
-    BasicSet(const BasicSet &that) : set(nullptr) { give(that.takeCopy()); }
-    BasicSet(BasicSet &&that) : set(nullptr) { give(that.take()); }
-    ~BasicSet();
-
-    const BasicSet &operator=(const BasicSet &that) { give(that.takeCopy()); return *this; }
-    const BasicSet &operator=(BasicSet &&that) { give(that.take()); return *this; }
-#endif
-
 #pragma region Creational
     static BasicSet create(const Space &space);
     static BasicSet create(Space &&space);
@@ -147,7 +114,7 @@ namespace isl {
     static BasicSet createFromPoint(Point &&pnt);
     static BasicSet createBoxFromPoints(Point &&pnt1, Point &&pnt2);
     static BasicSet createFromBasicMap(BasicMap &&bmap);
-    
+
     static BasicSet readFromFile(Ctx *ctx, FILE *input);
     static BasicSet readFromStr(Ctx *ctx, const char *str);
 
@@ -162,45 +129,15 @@ namespace isl {
     //void dump() const;
 #pragma endregion
 
-#if 0
-    Ctx *getCtx() const { return Ctx::wrap(isl_basic_set_get_ctx(keep())); }
-
-
-#pragma region Spacelike2
-    unsigned dim(isl_dim_type type) const { return isl_basic_set_dim(keep(), type); }
-
-    //bool hasTupleId(isl_dim_type type) const { return isl_basic_set_has_tuple_id(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { llvm_unreachable("Missing API function"); }
-    void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER{ llvm_unreachable("Missing API function"); }
-    //bool hasTupleName(isl_dim_type type) const { return isl_basic_set_has_tuple_name(keep(), type); }
-    const char *getTupleName(isl_dim_type type=isl_dim_set) const { assert(type==isl_dim_set); return isl_basic_set_get_tuple_name(keep());  }
-   // const char *getTupleName() const { return isl_basic_set_get_tuple_name(keep()); }
-     void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_basic_set_set_tuple_name(take(), s)); }
-     void setTupleName_inplace(const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_name(take(), s)); }
-
-    //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_id(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), type, pos)); }
-    void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing API function"); }
-    //bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_has_dim_name(keep(), type, pos); }
-    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_basic_set_get_dim_name(keep(), type, pos); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_name(take(), type, pos, s)); }
-
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_insert_dims(take(), type, pos, n)); }
-    void addDims_inplace(isl_dim_type type, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_dims(take(), type, n)); }
- void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_remove_dims(take(), type, first, n)); }
-#pragma endregion
-#endif
-
 
 #pragma region Constraints
     void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.take())); }
     void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
     BasicSet addConstraint(Constraint &&constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.take())); }
-     BasicSet addConstraint(const Constraint &constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.takeCopy())); }
+    BasicSet addConstraint(const Constraint &constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.takeCopy())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-         BasicSet addConstraint(Constraint &&constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.take())); }
-     BasicSet addConstraint(const Constraint &constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
+    BasicSet addConstraint(Constraint &&constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.take())); }
+    BasicSet addConstraint(const Constraint &constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
 #endif
 
     void dropContraint(Constraint &&constraint);
@@ -218,8 +155,12 @@ namespace isl {
     void params();
     /// Eliminate the coefficients for the given dimensions from the constraints, without removing the dimensions.
     void eliminate(isl_dim_type type, unsigned first, unsigned n);
-    void fix(isl_dim_type type, unsigned pos, const Int &value);
-    void fix(isl_dim_type type, unsigned pos, int value);
+
+    void fix_inplace(isl_dim_type type, unsigned pos, const Int &value) ISLPP_INPLACE_QUALIFIER {   give(isl_basic_set_fix(take(), type, pos, value.keep())); }
+    BasicSet fix(isl_dim_type type, unsigned pos, const Int &value) const {      BasicSet  ::enwrap(isl_basic_set_fix(takeCopy(), type, pos, value.keep())); }
+    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_QUALIFIER {      give(isl_basic_set_fix_si(take(), type, pos, value));    }
+    BasicSet fix(isl_dim_type type, unsigned pos, int value) const {    return  BasicSet  ::enwrap(isl_basic_set_fix_si(takeCopy(), type, pos, value));    }
+
     void detectEqualities();
     void removeRedundancies();
     void affineHull();
@@ -231,14 +172,14 @@ namespace isl {
     void removeUnknownDivs();
 
     /// The number of parameters, input, output or set dimensions can be obtained using the following functions.
-//    unsigned dim(isl_dim_type type) const;
+    //    unsigned dim(isl_dim_type type) const;
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const;
 
-//    const char *getTupleName() const;
-//    void setTupleName(const char *s);
+    //    const char *getTupleName() const;
+    //    void setTupleName(const char *s);
 
-//    Id getDimId(isl_dim_type type, unsigned pos) const;
- //   const char *getDimName(isl_dim_type type, unsigned pos) const;
+    //    Id getDimId(isl_dim_type type, unsigned pos) const;
+    //   const char *getDimName(isl_dim_type type, unsigned pos) const;
 
     bool plainIsEmpty() const;
     bool isEmpty() const;

@@ -6,6 +6,10 @@
 //#include <llvm/Support/CommandLine.h>
 #include <cassert>
 
+namespace llvm {
+  template<typename> class ArrayRef;
+} // namespace llvm
+
 #ifdef __GNUC__
 // Ignore #pragma region
 //TODO:  #pragma GCC diagnostic pop

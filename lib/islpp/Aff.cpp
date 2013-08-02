@@ -9,58 +9,35 @@
 #include "islpp/Set.h"
 #include "islpp/MultiAff.h"
 #include "islpp/BasicSet.h"
+#include "islpp/PwAff.h"
 
 #include <isl/aff.h>
 #include <llvm/Support/raw_ostream.h>
 
 using namespace isl;
+using namespace llvm;
 using namespace std;
-
 
 
 Aff isl::div(Aff &&aff1, const Int &divisor) {
   return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(divisor));
 }
 
-#if 0
-isl_aff *Aff::takeCopy() const {
-  return isl_aff_copy(keep());
+
+PwAff  Aff:: toPwAff() const {
+  return PwAff::enwrap(isl_pw_aff_from_aff(takeCopy()));
 }
 
-
-void Aff::give(isl_aff *aff) {
-  if (this->aff)
-    isl_aff_free(this->aff);
-  this->aff = aff;
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
-
-
-Aff Aff::wrapCopy(__isl_keep isl_aff *aff) {
-  // TODO: It could be more efficient if wo don't copy but just do not free in the destructor
-  // - Adding a flag is more costly than the reference counter increment inside isl_aff_copy
-  // - Make a second implementation that does not free in destructor; complicates using this class
-  assert(aff);
-  Aff result;
-  result.give(isl_aff_copy(aff)); 
-  return result; 
-}
-
-
-Aff::~Aff(void) {
-  if (this->aff)
-    isl_aff_free(this->aff);
-}
-#endif
 
 Aff Aff::createZeroOnDomain(LocalSpace &&space) {
   return Aff::enwrap(isl_aff_zero_on_domain(space.take()));
 }
+
+
 Aff Aff::createVarOnDomain(LocalSpace &&space, isl_dim_type type, unsigned pos) {
   return Aff::enwrap(isl_aff_var_on_domain(space.take(), type, pos));
 }
+
 
 Aff Aff::readFromString(Ctx *ctx, const char *str) {
   return Aff::enwrap(isl_aff_read_from_str(ctx->keep(), str));
@@ -107,7 +84,7 @@ bool Aff::involvesDims(isl_dim_type type, unsigned first, unsigned n) const{
   return isl_aff_involves_dims(keep(), type, first, n);
 }
 Space Aff::getDomainSpace() const {
-  return Space::wrap(isl_aff_get_domain_space(keep()));
+  return Space::enwrap(isl_aff_get_domain_space(keep()));
 }
 #if 0
 Space Aff::getSpace() const {

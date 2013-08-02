@@ -116,6 +116,7 @@ namespace isl {
     Map createAlltoallMap(const Set &domain, Set &&range) ;
     Map createAlltoallMap(Set &&domain, const Set &range);
     Map createAlltoallMap(const Set &domain, const Set &range);
+    //Map createAlltoallMap(const Set &domain, const MultiPwAff &range);
 #pragma endregion
 
 

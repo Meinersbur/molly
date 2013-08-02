@@ -7,18 +7,7 @@
 #include "islpp/Space.h"
 #include "islpp/MultiAff.h"
 #include "islpp/Islfwd.h"
-
-namespace llvm {
-  class Module;
-  class MDNode;
-  class StructType;
-  class PointerType;
-  class LLVMContext;
-  class Function;
-  namespace CodeGen {
-    class FieldTypeMetadata;
-  } // namespace CodeGen
-}
+#include "LLVMfwd.h"
 
 namespace isl {
   class Ctx;
@@ -36,10 +25,10 @@ namespace molly {
 namespace molly {
 
   class FieldType {
-
   private:
     //molly::MollyContextPass *mollyContext;
     isl::Ctx *islctx;
+    //llvm::DataLayout *datalayout;
     llvm::Module *module;
 
     clang::CodeGen::FieldTypeMetadata metadata;
@@ -73,8 +62,8 @@ namespace molly {
   public:
     ~FieldType();
 
-    static FieldType *createFromMetadata(isl::Ctx *islctx, /*molly::MollyContextPass *mollyContext,*/ llvm::Module *module, llvm::MDNode *metadata) {
-      return new FieldType(islctx,/*mollyContext,*/ module, metadata);
+    static FieldType *createFromMetadata(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) {
+      return new FieldType(islctx, module, metadata);
     }
 
     void dump();
@@ -160,7 +149,7 @@ namespace molly {
     //llvm::Function *getPtrFunc() { return ptrFunc; }
     //void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
-    llvm::Type *getEltType();
+    llvm::Type *getEltType() const;
     llvm::PointerType *getEltPtrType();
 
     //TODO: Element length in bytes
@@ -175,6 +164,8 @@ namespace molly {
     isl::Map getHomeRel(); /* { cluster[nodecoord] -> fty[indexset] } which coordnated are stored at these nodes */
 
     llvm::StringRef getName() const;
+
+    //uint64_t getEltSize() const;
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

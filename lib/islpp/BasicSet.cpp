@@ -164,12 +164,7 @@ void BasicSet::params() {
 void BasicSet::eliminate(isl_dim_type type, unsigned first, unsigned n){
   give(isl_basic_set_eliminate(take(), type, first, n));
 }
-void BasicSet::fix(isl_dim_type type, unsigned pos, const Int &value) {
-  give(isl_basic_set_fix(take(), type, pos, value.keep()));
-}
-void BasicSet::fix(isl_dim_type type, unsigned pos, int value) {
-  give(isl_basic_set_fix_si(take(), type, pos, value));
-}
+
 void BasicSet::detectEqualities() {
   give(isl_basic_set_detect_equalities(take()));
 }

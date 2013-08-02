@@ -1,7 +1,16 @@
 #ifndef ISLPP_ISLFWD_H
 #define ISLPP_ISLFWD_H
 
+#pragma region Forward declarations for original isl
+
+// #include <isl/id.h>
+struct isl_id;
+
+#pragma endregion
+
+#pragma region Forward declarations for Islpp
 namespace isl {
+
   // Ctx.h
   class Ctx;
 
@@ -108,12 +117,25 @@ namespace isl {
   template<> class Pw<MultiAff>;
   typedef Pw<MultiAff> PwMultiAff;
 
+  // #include <UnionPwMultiAff.h>
+  class UnionPwMultiAff;
 
+  // #include <islpp/QPolynomial.h>
   class QPolynomial;
+
+  // #include <islpp/PwQPolynomial.h>
   class PwQPolynomial;
+
+  // #include <islpp/UnionPwQPolynomial.h>
   class UnionPwQPolynomial;
+
+  // #include <islpp/PwQPolynomialFold.h>
   class PwQPolynomialFold;
-   class UnionPwQPolynomialFold;
-    class UnionPwMultiAff;
+
+  // #include <islpp/UnionPwQPolynomialFold.h>
+  class UnionPwQPolynomialFold;
+
 } // namespace isl
+#pragma endregion
+
 #endif /* ISLPP_ISLFWD_H */

@@ -39,6 +39,11 @@ Set Set::createFromParams(Set &&set) {
 }
 
 
+Set Set::createFromPwAff(PwAff &&aff) { 
+  return Set::enwrap(isl_set_from_pw_aff(aff.take()));
+}
+
+
 Set Set::createFromPwMultiAff(PwMultiAff &&aff) { 
   return Set::enwrap(isl_set_from_pw_multi_aff(aff.take()));
 }
@@ -608,27 +613,59 @@ PwAff Set::dimMax(const Dim &dim) const {
 }
 
 
-    void Set::apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.take())); } 
-    void Set::apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.takeCopy())); } 
-    Set Set::apply(Map &&map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.take())); }
-    Set Set::apply(const Map &map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.takeCopy())); }
+void Set::apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.take())); } 
+void Set::apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.takeCopy())); } 
+Set Set::apply(Map &&map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.take())); }
+Set Set::apply(const Map &map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.takeCopy())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    Set Set::apply(Map &&map) && { return Set::enwrap(isl_set_apply(take(), map.take())); }
-    Set Set::apply(const Map &map) && { return Set::enwrap(isl_set_apply(take(), map.takeCopy())); }
+Set Set::apply(Map &&map) && { return Set::enwrap(isl_set_apply(take(), map.take())); }
+Set Set::apply(const Map &map) && { return Set::enwrap(isl_set_apply(take(), map.takeCopy())); }
 #endif
 
 
-        PwMultiAff Set::lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmin_pw_multi_aff(takeCopy())); }
-    PwMultiAff Set::lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmax_pw_multi_aff(takeCopy())); }
+PwMultiAff Set::lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmin_pw_multi_aff(takeCopy())); }
+PwMultiAff Set::lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_set_lexmax_pw_multi_aff(takeCopy())); }
 
 
-     Map Set::unwrap() const {
-       return Map::enwrap(isl_set_unwrap(takeCopy()));
-     }
+Map Set::unwrap() const {
+  return Map::enwrap(isl_set_unwrap(takeCopy()));
+}
 
-     Map Set::chain(const Map &map) const{
-      return map.intersectDomain(*this);
-     }
+
+Map Set::chain(const Map &map) const{
+  return map.intersectDomain(*this);
+}
+
+
+void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER {
+  llvm::SmallVector<unsigned, 4> poss(order.begin(), order.end());
+  auto nDims = getSetDimCount();
+
+  auto nextDst = 0;
+  for (auto i = 0; i < order.size(); i+=1) {
+    auto origPos = order[i];
+    auto next = nDims;
+    for (auto j = 0; j < order.size(); j+=1) {
+      if (j==i)
+        continue;
+      if (order[j] < origPos)
+        continue;
+      next = std::min(next, order[j]);
+    }
+    auto len = next - origPos;
+    auto srcPos = poss[i];
+
+    moveDims_inplace(isl_dim_set, nextDst, isl_dim_set, srcPos, len);
+
+    for (auto j = i+1; j < order.size(); j+=1) {
+      if (poss[j] < srcPos) 
+        continue;
+      assert(poss[j] >= srcPos+len);
+      poss[j] += len; // Dims has been moved in front
+    }
+    nextDst += len;
+  }
+}
 
 
 Set isl::alignParams(Set &&set, Space &&model) {
@@ -728,8 +765,6 @@ Set Set::complement() const {
 }
 
 
-
-
 Set isl::complement(Set &&set) {
   return Set::enwrap(isl_set_complement(set.take()));
 }
@@ -755,6 +790,7 @@ Set isl::params(Set &&set){
 Set isl::addContraint(Set &&set, Constraint &&constraint) {
   return Set::enwrap(isl_set_add_constraint(set.take(), constraint.take()));
 }
+
 
 Set isl::computeDivs(Set &&set) {
   return Set::enwrap(isl_set_compute_divs(set.take()));

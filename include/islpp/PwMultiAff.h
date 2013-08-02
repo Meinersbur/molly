@@ -54,7 +54,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_pw_multi_aff_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_pw_multi_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -159,7 +159,7 @@ namespace isl {
 
 #pragma region Properties
     //Ctx *getCtx() const { return Ctx::wrap(isl_pw_multi_aff_get_ctx(keep())); }
-    Space getDomainSpace() const { return Space::wrap(isl_pw_multi_aff_get_domain_space(keep())); }
+    Space getDomainSpace() const { return Space::enwrap(isl_pw_multi_aff_get_domain_space(keep())); }
     //Space getSpace() const { Space::wrap(isl_pw_multi_aff_get_space(keep())); }
 #pragma endregion
 

@@ -50,7 +50,7 @@ namespace isl {
 
   public:
     Space() { }
-    static ObjTy wrap(StructTy *obj) { return Space::enwrap(obj); }// obsolete
+    //static ObjTy wrap(StructTy *obj) { return Space::enwrap(obj); }// obsolete
 
     /* implicit */ Space(const ObjTy &that) : Obj3(that) { }
     /* implicit */ Space(ObjTy &&that) : Obj3(std::move(that)) { }
@@ -140,9 +140,9 @@ namespace isl {
     static Space createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
 
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
-    static Space createMapFromDomainAndRange( Space &&domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.take(), range.takeCopy())); }
-    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.take())); }
-    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::wrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
+    static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.take(), range.takeCopy())); }
+    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.take())); }
+    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
 
     //Space copy() const { return Space::wrap(takeCopy()); }
     //Space &&move() { return std::move(*this); }
@@ -234,12 +234,14 @@ namespace isl {
     bool isSetSpace() const;
     bool isMapSpace() const;
 
+    bool matches(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return isl_space_match(keep(), thisType, that.keep(), thatType); }
+
 
 #pragma region  Matching spaces
     bool matchesSetSpace(const Id &id) { 
       if (!this->isSetSpace())
         return false;
-      if ( this->getSetTupleId() == id)
+      if (this->getSetTupleId() == id)
         return false;
       return true;
     }
@@ -250,6 +252,7 @@ namespace isl {
 
       if (!this->isSetSpace())
         return false;
+      return matches(isl_dim_set, that, isl_dim_set);
 
       if (this->getSetDimCount() != that.getSetDimCount())
         return false;
@@ -283,6 +286,7 @@ namespace isl {
 
       if (!this->isMapSpace())
         return false;
+       return matches(isl_dim_in, domainSpace, isl_dim_set) &&  matches(isl_dim_out, rangeSpace, isl_dim_set);
 
       if (this->getInDimCount() != domainSpace.getSetDimCount())
         return false;
@@ -346,7 +350,7 @@ namespace isl {
   }; // class Space
 
 
-  static inline Space enwrap(isl_space *obj) { return Space::wrap(obj); }
+  static inline Space enwrap(isl_space *obj) { return Space::enwrap(obj); }
 
   bool isEqual(const Space &space1, const Space &space2);
   /// checks whether the first argument is equal to the domain of the second argument. This requires in particular that the first argument is a set space and that the second argument is a map space.
@@ -365,5 +369,4 @@ namespace isl {
   static inline bool operator!=(const Space &lhs, const Space &rhs) { return !isEqual(lhs, rhs); }
 
 } // namespace isl
-
 #endif /* ISLPP_SPACE_H */

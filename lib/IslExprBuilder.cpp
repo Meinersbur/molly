@@ -417,9 +417,10 @@ Value *IslExprBuilder::create(__isl_take isl_ast_expr *Expr) {
   llvm_unreachable("Unexpected enum value");
 }
 #pragma endregion
+} // namespace molly
 
 
-Value* molly::buildIslAff(IRBuilder<> &builder, const isl::Aff &aff, std::map<isl_id *, Value *> &values) {
+llvm::Value* molly::buildIslAff(llvm::IRBuilder<> &builder, const isl::Aff &aff, std::map<isl_id *, Value *> &values) {
   auto space = aff.getSpace();
   auto astbuild = space.createAstBuild();
   auto astexpr = astbuild.exprFromAff(aff);
@@ -430,4 +431,16 @@ Value* molly::buildIslAff(IRBuilder<> &builder, const isl::Aff &aff, std::map<is
   return result;
 }
 
-} // namespace molly
+
+llvm::Value* molly::buildIslAff(llvm::IRBuilder<> &builder, const isl::PwAff &aff, std::map<isl_id *, llvm::Value *> &values) {
+  auto space = aff.getSpace();
+  auto astbuild = space.createAstBuild();
+  auto astexpr = astbuild.exprFromPwAff(aff);
+
+  IslExprBuilder exprBuilder(builder, values);
+  Value *result = exprBuilder.create(astexpr.take());
+  assert(result);
+  return result;
+}
+
+

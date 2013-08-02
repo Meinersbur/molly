@@ -63,7 +63,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_aff_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_aff_get_space(keep())); }
     LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_aff_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
@@ -95,36 +95,9 @@ namespace isl {
 #pragma endregion
 
 
-#if 0
-#ifndef NDEBUG
-    std::string _printed;
-#endif
-
-#pragma region Low-level
-  private:
-    isl_aff *aff;
-
-  public: // Public because otherwise we had to add a lot of friends
-    isl_aff *take() { assert(aff); isl_aff *result = aff; aff = nullptr; return result; }
-    isl_aff *takeCopy() const;
-    isl_aff *keep() const { return aff; }
-  protected:
-    void give(isl_aff *aff);
-
-  public:
-    static Aff wrap(__isl_take isl_aff *aff) { assert(aff); Aff result; result.give(aff); return result; }
-    static Aff wrapCopy(__isl_keep isl_aff *aff);
+#pragma region Conversion
+    PwAff toPwAff() const;
 #pragma endregion
-
-  public:
-    Aff() : aff(nullptr) {}
-    /* implicit */ Aff(const Aff &that) : aff(nullptr) { give(that.takeCopy()); }
-    /* implicit */ Aff(Aff &&that) : aff(nullptr) { give(that.take()); }
-    ~Aff();
-
-    const Aff &operator=(const Aff &that) { give(that.takeCopy()); return *this; }
-    const Aff &operator=(Aff &&that) { give(that.take()); return *this; }
-#endif
 
 
 #pragma region Creational
@@ -132,9 +105,6 @@ namespace isl {
     static Aff createVarOnDomain(LocalSpace &&space, isl_dim_type type, unsigned pos);
 
     static Aff readFromString(Ctx *ctx, const char *str);
-
-    //Aff copy() const { return Aff::enwrap(isl_aff_copy(keep())); }
-    //Aff &&move() { return std::move(*this); }
 #pragma endregion
 
 

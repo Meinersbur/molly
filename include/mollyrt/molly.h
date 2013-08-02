@@ -861,8 +861,15 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     int getClusterDims();
     int getClusterLength(int d);
-
-
-
 } // namespace molly
+
+
+namespace molly {
+ class SendCommunicationBuffer;
+ class RecvCommunicationBuffer;
+
+} // namespace molly;
+extern "C" void __molly_combuf_send(SendCommunicationBuffer *combuf);
+extern "C" void __molly_combuf_recv(RecvCommunicationBuffer *combuf);
+
 #endif /* MOLLY_H */

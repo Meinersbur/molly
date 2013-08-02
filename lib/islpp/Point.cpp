@@ -23,40 +23,15 @@ void Point::print(llvm::raw_ostream &out) const {
 }
 
 
-#if 0
-isl_point *Point::takeCopy() const {
-  return isl_point_copy(keep());
-}
-
-
-void Point::give(isl_point *point) {
-  assert(point);
-  if (this->point)
-    isl_point_free(this->point);
-  this->point = point;
-}
-
-
-Point::~Point(void) {
-  if (this->point)
-    isl_point_free(this->point);
-}
-#endif
-
 Point Point::createZero(Space &&space) {
   return Point::enwrap(isl_point_zero(space.take()));
 }
 
 
 Space Point::getSpace() const {
-  return Space::wrap(isl_point_get_space(keep()));
+  return Space::enwrap(isl_point_get_space(keep()));
 }
 
-#if 0
-Ctx *Point::getCtx() const {
-  return Ctx::wrap(isl_point_get_ctx(keep()));
-}
-#endif
    
     BasicSet Point::toBasicSet() const {
       return BasicSet::enwrap(isl_basic_set_from_point(takeCopy()));

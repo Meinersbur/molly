@@ -16,6 +16,7 @@ add_molly_library(LLVMMolly
     MollyFieldAccess.cpp
     IslExprBuilder.cpp
     MollyIntrinsics.cpp
+    RectangularMapping.cpp
     
     MollyContext.cpp
     Nodegrid.cpp  # Obsolete?
@@ -37,6 +38,7 @@ add_molly_library(LLVMMolly
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
     FlattenMapping.cpp
+    Quast.cpp
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib

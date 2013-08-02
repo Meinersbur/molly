@@ -67,29 +67,11 @@ void Map::print(llvm::raw_ostream &out) const {
   printer.print(out);
 }
 
-#if 0
-std::string Map::toString() const {
-  if (!keep())
-    return string();
-  std::string buf;
-  llvm::raw_string_ostream stream(buf);
-  print(stream);
-  return stream.str();
-}
-void Map::dump() const {
-  print(llvm::errs());
-}
-#endif
 
 Map Map::createFromUnionMap(UnionMap &&umap) {
   return Map::enwrap(isl_map_from_union_map(umap.take()));
 }
  
-
-bool Map::isEmpty() const {
-  return isl_map_is_empty(keep());
-}
-
 
 static int foreachBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
   assert(user);

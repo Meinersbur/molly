@@ -23,6 +23,7 @@
 #include "Spacelike.h" // class Spacelike (base of Map)
 #include "Obj.h"
 #include "MultiPwAff.h"
+#include <llvm/ADT/ArrayRef.h>
 
 struct isl_map;
 
@@ -34,7 +35,7 @@ namespace isl {
   class Ctx;
   class Space;
   class BasicMap;
-  class id;
+  class Id;
   class Set;
   class Mat;
   class Aff;
@@ -82,7 +83,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_map_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -134,21 +135,21 @@ namespace isl {
     Map(PwMultiAff &&pmaff) : Obj3(isl_map_from_pw_multi_aff(pmaff.take())) {}
     Map(const PwMultiAff &pmaff) : Obj3(isl_map_from_pw_multi_aff(pmaff.takeCopy())) {}
     const Map &operator=(PwMultiAff &&pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.take())); return *this; }
-   const Map &operator=(const PwMultiAff &pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.takeCopy())); return *this; }
-   
-    // to PwMultiAff
-   PwMultiAff toPwMultiAff() const { return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(takeCopy())); } 
+    const Map &operator=(const PwMultiAff &pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.takeCopy())); return *this; }
 
-   // to MultiPwAff
-  MultiPwAff toMultiPwAff() const;
+    // to PwMultiAff
+    PwMultiAff toPwMultiAff() const { return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(takeCopy())); } 
+
+    // to MultiPwAff
+    MultiPwAff toMultiPwAff() const;
 
     // to UnionMap
     UnionMap toUnionMap() const;
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-     UnionMap toUnionMap() &&;
+    UnionMap toUnionMap() &&;
 #endif
-     //operator UnionMap() const;
-     //operator UnionMap() &&;
+    //operator UnionMap() const;
+    //operator UnionMap() &&;
 #pragma endregion
 
 
@@ -193,8 +194,8 @@ namespace isl {
 
     //Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
     //Space getSpacelike() const { return getSpace(); }
-    Space getDomainSpace() const { return Space::wrap(isl_space_domain(isl_map_get_space(keep()))); }
-    Space getRangeSpace() const { return Space::wrap(isl_space_range(isl_map_get_space(keep()))); }
+    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_map_get_space(keep()))); }
+    Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_map_get_space(keep()))); }
 
 
     bool isEmpty() const { return checkBool(isl_map_is_empty(keep())); }
@@ -215,10 +216,12 @@ namespace isl {
       return Set::enwrap(empty);
     }
 
-    void lexmin() { give(isl_map_lexmin(take())); } 
-    void lexmax() { give(isl_map_lexmax(take())); } 
+    void lexmin_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_lexmin(take())); } 
+    Map lexmin() const { return Map::enwrap(isl_map_lexmin(takeCopy())); }
+      PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
 
-    PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
+    void lexmax_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_lexmax(take())); } 
+    Map lexmax() const { return Map::enwrap(isl_map_lexmax(takeCopy())); }
     PwMultiAff lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
 
 #if 0
@@ -363,19 +366,22 @@ namespace isl {
     bool plainIsSingleValued() const { return isl_map_plain_is_single_valued(keep()); }
     bool isSingleValued() const { return isl_map_plain_is_single_valued(keep()); }
 
-    bool plainIsInjective() const { return isl_map_plain_is_injective(keep()); }
-    bool isInjective() const { return isl_map_is_injective(keep()); }
-    bool isBijective() const { return isl_map_is_bijective(keep()); }
-    bool isTranslation() const { return isl_map_is_translation(keep()); }
+    bool plainIsInjective() const { return checkBool(isl_map_plain_is_injective(keep())); }
+    bool isInjective() const { return checkBool( isl_map_is_injective(keep())); }
+    bool isBijective() const { return checkBool(isl_map_is_bijective(keep())); }
+    bool isTranslation() const { return checkBool(isl_map_is_translation(keep())); }
 
-    bool canZip() const { return isl_map_can_zip(keep()); }
-    void zip() {give(isl_map_zip(take()));}
+    bool canZip() const { return checkBool(isl_map_can_zip(keep())); }
+    void zip_inplace() ISLPP_INPLACE_QUALIFIER {give(isl_map_zip(take()));}
+    Map zip() const { return Map::enwrap(isl_map_zip(takeCopy()));}
 
-    bool canCurry() const { return isl_map_can_curry(keep()); }
-    void curry() { give(isl_map_curry(take())); }
+    bool canCurry() const { return checkBool(isl_map_can_curry(keep())); }
+    void curry_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_curry(take())); }
+    Map curry() const { return Map::enwrap(isl_map_curry(takeCopy())); }
 
     bool canUnurry() const { return isl_map_can_uncurry(keep()); }
-    void uncurry() {give(isl_map_uncurry(take()));}
+    void uncurry_inplace() ISLPP_INPLACE_QUALIFIER{ give(isl_map_uncurry(take()));}
+    Map uncurry() const { return Map::enwrap(isl_map_uncurry(takeCopy()));  }
 
     void makeDisjoint() { give(isl_map_make_disjoint(take()));}
 
@@ -455,34 +461,34 @@ namespace isl {
 
     /// Add the value of aff to all the range values of the corresponding map elements
     void sum_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_map_sum(take(), map.takeCopy() )); }
-   Map sum(const Map &map) const { return Map::enwrap(isl_map_sum(takeCopy(), map.takeCopy() )); }
+    Map sum(const Map &map) const { return Map::enwrap(isl_map_sum(takeCopy(), map.takeCopy() )); }
 
-   /// { A -> B } and { B' -> C } to { (A -> B*B') -> C }
-   /// Function composition
-   /// similar to apply() function, but returns nested domain
-   /// Use curry() to get { A -> (B -> C) }
-   Map chain(const Map &that) const {
-    auto result = this->rangeMap(); // { (A -> B) -> B }
-    result.applyRange_inplace(that);
-    return result;
-   }
+    /// { A -> B } and { B' -> C } to { (A -> B*B') -> C }
+    /// Function composition
+    /// similar to apply() function, but returns nested domain
+    /// Use curry() to get { A -> (B -> C) }
+    Map chain(const Map &that) const { // rename: (inner) join?
+      auto result = this->rangeMap(); // { (A -> B) -> B }
+      result.applyRange_inplace(that);
+      return result;
+    }
 
-   /// { A -> B } to { (A -> B) } (with nested range)
+    /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy()));} 
   }; // class Map
 
 
   static inline Map enwrap(__isl_take isl_map *obj) { return Map::enwrap(obj); }
-    static inline Map enwrapCopy(__isl_keep isl_map *obj) { return Map::enwrapCopy(obj); }
+  static inline Map enwrapCopy(__isl_keep isl_map *obj) { return Map::enwrapCopy(obj); }
 
   static inline Map reverse(Map &&map) { return enwrap(isl_map_reverse(map.take())); }
-  static inline Map reverse(Map &map) { return enwrap(isl_map_reverse(map.takeCopy())); }
+  static inline Map reverse(const Map &map) { return enwrap(isl_map_reverse(map.takeCopy())); }
 
   static inline Map intersectDomain(Map &&map, Set &&set) { return enwrap(isl_map_intersect_domain(map.take(), set.take())); }
   static inline Map intersectRange(Map &&map, Set &&set) { return enwrap(isl_map_intersect_range(map.take(), set.take())); }
 
-  static inline BasicMap simpleHull(Map &&map)  { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
-  static inline BasicMap unshiftedSimpleHull(Map &&map)  { return BasicMap::enwrap(isl_map_unshifted_simple_hull(map.take())); }
+  static inline BasicMap simpleHull(Map &&map) { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
+  static inline BasicMap unshiftedSimpleHull(Map &&map) { return BasicMap::enwrap(isl_map_unshifted_simple_hull(map.take())); }
   static inline Map sum(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_sum(map1.take(), map2.take())); }
 
   static inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 

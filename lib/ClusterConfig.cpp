@@ -2,8 +2,14 @@
 
 #include "islpp/Space.h"
 #include "islpp/MultiAff.h"
+#include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/ADT/ArrayRef.h>
+#include "MollyUtils.h"
+#include "llvm/IR/Function.h"
 
 using namespace molly;
+using namespace llvm;
 
 
 isl::Space ClusterConfig::getClusterSpace() const {
@@ -29,4 +35,22 @@ isl::MultiAff ClusterConfig::getMasterRank() const {
   auto nDims = getClusterDims();
 
   return isl::MultiAff::createZero(getClusterSpace());
+}
+
+
+llvm::Value *ClusterConfig::codegenComputeRank(llvm::IRBuilder<> &builder, ArrayRef<Value*> coords) {
+  auto &llvmContext = builder.getContext();
+  auto intTy = Type::getInt32Ty(llvmContext);
+
+  if (!funcCoordToRank) {
+    auto module = getParentModule(builder);
+
+    SmallVector<Type*,4> argTys(getClusterDims(), intTy);
+   auto funcTy = FunctionType::get(intTy,argTys, false);
+    funcCoordToRank = Function::Create(funcTy, GlobalValue::PrivateLinkage, "Coord2Rank", module);
+    //FIXME: Call MPI_Cart_rank
+  }
+
+auto result = builder.CreateCall(funcCoordToRank, coords);
+return result;
 }

@@ -6,6 +6,8 @@
 #include <llvm/Analysis/RegionInfo.h>
 #include "MollyFieldAccess.h"
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/IRBuilder.h>
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace polly;
@@ -76,7 +78,44 @@ llvm::Function *molly::getParentFunction(llvm::BasicBlock *bb) {
 llvm::Function *molly::getParentFunction(const polly::Scop *scop) { 
   return getParentFunction(&scop->getRegion()); 
 }
+Function *molly::getParentFunction(Value *v) {
+  if (Function *F = dyn_cast<Function>(v))
+    return F;
 
+  if (Instruction *I = dyn_cast<Instruction>(v))
+    return I->getParent()->getParent();
+
+  if (BasicBlock *B = dyn_cast<BasicBlock>(v))
+    return B->getParent();
+
+  return nullptr;
+}
+
+
+const llvm::Module *molly::getParentModule(const llvm::Function *func){
+  return func->getParent();
+}
+llvm::Module *molly::getParentModule(llvm::Function *func){
+  return func->getParent();
+}
+llvm::Module *molly::getParentModule(polly::Scop *scop) {
+  return getParentFunction(scop)->getParent();
+}
+const llvm::Module *molly::getParentModule(const llvm::BasicBlock *bb) {
+  return bb->getParent()->getParent();
+}
+llvm::Module *molly::getParentModule(llvm::BasicBlock *bb) {
+  return bb->getParent()->getParent();
+}
+const llvm::Module *molly::getParentModule(const llvm::GlobalValue *v){
+  return v->getParent();
+}
+llvm::Module *molly::getParentModule(llvm::GlobalValue *v) {
+  return v->getParent();
+}
+llvm::Module *molly::getParentModule(llvm::IRBuilder<> &builder) {
+  return getParentModule(builder.GetInsertBlock());
+}
 
 #if 0
 bool molly::isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt) {
@@ -99,18 +138,40 @@ bool molly::isFieldAccessBasicBlock(llvm::BasicBlock *bb) {
     return false;
 
 
-    for (auto &i : *bb) {
-      auto instr = &i;
+  for (auto &i : *bb) {
+    auto instr = &i;
 
-      if (instr == facc.getAccessor())
-        continue;
+    if (instr == facc.getAccessor())
+      continue;
 
-      if (instr == facc.getFieldCall())
-        continue;
+    if (instr == facc.getFieldCall())
+      continue;
 
-      return false;
-    }
+    return false;
+  }
 
-    return true;
+  return true;
 }
 #endif 
+
+
+llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
+  if (!rtnTy) {
+    auto &llvmContext = module->getContext();
+    rtnTy = Type::getVoidTy(llvmContext);
+  }
+
+  auto funcTy = FunctionType::get(rtnTy, argTys, false);
+ return Function::Create(funcTy, linkage, name, module);
+}
+
+llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
+  if (!rtnTy) {
+    auto &llvmContext = module->getContext();
+    rtnTy = Type::getVoidTy(llvmContext);
+  }
+
+  auto funcTy = FunctionType::get(rtnTy, false);
+ return Function::Create(funcTy, linkage, name, module);
+}
+

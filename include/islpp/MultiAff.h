@@ -62,7 +62,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_multi_aff_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_multi_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -130,7 +130,7 @@ namespace isl {
     Ctx *getCtx() const { return Ctx::wrap(isl_multi_aff_get_ctx(keep())); }
     Space getSpace() const { return Space::wrap(isl_multi_aff_get_space(keep())); }
 #endif
-    Space getDomainSpace() const { return Space::wrap(isl_multi_aff_get_domain_space(keep())); }
+    Space getDomainSpace() const { return Space::enwrap(isl_multi_aff_get_domain_space(keep())); }
 
 
 #pragma region Conversion
@@ -196,7 +196,7 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::enwrap(isl_multi_aff_get_aff(keep(), pos)); }
-    void setAff_inline(int pos, Aff &&el) { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
+    void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
     MultiAff setAff(int pos, Aff &&el) { return MultiAff::enwrap(isl_multi_aff_set_aff(take(), pos, el.take())); }
     void push_back(Aff &&aff);
     void push_back(const Aff &aff) { return push_back(aff.copy()); }

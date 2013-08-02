@@ -94,7 +94,7 @@ namespace isl {
 
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_union_map_get_ctx(keep())); }
-    Space getSpace() const { return Space::wrap(isl_union_map_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_union_map_get_space(keep())); }
 
     void universe() { give(isl_union_map_universe(take())); } // ???
     void domainMap() { give(isl_union_map_domain_map(take())); } // ???

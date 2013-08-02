@@ -49,7 +49,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_multi_pw_aff_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_multi_pw_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -130,7 +130,7 @@ namespace isl {
 #endif
 
     //Space getSpace() const { return Space::wrap(isl_multi_pw_aff_get_space(keep())); }
-    Space getDomainSpace() const { return Space::wrap(isl_multi_pw_aff_get_domain_space(keep())); }
+    Space getDomainSpace() const { return Space::enwrap(isl_multi_pw_aff_get_domain_space(keep())); }
 
 
 #pragma region Conversion
@@ -192,8 +192,9 @@ namespace isl {
 
 #pragma region Multi
     EltType getPwAff(int pos) const { return EltType::enwrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
-    MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos,  el.take())); }
-    void setPwAff_inplace(int pos, PwAff &&el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos,  el.take())); }
+    MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos, el.take())); }
+    void setPwAff_inplace(int pos, PwAff &&el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.take())); }
+    void setPwAff_inplace(int pos, const PwAff &el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.takeCopy())); }
 
     void push_back(PwAff &&);
 #pragma endregion

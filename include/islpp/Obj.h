@@ -1,7 +1,7 @@
 #ifndef ISLPP_OBJ_H
 #define ISLPP_OBJ_H
 
-//#include "islpp_common.h"
+#include "islpp_common.h"
 #include <llvm/Support/Compiler.h>
 #include <llvm/Support/raw_ostream.h>
 #include <cassert>
@@ -113,8 +113,8 @@ namespace isl {
        return &obj; 
      }
 
-  protected:
-    void give(StructTy *obj) {
+  public:
+    void give(StructTy *obj) ISLPP_INPLACE_QUALIFIER {
       assert(obj); 
       getDerived()->release();
       this->obj = obj;

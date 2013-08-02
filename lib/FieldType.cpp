@@ -36,9 +36,9 @@ FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metad
   assert(module);
   assert(metadata);
 
-  //this->mollyContext = mollyContext;
-  this->module = module;
   this->islctx = islctx;
+  //this->datalayout = dl;
+   this->module = module;
 
   //localOffsetFunc = NULL;
   localLengthFunc = NULL;
@@ -144,7 +144,7 @@ isl::MultiAff FieldType::getDistributionAff() {
 }
 
 
-llvm::Type *FieldType::getEltType() {
+llvm::Type *FieldType::getEltType() const {
   //FIXME: In future versions, the element type might depend on the element accessed, if there is a struct type in between 
   assert(metadata.llvmEltType);
   return metadata.llvmEltType;
@@ -243,7 +243,7 @@ isl::PwMultiAff FieldType::getHomeAff() {
 
     // [globalcoordinate/len]
     auto aff = floor(div(coordSpace.createVarAff(isl_dim_set, d), localLen));
-    maff.setAff_inline(i, aff.move());
+    maff.setAff_inplace(i, aff.move());
     i += 1;
   }
 
@@ -262,3 +262,9 @@ llvm::StringRef FieldType:: getName() const {
     result = metadata.llvmType->getName();
   return result;
 }
+
+#if 0
+uint64_t molly::FieldType::getEltSize() const {
+  return datalayout->getTypeAllocSize(getEltType());
+}
+#endif

@@ -18,6 +18,7 @@
 #include "Spacelike.h"
 #include "Ctx.h"
 #include "BasicSet.h"
+#include <llvm/ADT/ArrayRef.h>
 
 struct isl_set;
 struct isl_basic_set;
@@ -61,7 +62,7 @@ namespace isl {
 
     /* implicit */ Set(ObjTy &&that) : Obj3(std::move(that)) { }
     /* implicit */ Set(const ObjTy &that) : Obj3(that) { }
-      const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_set_get_ctx(keep())); }
@@ -73,7 +74,7 @@ namespace isl {
 #pragma region isl::Spacelike3
     friend class isl::Spacelike3<ObjTy>;
   public:
-    Space getSpace() const { return Space::wrap(isl_set_get_space(keep())); }
+    Space getSpace() const { return Space::enwrap(isl_set_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
 
   protected:
@@ -123,7 +124,7 @@ namespace isl {
     // From BasicSet
     /* implicit */ Set(BasicSet &&set) : Obj3(isl_set_from_basic_set(set.take())) {}
     /* implicit */ Set(const BasicSet &set) : Obj3(isl_set_from_basic_set(set.takeCopy())) {}
-     const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); return *this; }
+    const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); return *this; }
     const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); return *this; }
 #pragma endregion
 
@@ -158,7 +159,8 @@ namespace isl {
 
     //Space getSpace() const;
 
-    Set addContraint(Constraint &&) const;
+    void addConstraint_inplace(const Constraint &c) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_constraint(take(), c.takeCopy())); }
+    Set addContraint(const Constraint &c) const { return Set::enwrap(isl_set_add_constraint(takeCopy(), c.takeCopy())); }
 
     Set complement() const;
     Set projectOut(isl_dim_type type, unsigned first, unsigned n) const;
@@ -228,7 +230,7 @@ namespace isl {
 
     void unite_inplace(Set &&that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.take())); }
     void unite_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.takeCopy())); }
- 
+
     void apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER; 
     void apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER; 
     Set apply(Map &&map) const ;
@@ -248,10 +250,13 @@ namespace isl {
 
     Map unwrap() const;
 
-
     // { A } and { A' -> B } to { A*A' -> B }
     Map chain(const Map &map) const;
- }; // class Set
+
+
+    void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
+    Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
+  }; // class Set
 
 
   static inline Set enwrap(isl_set *obj) { return Set::enwrap(obj); }
@@ -273,7 +278,6 @@ namespace isl {
 
   /// If the input (basic) set or relation is non-empty, then return a singleton subset of the input. Otherwise, return an empty set.
   BasicSet sample(Set &&);
-
 
   /// Compute the minimum or maximum of the given set or output dimension as a function of the parameters (and input dimensions), but independently of the other set or output dimensions. For lexicographic optimization, see Lexicographic Optimization.
   PwAff dimMin(Set &&, int pos);
@@ -304,9 +308,9 @@ namespace isl {
   Set intersect(Set &&set1, Set &&set2);
 
   static inline Set unite(Set &&set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.take(), set2.take())); }
-    static inline Set unite(Set &&set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.take(), set2.takeCopy())); }
+  static inline Set unite(Set &&set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.take(), set2.takeCopy())); }
   static inline Set unite(const Set &set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.take())); }
- static inline Set unite(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.takeCopy())); }
+  static inline Set unite(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.takeCopy())); }
 
   Set subtract(Set &&set1, Set &&set2);
 
@@ -320,7 +324,11 @@ namespace isl {
   /// @brief Cartesian product
   /// The above functions compute the cross product of the given sets or relations. The domains and ranges of the results are wrapped maps between domains and ranges of the inputs.
   Set product(Set &&set1, Set &&set2);
+ static inline Set product(const Set &set1, Set &set2) { return Set::enwrap(isl_set_product(set1.takeCopy(), set2.takeCopy())); }
+
   Set flatProduct(Set &&set1,Set &&set2);
+   static inline Set flatProduct(const Set &set1,const Set &set2) { return Set::enwrap(isl_set_flat_product(set1.takeCopy(), set2.takeCopy())); }
+
   Set gist(Set &&set, Set &&context);
   Set gistParams(Set &&set, Set &&context);
   Set partialLexmin(Set &&set, Set &&dom, Set &empty);

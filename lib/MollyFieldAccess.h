@@ -80,7 +80,7 @@ namespace molly {
     isl::Space getLogicalSpace(isl::Ctx *); // returns a set space with getNumDims() dimensions
 
     polly::MemoryAccess *getPollyMemoryAccess() const;
-    polly::ScopStmt *getPollyScopStmt();
+    polly::ScopStmt *getPollyScopStmt() const;
     isl::MultiPwAff getAffineAccess(llvm::ScalarEvolution *se);
     isl::Map/*iteration coord -> field coord*/ getAccessRelation() const;
     isl::Set getAccessedRegion();
@@ -98,6 +98,8 @@ namespace molly {
     isl::Map getAccessScattering() const;
 
     isl::PwMultiAff getHomeAff() const;
+
+    llvm::StoreInst *getLoadUse() const;
   }; // class MollyFieldAccess
 
 } // namespace molly

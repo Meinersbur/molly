@@ -11,6 +11,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/ArrayRef.h>
 #include "islpp/BasicSet.h"
+#include "LLVMfwd.h"
 
 namespace isl {
 class Space;
@@ -25,12 +26,13 @@ namespace molly {
 
     llvm::SmallVector<unsigned,4> clusterLengths;
     isl::BasicSet clusterShape;
+    llvm::Function *funcCoordToRank;
 
   protected:
     isl::Ctx *getIslContext() const { assert(islctx); return islctx; }
 
   public:
-    ClusterConfig(isl::Ctx *islctx) : islctx(islctx) {
+    ClusterConfig(isl::Ctx *islctx) : islctx(islctx), funcCoordToRank(nullptr) {
       assert(islctx);
       nodecoord = islctx->createId("rank");
     }
@@ -54,6 +56,8 @@ namespace molly {
     unsigned getClusterLength(size_t d) const { assert(0 <= d && d < clusterLengths.size()); return clusterLengths[d]; }
 
     isl::MultiAff getMasterRank() const;
+
+    llvm::Value *codegenComputeRank(llvm::IRBuilder<> &builder, llvm::ArrayRef<llvm::Value*> coords);
   }; // class ClusterConfig
 } // namespace molly
 #endif /* MOLLY_CLUSTERCONFIG_H */

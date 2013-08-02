@@ -162,7 +162,7 @@ void LocalSpace::setDimId(isl_dim_type type, unsigned pos, Id &&id) {
   give(isl_local_space_set_dim_id(take(), type, pos, id.take()));
 }
 Space LocalSpace::getSpace() const {
-  return Space::wrap(isl_local_space_get_space(keep()));
+  return Space::enwrap(isl_local_space_get_space(keep()));
 }
 Aff LocalSpace::getDiv(int pos) const {
   return Aff::enwrap(isl_local_space_get_div(keep(), pos));

@@ -150,7 +150,7 @@ FieldType *MollyFieldAccess::getFieldType() const {
 
 
 isl::Space MollyFieldAccess::getLogicalSpace(isl::Ctx* ctx) {
-  return isl::Space::wrap(isl_getLogicalSpace(ctx->keep()));
+  return isl::Space::enwrap(isl_getLogicalSpace(ctx->keep()));
 }
 
 
@@ -160,7 +160,7 @@ polly::MemoryAccess *MollyFieldAccess::getPollyMemoryAccess() const {
 }
 
 
-polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() {
+polly::ScopStmt *MollyFieldAccess::getPollyScopStmt() const {
   assert(scopAccess && "Need to augment the access using SCoP");
   auto result = scopAccess->getStatement();
   assert(result);
@@ -233,4 +233,17 @@ isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
   auto tyHomeAff = getFieldType() ->getHomeAff();
   tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
   return tyHomeAff;
+}
+
+
+llvm::StoreInst *MollyFieldAccess::getLoadUse() const {
+  auto ld = getLoadInst();
+
+  // An access within a Scop should have been isolated into its own ScopStmt by MollyPassManager::isloateFieldAccesses
+  // and  IndependentBlocks made independent by writing the result to a local variable that is picked up by those ScopStmt that need it
+  assert( this->getPollyScopStmt() );
+  assert(ld->getNumUses() == 1);
+
+  auto use = *ld->use_begin();
+  return cast<StoreInst>(use);
 }

@@ -13,7 +13,7 @@ namespace isl {
 
 
 namespace isl {
-  class PwQPolynomialFold final {
+  class PwQPolynomialFold {
 #pragma region Low-level
   private:
     isl_pw_qpolynomial_fold *poly;
