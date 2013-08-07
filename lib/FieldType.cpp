@@ -38,7 +38,7 @@ FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metad
 
   this->islctx = islctx;
   //this->datalayout = dl;
-   this->module = module;
+  this->module = module;
 
   //localOffsetFunc = NULL;
   localLengthFunc = NULL;
@@ -74,6 +74,7 @@ isl::BasicSet FieldType::getLogicalIndexset() {
 
   auto dims = getNumDimensions();
   auto space = ctx->createSetSpace(0, dims); //TODO: Assign an id to the tuple
+  space.setSetTupleId_inplace(getIndexsetTuple());
   auto set = isl::BasicSet::create(space.copy());
 
   for (auto d = dims-dims; d < dims; d+=1) {
@@ -93,7 +94,7 @@ isl::BasicSet FieldType::getLogicalIndexset() {
 
 
 isl::Space FieldType::getLogicalIndexsetSpace() {
-return getIndexsetSpace();
+  return getIndexsetSpace();
 }
 
 
@@ -102,13 +103,13 @@ isl::Id FieldType::getIndexsetTuple() const {
 }
 
 
- isl::Space FieldType::getIndexsetSpace() const {
-   auto islctx = getIslContext(); 
-   auto dims = getNumDimensions();
- auto result = islctx->createSetSpace(0, dims);
- result.setSetTupleId_inplace(getIndexsetTuple());
- return result;
- }
+isl::Space FieldType::getIndexsetSpace() const {
+  auto islctx = getIslContext(); 
+  auto dims = getNumDimensions();
+  auto result = islctx->createSetSpace(0, dims);
+  result.setSetTupleId_inplace(getIndexsetTuple());
+  return result;
+}
 
 
 void FieldType::dump() {
@@ -247,7 +248,11 @@ isl::PwMultiAff FieldType::getHomeAff() {
     i += 1;
   }
 
-  return maff.restrictDomain(getLogicalIndexset());
+  auto indexset = getLogicalIndexset().toSet().setSetTupleId(maff.getInTupleId());
+  //indexset.setSetTupleId_inplace(maff.getInTupleId());
+  auto result = maff.restrictDomain(indexset);
+  result.setOutTupleId_inplace(clusterTupleId);
+  return result;
 }
 
 

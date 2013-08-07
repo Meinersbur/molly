@@ -1,5 +1,5 @@
 
-set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp)
+set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp combuf.cpp)
 
 ### MollyRT, compile using standard compiler
 include_directories(${MOLLY_SOURCE_DIR}/include/mollyrt ${MPI_CXX_INCLUDE_PATH})

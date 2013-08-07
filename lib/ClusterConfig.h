@@ -57,7 +57,7 @@ namespace molly {
 
     isl::MultiAff getMasterRank() const;
 
-    llvm::Value *codegenComputeRank(llvm::IRBuilder<> &builder, llvm::ArrayRef<llvm::Value*> coords);
+    llvm::Value *codegenComputeRank(DefaultIRBuilder &builder, llvm::ArrayRef<llvm::Value*> coords);
   }; // class ClusterConfig
 } // namespace molly
 #endif /* MOLLY_CLUSTERCONFIG_H */

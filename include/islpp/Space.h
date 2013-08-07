@@ -64,7 +64,7 @@ namespace isl {
 
 
 #pragma region isl::Spacelike3
-   friend class isl::Spacelike3<ObjTy>;
+    friend class isl::Spacelike3<ObjTy>;
   public:
     Space getSpace() const { return *this; }
     Space getSpacelike() const { return *this; }
@@ -78,8 +78,8 @@ namespace isl {
     bool isMap() const { return isMapSpace(); }
 
   public:
-        void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_tuple_id(take(), type)); }
-        void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_dim_id(take(), type, pos)); }
+    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_tuple_id(take(), type)); }
+    void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { give(isl_space_reset_dim_id(take(), type, pos)); }
 
     void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_insert_dims(take(), type, pos, count)); }
     void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
@@ -184,17 +184,17 @@ namespace isl {
 
     Map emptyMap() const;
     Map universeMap() const;
-   
+
     /// Maps vectors to anything that is lexically smaller
-     Map lexLtMap() const;
+    Map lexLtMap() const;
 
-       /// Maps vectors to anything that is lexically greater
-     Map lexGtMap() const;
+    /// Maps vectors to anything that is lexically greater
+    Map lexGtMap() const;
 
-     /// Maps vectors to any vector that is lexically less in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
+    /// Maps vectors to any vector that is lexically less in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexLtFirstMap(unsigned pos) const;
 
-     /// Maps vectors to any vector that is lexically greater in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
+    /// Maps vectors to any vector that is lexically greater in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexGtFirstMap(unsigned pos) const;
 
     Aff createZeroAff() const;
@@ -222,7 +222,7 @@ namespace isl {
     Constraint createLeConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createEqConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createEqConstraint(Aff &&lhs, int rhs) const;
-     Constraint createEqConstraint(Aff &&lhs, isl_dim_type type, unsigned pos) const;
+    Constraint createEqConstraint(Aff &&lhs, isl_dim_type type, unsigned pos) const;
     Constraint createGeConstraint(Aff &&lhs, Aff &&rhs) const;
     Constraint createGtConstraint(Aff &&lhs, Aff &&rhs) const;
 
@@ -241,7 +241,7 @@ namespace isl {
     bool matchesSetSpace(const Id &id) { 
       if (!this->isSetSpace())
         return false;
-      if (this->getSetTupleId() == id)
+      if (this->getSetTupleId() != id)
         return false;
       return true;
     }
@@ -286,7 +286,7 @@ namespace isl {
 
       if (!this->isMapSpace())
         return false;
-       return matches(isl_dim_in, domainSpace, isl_dim_set) &&  matches(isl_dim_out, rangeSpace, isl_dim_set);
+      return matches(isl_dim_in, domainSpace, isl_dim_set) &&  matches(isl_dim_out, rangeSpace, isl_dim_set);
 
       if (this->getInDimCount() != domainSpace.getSetDimCount())
         return false;
@@ -319,9 +319,11 @@ namespace isl {
     void wrap();
     void unwrap();
 
-    void domain();
+    Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
+    Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
+
     void fromDomain();
-    void range();
+    
     void fromRange();
     void params();
     void setFromParams();
@@ -342,11 +344,15 @@ namespace isl {
     BasicMap createUniverseBasicMap() const;
 
     UnionMap createEmptyUnionMap() const;
+
+        AstBuild createAstBuild() const;
 #pragma endregion
 
     LocalSpace asLocalSpace() const;
 
-    AstBuild createAstBuild() const;
+    Space setNested(isl_dim_type type, const Space &nest) const { return Space::enwrap(isl_space_set_nested(takeCopy(), type, nest.takeCopy())); }
+    Space setInNested(const Space &nest) const  { return Space::enwrap(isl_space_set_nested(takeCopy(), isl_dim_in, nest.takeCopy())); }
+    Space setOutNested(const Space &nest) const  { return Space::enwrap(isl_space_set_nested(takeCopy(), isl_dim_out, nest.takeCopy())); }
   }; // class Space
 
 

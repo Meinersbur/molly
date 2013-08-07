@@ -157,7 +157,7 @@ namespace isl {
     const SpaceTy *getDerived() const { return static_cast<const D*>(this); }
 
 #pragma region To be implementend by Derived
-   //friend class isl::Spacelike3<ObjTy>;
+    //friend class isl::Spacelike3<ObjTy>;
   public:
     // mandatory
     //Space getSpace() const;
@@ -253,7 +253,7 @@ namespace isl {
     unsigned getDivDimCount() const { return getDerived()->dim(isl_dim_div); }
     unsigned getAllDimCount() const { 
       auto result = getDerived()->dim(isl_dim_all);
-      assert(result = getParamDimCount() + getSetDimCount() +  getInDimCount() + getOutDimCount() + getDivDimCount());
+      assert(result == dim(isl_dim_param) + dim(isl_dim_in) + dim(isl_dim_out)  + dim(isl_dim_div));
       return result;
     }
 
@@ -370,7 +370,7 @@ namespace isl {
     Dim addOutDim_inplace() ISLPP_INPLACE_QUALIFIER {
       return getDerived()->addDim_inplace(isl_dim_out);
     }
-     Dim addSetDim_inplace() ISLPP_INPLACE_QUALIFIER {
+    Dim addSetDim_inplace() ISLPP_INPLACE_QUALIFIER {
       return getDerived()->addDim_inplace(isl_dim_out);
     }
   }; // class Spacelike3
@@ -378,30 +378,30 @@ namespace isl {
 
   template<typename D> D setTupleName(Spacelike3<D> &&spacelike, isl_dim_type type, const char *s) { spacelike.setTupleName_inplace(type, s); return std::move(spacelike); }
   template<typename D> D setTupleName(const Spacelike3<D> &spacelike, isl_dim_type type, const char *s) { return spacelike.setTupleName(type, s); }
- 
-    template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, Id &&id) { spacelike.setTupleId_inplace(type, std::move(id)); return std::move(spacelike); }
-  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, Id &&id) { return spacelike.setTupleId(type, std::move(id)); }
-     template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, const Id &id) { spacelike.setTupleId_inplace(type, id.copy()); return std::move(spacelike); }
-  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, const Id &id) { return spacelike.setTupleId(type, id.copy()); }
- 
-    template<typename D> D setDimName(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const char *s) { spacelike.setDimName_inplace(type, pos, s); return std::move(spacelike); }
-      template<typename D> D setDimName(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const char *s) { return spacelike.setDimName(type, pos, s); }
 
-   template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, Id &&id) { spacelike.setDimId_inplace(type, pos, std::move(id)); return std::move(spacelike); }
- template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, Id &&id) { return spacelike.setDimId(type, pos, std::move(id)); }
-    template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const Id &id) { spacelike.setDimId_inplace(type, pos, id.copy()); return std::move(spacelike); }
- template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const Id &id) { return spacelike.setDimId(type, pos, id.copy()); }
+  template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, Id &&id) { spacelike.setTupleId_inplace(type, std::move(id)); return std::move(spacelike); }
+  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, Id &&id) { return spacelike.setTupleId(type, std::move(id)); }
+  template<typename D> D setTupleId(Spacelike3<D> &&spacelike, isl_dim_type type, const Id &id) { spacelike.setTupleId_inplace(type, id.copy()); return std::move(spacelike); }
+  template<typename D> D setTupleId(const Spacelike3<D> &spacelike, isl_dim_type type, const Id &id) { return spacelike.setTupleId(type, id.copy()); }
+
+  template<typename D> D setDimName(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const char *s) { spacelike.setDimName_inplace(type, pos, s); return std::move(spacelike); }
+  template<typename D> D setDimName(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const char *s) { return spacelike.setDimName(type, pos, s); }
+
+  template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, Id &&id) { spacelike.setDimId_inplace(type, pos, std::move(id)); return std::move(spacelike); }
+  template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, Id &&id) { return spacelike.setDimId(type, pos, std::move(id)); }
+  template<typename D> D setDimId(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, const Id &id) { spacelike.setDimId_inplace(type, pos, id.copy()); return std::move(spacelike); }
+  template<typename D> D setDimId(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, const Id &id) { return spacelike.setDimId(type, pos, id.copy()); }
 
   template<typename D> D addDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned count) { spacelike.addDims_inplace(type, count); return std::move(spacelike); }
   template<typename D> D addDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned count) { return spacelike.addDims(type, count); }
 
-   template<typename D> D insertDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, unsigned count) { spacelike.insertDims_inplace(type, pos, count); return std::move(spacelike); }
+  template<typename D> D insertDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned pos, unsigned count) { spacelike.insertDims_inplace(type, pos, count); return std::move(spacelike); }
   template<typename D> D insertDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned pos, unsigned count) { return spacelike.insertDims(type, pos, count); }
 
-   template<typename D> D moveDims(Spacelike3<D> &&spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { spacelike.moveDims_inplace(dst_type, dst_pos, src_type, src_pos, count); return std::move(spacelike); }
- template<typename D> D moveDims(const Spacelike3<D> &spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { return spacelike.moveDims(dst_type, dst_pos, src_type, src_pos, count); }
- 
-   template<typename D> D removeDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned first, unsigned count) { spacelike.removeDims_inplace(type, first, count); return std::move(spacelike); }
+  template<typename D> D moveDims(Spacelike3<D> &&spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { spacelike.moveDims_inplace(dst_type, dst_pos, src_type, src_pos, count); return std::move(spacelike); }
+  template<typename D> D moveDims(const Spacelike3<D> &spacelike, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) { return spacelike.moveDims(dst_type, dst_pos, src_type, src_pos, count); }
+
+  template<typename D> D removeDims(Spacelike3<D> &&spacelike, isl_dim_type type, unsigned first, unsigned count) { spacelike.removeDims_inplace(type, first, count); return std::move(spacelike); }
   template<typename D> D removeDims(const Spacelike3<D> &spacelike, isl_dim_type type, unsigned first, unsigned count) { return spacelike.removeDims(type, first, count); }
 
 

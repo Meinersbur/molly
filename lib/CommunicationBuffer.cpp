@@ -11,14 +11,24 @@ using namespace llvm;
 using namespace std;
 
 
-  llvm::Value *CommunicationBuffer::getBufferBase(llvm::IRBuilder<> &builder) {
-    auto &llvmContext = builder.getContext();
-    auto intTy = Type::getInt32Ty(llvmContext);
+llvm::Value *CommunicationBuffer::getSendBufferBase(DefaultIRBuilder &builder) {
+  auto &llvmContext = builder.getContext();
+  auto intTy = Type::getInt32Ty(llvmContext);
 
-    auto ptr = builder.CreateConstGEP1_32(var,0, "combuf_base");
-    auto bufbase = builder.CreateLoad(ptr);
-    return bufbase;
-  }
+  auto ptr = builder.CreateConstGEP1_32(varsend,0, "combufsend_base");
+  auto bufbase = builder.CreateLoad(ptr);
+  return bufbase;
+}
+
+
+llvm::Value *CommunicationBuffer::getRecvBufferBase(DefaultIRBuilder &builder) {
+  auto &llvmContext = builder.getContext();
+  auto intTy = Type::getInt32Ty(llvmContext);
+
+  auto ptr = builder.CreateConstGEP1_32(varrecv,0, "combufrecv_base");
+  auto bufbase = builder.CreateLoad(ptr);
+  return bufbase;
+}
 
 
 void CommunicationBuffer::doLayoutMapping() {
@@ -51,25 +61,25 @@ void CommunicationBuffer::doLayoutMapping() {
 }
 
 
-llvm::Value *CommunicationBuffer::codegenReadFromBuffer(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices) {
+llvm::Value *CommunicationBuffer::codegenReadFromBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices) {
   auto &llvmContext = builder.getContext();
   auto intTy = Type::getInt32Ty(llvmContext);
 
   auto linear = mapping->codegen(builder, params, indices);
-  auto base = getBufferBase(builder);
+  auto base = getRecvBufferBase(builder);
   auto ptr = builder.CreateGEP(base, linear, "local_ptr");
 
   return builder.CreateLoad(ptr, "field_val");
 }
 
 
- void CommunicationBuffer::codegenWriteToBuffer(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices) {
-   auto &llvmContext = builder.getContext();
-   auto intTy = Type::getInt32Ty(llvmContext);
-   
-   auto linear = mapping->codegen(builder, params, indices);
-   auto base = getBufferBase(builder);
-   auto ptr = builder.CreateGEP(base, linear, "local_ptr");
+void CommunicationBuffer::codegenWriteToBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices) {
+  auto &llvmContext = builder.getContext();
+  auto intTy = Type::getInt32Ty(llvmContext);
 
-   builder.CreateStore(value,ptr);
- }
+  auto linear = mapping->codegen(builder, params, indices);
+  auto base = getSendBufferBase(builder);
+  auto ptr = builder.CreateGEP(base, linear, "local_ptr");
+
+  builder.CreateStore(value,ptr);
+}

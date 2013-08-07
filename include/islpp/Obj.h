@@ -246,7 +246,7 @@ namespace isl {
     ~Obj3() { 
 #ifndef NDEBUG
       if (obj && _lastWasCopy) {
-        llvm::dbgs() << "PerfWarn: isl::Obj " << _printed << " has been copied from, but not reused after that. Try to use _inplace methods or rvalue references.\n";
+        //llvm::dbgs() << "PerfWarn: isl::Obj " << _printed << " has been copied from, but not reused after that. Try to use _inplace methods or rvalue references.\n";
       }
 #endif
       getDerived()->release();

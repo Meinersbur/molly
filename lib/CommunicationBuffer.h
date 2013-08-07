@@ -16,7 +16,8 @@ namespace molly {
 
   class CommunicationBuffer {
   private:
-    llvm::GlobalVariable *var;
+    llvm::GlobalVariable *varsend;
+    llvm::GlobalVariable *varrecv;
     //uint64_t baseOffset;
     FieldType *fty;
     isl::Map relation; /* { (src[coord] -> dst[coord]) -> field[indexset] } */
@@ -24,24 +25,29 @@ namespace molly {
     AffineMapping *mapping;
     isl::PwAff countElts;
 
-    llvm::Value *getBufferBase(llvm::IRBuilder<> &builder);
+    llvm::Value *getSendBufferBase(DefaultIRBuilder &builder);
+    llvm::Value *getRecvBufferBase(DefaultIRBuilder &builder);
 
   protected:
     CommunicationBuffer() : fty(nullptr), mapping(nullptr) { }
     ~CommunicationBuffer() { delete mapping; }
 
   public:
-    static CommunicationBuffer *create(llvm::GlobalVariable *var, /*uint64_t baseOffset,*/ FieldType *fty, isl::Map &&relation) {
+    static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv,  FieldType *fty, isl::Map &&relation) {
       auto result = new CommunicationBuffer();
-      result->var = var;
+      result->varsend = varsend;
+      result->varrecv = varrecv;
       //result->baseOffset = baseOffset;
       result->fty = fty;
       result->relation = std::move(relation);
       return result;
     }
 
-    llvm::GlobalVariable *getVariable() const {
-      return var;
+    llvm::GlobalVariable *getVariableSend() const {
+      return varsend;
+    }
+    llvm::GlobalVariable *getVariableRecv() const {
+      return varrecv;
     }
 
     FieldType *getFieldType() const {
@@ -57,8 +63,8 @@ namespace molly {
      const AffineMapping *getMapping() { return mapping; }
      isl::PwAff getEltCount() { return countElts; }
 
-    llvm::Value *codegenReadFromBuffer(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices);
-    void codegenWriteToBuffer(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices);
+    llvm::Value *codegenReadFromBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices);
+    void codegenWriteToBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices);
 
   }; // class CommunicationBuffer
 } // namespace molly

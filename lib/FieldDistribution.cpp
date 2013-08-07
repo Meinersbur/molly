@@ -132,7 +132,7 @@ bool FieldDistribution::runOnFieldType(FieldType *fieldTy) {
     locallengths.push_back(localLen);
   }
   fieldTy->setDistributed();
-  fieldTy->setLocalLength(locallengths);
+  fieldTy->setLocalLength(locallengths, isl::Id());
   return true;
 }
 

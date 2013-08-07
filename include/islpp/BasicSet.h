@@ -117,9 +117,11 @@ namespace isl {
 
     static BasicSet readFromFile(Ctx *ctx, FILE *input);
     static BasicSet readFromStr(Ctx *ctx, const char *str);
+#pragma endregion
 
-    //BasicSet copy() const { return wrap(isl_basic_set_copy(keep())); }
-    //BasicSet &&move() { return std::move(*this); }
+
+#pragma region Conversion
+    Set toSet() const;
 #pragma endregion
 
 

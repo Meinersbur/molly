@@ -475,6 +475,9 @@ namespace isl {
 
     /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy()));} 
+
+    void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_map_cast(take(), space.takeCopy())); }
+    Map cast(const Space &space) const { return Map::enwrap(isl_map_cast(takeCopy(), space.takeCopy())); }
   }; // class Map
 
 

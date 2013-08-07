@@ -65,8 +65,8 @@ namespace llvm {
   // #include <llvm/IR/IRBuilder.h>
   // TODO: Do not pass IRBuilder<> as argument to codegen functions
   class ConstantFolder;
-  template<bool preserveNames = true> class IRBuilderDefaultInserter;
-  template<bool preserveNames = true, typename T = ConstantFolder, typename Inserter = IRBuilderDefaultInserter<preserveNames>> class IRBuilder;
+  template<bool preserveNames> class IRBuilderDefaultInserter;
+  template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
 
   // #include <llvm/IR/LLVMContext.h>
   class LLVMContext;
@@ -96,4 +96,10 @@ namespace llvm {
   } // namespace CodeGen
 
 } // namespace llvm
+
+
+namespace molly {
+  typedef llvm::IRBuilder<true,llvm::ConstantFolder,llvm::IRBuilderDefaultInserter<true>> DefaultIRBuilder;
+} // namespace molly;
+
 #endif /* MOLLY_LLVMFWD_H */

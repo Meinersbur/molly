@@ -25,7 +25,7 @@ namespace molly {
     llvm::ArrayRef<unsigned> getOffsets() {return offsets;}
 
     int map(llvm::ArrayRef<unsigned> coords) const;
-    llvm::Value *codegen(llvm::IRBuilder<> &builder, llvm::ArrayRef<llvm::Value*> coords);
+    llvm::Value *codegen(DefaultIRBuilder &builder, llvm::ArrayRef<llvm::Value*> coords);
 
   }; // class RectangularMapping
 

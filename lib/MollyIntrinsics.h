@@ -12,9 +12,9 @@ namespace molly {
 
 namespace molly {
 
-  llvm::Value *codegenReadLocal(llvm::IRBuilder<> &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices);
-  void codegenWriteLocal(llvm::IRBuilder<> &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, llvm::Value *val);
+  llvm::Value *codegenReadLocal(DefaultIRBuilder &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices);
+  void codegenWriteLocal(DefaultIRBuilder &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, llvm::Value *val);
 
- void codegenSendBuf(llvm::IRBuilder<> &builder, molly::CommunicationBuffer *buf, llvm::Value *dstCoord) ;
+ void codegenSendBuf(DefaultIRBuilder &builder, molly::CommunicationBuffer *buf, llvm::Value *dstCoord) ;
 } // namespace molly
 #endif /* MOLLY_MOLLYINTRINSICS_H */

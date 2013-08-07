@@ -45,6 +45,7 @@ namespace molly {
     // Local shape(s)
     bool isdistributed;
     llvm::SmallVector<int, 4> localLengths;
+    isl::Id clusterTupleId;
     //isl::Set localShape
 
     //llvm::Function *reffunc;
@@ -107,9 +108,10 @@ namespace molly {
     void setDistributed(bool val = true) {
       isdistributed = val;
     }
-    void setLocalLength(const llvm::ArrayRef<int> &lengths) {
+    void setLocalLength(const llvm::ArrayRef<int> &lengths, const isl::Id &clusterId) {
       this->localLengths.clear();
       this->localLengths.append(lengths.begin(), lengths.end());
+      this->clusterTupleId = clusterId;
     }
     //void setDistribution(const llvm::ArrayRef<int> &localLengths )
     isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */

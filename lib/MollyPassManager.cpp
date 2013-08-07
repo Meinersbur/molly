@@ -201,7 +201,8 @@ namespace molly {
 
         auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
         auto home = fieldTy->getHomeAff(); /* field coord -> cluster coord */
-        auto it2rank = rel.toMap().applyRange(home.toMap());
+        auto relMap = rel.toMap().setOutTupleId(fieldTy->getIndexsetTuple());
+        auto it2rank = relMap.applyRange(home.toMap());
 
         if (acc.isRead()) {
           executeWhereRead = unite(executeWhereRead.subtractDomain(it2rank.getDomain()), it2rank);
@@ -234,6 +235,8 @@ namespace molly {
         auto result = executeEverywhere;
         result = unite(result.subtractDomain(executeWhereRead.getDomain()), executeWhereRead);
         result = unite(result.subtractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
+
+        result.setOutTupleId_inplace(pm->clusterConf->getClusterTuple());
         stmt->setWhereMap(result.take());
         // FIXME: We must ensure that depended instructions are executed on the same node. Execute on multiple nodes if necessary
 
@@ -373,6 +376,7 @@ namespace molly {
         assert(allScatters.nSet()==1);
         auto scatterRange = allScatters.extractSet(scatterRangeSpace); 
         assert(scatterRange.isValid());
+        auto nScatterDims = scatterRange.getDimCount();
 
         auto max = scatterRange.dimMax(0) + 1;
         max.setInTupleId_inplace(scatterId);
@@ -382,9 +386,10 @@ namespace molly {
           epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
         }
 
-        auto min = scatterRange.dimMin(0) - 1;
-        min.setInTupleId_inplace(scatterId);
-        auto beforeScopScatter = scatterRangeSpace.createZeroMultiPwAff();
+        auto min = scatterRange.dimMin(0) - 1; /* { [1] } */
+        min.addDims_inplace(isl_dim_in, nScatterDims);
+        min.setInTupleId_inplace(scatterId); /* { scattering[nScatterDims] -> [1] } */
+        auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
         beforeScopScatter.setPwAff_inplace(0, min);
         auto beforeScopScatterRange = beforeScopScatter.toMap().getRange();
 
@@ -458,22 +463,26 @@ namespace molly {
 
           auto accessRel = facc.getAccessRelation(); /* { stmtRead[domain] -> field[indexset] } */
           assert(accessRel.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
+          accessRel.intersectDomain_inplace(domainRead);
 
           auto whereRead = getWhereMap(stmtRead); /* { stmtRead[domain] -> cluster[node] } */
           assert(whereRead.getSpace().matchesMapSpace(domainSpace, nodeSpace));
-          auto wherePairs = whereRead.wrap(); /* { (stmtRead[domain] -> cluster[node]) } */ // All execution instances of this ScopStmt
+          auto wherePairs = whereRead.wrap(); /* { (stmtRead[domain] -> rank[node]) } */ // All execution instances of this ScopStmt
 
           // Find those who are already at their home location
           // For every execution of a stmt on a specific node
           auto homeRel = fty->getHomeRel(); /* { cluster[node] -> field[indexset] } */
+          homeRel.setInTupleId_inplace(pm->clusterConf->getClusterTuple());
           assert(homeRel.getSpace().matchesMapSpace(clusterTuple, fieldTuple));
 
-          auto wherePairsAccesses = accessRel.addInDims(nodeSpace.getSetDimCount()).intersectDomain(wherePairs); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
+          auto wherePairsAccesses = accessRel.addInDims(nodeSpace.getSetDimCount()); 
+          wherePairsAccesses.cast_inplace(wherePairs.getSpace().mapsTo(homeRel.getSpace().range()));
+          wherePairsAccesses = wherePairsAccesses.intersectDomain(wherePairs); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
           auto c = wherePairsAccesses.chain(homeRel.reverse()); /* { ((stmtRead[domain] -> cluster[node]) -> field[indexset]) -> cluster[node] } */ // Oh my goodness
           // condition: node on which read is executed==node the read value is home
           auto homePairAccesses = c;
           for (auto i = 0; i < nClusterDims; i+=1) {
-            homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + nClusterDims   +i, isl_dim_out, i);
+            homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + i, isl_dim_out, i);
           }
           auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
           auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
@@ -1590,7 +1599,7 @@ namespace molly {
     template<typename T>
     T* findAnalysis(Function *func, Region *region) {
       auto passID = &T::ID;
-      auto pass = findAnalysis(passID, func. region);
+      auto pass = findAnalysis(passID, func, region);
       return static_cast<T*>(pass->getAdjustedAnalysisPointer(passID));
     }
 
@@ -1743,7 +1752,7 @@ namespace molly {
         locallengths.push_back(localLen);
       }
       fty->setDistributed();
-      fty->setLocalLength(locallengths);
+      fty->setLocalLength(locallengths, clusterConf->getClusterTuple());
     }
 
 
@@ -1987,8 +1996,9 @@ namespace molly {
 
   public :
     CommunicationBuffer *newCommunicationBuffer(FieldType *fty, isl::Map &&relation) {
-      auto comvar = new GlobalVariable(*module, runtimeMetadata.tyCombuf, false, GlobalValue::PrivateLinkage, nullptr, "combuf");
-      auto result =  CommunicationBuffer::create(comvar, fty, relation.copy());
+      auto comvarSend = new GlobalVariable(*module, runtimeMetadata.tyCombufSend, false, GlobalValue::PrivateLinkage, nullptr, "combufsend");
+      auto comvarRecv = new GlobalVariable(*module, runtimeMetadata.tyCombufRecv, false, GlobalValue::PrivateLinkage, nullptr, "combufrecv");
+      auto result =  CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy());
       combufs.push_back(result);
       return result;
     }
@@ -2077,7 +2087,8 @@ namespace molly {
     clang::CodeGen::MollyRuntimeMetadata runtimeMetadata;
 
   public:
-    llvm::Type *getCombufType() { return runtimeMetadata.tyCombuf; } 
+    llvm::Type *getCombufSendType() { return runtimeMetadata.tyCombufSend; } 
+    llvm::Type *getCombufRecvType() { return runtimeMetadata.tyCombufRecv; } 
     llvm::Function *getCombufSendFunc() { return runtimeMetadata.funcCombufSend; }
 #pragma endregion
 

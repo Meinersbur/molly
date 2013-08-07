@@ -236,8 +236,12 @@ extern int _cart_local_coord[1];
 extern int _rank_local;
 
 namespace molly {
-typedef int rank_t;
+  class SendCommunicationBuffer;
+ class RecvCommunicationBuffer;
 
+typedef int rank_t;
+typedef SendCommunicationBuffer combufsend_t;
+typedef RecvCommunicationBuffer combufrecv_t;
 
 
 void init(int &argc, char **&argv, int clusterDims, int *dimLengths, bool *dimPeriodical);
@@ -734,10 +738,12 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       if (std::getenv("bla")==(char*)-1) {
         MOLLY_DEBUG("This should never execute");
         // Dead code, but do not optimize away so the template functions get instantiated
+        //TODO: Modify clang::CodeGen to generate the unconditionally
         T dummy;
         (void)ptr(static_cast<int>(L)...);
         (void)__get_local(dummy, static_cast<int>(L)...);
         (void)__set_local(dummy, static_cast<int>(L)...);
+        (void)__ptr_local(static_cast<int>(L)...);
         (void)__get_broadcast(dummy, static_cast<int>(L)...);
         (void)__set_broadcast(dummy, static_cast<int>(L)...);
         (void)__get_master(dummy, static_cast<int>(L)...);
@@ -869,7 +875,9 @@ namespace molly {
  class RecvCommunicationBuffer;
 
 } // namespace molly;
-extern "C" void __molly_combuf_send(SendCommunicationBuffer *combuf);
-extern "C" void __molly_combuf_recv(RecvCommunicationBuffer *combuf);
+extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size);
+extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size);
+extern "C" void __molly_combuf_send(molly::SendCommunicationBuffer *combuf);
+extern "C" void __molly_combuf_recv(molly::RecvCommunicationBuffer *combuf);
 
 #endif /* MOLLY_H */

@@ -239,7 +239,7 @@ int molly::getClusterLength(int d) {
 
 
  namespace molly {
-   class SendCommunicationBuffer{
+   class SendCommunicationBuffer {
    private:
      void *buf;
      size_t size;
@@ -248,7 +248,7 @@ int molly::getClusterLength(int d) {
    public:
    };
 
-   class RecvCommunicationBuffer{
+   class RecvCommunicationBuffer {
    private:
      void *buf;
      size_t size;
@@ -270,12 +270,16 @@ int molly::getClusterLength(int d) {
  } // namespace molly
 
 
- extern "C" void __molly_combuf_send(SendCommunicationBuffer *combuf) {
+ extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size) {
+ }
 
+ extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size) {
+ }
+
+ extern "C" void __molly_combuf_send(SendCommunicationBuffer *combuf) {
  }
 
  extern "C" void __molly_combuf_recv(RecvCommunicationBuffer *combuf) {
-
  }
 
 

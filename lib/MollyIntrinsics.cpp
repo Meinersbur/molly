@@ -30,7 +30,7 @@ Value *molly::codegenReadLocal(IRBuilder<> &builder, FieldVariable *fvar, ArrayR
 } 
 
 
-void molly::codegenWriteLocal(IRBuilder<> &builder, FieldVariable *fvar, ArrayRef<Value*> indices, Value *val) {
+void molly::codegenWriteLocal(DefaultIRBuilder &builder, FieldVariable *fvar, ArrayRef<Value*> indices, Value *val) {
   auto fty = fvar->getFieldType();
   auto funcPtrLocal = fty->getFuncPtrLocal();
 
@@ -42,11 +42,11 @@ void molly::codegenWriteLocal(IRBuilder<> &builder, FieldVariable *fvar, ArrayRe
 }
 
 
-void molly::codegenSendBuf(llvm::IRBuilder<> &builder, molly::CommunicationBuffer *buf, llvm::Value *dstCoord) {
+void molly::codegenSendBuf(DefaultIRBuilder &builder, molly::CommunicationBuffer *buf, llvm::Value *dstCoord) {
   auto module = getParentModule(builder.GetInsertBlock());
    auto sendFunc = module->getFunction("__molly_buf_send");
 
-   auto var = buf->getVariable();
+   auto var = buf->getVariableSend();
    auto fty = buf->getFieldType();
    auto rel = buf->getRelation(); /* { (src[coord] -> dst[coord]) -> field[indexset] } */
 

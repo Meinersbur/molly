@@ -38,7 +38,7 @@ isl::MultiAff ClusterConfig::getMasterRank() const {
 }
 
 
-llvm::Value *ClusterConfig::codegenComputeRank(llvm::IRBuilder<> &builder, ArrayRef<Value*> coords) {
+llvm::Value *ClusterConfig::codegenComputeRank(DefaultIRBuilder &builder, ArrayRef<Value*> coords) {
   auto &llvmContext = builder.getContext();
   auto intTy = Type::getInt32Ty(llvmContext);
 

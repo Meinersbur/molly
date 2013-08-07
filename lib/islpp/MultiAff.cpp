@@ -120,3 +120,7 @@ Map Multi<Aff>::toMap() const {
 PwMultiAff Multi<Aff>::restrictDomain(Set &&set) const {
   return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
 }
+
+PwMultiAff Multi<Aff>::restrictDomain(const Set &set) const {
+  return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), takeCopy()));
+}

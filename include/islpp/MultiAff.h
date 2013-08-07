@@ -219,12 +219,13 @@ namespace isl {
 
 #pragma region Derived
     PwMultiAff restrictDomain(Set &&set) const;
+    PwMultiAff restrictDomain(const Set &set) const;
 #pragma endregion
   }; // class MultiAff
 
 
   static inline MultiAff enwrap(__isl_take isl_multi_aff *obj) { return MultiAff::enwrap(obj); }
- static inline MultiAff enwrapCopy(__isl_keep isl_multi_aff *obj) { return MultiAff::enwrapCopy(obj); }
+  static inline MultiAff enwrapCopy(__isl_keep isl_multi_aff *obj) { return MultiAff::enwrapCopy(obj); }
 
 
   static inline bool plainIsEqual(const Multi<Aff> &maff1, const Multi<Aff> &maff2) { return isl_multi_aff_plain_is_equal(maff1.keep(), maff2.keep()); }

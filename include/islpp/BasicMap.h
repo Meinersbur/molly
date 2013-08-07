@@ -203,6 +203,9 @@ namespace isl {
 
      bool foreachConstraint(const std::function<bool(Constraint)> &func) const;
     std::vector<Constraint> getConstraints() const;
+
+       void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_cast(take(), space.takeCopy())); }
+    BasicMap cast(const Space &space) const { return BasicMap::enwrap(isl_basic_map_cast(takeCopy(), space.takeCopy())); }
   }; // class BasicMap
 
 

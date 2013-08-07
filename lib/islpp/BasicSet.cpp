@@ -98,6 +98,12 @@ BasicSet BasicSet::readFromStr(Ctx *ctx, const char *str) {
   return BasicSet::wrap(isl_basic_set_read_from_str(ctx->keep(), str));
 }
 
+
+ Set BasicSet:: toSet() const {
+   return Set::enwrap(isl_set_from_basic_set(takeCopy()));
+ }
+
+
 void BasicSet::print(llvm::raw_ostream &out) const { 
   molly::CstdioFile tmp;
   isl_basic_set_print(this->keep(), tmp.getFileDescriptor(), 0, "prefix", "suffix", ISL_FORMAT_ISL);

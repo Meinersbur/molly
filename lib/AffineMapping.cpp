@@ -30,7 +30,7 @@ using namespace molly;
   }
 
 
- llvm::Value *AffineMapping::codegen(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords) {
+ llvm::Value *AffineMapping::codegen(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords) {
    // FIXME: coords bot used
    // TODO: This is piecewise, can make SCopStmts instead
   return buildIslAff(builder, mapping, params);

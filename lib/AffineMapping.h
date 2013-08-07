@@ -25,7 +25,7 @@ namespace molly {
 
    isl::Set getIndexset() const;
 
-     llvm::Value *codegen(llvm::IRBuilder<> &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords);
+     llvm::Value *codegen(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords);
   }; // class AffineMapping
 
 } // namespace molly

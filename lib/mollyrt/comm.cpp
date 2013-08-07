@@ -21,18 +21,18 @@ namespace molly {
     virtual void startDistributed() { }
     virtual void stopDistributed() { }
     //TODO: rank type configurable
-    virtual uint32_t getMyRank() {}
+    virtual uint32_t getMyRank() { return 0; }
     virtual bool isMaster() { return false; }
 #pragma endregion
 
 
 #pragma region Communication buffers
-    virtual void *createSendBuffer(size_t length, uint32_t destRank) { }
+    virtual void *createSendBuffer(size_t length, uint32_t destRank) { return nullptr; }
     virtual void freeSendBuffer(void  *buf) {}
     virtual void sendAll() {}
     virtual void waitSend() {}
 
-    virtual void *createRecvBuffer(size_t length, uint32_t senderRank) {}
+    virtual void *createRecvBuffer(size_t length, uint32_t senderRank) { return nullptr; }
     virtual void freeRecvBuffer(void  *buf) {}
     virtual void waitRecv() {}
 //#pragma endregion

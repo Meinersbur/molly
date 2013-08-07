@@ -89,7 +89,7 @@ const llvm::Module *getParentModule(const llvm::BasicBlock *bb);
 llvm::Module *getParentModule(llvm::BasicBlock *bb);
 const llvm::Module *getParentModule(const llvm::GlobalValue *bb);
 llvm::Module *getParentModule(llvm::GlobalValue *bb);
-llvm::Module *getParentModule(llvm::IRBuilder<> &builder);
+llvm::Module *getParentModule(DefaultIRBuilder &builder);
 
 //bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
 //bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);

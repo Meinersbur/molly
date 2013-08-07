@@ -141,6 +141,7 @@ Map Space::universeMap() const {
 
 
 Aff Space::createZeroAff() const {
+  assert(isSetSpace());
   return Aff::enwrap(isl_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
 
@@ -173,6 +174,7 @@ MultiAff Space::createZeroMultiAff() const {
 
 
 MultiPwAff Space::createZeroMultiPwAff() const {
+  assert(this->isMapSpace());
   return MultiPwAff::enwrap(isl_multi_pw_aff_zero(takeCopy()));
 }
 
@@ -311,15 +313,11 @@ void Space::unwrap() {
 }
 
 
-void Space::domain(){
-  give(isl_space_domain(take()));
-}
-void Space:: fromDomain(){
+
+void Space::fromDomain(){
   give(isl_space_from_domain(take()));
 }
-void Space::range(){
-  give(isl_space_range(take()));
-}
+
 void Space:: fromRange() {
   give(isl_space_from_range(take()));
 }
@@ -330,7 +328,7 @@ void Space::params(){
 void Space::setFromParams(){
   give(isl_space_set_from_params(take()));
 }
-void Space:: reverse(){
+void Space::reverse(){
   give(isl_space_reverse(take()));
 }
 

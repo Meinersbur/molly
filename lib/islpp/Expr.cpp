@@ -27,8 +27,8 @@ namespace isl {
     ~ExprImpl() {}
 
   public:
-    explicit ExprImpl(LocalSpace &&ls) : space(std::move(ls)), refs(1), coeffs(this->space.getAllDimCount()/*ls has been moved from*/) {}
-    explicit ExprImpl(const LocalSpace &ls) : space(space), refs(1), coeffs(ls.getAllDimCount()) {}
+    explicit ExprImpl(LocalSpace &&ls) : space(std::move(ls)), refs(1), coeffs(1/*isl_dim_cst*/ + this->space.getAllDimCount()/*ls has been moved from*/) {}
+    explicit ExprImpl(const LocalSpace &ls) : space(space), refs(1), coeffs(1/*isl_dim_cst*/ + ls.getAllDimCount()) {}
     /* implicit */ ExprImpl(const ExprImpl &that) : space(that.space), refs(1), coeffs(that.coeffs) {}
 
     void release() {
