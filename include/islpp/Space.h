@@ -40,10 +40,10 @@ extern "C" {
 
 namespace isl {
   /// Whenever a new set, relation or similar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
-  class Space : public Obj3<Space,isl_space>, public Spacelike3<Space> {
+  class Space : public Obj<Space,isl_space>, public Spacelike<Space> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_space_free(takeOrNull()); }
     StructTy *addref() const { return isl_space_copy(keepOrNull()); }
@@ -52,8 +52,8 @@ namespace isl {
     Space() { }
     //static ObjTy wrap(StructTy *obj) { return Space::enwrap(obj); }// obsolete
 
-    /* implicit */ Space(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Space(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Space(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Space(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
@@ -63,8 +63,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return *this; }
     Space getSpacelike() const { return *this; }

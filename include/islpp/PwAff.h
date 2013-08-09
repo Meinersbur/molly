@@ -37,10 +37,10 @@ namespace isl {
 namespace isl {
 
   template<> 
-  class Pw<Aff> : public Obj3<Pw<Aff>, isl_pw_aff>, public Spacelike3<Pw<Aff>> {
+  class Pw<Aff> : public Obj<Pw<Aff>, isl_pw_aff>, public Spacelike<Pw<Aff>> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_pw_aff_free(takeOrNull()); }
     StructTy *addref() const { return isl_pw_aff_copy(keepOrNull()); }
@@ -49,8 +49,8 @@ namespace isl {
     Pw() { }
     //static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    /* implicit */ Pw(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Pw(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Pw(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Pw(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
@@ -60,8 +60,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-   friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+   friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_pw_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
@@ -112,8 +112,8 @@ namespace isl {
 
 #pragma region Conversion
     // from Aff
-    Pw(const Aff &aff) : Obj3( isl_pw_aff_from_aff(aff.takeCopy()) ) {}
-    Pw(Aff &&aff) : Obj3(isl_pw_aff_from_aff(aff.take())) {}
+    Pw(const Aff &aff) : Obj( isl_pw_aff_from_aff(aff.takeCopy()) ) {}
+    Pw(Aff &&aff) : Obj(isl_pw_aff_from_aff(aff.take())) {}
     const PwAff &operator=(const Aff &aff) LLVM_LVALUE_FUNCTION { give(isl_pw_aff_from_aff(aff.takeCopy())); return *this; }
     const PwAff &operator=(Aff &&aff) LLVM_LVALUE_FUNCTION { give(isl_pw_aff_from_aff(aff.take())); return *this; }
 

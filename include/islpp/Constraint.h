@@ -30,20 +30,20 @@ namespace isl {
 
 
 namespace isl {
-  class Constraint : public Obj3<Constraint, struct isl_constraint> {
+  class Constraint : public Obj<Constraint, struct isl_constraint> {
 
 #pragma region isl::Obj
-    friend class isl::Obj3<ObjTy, StructTy>;
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_constraint_free(takeOrNull()); }
     StructTy *addref() const { return isl_constraint_copy(keepOrNull()); }
 
   public:
-    Constraint() : Obj3() { }
+    Constraint() : Obj() { }
     static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    /* implicit */ Constraint(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Constraint(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Constraint(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Constraint(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 

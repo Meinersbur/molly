@@ -37,10 +37,10 @@ namespace isl {
   typedef Multi<Aff> MultiAff;
 
   template<>
-  class Multi<Aff> : public Obj3<MultiAff, isl_multi_aff>, public Spacelike3<MultiAff> {
+  class Multi<Aff> : public Obj<MultiAff, isl_multi_aff>, public Spacelike<MultiAff> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_multi_aff_free(takeOrNull()); }
     StructTy *addref() const { return isl_multi_aff_copy(keepOrNull()); }
@@ -48,8 +48,8 @@ namespace isl {
   public:
     Multi() { }
 
-    /* implicit */ Multi(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Multi(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Multi(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Multi(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
@@ -59,8 +59,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_multi_aff_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }

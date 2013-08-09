@@ -19,10 +19,10 @@ namespace llvm {
 
 
 namespace isl {
-  class Val : public Obj3<Val, isl_val> {
+  class Val : public Obj<Val, isl_val> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_val_free(takeOrNull()); }
     StructTy *addref() const { return isl_val_copy(keepOrNull()); }
@@ -30,8 +30,8 @@ namespace isl {
   public:
     Val() { }
 
-    /* implicit */ Val(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Val(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Val(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Val(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 

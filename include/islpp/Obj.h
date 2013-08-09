@@ -34,7 +34,7 @@ namespace isl {
 
   // Curiously recursive template pattern to avoid virtual function calls
   template<typename D, typename S>
-  class Obj3 {
+  class Obj {
 #ifndef NDEBUG
   public:
     std::string _printed; // A cached toString() output to allow readable value inspection during debugging
@@ -149,7 +149,7 @@ namespace isl {
 #endif
 
   protected:
-    void obj_give(const Obj3<D,S> &that) {
+    void obj_give(const Obj<D,S> &that) {
       if (&that == this)
         return;
 
@@ -163,7 +163,7 @@ namespace isl {
 #endif
     }
 
-    void obj_give(Obj3<D,S> &&that) {
+    void obj_give(Obj<D,S> &&that) {
       assert(&that != this);
 
       if (this->obj)
@@ -243,7 +243,7 @@ namespace isl {
 
 
   public:
-    ~Obj3() { 
+    ~Obj() { 
 #ifndef NDEBUG
       if (obj && _lastWasCopy) {
         //llvm::dbgs() << "PerfWarn: isl::Obj " << _printed << " has been copied from, but not reused after that. Try to use _inplace methods or rvalue references.\n";
@@ -258,20 +258,20 @@ namespace isl {
 
   protected:
 #ifndef NDEBUG
-    Obj3() : _printed(), _lastWasCopy(false), obj(nullptr) {  }
+    Obj() : _printed(), _lastWasCopy(false), obj(nullptr) {  }
 #else
-    Obj3() : obj(nullptr) {  }
+    Obj() : obj(nullptr) {  }
 #endif
 
 #ifndef NDEBUG
-    explicit Obj3(ObjTy &&that) : _printed(std::move(that._printed)), _lastWasCopy(false), obj(that.takeOrNull()) { }
-    explicit Obj3(const ObjTy &that) : _printed(that._printed), _lastWasCopy(false), obj(that.takeCopyOrNull()) { }
+    explicit Obj(ObjTy &&that) : _printed(std::move(that._printed)), _lastWasCopy(false), obj(that.takeOrNull()) { }
+    explicit Obj(const ObjTy &that) : _printed(that._printed), _lastWasCopy(false), obj(that.takeCopyOrNull()) { }
 #else
-    explicit Obj3(ObjTy &&that) : obj(that.takeOrNull()) { }
-    explicit Obj3(const ObjTy &that) : obj(that.keepOrNull()) { }
+    explicit Obj(ObjTy &&that) : obj(that.takeOrNull()) { }
+    explicit Obj(const ObjTy &that) : obj(that.keepOrNull()) { }
 #endif
 
-    explicit Obj3(StructTy *obj) : obj(obj) {
+    explicit Obj(StructTy *obj) : obj(obj) {
 #ifndef NDEBUG
       if (obj) {
         llvm::raw_string_ostream stream(_printed);
@@ -337,7 +337,7 @@ namespace isl {
     void dump() const {
       getDerived()->print( llvm::errs() );
     }
-  }; // class Obj3
+  }; // class Obj
 
 } // namespace isl
 #endif /* ISLPP_OBJ_H */

@@ -28,10 +28,10 @@ namespace isl {
 
 namespace isl {
 
-  class Point : public Obj3<Point, isl_point> {
+  class Point : public Obj<Point, isl_point> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_point_free(takeOrNull()); }
     StructTy *addref() const { return isl_point_copy(keepOrNull()); }
@@ -39,8 +39,8 @@ namespace isl {
   public:
     Point() { }
 
-    /* implicit */ Point(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Point(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Point(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Point(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 

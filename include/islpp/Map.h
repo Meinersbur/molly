@@ -58,10 +58,10 @@ namespace isl {
   };
 
 
-  class Map : public Obj3<Map,isl_map>, public Spacelike3<Map> {
+  class Map : public Obj<Map,isl_map>, public Spacelike<Map> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_map_free(takeOrNull()); }
     StructTy *addref() const { return isl_map_copy(keepOrNull()); }
@@ -69,8 +69,8 @@ namespace isl {
   public:
     Map() { }
 
-    /* implicit */ Map(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Map(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Map(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Map(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
@@ -80,8 +80,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_map_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
@@ -120,20 +120,20 @@ namespace isl {
 
 #pragma region Conversion
     // from BasicMap
-    Map(const BasicMap &bmap) : Obj3(isl_map_from_basic_map(bmap.takeCopy())) {}
-    Map(BasicMap &&bmap) : Obj3(isl_map_from_basic_map(bmap.take())) {}
+    Map(const BasicMap &bmap) : Obj(isl_map_from_basic_map(bmap.takeCopy())) {}
+    Map(BasicMap &&bmap) : Obj(isl_map_from_basic_map(bmap.take())) {}
     const Map &operator=(const BasicMap &bmap) LLVM_LVALUE_FUNCTION { give(isl_map_from_basic_map(bmap.takeCopy())); return *this; }
     const Map &operator=(BasicMap &&bmap) LLVM_LVALUE_FUNCTION { give(isl_map_from_basic_map(bmap.take())); return *this; }
 
     // from MultiAff
-    Map(const MultiAff &maff) : Obj3(isl_map_from_multi_aff(maff.takeCopy())) {}
-    Map(MultiAff &&maff) : Obj3(isl_map_from_multi_aff(maff.take())) {}
+    Map(const MultiAff &maff) : Obj(isl_map_from_multi_aff(maff.takeCopy())) {}
+    Map(MultiAff &&maff) : Obj(isl_map_from_multi_aff(maff.take())) {}
     const Map &operator=(const MultiAff &maff) LLVM_LVALUE_FUNCTION { give(isl_map_from_multi_aff(maff.takeCopy())); return *this; }
     const Map &operator=(MultiAff &&maff) LLVM_LVALUE_FUNCTION { give(isl_map_from_multi_aff(maff.take())); return *this; }
 
     // from PwMultiAff
-    Map(PwMultiAff &&pmaff) : Obj3(isl_map_from_pw_multi_aff(pmaff.take())) {}
-    Map(const PwMultiAff &pmaff) : Obj3(isl_map_from_pw_multi_aff(pmaff.takeCopy())) {}
+    Map(PwMultiAff &&pmaff) : Obj(isl_map_from_pw_multi_aff(pmaff.take())) {}
+    Map(const PwMultiAff &pmaff) : Obj(isl_map_from_pw_multi_aff(pmaff.takeCopy())) {}
     const Map &operator=(PwMultiAff &&pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.take())); return *this; }
     const Map &operator=(const PwMultiAff &pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.takeCopy())); return *this; }
 

@@ -26,11 +26,11 @@ namespace llvm {
 
 
 namespace isl {
-  class Id : public Obj3<Id, isl_id> {
+  class Id : public Obj<Id, isl_id> {
     friend struct llvm::DenseMapInfo<isl::Id>;
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() ;
     StructTy *addref() const;
@@ -39,8 +39,8 @@ namespace isl {
     Id() { }
     static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    /* implicit */ Id(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Id(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Id(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Id(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 

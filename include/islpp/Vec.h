@@ -15,10 +15,10 @@ namespace llvm {
 
 namespace isl {
 
-  class Vec : public Obj3<Vec, isl_vec> {
+  class Vec : public Obj<Vec, isl_vec> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_vec_free(takeOrNull()); }
     StructTy *addref() const { return isl_vec_copy(keepOrNull()); }
@@ -26,8 +26,8 @@ namespace isl {
   public:
     Vec() { }
 
-    /* implicit */ Vec(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Vec(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Vec(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Vec(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 

@@ -17,7 +17,6 @@ struct isl_set;
 struct isl_basic_set;
 
 namespace isl {
-  class Spacelike;
   class Id;
   class LocalSpace;
   class Space;

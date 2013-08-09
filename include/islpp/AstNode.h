@@ -7,10 +7,10 @@
 
 
 namespace isl {
-  class AstNode : public Obj3<AstNode, isl_ast_node> {
+  class AstNode : public Obj<AstNode, isl_ast_node> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_ast_node_free(takeOrNull()); }
     StructTy *addref() const { return isl_ast_node_copy(keepOrNull()); }
@@ -18,8 +18,8 @@ namespace isl {
   public:
     AstNode() { }
 
-    /* implicit */ AstNode(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ AstNode(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ AstNode(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ AstNode(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 

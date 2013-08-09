@@ -15,7 +15,7 @@ namespace llvm {
 namespace isl {
 
   template<>
-  class Multi<Val> : public Obj3<Multi<Val>, isl_multi_val> {
+  class Multi<Val> : public Obj<Multi<Val>, isl_multi_val> {
 
   public:
     //typedef isl_multi_val StructTy;

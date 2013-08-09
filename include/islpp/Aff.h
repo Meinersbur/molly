@@ -38,10 +38,10 @@ namespace isl {
 
   Aff div(Aff &&, const Int &);
  
-  class Aff : public Obj3<Aff, isl_aff>, public Spacelike3<Aff> {
+  class Aff : public Obj<Aff, isl_aff>, public Spacelike<Aff> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_aff_free(takeOrNull()); }
     StructTy *addref() const { return isl_aff_copy(keepOrNull()); }
@@ -49,8 +49,8 @@ namespace isl {
   public:
     Aff() { }
 
-    /* implicit */ Aff(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Aff(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Aff(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Aff(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
@@ -60,8 +60,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_aff_get_space(keep())); }
     LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_aff_get_local_space(keep())); }

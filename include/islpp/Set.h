@@ -48,11 +48,11 @@ namespace isl {
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
 
-  class Set : public Obj3<Set, isl_set>, public Spacelike3<Set> {
+  class Set : public Obj<Set, isl_set>, public Spacelike<Set> {
 
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_set_free(takeOrNull()); }
     StructTy *addref() const { return isl_set_copy(keepOrNull()); }
@@ -60,8 +60,8 @@ namespace isl {
   public:
     Set() { }
 
-    /* implicit */ Set(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Set(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Set(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Set(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
@@ -71,8 +71,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_set_get_space(keep())); }
     Space getSpacelike() const { return getSpace(); }
@@ -122,8 +122,8 @@ namespace isl {
 
 #pragma region Conversion
     // From BasicSet
-    /* implicit */ Set(BasicSet &&set) : Obj3(isl_set_from_basic_set(set.take())) {}
-    /* implicit */ Set(const BasicSet &set) : Obj3(isl_set_from_basic_set(set.takeCopy())) {}
+    /* implicit */ Set(BasicSet &&set) : Obj(isl_set_from_basic_set(set.take())) {}
+    /* implicit */ Set(const BasicSet &set) : Obj(isl_set_from_basic_set(set.takeCopy())) {}
     const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); return *this; }
     const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); return *this; }
 #pragma endregion

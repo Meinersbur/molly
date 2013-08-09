@@ -31,8 +31,8 @@ namespace isl {
 
   /// Contains a Map per Space
   template<>
-  class Union<Map> : public/*because otherwise we had to make a lot of friends*/ isl::Obj3<Union<Map>, struct isl_union_map> {
-    friend class isl::Obj3<UnionMap, struct isl_union_map>;
+  class Union<Map> : public/*because otherwise we had to make a lot of friends*/ isl::Obj<Union<Map>, struct isl_union_map> {
+    friend class isl::Obj<UnionMap, struct isl_union_map>;
   public:
     //typedef struct isl_union_map StructTy;
     //typedef Union<Map> ObjTy;
@@ -47,8 +47,8 @@ namespace isl {
   public:
     Union() {}
 
-    /* implicit */ Union(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ Union(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ Union(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ Union(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     
@@ -57,8 +57,8 @@ namespace isl {
 
 
 #pragma region Conversion
-    /* implicit */ Union(Map &&that) : Obj3(isl_union_map_from_map(that.take())) { }
-    /* implicit */ Union(const Map &that) : Obj3(isl_union_map_from_map(that.takeCopy())) { }
+    /* implicit */ Union(Map &&that) : Obj(isl_union_map_from_map(that.take())) { }
+    /* implicit */ Union(const Map &that) : Obj(isl_union_map_from_map(that.takeCopy())) { }
     const UnionMap &operator=(Map &&that) { reset(isl_union_map_from_map(that.take())); return *this; }
     const UnionMap &operator=(const Map &that) { reset(isl_union_map_from_map(that.takeCopy())); return *this; }
 #pragma endregion

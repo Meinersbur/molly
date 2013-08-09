@@ -43,10 +43,10 @@ namespace isl {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet : public Obj3<BasicSet,isl_basic_set>, public Spacelike3<BasicSet> {
+  class BasicSet : public Obj<BasicSet,isl_basic_set>, public Spacelike<BasicSet> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_basic_set_free(takeOrNull()); }
     StructTy *addref() const { return isl_basic_set_copy(keepOrNull()); }
@@ -55,8 +55,8 @@ namespace isl {
     BasicSet() { }
     static ObjTy wrap(StructTy *obj) { return BasicSet::enwrap(obj); }// obsolete
 
-    /* implicit */ BasicSet(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ BasicSet(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ BasicSet(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ BasicSet(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
@@ -67,8 +67,8 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region isl::Spacelike3
-    friend class isl::Spacelike3<ObjTy>;
+#pragma region isl::Spacelike
+    friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_basic_set_get_space(keep())); }
     LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_basic_set_get_local_space(keep())); }

@@ -30,10 +30,10 @@ namespace isl {
 
 
 namespace isl {
-  class BasicMap : public Obj3<BasicMap, struct isl_basic_map>, public Spacelike3<BasicMap> {
+  class BasicMap : public Obj<BasicMap, struct isl_basic_map>, public Spacelike<BasicMap> {
 
 #pragma region isl::Obj
-    friend class isl::Obj3<ObjTy, StructTy>;
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_basic_map_free(takeOrNull()); }
     StructTy *addref() const { return isl_basic_map_copy(keepOrNull()); }
@@ -42,8 +42,8 @@ namespace isl {
     BasicMap() { }
     //static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    /* implicit */ BasicMap(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ BasicMap(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ BasicMap(const ObjTy &that) : Obj(that) { }
+    /* implicit */ BasicMap(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 

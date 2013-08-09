@@ -25,10 +25,10 @@ ISL_DECLARE_LIST_FN(aff)
 namespace isl {
 
   template<>
-  class List<Aff> : public Obj3<AffList, isl_aff_list> {
+  class List<Aff> : public Obj<AffList, isl_aff_list> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_aff_list_free(takeOrNull()); }
     StructTy *addref() const { return isl_aff_list_copy(keepOrNull()); }
@@ -36,8 +36,8 @@ namespace isl {
   public:
     List() { }
 
-    /* implicit */ List(ObjTy &&that) : Obj3(std::move(that)) { }
-    /* implicit */ List(const ObjTy &that) : Obj3(that) { }
+    /* implicit */ List(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ List(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 

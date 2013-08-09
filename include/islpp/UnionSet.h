@@ -26,10 +26,10 @@ namespace isl {
 
   // Basically a disctionary from isl::Space to isl::Set with that space
   template<>
-  class Union<Set> : public Obj3<Union<Set>,isl_union_set> {
+  class Union<Set> : public Obj<Union<Set>,isl_union_set> {
 
-#pragma region isl::Obj3
-    friend class isl::Obj3<ObjTy, StructTy>;
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release() { isl_union_set_free(takeOrNull()); }
     StructTy *addref() const { return isl_union_set_copy(keepOrNull()); }
@@ -37,8 +37,8 @@ namespace isl {
   public:
     Union() { }
 
-    /* implicit */ Union(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Union(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Union(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Union(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
@@ -59,8 +59,8 @@ namespace isl {
 
 
 #pragma region Conversion
-    Union(Set &&set) : Obj3(isl_union_set_from_set(set.take())) {}
-    Union(const Set &set) : Obj3(isl_union_set_from_set(set.takeCopy())) {}
+    Union(Set &&set) : Obj(isl_union_set_from_set(set.take())) {}
+    Union(const Set &set) : Obj(isl_union_set_from_set(set.takeCopy())) {}
     const UnionSet &operator=(Set &&set) { reset(isl_union_set_from_set(set.take()));  return *this; }
     const UnionSet &operator=(const Set &set) { reset(isl_union_set_from_set(set.takeCopy()));  return *this; }
 #pragma endregion

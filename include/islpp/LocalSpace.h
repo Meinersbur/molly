@@ -33,8 +33,8 @@ namespace isl {
 
 
   /// A local space is essentially a space with zero or more existentially quantified variables.
-  class LocalSpace : public Spacelike3<LocalSpace> {
-    friend class Spacelike3<LocalSpace>;
+  class LocalSpace : public Spacelike<LocalSpace> {
+    friend class Spacelike<LocalSpace>;
 
 #pragma region Low-Level
   private:

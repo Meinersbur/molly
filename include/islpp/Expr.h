@@ -23,10 +23,10 @@ namespace isl {
 
 namespace isl {
 
-  class Expr : public Obj3<Expr, ExprImpl> {
+  class Expr : public Obj<Expr, ExprImpl> {
 
 #pragma region isl::Obj
-    friend class isl::Obj3<ObjTy, StructTy>;
+    friend class isl::Obj<ObjTy, StructTy>;
   protected:
     void release();
     StructTy *addref() const;
@@ -35,8 +35,8 @@ namespace isl {
     Expr() { }
     //static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
-    /* implicit */ Expr(const ObjTy &that) : Obj3(that) { }
-    /* implicit */ Expr(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Expr(const ObjTy &that) : Obj(that) { }
+    /* implicit */ Expr(ObjTy &&that) : Obj(std::move(that)) { }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
 
