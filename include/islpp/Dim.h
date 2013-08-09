@@ -57,7 +57,6 @@ namespace isl {
     isl_dim_type type;
     unsigned pos;
 
-#if 1
   private:
     //TODO: llvm::PointerUnion
     isl_space *space;
@@ -97,6 +96,7 @@ namespace isl {
       llvm_unreachable("Null dim");
     } 
 
+
     unsigned getTupleDims() const { 
       if (space)
         return isl_space_dim(space, type);
@@ -104,33 +104,15 @@ namespace isl {
         return isl_local_space_dim(localspace, type);
       llvm_unreachable("Null dim");
     }
-#else
-  private:
-    Id dimId;
-
-    unsigned tupleDims;
-    Id tupleId;
-
-  protected:
-    Dim(isl_dim_type type, unsigned dimPos, const Id dimId, unsigned tupleDims, const Id &tupleId) : type(type), dimPos(dimPos), dimId(dimId), tupleDims(tupleDims), tupleId(tupleId) {
-      assert(dimPos < tupleDims);
-    }
-
-  public:
-    bool hasId() const { return dimId.isValid(); }
-    Id getId() const { return dimId; }
-    const char *getName() const { return dimId.getName(); } 
-    unsigned getTupleDims() const { return tupleDims; }
-#endif
-
 
 
   public:
     Dim(): type(isl_dim_cst/*Constant dim not valid*/) {}
 
-    static Dim enwrap(Space space, isl_dim_type type, unsigned pos) ;
-    static Dim enwrap(LocalSpace localspace, isl_dim_type type, unsigned pos);
-
+    static Dim enwrap(const Space &space, isl_dim_type type, unsigned pos) ;
+    static Dim enwrap(isl_space *space, isl_dim_type type, unsigned pos) ;
+    static Dim enwrap(const LocalSpace &localspace, isl_dim_type type, unsigned pos);
+        static Dim enwrap(isl_local_space *localspace, isl_dim_type type, unsigned pos);
 
   public:
     isl_dim_type getType() const { return type; }

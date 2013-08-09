@@ -282,6 +282,10 @@ int molly::getClusterLength(int d) {
  extern "C" void __molly_combuf_recv(RecvCommunicationBuffer *combuf) {
  }
 
+ extern "C" int __molly_local_coord(int i) {
+   return getClusterLength(i);
+ }
+
 
 //static Communicator communicator;
 

@@ -78,6 +78,9 @@ llvm::Function *molly::getParentFunction(llvm::BasicBlock *bb) {
 llvm::Function *molly::getParentFunction(const polly::Scop *scop) { 
   return getParentFunction(&scop->getRegion()); 
 }
+llvm::Function *molly::getParentFunction(const polly::ScopStmt *stmt) {
+  return getParentFunction(stmt->getParent());
+}
 Function *molly::getParentFunction(Value *v) {
   if (Function *F = dyn_cast<Function>(v))
     return F;

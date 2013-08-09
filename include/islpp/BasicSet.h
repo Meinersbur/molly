@@ -222,6 +222,13 @@ namespace isl {
       give(result);
     }
     BasicSet equate(isl_dim_type type1, unsigned pos1, isl_dim_type type2, unsigned pos2) const { auto result = copy(); result.equate_inplace(type1, pos1, type2, pos2); return result; }
+    void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_QUALIFIER { equate_inplace(dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos() ); }
+    BasicSet equate(Dim dim1, Dim dim2) const { return equate(dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos()); }
+
+    void alignParams_inplace(Space &&model) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_align_params(take(), model.take())); }
+    void alignParams_inplace(const Space &model) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_align_params(take(), model.takeCopy())); }
+    BasicSet alignParams(Space &&model) const { return BasicSet::enwrap(isl_basic_set_align_params(takeCopy(), model.take())); }
+    BasicSet alignParams(const Space &model) const { return BasicSet::enwrap(isl_basic_set_align_params(takeCopy(), model.takeCopy())); }
   }; // class BasicSet
 
 

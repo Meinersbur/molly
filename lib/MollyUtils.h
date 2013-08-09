@@ -79,6 +79,7 @@ llvm::Function *getParentFunction(llvm::Function *func);
 llvm::Function *getParentFunction(const llvm::Region *region);
 llvm::Function *getParentFunction(llvm::BasicBlock *bb);
 llvm::Function *getParentFunction(const polly::Scop *scop);
+llvm::Function *getParentFunction(const polly::ScopStmt *stmt);
 llvm::Function *getParentFunction(llvm::Value *v);
 
 

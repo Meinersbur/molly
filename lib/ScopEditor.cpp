@@ -88,11 +88,12 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
 
   auto stmt = new ScopStmt(scop, bb, name, nullptr, ArrayRef<Loop*>(), domain.take(), scattering.take());
   stmt->setWhereMap(where.take());
+  scop->addScopStmt(stmt);
   return StmtEditor(stmt);
 }
 
 
-StmtEditor ScopEditor:: replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDomainWhere, const std::string &name) {
+StmtEditor ScopEditor::replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDomainWhere, const std::string &name) {
   auto scop = model->getParent();
   auto origDomain = getIterationDomain(model);
   auto origWhere = getWhereMap(model);
@@ -104,7 +105,7 @@ StmtEditor ScopEditor:: replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDo
   auto newModelDomain = newModelDomainWhere.getDomain();
   auto createdModelDomain = replaceDomainWhere.getDomain();
 
-  auto result = createStmt(createdModelDomain.move(),  scattering.move(), newModelDomainWhere.move(), name);
+  auto result = createStmt(createdModelDomain.move(),  scattering.move(), replaceDomainWhere.move(), name);
   model->setDomain(newModelDomain.take());
   return result;
 }

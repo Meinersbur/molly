@@ -206,6 +206,11 @@ namespace isl {
 
        void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_cast(take(), space.takeCopy())); }
     BasicMap cast(const Space &space) const { return BasicMap::enwrap(isl_basic_map_cast(takeCopy(), space.takeCopy())); }
+
+    void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_equate(take(), type1, pos1, type2, pos2)); }
+    BasicMap equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
+    void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
+  BasicMap equate(Dim dim1, Dim dim2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
   }; // class BasicMap
 
 

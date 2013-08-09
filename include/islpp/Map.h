@@ -442,7 +442,10 @@ namespace isl {
       return exact ? Approximation::Exact : Approximation::Over;
     }
 
-    void alignParams(Space &&model) { give(isl_map_align_params(take(), model.take())); }
+    void alignParams_inplace(Space &&model) ISLPP_INPLACE_QUALIFIER { give(isl_map_align_params(take(), model.take())); }
+    void alignParams_inplace(const Space &model) ISLPP_INPLACE_QUALIFIER { give(isl_map_align_params(take(), model.takeCopy())); }
+    Map alignParams(Space &&model) const { return Map::enwrap(isl_map_align_params(takeCopy(), model.take())); }
+       Map alignParams(const Space &model) const { return Map::enwrap(isl_map_align_params(takeCopy(), model.takeCopy())); }
 
     PwAff dimMax_consume(unsigned pos) { return PwAff::enwrap(isl_map_dim_max(take(), pos)); }
     PwAff dimMax(unsigned pos) const { return PwAff::enwrap(isl_map_dim_max(takeCopy(), pos)); }

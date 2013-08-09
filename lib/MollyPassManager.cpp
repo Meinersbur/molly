@@ -138,10 +138,43 @@ namespace molly {
     public:
       MollyScopStmtContext(MollyPassManager *pm, ScopStmt *stmt) : pm(pm), stmt(stmt) {}
 
+
 #pragma region Apply whete to execute stmt
 
       void applyWhere() {
+        auto scop = stmt->getParent();
+        auto func = getParentFunction(stmt);
+        //auto funcCtx = pm->getFuncContext(func);
+        auto scopCtx = pm->getScopContext(scop);
+        // auto se = pm->findOrRunAnalysis<ScalarEvolution>(func);
+
+        auto domain = getIterationDomain(stmt);
         auto where = getWhereMap(stmt);
+        where.intersectDomain_inplace(domain);
+
+        auto nCoords = pm->clusterConf->getClusterDims();
+        auto coordSpace = pm->clusterConf->getClusterSpace();
+        auto coordValues = scopCtx->getClusterCoordinates();
+        assert(coordValues.size() == nCoords);
+
+        auto coordMatches = coordSpace.createUniverseBasicSet();
+        for (auto i = 0; i < nCoords; i+=1) {
+          // auto coordValue = coordValues[i];
+          auto scev = coordValues[i];
+          auto id = enwrap(scop->getIdForParam(scev));
+          coordMatches.alignParams_inplace(pm->getIslContext()->createParamsSpace(1).setParamDimId(0,id)); // Add the param if not exists yet
+          auto paramDim = coordMatches.findDim(id);
+          assert(paramDim.isValid());
+          auto coordDim = coordSpace.getSetDim(i);
+          assert(coordDim.isValid());
+
+          coordMatches.equate_inplace(paramDim, coordDim);
+        }
+
+        auto newDomain = where.intersectRange(coordMatches).getDomain();
+
+        stmt->setDomain(newDomain.take());
+        stmt->setWhereMap(nullptr);
       }
 
 #pragma enregion
@@ -186,6 +219,27 @@ namespace molly {
       MollyScopContext(MollyPassManager *pm, Scop *scop) : pm(pm), scop(scop), changedScop(false) {
         func = getParentFunction(scop);
         islctx = pm->getIslContext();
+      }
+
+      const SCEV *getClusterCoordinate(int i) {
+        //TODO: Cache SCEV
+        auto funcCtx = pm->getFuncContext(func);
+        auto coordVal = funcCtx->getClusterCoordinate(i);
+        auto se = pm->findOrRunAnalysis<ScalarEvolution>(func);
+        auto coordSe = se->getSCEV(coordVal);
+        scop->addParam(coordSe);
+
+        return coordSe;
+      }
+
+      std::vector<const SCEV *> getClusterCoordinates() {
+        auto nClusterDims = pm->clusterConf->getClusterDims();
+        std::vector<const SCEV *> result;
+        result.reserve(nClusterDims);
+        for (auto i = 0; i < nClusterDims; i+=1) {
+          result.push_back(getClusterCoordinate(i));
+        }
+        return result;
       }
 
 #pragma region Scop Distribution
@@ -488,17 +542,24 @@ namespace molly {
           auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
 
 
+          ScopEditor editor(scop);
+
           // CodeGen already home
           if (!alreadyHomeAccesses.isEmpty()) {
-            BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
+            auto readLocalEdit = editor.replaceStmt(stmtRead, alreadyHomeAccesses.getDomain().unwrap(), "InputLocal");
+            auto bb = readLocalEdit.getBasicBlock();
+
+            //BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
             IRBuilder<> builder(bb);
 
             auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
             readUsed->replaceAllUsesWith(val); 
-
+            readLocalEdit.getTerminator();
             // TODO: Don't assume every stmt accessed just one value
-            auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
-            scop->addScopStmt(replacementStmt);
+            //auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
+            //scop->addScopStmt(replacementStmt);
+
+            //TODO: Create polly::MemoryAccess
           }
 
           // CodeGen from other nodes
@@ -516,8 +577,6 @@ namespace molly {
             auto sendRel = sendRelPerm.wrap().permuteDims(perm).unwrap() ; /* { (src[node] -> dst[node]) -> field[indexset] } */
             auto combuf = pm->newCommunicationBuffer(fty, sendRel.copy());
 
-
-            ScopEditor editor(scop);
             // Send on source node
             // Copy to buffer
             auto copyArea = product(nodes, combuf->getRelation().getRange()); /* { [cluster,indexset] } */
@@ -538,7 +597,7 @@ namespace molly {
 
             // Execute send
             auto singletonDomain = islctx->createSetSpace(0, 0).universeBasicSet();
-            auto sendStmtEditor = editor.createStmt( singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain,afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
+            auto sendStmtEditor = editor.createStmt(singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain,afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
             BasicBlock *sendBB = sendStmtEditor.getBasicBlock();
             IRBuilder<> sendBuilder(sendBB);
 
@@ -561,6 +620,8 @@ namespace molly {
             auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
             auto useLoad = facc.getLoadUse();
             useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
+
+            //TODO: Create polly::MemoryAccess
           }
         }
 
@@ -630,7 +691,7 @@ namespace molly {
           auto nDims = alreadyHome.getDimCount();
           for (auto i = 0; i < nDims; i+=1) {
             tys.push_back(Type::getInt32Ty(llvmContext));
-            args.push_back( faccWrite.getCoordinate(i));
+            args.push_back(faccWrite.getCoordinate(i));
           }
           auto intrSetLocal = Intrinsic::getDeclaration(module, Intrinsic::molly_set_local, tys);
           builder.CreateCall(intrSetLocal, args);
@@ -639,6 +700,7 @@ namespace molly {
           auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
           auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
           auto writebackLocalStmt = createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
+          writebackLocalStmt->setWhereMap(homeRel.applyRange(relWrite.reverse()).reverse().take());
           //writebackLocalStmt->addAccess(MemoryAccess::READ, 
           //writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
 
@@ -1163,6 +1225,33 @@ namespace molly {
 
 #pragma endregion
 
+
+
+      Value* getClusterCoordinate(int i) {
+        auto &llvmContext = func->getContext();
+        auto intTy = Type::getInt32Ty(llvmContext);
+        //auto varSelfCoords = pm->runtimeMetadata.varSelfCoords;
+        auto funcLocalCoord = pm->runtimeMetadata.funcLocalCoord;
+        DefaultIRBuilder builder(func->getEntryBlock().getFirstNonPHI());
+
+        //auto coordsArray = builder.CreateConstGEP1_32(varSelfCoords, 0, "coords_array");
+        // auto coordPtr = builder.CreateConstGEP1_32(coordsArray, i, "coord");
+        //return builder.CreateLoad(coordPtr, false, "local coord");
+        return builder.CreateCall(funcLocalCoord, ConstantInt::get(intTy, i));
+      }
+
+
+      std::vector<Value*> getClusterCoordinates() {
+        vector<Value *>result;
+        auto nClusterDims = pm->clusterConf->getClusterDims();
+        result.reserve(nClusterDims);
+
+        for (auto i = 0; i < nClusterDims;i+=1) {
+          result.push_back(getClusterCoordinate(i));
+        } 
+
+        return result;
+      }
     }; // class MollyFunctionContext
 
 
@@ -2091,6 +2180,9 @@ namespace molly {
     llvm::Type *getCombufRecvType() { return runtimeMetadata.tyCombufRecv; } 
     llvm::Function *getCombufSendFunc() { return runtimeMetadata.funcCombufSend; }
 #pragma endregion
+
+
+
 
 
 #pragma region llvm::ModulePass

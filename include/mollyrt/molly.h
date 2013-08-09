@@ -879,5 +879,6 @@ extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf
 extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size);
 extern "C" void __molly_combuf_send(molly::SendCommunicationBuffer *combuf);
 extern "C" void __molly_combuf_recv(molly::RecvCommunicationBuffer *combuf);
+extern "C" int __molly_local_coord(int i);
 
 #endif /* MOLLY_H */

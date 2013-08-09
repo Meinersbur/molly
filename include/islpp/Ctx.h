@@ -99,6 +99,7 @@ namespace isl {
 
 #pragma region Create BasicSets
     BasicSet createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths);
+
     BasicSet readBasicSet(const char *str);
 #pragma endregion
 

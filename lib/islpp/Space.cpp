@@ -21,27 +21,6 @@
 using namespace isl;
 using namespace std;
 
-#if 0
-isl_space *Space::takeCopy() const {
-  return isl_space_copy(space);
-}
-
-
-void Space::give(isl_space *space) {
-  assert(space);
-  if (this->space)
-    isl_space_free(this->space);
-  this->space = space;
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
-
-
-Space::~Space() {
-  if (space) isl_space_free(space);
-}
-#endif
 
 void Space::print(llvm::raw_ostream &out) const {
   auto printer = isl::Printer::createToStr(getCtx());
@@ -49,21 +28,6 @@ void Space::print(llvm::raw_ostream &out) const {
   printer.print(out);
 }
 
-#if 0
-std::string Space::toString() const {
-  if (!keep())
-    return string();  
-  std::string buf;
-  llvm::raw_string_ostream stream(buf);
-  print(stream);
-  return stream.str();
-}
-
-
-void Space::dump() const {
-  isl_space_dump(keep());
-}
-#endif
 
 Space Space::createMapSpace(const Ctx *ctx, unsigned nparam, unsigned n_in, unsigned n_out) {
   return Space::enwrap(isl_space_alloc(ctx->keep(), nparam, n_in, n_out));
@@ -95,19 +59,19 @@ BasicMap Space::universeBasicMap() const {
 }
 
 
-    BasicMap Space::equalBasicMap(unsigned n_equal) const {
-      return BasicMap::enwrap(isl_basic_map_equal(takeCopy(), n_equal));
-    }
+BasicMap Space::equalBasicMap(unsigned n_equal) const {
+  return BasicMap::enwrap(isl_basic_map_equal(takeCopy(), n_equal));
+}
 
-    
-    BasicMap Space::lessAtBasicMap(unsigned pos) const {
-        return BasicMap::enwrap(isl_basic_map_less_at(takeCopy(), pos));
-    }
 
-    
-    BasicMap Space::moreAtBasicMap(unsigned pos) const {
-      return BasicMap::enwrap(isl_basic_map_more_at(takeCopy(), pos));
-    }
+BasicMap Space::lessAtBasicMap(unsigned pos) const {
+  return BasicMap::enwrap(isl_basic_map_less_at(takeCopy(), pos));
+}
+
+
+BasicMap Space::moreAtBasicMap(unsigned pos) const {
+  return BasicMap::enwrap(isl_basic_map_more_at(takeCopy(), pos));
+}
 
 
 Map Space::emptyMap() const {
@@ -120,24 +84,24 @@ Map Space::universeMap() const {
 }
 
 
- Map Space::lexLtMap() const {
-   return Map::enwrap(isl_map_lex_lt(takeCopy()));
- }
+Map Space::lexLtMap() const {
+  return Map::enwrap(isl_map_lex_lt(takeCopy()));
+}
 
 
-     Map Space::lexGtMap() const {
-         return Map::enwrap(isl_map_lex_gt(takeCopy()));
-     }
+Map Space::lexGtMap() const {
+  return Map::enwrap(isl_map_lex_gt(takeCopy()));
+}
 
 
- Map Space::lexLtFirstMap(unsigned pos) const {
-   return Map::enwrap(isl_map_lex_lt_first(takeCopy(), pos));
- }
+Map Space::lexLtFirstMap(unsigned pos) const {
+  return Map::enwrap(isl_map_lex_lt_first(takeCopy(), pos));
+}
 
 
-    Map Space::lexGtFirstMap(unsigned pos) const {
-         return Map::enwrap(isl_map_lex_gt_first(takeCopy(), pos));
-    }
+Map Space::lexGtFirstMap(unsigned pos) const {
+  return Map::enwrap(isl_map_lex_gt_first(takeCopy(), pos));
+}
 
 
 Aff Space::createZeroAff() const {
@@ -158,14 +122,14 @@ Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
   return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
 }
 
- PwAff Space::createEmptyPwAff() const {
-   return PwAff::enwrap(isl_pw_aff_empty(takeCopy()));
- }
+PwAff Space::createEmptyPwAff() const {
+  return PwAff::enwrap(isl_pw_aff_empty(takeCopy()));
+}
 
 
- PwAff Space::createZeroPwAff() const {
-return PwAff::enwrap(isl_pw_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
- }
+PwAff Space::createZeroPwAff() const {
+  return PwAff::enwrap(isl_pw_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
+}
 
 
 MultiAff Space::createZeroMultiAff() const {
@@ -179,9 +143,9 @@ MultiPwAff Space::createZeroMultiPwAff() const {
 }
 
 
- PwMultiAff Space::createEmptyPwMultiAff() const {
-   return PwMultiAff::enwrap(isl_pw_multi_aff_empty(takeCopy()));
- }
+PwMultiAff Space::createEmptyPwMultiAff() const {
+  return PwMultiAff::enwrap(isl_pw_multi_aff_empty(takeCopy()));
+}
 
 
 Point Space::zeroPoint() const {
@@ -233,16 +197,16 @@ Constraint Space::createEqConstraint(Aff &&lhs, int rhs) const {
 }
 
 
-  Constraint Space::createEqConstraint(Aff &&lhs, isl_dim_type type, unsigned pos) const {
-    auto term = isl_equality_from_aff(lhs.take());
-    isl_int coeff;
-    isl_int_init(coeff);
-    isl_constraint_get_coefficient(term, type, pos, &coeff);
-    isl_int_sub_ui(coeff, coeff, 1);
-    isl_constraint_set_coefficient(term, type, pos, coeff);
-    isl_int_clear(coeff);
-    return Constraint::enwrap(term);
-  }
+Constraint Space::createEqConstraint(Aff &&lhs, isl_dim_type type, unsigned pos) const {
+  auto term = isl_equality_from_aff(lhs.take());
+  isl_int coeff;
+  isl_int_init(coeff);
+  isl_constraint_get_coefficient(term, type, pos, &coeff);
+  isl_int_sub_ui(coeff, coeff, 1);
+  isl_constraint_set_coefficient(term, type, pos, coeff);
+  isl_int_clear(coeff);
+  return Constraint::enwrap(term);
+}
 
 
 Constraint Space::createGeConstraint(Aff &&lhs, Aff &&rhs) const {
@@ -386,24 +350,31 @@ LocalSpace Space::asLocalSpace() const {
 }
 
 
- AstBuild Space::createAstBuild() const {
-   return AstBuild::enwrap(isl_ast_build_from_context(isl_set_universe(takeCopy())));
- }
+AstBuild Space::createAstBuild() const {
+  return AstBuild::enwrap(isl_ast_build_from_context(isl_set_universe(takeCopy())));
+}
 
 
 bool isl::isEqual(const Space &space1, const Space &space2){
   return isl_space_is_equal(space1.keep(), space2.keep());
 }
+
+
 bool isl::isDomain(const Space &space1, const Space &space2){
   return isl_space_is_domain(space1.keep(), space2.keep());
 }
+
+
 bool isl::isRange(const Space &space1, const Space &space2){
   return isl_space_is_range(space1.keep(), space2.keep());
 }
 
+
 Space isl::join(Space &&left, Space &&right){
   return Space::enwrap(isl_space_join(left.take(), right.take()));
 }
+
+
 Space isl::alignParams(Space &&space1, Space &&space2){
   return Space::enwrap(isl_space_align_params(space1.take(), space2.take()));
 }
@@ -412,12 +383,18 @@ Space isl::alignParams(Space &&space1, Space &&space2){
 Space isl::setTupleId(Space &&space, isl_dim_type type, Id &&id) {
   return Space::enwrap(isl_space_set_tuple_id(space.take(), type, id.take()));
 }
+
+
 Space isl::setTupleId(Space &&space, isl_dim_type type, const Id &id) {
   return Space::enwrap(isl_space_set_tuple_id(space.take(), type, id.takeCopy()));
 }
+
+
 Space isl::setTupleId(const Space &space, isl_dim_type type, Id &&id) {
   return Space::enwrap(isl_space_set_tuple_id(space.takeCopy(), type, id.take()));
 }
+
+
 Space isl::setTupleId(const Space &space, isl_dim_type type, const Id &id) {
   return Space::enwrap(isl_space_set_tuple_id(space.takeCopy(), type, id.takeCopy()));
 }
