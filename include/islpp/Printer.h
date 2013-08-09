@@ -118,9 +118,10 @@ namespace isl {
     void print(const MultiVal &);
     void print(const BasicMap &);
     void print(const Point &point);
-        void print(const AstExpr &);
+    void print(const AstExpr &);
     void print(const AstNode &);
     void print(const PwAffList &);
+    void print(const AffList &);
 
     void flush();
   }; // class Printer

@@ -213,8 +213,8 @@ void Printer::print(const Space &space) {
 }
 
 
-void Printer::print(const MultiVal &space) {
-  //give(isl_printer_print_multi_val);
+void Printer::print(const MultiVal &mval) {
+  //give(isl_printer_print_multi_val(take(), mval.keep()));
 }
 
 
@@ -238,9 +238,14 @@ void Printer::print(const AstNode &node) {
 }
 
 
- void Printer::print(const PwAffList &list) {
-     give(isl_printer_print_pw_aff_list(take(), list.keep()));
- }
+void Printer::print(const PwAffList &list) {
+  give(isl_printer_print_pw_aff_list(take(), list.keep()));
+}
+
+
+void Printer::print(const AffList &list) {
+  give(isl_printer_print_aff_list(take(), list.keep()));
+}
 
 
 void Printer::flush(){

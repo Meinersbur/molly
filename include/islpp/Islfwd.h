@@ -11,6 +11,12 @@ struct isl_id;
 #pragma region Forward declarations for Islpp
 namespace isl {
 
+  // Obj.h
+  template<typename,typename> class Obj;
+
+  // Spacelike.h
+  template<typename> class Spacelike;
+
   // Ctx.h
   class Ctx;
 

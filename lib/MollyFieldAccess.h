@@ -69,7 +69,7 @@ namespace molly {
     static MollyFieldAccess fromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * =nullptr);
     static MollyFieldAccess fromScopStmt(polly::ScopStmt *acc, FieldVariable * =nullptr);
 
-    void augmentFieldDetection(FieldDetectionAnalysis *fields);
+    //void augmentFieldDetection(FieldDetectionAnalysis *fields);
     //void augmentMemoryAccess(polly::MemoryAccess *acc);
     //void augmentFieldVariable(FieldVariable *fieldvar);
     //void augmentScEv(llvm::ScalarEvolution *se) {}

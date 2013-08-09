@@ -2,11 +2,7 @@
 #include "molly/RegisterPasses.h"
 
 #include "molly/LinkAllPasses.h"
-#include "FieldCodeGen.h"
-#include "ScopStmtSplit.h"
 #include "MollyInlinePrepa.h"
-#include "ScopDistribution.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/CFGPrinter.h"
@@ -15,20 +11,13 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Analysis/RegionPass.h"
-#include "PatternSearchAnalysis.h"
 #include <polly/LinkAllPasses.h>
 #include <llvm/Transforms/Scalar.h>
 #include <polly/ScopPass.h>
-#include "ScopFieldCodeGen.h"
-#include "GlobalPassManager.h"
 #include <polly/RegisterPasses.h>
 #include <polly/ScopInfo.h>
 #include "MollyUtils.h"
-#include "MollyContextPass.h"
-#include "FieldDetection.h"
 #include "llvm/Assembly/PrintModulePass.h"
-#include <polly/PollyContextPass.h>
-#include "InsertInOut.h"
 #include "MollyPassManager.h"
 
 using namespace llvm;
@@ -389,7 +378,7 @@ static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &B
 
 
 namespace molly {
-  ModulePass *createFieldDetectionAnalysisPass();
+  //ModulePass *createFieldDetectionAnalysisPass();
 
   //extern char &FieldDetectionAnalysisID;
 }
@@ -407,7 +396,7 @@ namespace molly {
     if (std::getenv("bar") != (char*) -1)
       return;
 
-    molly::createFieldDetectionAnalysisPass();
+    //molly::createFieldDetectionAnalysisPass();
 
 #define USE(val) \
   srand( *((unsigned int*)&(val)) )

@@ -1,7 +1,6 @@
 // This file contains the implementatations of functions that require the LLVMMolly project being linked
 #include "MollyFieldAccess.h"
 
-#include "MollyContext.h"
 #include "FieldVariable.h"
 #include "islpp/Aff.h"
 #include "islpp/MultiAff.h"
@@ -13,14 +12,13 @@
 #include "FieldType.h"
 
 #include <llvm/Analysis/ScalarEvolution.h>
-#include "FieldDetection.h"
 
 using std::move;
 using namespace llvm;
 using namespace molly;
 using isl::enwrap;
 
-
+#if 0
 void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
   assert(fields);
   if (isNull())
@@ -34,7 +32,7 @@ void MollyFieldAccess::augmentFieldDetection(FieldDetectionAnalysis *fields) {
     this->fieldvar = gvar;
   }
 }
-
+#endif
 
 void MollyFieldAccess::loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVariable * fvar) {
   assert(acc);

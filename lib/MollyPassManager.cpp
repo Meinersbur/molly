@@ -3,19 +3,13 @@
 
 #include <llvm/Support/Debug.h>
 #include <llvm/Pass.h>
-#include <polly/PollyContextPass.h>
 #include "MollyUtils.h"
 #include <llvm/ADT/DenseSet.h>
-#include "MollyContextPass.h"
 #include <polly/ScopInfo.h>
 #include <polly/LinkAllPasses.h>
-#include "FieldDistribution.h"
-#include "FieldDetection.h"
-#include "FieldCodeGen.h"
 #include "ClusterConfig.h"
 #include <llvm/Support/CommandLine.h>
 #include "molly/RegisterPasses.h"
-#include "MollyContextPass.h"
 #include <polly/RegisterPasses.h>
 #include <llvm/Support/Debug.h>
 #include "FieldType.h"
@@ -43,6 +37,8 @@
 #include "CommunicationBuffer.h"
 #include <clang/CodeGen/MollyRuntimeMetadata.h>
 #include "IslExprBuilder.h"
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
 
 using namespace molly;
 using namespace polly;
@@ -50,6 +46,8 @@ using namespace llvm;
 using namespace std;
 using isl::enwrap;
 
+
+cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
 
 namespace molly {
 

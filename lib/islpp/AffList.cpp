@@ -1,6 +1,18 @@
+#include "islpp_impl_common.h"
 #include "islpp/AffList.h"
 
+#include "islpp/Printer.h"
+
 using namespace isl;
+
+
+void AffList::print(llvm::raw_ostream &out) const {
+  // isl_map_print requires to print to FILE*
+  Printer printer = Printer::createToStr(getCtx());
+  printer.print(*this);
+  printer.print(out);
+}
+
 
 static int foreachAffCallback(__isl_take isl_aff *el, void *user) {
   assert(user);

@@ -1,8 +1,6 @@
 #define DEBUG_TYPE "molly"
 #include "FieldType.h"
 
-#include "MollyContext.h"
-#include "MollyContextPass.h"
 #include "islpp/Ctx.h"
 #include "islpp/Set.h"
 #include "islpp/Space.h"

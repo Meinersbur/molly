@@ -14,10 +14,10 @@ namespace llvm {
 using namespace llvm;
 
 namespace molly {
-  ModulePass *createFieldDetectionAnalysisPass();
+  //ModulePass *createFieldDetectionAnalysisPass();
 
-extern const char &FieldDistributionPassID;
-  ModulePass *createFieldDistributionPass();
+//extern const char &FieldDistributionPassID;
+  //ModulePass *createFieldDistributionPass();
 
   //extern char &FieldDetectionAnalysisID;
 }
@@ -35,10 +35,10 @@ namespace {
     return;
 
      //createAffSCEVItTesterPass();
-    molly::createFieldDetectionAnalysisPass();
+    //molly::createFieldDetectionAnalysisPass();
   }
   } MollyForcePassLinking; // Force link by creating a global definition.
-}
+} // namespace
 
 namespace llvm {
   class PassRegistry;

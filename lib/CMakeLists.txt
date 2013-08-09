@@ -1,44 +1,43 @@
 
 add_molly_library(LLVMMolly
   SOURCES
+    # General
     RegisterPasses.cpp
-    FieldDetection.cpp
-    FieldDistribution.cpp
+  
+    # LLVM Passes
+    MollyInlinePrepa.cpp
+    MollyPassManager.cpp
+    
+    # Classes representing something
     FieldType.cpp
     FieldVariable.cpp
-    FieldCodeGen.cpp
-    ScopDistribution.cpp
-    MollyContextPass.cpp
-    ScopUtils.cpp
-    ScopFieldCodeGen.cpp
-    InsertInOut.cpp
-    ClusterConfig.cpp
-    MollyFieldAccess.cpp
-    IslExprBuilder.cpp
-    MollyIntrinsics.cpp
-    RectangularMapping.cpp
-    
-    MollyContext.cpp
-    Nodegrid.cpp  # Obsolete?
-    ValueSourceAnalysis.cpp
-    ScopStmtSplit.cpp
-    MollyUtils.cpp
-    MollyInlinePrepa.cpp # Obsolete?
-    PatternSearchAnalysis.cpp # Obsolete
-    GlobalPassManager.cpp
-    MollyPassManager.cpp # Obsolete
-    SCEVAffinator.cpp
-    UnusedValueElimination.cpp
-    CommunicationBuffer.cpp
-    ScopEditor.cpp
     FieldLayout.cpp
-    LayoutMapping.cpp
+    CommunicationBuffer.cpp
+    ClusterConfig.cpp
+
+    # Algorithms
+    IslExprBuilder.cpp
+    SCEVAffinator.cpp
+    MollyIntrinsics.cpp
+    
+    # Available Layouts
     AffineMapping.cpp
+    
+    # Utilities,Helpers
+    MollyFieldAccess.cpp
+    ScopUtils.cpp
+    MollyUtils.cpp
+    ScopEditor.cpp
+    
+    # To be used in the future
+    RectangularMapping.cpp
+    LayoutMapping.cpp
     IndirectMapping.cpp
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
     FlattenMapping.cpp
     Quast.cpp
+    
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 
     ${MOLLY_SOURCE_DIR}/lib
