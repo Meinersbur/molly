@@ -7,7 +7,7 @@
 
 using namespace isl;
 
-
+#if 0
 Id Spacelike::getDimIdOrNull(isl_dim_type type, unsigned pos) const {
   if (hasDimId(type, pos))
     return getDimId(type, pos); 
@@ -103,6 +103,7 @@ bool Spacelike::hasDimName(isl_dim_type type, unsigned pos) const {
 const char *Spacelike::getDimName(isl_dim_type type, unsigned pos) const { 
   return getSpace().getDimName(type, pos);
 }
+#endif
 
 #if 0
 int Spacelike::findDimByName(isl_dim_type type, const char *name) const {

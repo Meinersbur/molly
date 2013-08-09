@@ -42,7 +42,7 @@ extern "C" void fill() {
 extern "C" void test() {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
-    auto len = FieldDst.length();
+  auto len = FieldDst.length();
   for (int i = 0; i < len-1; i+=1) {
     FieldDst[i] = 2*FieldSrc[i+1];
   }
@@ -66,8 +66,8 @@ extern "C" void sink() {
 int main(int argc, char *argv[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
-   // fill();
-  //test();
+  fill();
+  test();
   sink();
 
   return 0;

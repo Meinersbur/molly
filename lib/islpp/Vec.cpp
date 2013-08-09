@@ -18,7 +18,7 @@ void Vec::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 
-
+#if 0
 std::string Vec::toString() const{
   std::string buf;
   llvm::raw_string_ostream out(buf);
@@ -30,7 +30,7 @@ std::string Vec::toString() const{
 void Vec::dump() const { 
   isl_vec_dump(keep()); 
 }
-
+#endif
 
 void Vec::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {

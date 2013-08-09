@@ -19,34 +19,42 @@ namespace llvm {
 
 
 namespace isl {
-  class Val : public Obj2<isl_val> {
-#pragma region Low-level
-  public: // Public because otherwise we had to add a lot of friends
-    //isl_pw_multi_aff *take() { assert(pwmaff); isl_pw_multi_aff *result = pwmaff; pwmaff = nullptr; return result; }
-    isl_val *takeCopy() const LLVM_OVERRIDE { return isl_val_copy(keep()); }
+  class Val : public Obj3<Val, isl_val> {
 
-    // isl_pw_multi_aff *keep() const { assert(pwmaff); return pwmaff; }
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
   protected:
-    void release() { isl_val_free(take()); }
-    //void give(isl_pw_multi_aff *pwmaff) { assert(pwmaff); if (this->pwmaff) isl_pw_multi_aff_free(pwmaff); this->pwmaff = pwmaff; }
+    void release() { isl_val_free(takeOrNull()); }
+    StructTy *addref() const { return isl_val_copy(keepOrNull()); }
 
   public:
-    ~Val() { release(); }
-    Val() : Obj2() { }
-    static Val enwrap(isl_val *val) { assert(val); Val result; result.give(val); return result; }
-#pragma endregion
+    Val() { }
+
+    /* implicit */ Val(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Val(const ObjTy &that) : Obj3(that) { }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_val_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_val_dump(keep()); }
+#pragma endregion
+
+
+
+   // Ctx *getCtx() const { return Ctx::enwrap(isl_val_get_ctx(keep())); }
 
 #pragma region Printing
-    void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
+    //void print(llvm::raw_ostream &out) const;
+    //std::string toString() const;
+    //void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth, int indent) const;
 #pragma endregion
   }; // class Val
 
+
   static inline Val enwrap(isl_val *val) { return Val::enwrap(val); }
+  static inline Val enwrapCopy(isl_val *val) { return Val::enwrapCopy(val); }
 
 } // namespace isl
 #endif /* ISLPP_VAL_H */

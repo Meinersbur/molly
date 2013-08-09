@@ -13,7 +13,7 @@ void Val::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 
-
+#if 0
 std::string Val::toString() const{
   std::string buf;
   llvm::raw_string_ostream out(buf);
@@ -25,6 +25,7 @@ std::string Val::toString() const{
 void Val::dump() const{
   isl_val_dump(keep());
 }
+#endif
 
 
 void Val::printProperties(llvm::raw_ostream &out, int depth, int indent) const {

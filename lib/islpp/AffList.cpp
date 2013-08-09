@@ -16,7 +16,7 @@ bool List<Aff>::foreach(const std::function<bool(Aff &&)> &func) {
 static int foreachSccAffCallback(__isl_take isl_aff_list *scc, void *user) {
   assert(user);
   auto &func = *static_cast<const std::function<bool(List<Aff>&&)>*>(user);
-  auto retval = func( List<Aff>::wrap(scc) );
+  auto retval = func( List<Aff>::enwrap(scc) );
   return retval ? -1 : 0;
 }
 static int foreachSccAffFollows(__isl_keep isl_aff *a, __isl_keep isl_aff *b, void *user) {

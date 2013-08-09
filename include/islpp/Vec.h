@@ -14,8 +14,30 @@ namespace llvm {
 
 
 namespace isl {
-  class Vec : public Obj2<isl_vec> {
 
+  class Vec : public Obj3<Vec, isl_vec> {
+
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
+  protected:
+    void release() { isl_vec_free(takeOrNull()); }
+    StructTy *addref() const { return isl_vec_copy(keepOrNull()); }
+
+  public:
+    Vec() { }
+
+    /* implicit */ Vec(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ Vec(const ObjTy &that) : Obj3(that) { }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+
+    Ctx *getCtx() const { return Ctx::enwrap(isl_vec_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_vec_dump(keep()); }
+#pragma endregion
+
+
+#if 0
 #pragma region Low-level
     typedef isl_vec StructTy;
     typedef Obj2<isl_vec> ObjTy;
@@ -31,6 +53,7 @@ namespace isl {
     ~Vec() { release(); }
     static Vec enwrap(StructTy *obj) { ThisTy result; result.give(obj); return result; }
 #pragma endregion
+#endif
 
 
 #pragma region Creational
@@ -38,13 +61,13 @@ namespace isl {
 
     static Vec readFromFile(Ctx *ctx, FILE *input) { return enwrap(isl_vec_read_from_file(ctx->keep(), input)); }
 
-    Vec copy() const { return enwrap(takeCopy()); }
-    Vec &&move() { return std::move(*this); }
+    //Vec copy() const { return enwrap(takeCopy()); }
+    //Vec &&move() { return std::move(*this); }
 #pragma endregion Creational
 
 
 #pragma region Properties
-    Ctx *getCtx() const { return Ctx::enwrap(isl_vec_get_ctx(keep())); }
+    //Ctx *getCtx() const { return Ctx::enwrap(isl_vec_get_ctx(keep())); }
 
     int getSize() const { return isl_vec_size(keep()); }
 #pragma endregion
@@ -62,9 +85,9 @@ namespace isl {
 
 
 #pragma region Printing
-    void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
+    //void print(llvm::raw_ostream &out) const;
+    //std::string toString() const;
+    //void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
 #pragma endregion
 

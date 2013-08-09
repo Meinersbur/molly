@@ -25,7 +25,29 @@ ISL_DECLARE_LIST_FN(aff)
 namespace isl {
 
   template<>
-  class List<Aff> final : public Obj {
+  class List<Aff> : public Obj3<AffList, isl_aff_list> {
+
+#pragma region isl::Obj3
+    friend class isl::Obj3<ObjTy, StructTy>;
+  protected:
+    void release() { isl_aff_list_free(takeOrNull()); }
+    StructTy *addref() const { return isl_aff_list_copy(keepOrNull()); }
+
+  public:
+    List() { }
+
+    /* implicit */ List(ObjTy &&that) : Obj3(std::move(that)) { }
+    /* implicit */ List(const ObjTy &that) : Obj3(that) { }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+
+    Ctx *getCtx() const { return Ctx::enwrap(isl_aff_list_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const { isl_aff_list_dump(keep()); }
+#pragma endregion
+
+
+#if 0
 #pragma region Low-level
   private:
     isl_aff_list *list;
@@ -41,7 +63,10 @@ namespace isl {
   public:
     static List<Aff> wrap(isl_aff_list *list) { return List<Aff>(list); }
 #pragma endregion
+#endif
 
+
+#if 0
   public:
     List<Aff>() : list(nullptr) {}
     List(const List<Aff> &that) : list(that.takeCopy()) {}
@@ -53,15 +78,16 @@ namespace isl {
   this->list = nullptr;
 #endif
 }
+#endif
 
-    const List<Aff> &operator=(const List<Aff> &that) { give(that.takeCopy()); return *this; }
-    const List<Aff> &operator=(List<Aff> &&that) { give(that.take()); return *this; }
+    //const List<Aff> &operator=(const List<Aff> &that) { give(that.takeCopy()); return *this; }
+    //const List<Aff> &operator=(List<Aff> &&that) { give(that.take()); return *this; }
 
-    List<Aff> copy() const { return wrap(takeCopy()); }
-    Ctx *getCtx() const { return Ctx::enwrap(isl_aff_list_get_ctx(list)); }
+    //List<Aff> copy() const { return wrap(takeCopy()); }
+    //Ctx *getCtx() const { return Ctx::enwrap(isl_aff_list_get_ctx(list)); }
 
 #pragma region Creational
-    static List<Aff> create(Ctx *ctx, int n) { assert(n >= 0); return wrap(isl_aff_list_alloc(ctx->keep(), n)); }
+    static List<Aff> create(Ctx *ctx, int n) { assert(n >= 0); return AffList::enwrap(isl_aff_list_alloc(ctx->keep(), n)); }
 #pragma endregion
 
    void add(Aff &&el) { give(isl_aff_list_add(take(), el.take())); }
@@ -80,12 +106,12 @@ namespace isl {
    void printTo(isl::Printer &printer) {
      printer.give(isl_printer_print_aff_list(printer.take(), keep()));
    }
-   void dump() const { isl_aff_list_dump(keep()); }
+   //void dump() const { isl_aff_list_dump(keep()); }
 #pragma endregion
 
   }; // class List<Aff>
 
-  static inline List<Aff> concat(List<Aff> &&list1, List<Aff> &&list2) { return List<Aff>::wrap(isl_aff_list_concat(list1.take(), list2.take())); }
+  static inline List<Aff> concat(List<Aff> &&list1, List<Aff> &&list2) { return List<Aff>::enwrap(isl_aff_list_concat(list1.take(), list2.take())); }
 
 } // namespace isl
 #endif /* ISLPP_AFFLIST_H */
