@@ -86,6 +86,7 @@ llvm::Function *getParentFunction(llvm::Value *v);
 const llvm::Module *getParentModule(const llvm::Function *func);
 llvm::Module *getParentModule(llvm::Function *func);
 llvm::Module *getParentModule(polly::Scop *scop);
+llvm::Module *getParentModule(polly::ScopStmt *scopStmt);
 const llvm::Module *getParentModule(const llvm::BasicBlock *bb);
 llvm::Module *getParentModule(llvm::BasicBlock *bb);
 const llvm::Module *getParentModule(const llvm::GlobalValue *bb);

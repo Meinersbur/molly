@@ -104,6 +104,9 @@ llvm::Module *molly::getParentModule(llvm::Function *func){
 llvm::Module *molly::getParentModule(polly::Scop *scop) {
   return getParentFunction(scop)->getParent();
 }
+llvm::Module *molly::getParentModule(polly::ScopStmt *scopStmt) {
+  return getParentFunction(scopStmt)->getParent();
+}
 const llvm::Module *molly::getParentModule(const llvm::BasicBlock *bb) {
   return bb->getParent()->getParent();
 }

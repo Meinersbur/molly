@@ -2,10 +2,13 @@
 #define MOLLY_POLLYFWD_H
 
 namespace polly {
-  // polly/ScopInfo.h
+   // #include <polly/ScopInfo.h>
   class Scop;
   class ScopStmt;
   class MemoryAccess;
+
+  // #include <polly/ScopPass.h>
+  class ScopPass;
 } // namespace polly
 
 #endif /* MOLLY_POLLYFWD_H */

@@ -312,6 +312,20 @@ namespace isl {
 
       return true;
     }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Id &rangeId) {
+      if (!this->isMapSpace())
+        return false;
+      return matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) {
+      if (!this->isMapSpace())
+        return false;
+      return (getInTupleId() == domainId) && matches(isl_dim_out, rangeSpace, isl_dim_set);
+    }
 #pragma endregion
 
 
@@ -323,7 +337,7 @@ namespace isl {
     Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
 
     void fromDomain();
-    
+
     void fromRange();
     void params();
     void setFromParams();
@@ -345,7 +359,7 @@ namespace isl {
 
     UnionMap createEmptyUnionMap() const;
 
-        AstBuild createAstBuild() const;
+    AstBuild createAstBuild() const;
 #pragma endregion
 
     LocalSpace asLocalSpace() const;

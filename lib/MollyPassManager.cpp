@@ -219,6 +219,17 @@ namespace molly {
         islctx = pm->getIslContext();
       }
 
+      
+    bool hasFieldAccess() {
+      // TODO: Cache result
+    for (auto stmt : *scop) {
+     auto facc = MollyFieldAccess::fromScopStmt(stmt);
+     if (facc.isValid())
+       return true;
+    }
+    return false;
+    }
+
       const SCEV *getClusterCoordinate(int i) {
         //TODO: Cache SCEV
         auto funcCtx = pm->getFuncContext(func);
@@ -345,7 +356,7 @@ namespace molly {
       void genCommunication() {
         auto funcName = func->getName();
         DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << funcName << "\n");
-        if (func->getName() == "sink") {
+        if (funcName == "sink") {
           int a = 0;
         }
 
@@ -425,7 +436,7 @@ namespace molly {
         auto epilogueScatterSpace = isl::Space::createMapFromDomainAndRange(epilogueDomainSpace, scatterRangeSpace);
 
         auto allScatters = range(schedule);
-        assert(allScatters.nSet()==1);
+        //assert(allScatters.nSet()==1);
         auto scatterRange = allScatters.extractSet(scatterRangeSpace); 
         assert(scatterRange.isValid());
         auto nScatterDims = scatterRange.getDimCount();
@@ -438,6 +449,7 @@ namespace molly {
           epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
         }
 
+        assert(!scatterRange.isEmpty());
         auto min = scatterRange.dimMin(0) - 1; /* { [1] } */
         min.addDims_inplace(isl_dim_in, nScatterDims);
         min.setInTupleId_inplace(scatterId); /* { scattering[nScatterDims] -> [1] } */
@@ -581,7 +593,8 @@ namespace molly {
             auto copyAreaSpace = copyArea.getSpace();
             auto copyScattering = islctx->createAlltoallMap(copyArea, beforeScopScatterRange);
             auto copyWhere = fty->getHomeRel(); // Execute where that value is home
-            auto memmovStmt = editor.createBlock(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
+            auto memmovEditor = editor.createStmt(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
+            auto memmovStmt = memmovEditor.getStmt();
             BasicBlock *memmovBB = memmovStmt->getBasicBlock();
 
             //BasicBlock::Create(llvmContext, "memmove_nonhome", func);
@@ -674,7 +687,15 @@ namespace molly {
 
 
           // Add writes to local storage for already-home writes
-          BasicBlock *bb = BasicBlock::Create(llvmContext, "OutputWrite", func);
+          auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
+          auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
+          auto wbWhere = homeRel.applyRange(relWrite.reverse()).reverse();
+
+          ScopEditor editor(scop);
+          auto writebackLocalStmtEditor = editor.createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"  ); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
+          auto writebackLocalStmt = writebackLocalStmtEditor.getStmt();
+          auto bb = writebackLocalStmtEditor.getBasicBlock();
+          //BasicBlock *bb = BasicBlock::Create(llvmContext, "OutputWrite", func);
           IRBuilder<> builder(bb);
 
           builder.CreateStore(val, stackMem); // stackMem contains a buffer with the value
@@ -693,16 +714,14 @@ namespace molly {
           }
           auto intrSetLocal = Intrinsic::getDeclaration(module, Intrinsic::molly_set_local, tys);
           builder.CreateCall(intrSetLocal, args);
-          builder.CreateBr(bb); // This is a dummy branch; at the moment this is dead code, but Polly's code generator will hopefully incorperate it
+          //builder.CreateBr(bb); // This is a dummy branch; at the moment this is dead code, but Polly's code generator will hopefully incorperate it
 
-          auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
-          auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
-          auto writebackLocalStmt = createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
-          writebackLocalStmt->setWhereMap(homeRel.applyRange(relWrite.reverse()).reverse().take());
+
+          //writebackLocalStmt->setWhereMap(homeRel.applyRange(relWrite.reverse()).reverse().take());
           //writebackLocalStmt->addAccess(MemoryAccess::READ, 
           //writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
 
-          scop->addScopStmt(writebackLocalStmt);
+          //scop->addScopStmt(writebackLocalStmt);
           modifiedScop();
 
           // Do not execute the stmt this is ought to replace anymore
@@ -719,7 +738,7 @@ namespace molly {
           // 5. Writeback buffer data to home location
 
 
-
+          writebackLocalStmtEditor.getTerminator();
 #pragma endregion
         }
 
@@ -2181,8 +2200,6 @@ namespace molly {
 
 
 
-
-
 #pragma region llvm::ModulePass
   public:
     void releaseMemory() LLVM_OVERRIDE {
@@ -2237,6 +2254,8 @@ namespace molly {
       for (auto &it : scops) {
         auto scop = it.first;
         auto scopCtx = it.second;
+        if (!scopCtx->hasFieldAccess())
+          continue;
 
         // Decide on which node(s) a ScopStmt should execute 
         scopCtx->computeScopDistibution();
@@ -2251,6 +2270,7 @@ namespace molly {
       for (auto &it : scops) {
         auto scop = it.first;
         auto scopCtx = it.second;
+
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
           stmtCtx->applyWhere();
