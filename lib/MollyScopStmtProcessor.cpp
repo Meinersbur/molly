@@ -15,7 +15,9 @@ using namespace std;
 using isl::enwrap;
 
 
-class MollyScopStmtProcessorImpl : public MollyScopStmtProcessor {
+namespace {
+
+  class MollyScopStmtProcessorImpl : public MollyScopStmtProcessor {
   private:
     MollyPassManager *pm;
     ScopStmt *stmt;
@@ -60,9 +62,10 @@ class MollyScopStmtProcessorImpl : public MollyScopStmtProcessor {
       stmt->setDomain(newDomain.take());
       stmt->setWhereMap(nullptr);
     }
-}; // class MollyScopStmtProcessorImpl
+  }; // class MollyScopStmtProcessorImpl
+} // namespace 
 
 
- MollyScopStmtProcessor *MollyScopStmtProcessor::create(MollyPassManager *pm, polly::ScopStmt *stmt) {
-   return new MollyScopStmtProcessorImpl(pm, stmt);
+MollyScopStmtProcessor *MollyScopStmtProcessor::create(MollyPassManager *pm, polly::ScopStmt *stmt) {
+  return new MollyScopStmtProcessorImpl(pm, stmt);
 }

@@ -55,7 +55,10 @@ using isl::enwrap;
 
 cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
 
-namespace molly {
+
+
+namespace {
+
 
   class MollyPassManagerImpl : public MollyPassManager, public ModulePass {
     typedef DefaultIRBuilder BuilderTy;
@@ -112,9 +115,6 @@ namespace molly {
       pass->releaseMemory();
       delete pass;
     }
-
-
-
 
 
     void removeUnpreservedAnalyses(const AnalysisUsage &AU, Function *func, Region *inRegion) {
@@ -274,7 +274,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(moduleCtx->asResolver());
+      pass->setResolver(MollyModuleProcessor::createResolver(this, module));
       bool changed = pass->runOnModule(*module);
       if (changed)
         removeUnpreservedAnalyses(AU, nullptr, nullptr);
@@ -353,7 +353,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(getFuncContext(func)->asResolver());
+      pass->setResolver(MollyFunctionProcessor::createResolver(this, func));
       bool changed = pass->runOnFunction(*func);
       if (changed)
         removeUnpreservedAnalyses(AU, func, nullptr);
@@ -418,8 +418,8 @@ namespace molly {
     }
 
 
-    private:
-      llvm::DenseMap<Region*, MollyRegionProcessor*> regionContexts;
+  private:
+    llvm::DenseMap<Region*, MollyRegionProcessor*> regionContexts;
     MollyRegionProcessor *getRegionContext(Region *region) {
       auto &result = regionContexts[region];
       if (!result) {
@@ -428,7 +428,7 @@ namespace molly {
       return  result;
     }
 
-    public:
+  public:
     void runRegionPass(llvm::RegionPass *pass, Region *region) LLVM_OVERRIDE {
       auto passID = pass->getPassID();
       assert(!currentRegionAnalyses.count(std::make_pair(passID, region)));
@@ -444,7 +444,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(getRegionContext(region)->asResolver());
+      pass->setResolver(MollyRegionProcessor::createResolver(this, region));
       bool changed = pass->runOnRegion(region, *(static_cast<RGPassManager*>(nullptr)));
       if (changed)
         removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
@@ -780,7 +780,7 @@ namespace molly {
       return ctx;
     }
 
-  
+
 
 
   private:
@@ -794,7 +794,7 @@ namespace molly {
     }
 
 
-    private:
+  private:
     void setAlwaysPreserve(Pass *pass) {
       alwaysPreserve.insert(pass);
 
@@ -1112,30 +1112,26 @@ namespace molly {
 
 
 #pragma region molly::MollyPassManager
-     ClusterConfig *getClusterConfig() LLVM_OVERRIDE    {
+    ClusterConfig *getClusterConfig() LLVM_OVERRIDE    {
       return clusterConf.get();
     }
 
-     clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE    {
+    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE    {
       return &runtimeMetadata;
     }
 
-     void modifiedScop() LLVM_OVERRIDE    {
-     changedScop = true;
+    void modifiedScop() LLVM_OVERRIDE    {
+      changedScop = true;
     }
 #pragma endregion
 
-  }; // class MollyPassManager
+  }; // class MollyPassManagerImpl
+
+} // namespace
 
 
-
-} // namespace molly
-
-
-char molly::MollyPassManagerImpl::ID = 0;
-extern char &molly::MollyPassManagerID = molly::MollyPassManagerImpl::ID;
-ModulePass *molly::createMollyPassManager() {
+char MollyPassManagerImpl::ID = 0;
+extern char &::molly::MollyPassManagerID = MollyPassManagerImpl::ID;
+ModulePass *::molly::createMollyPassManager() {
   return new MollyPassManagerImpl();
 }
-
-

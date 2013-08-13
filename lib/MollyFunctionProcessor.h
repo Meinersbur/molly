@@ -15,7 +15,7 @@ namespace molly {
 
   public:
     virtual llvm::FunctionPass *asPass() = 0;
-    virtual llvm::AnalysisResolver *asResolver() = 0;
+    //virtual llvm::AnalysisResolver *asResolver() = 0;
 
     virtual llvm::Value *getClusterCoordinate( int i ) = 0;
 
@@ -25,6 +25,7 @@ namespace molly {
 
   public:
     static MollyFunctionProcessor *create(MollyPassManager *pm, llvm::Function *func);
+    static llvm::AnalysisResolver *createResolver(MollyPassManager *pm, llvm::Function *func);
   }; // MollyFunctionProcessor
 
 } // namespace molly

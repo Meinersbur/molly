@@ -11,37 +11,45 @@ using namespace std;
 //using isl::enwrap;
 
 
-class MollyRegionProcessorImpl : public MollyRegionProcessor, private AnalysisResolver  {
-  MollyPassManager *pm;
-  llvm::Region *region;
+namespace {
 
-public:
-  MollyRegionProcessorImpl(MollyPassManager *pm, llvm::Region *region) : pm(pm), region(region), AnalysisResolver(*static_cast<PMDataManager*>(nullptr)) {}
+  class MollyRegionResolver : public AnalysisResolver {
+  private:
+    MollyPassManager *pm;
+    Region *region;
+
+  public:
+    MollyRegionResolver(MollyPassManager *pm, Region *region) 
+      :  AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), region(region) {}
+
+    Pass * findImplPass(AnalysisID PI) LLVM_OVERRIDE {
+      return pm->findOrRunAnalysis(PI, nullptr, region);
+    }
+
+    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
+      return pm->findOrRunAnalysis(PI, &F, region);
+    }
+
+    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
+      return pm->findAnalysis(ID, nullptr, region);
+    }
+  }; // class MollyRegionResolver
 
 
-#pragma region llvm::AnalysisResolver
-  Pass * findImplPass( AnalysisID PI ) LLVM_OVERRIDE {
-    return pm->findOrRunAnalysis(PI, nullptr, region);
-  }
+  class MollyRegionProcessorImpl : public MollyRegionProcessor  {
+    MollyPassManager *pm;
+    llvm::Region *region;
 
-  Pass * findImplPass( Pass *P, AnalysisID PI, Function &F ) LLVM_OVERRIDE {
-    return pm->findOrRunAnalysis(PI, &F, region);
-  }
+  public:
+    MollyRegionProcessorImpl(MollyPassManager *pm, llvm::Region *region) : pm(pm), region(region) {}
+  }; // class MollyRegionProcessorImpl
 
-  Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
-    return pm->findAnalysis(ID, nullptr, region);
-  }
-#pragma endregion
-
-
-#pragma region polly::MollyRegionProcessor
-  llvm::AnalysisResolver *asResolver() LLVM_OVERRIDE {
-    return this;
-  }
-#pragma endregion
-};
+} // namespace 
 
 
 MollyRegionProcessor *MollyRegionProcessor::create(MollyPassManager *pm, llvm::Region *region) {
   return new MollyRegionProcessorImpl(pm, region);
+}
+AnalysisResolver *MollyRegionProcessor::createResolver(MollyPassManager *pm, llvm::Region *region) {
+  return new MollyRegionResolver(pm, region);
 }

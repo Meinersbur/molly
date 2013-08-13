@@ -10,10 +10,11 @@ namespace molly {
   class MollyRegionProcessor {
 
   public:
-        virtual llvm::AnalysisResolver *asResolver() = 0;
+    //virtual llvm::AnalysisResolver *asResolver() = 0;
 
   public:
     static MollyRegionProcessor *create(MollyPassManager *pm, llvm::Region *region);
+    static llvm::AnalysisResolver *createResolver(MollyPassManager *pm, llvm::Region *region);
   }; // class MollyRegionProcessor
 
 } // namespace molly

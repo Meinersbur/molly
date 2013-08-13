@@ -9,38 +9,43 @@ using namespace llvm;
 using namespace std;
 //using isl::enwrap;
 
+namespace {
 
-class MollyModuleProcessorImpl : public MollyModuleProcessor, private AnalysisResolver {
-private:
-  MollyPassManager *pm;
-  llvm::Module *module;
+  class MollyModuleResolver : public AnalysisResolver {
+  private:
+    MollyPassManager *pm;
+    Module *module;
 
-public:
-  MollyModuleProcessorImpl(MollyPassManager *pm, llvm::Module *module) : AnalysisResolver(*static_cast<PMDataManager*>(nullptr)) {}
+  public:
+    MollyModuleResolver(MollyPassManager *pm, Module *module) 
+      :  AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), module(module) {}
 
-#pragma region llvm::AnalysisResolver
-   Pass * findImplPass( AnalysisID PI ) LLVM_OVERRIDE  {
-    throw std::logic_error("The method or operation is not implemented.");
-  }
+    Pass * findImplPass(AnalysisID PI) LLVM_OVERRIDE {
+      return pm->findOrRunAnalysis(PI, nullptr, nullptr);
+    }
 
-   Pass * findImplPass(Pass *P, AnalysisID PI, Function &F ) LLVM_OVERRIDE  {
-    return pm->findOrRunAnalysis(PI, &F, nullptr);
-  }
+    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
+      return pm->findOrRunAnalysis(PI, &F, nullptr);
+    }
 
-   Pass * getAnalysisIfAvailable( AnalysisID ID, bool Direction ) const LLVM_OVERRIDE  {
-    throw std::logic_error("The method or operation is not implemented.");
-  }
-#pragma endregion
+    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
+      return pm->findAnalysis(ID, nullptr, nullptr);
+    }
+  }; // class MollyModuleResolver
 
+  class MollyModuleProcessorImpl : public MollyModuleProcessor, private AnalysisResolver {
+  private:
+    MollyPassManager *pm;
+    llvm::Module *module;
 
-#pragma region molly::MollyModuleProcessor
-   llvm::AnalysisResolver * asResolver() LLVM_OVERRIDE {
-   return this;
-  }
-#pragma endregion
-}; // class MollyModuleProcessorImpl
-
+  public:
+    MollyModuleProcessorImpl(MollyPassManager *pm, llvm::Module *module) : AnalysisResolver(*static_cast<PMDataManager*>(nullptr)) {}
+  }; // class MollyModuleProcessorImpl
+} // namespace
 
 MollyModuleProcessor *MollyModuleProcessor::create(MollyPassManager *pm, llvm::Module *module) {
   return new MollyModuleProcessorImpl(pm, module);
+}
+AnalysisResolver *MollyModuleProcessor::createResolver(MollyPassManager *pm, llvm::Module *module) {
+  return new MollyModuleResolver(pm, module);
 }
