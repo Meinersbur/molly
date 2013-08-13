@@ -12,5 +12,20 @@ namespace molly {
   // #include "MollyFieldAccess.h"
   class MollyFieldAccess;
 
+  // #include "MollyPassManager.h"
+  class MollyPassManager;
+
+  // #include "MollyFunctionProcessor.h"
+  class MollyFunctionProcessor;
+
+  // #include "MollyScopProcessor.h"
+  class MollyScopProcessor;
+
+  // #include "ClusterConfig.h"
+  class ClusterConfig;
+
+  // #include "CommunicationBuffer.h"
+  class CommunicationBuffer;
+
 } // namespace molly
 #endif /* MOLLY_MOLLYFWD_H */

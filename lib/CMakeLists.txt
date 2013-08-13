@@ -7,6 +7,11 @@ add_molly_library(LLVMMolly
     # LLVM Passes
     MollyInlinePrepa.cpp
     MollyPassManager.cpp
+    MollyScopProcessor.cpp
+    MollyFunctionProcessor.cpp
+    MollyModuleProcessor.cpp
+    MollyRegionProcessor.cpp
+    MollyScopStmtProcessor.cpp
     
     # Classes representing something
     FieldType.cpp
@@ -36,7 +41,6 @@ add_molly_library(LLVMMolly
     ZCurveMapping.cpp
     HilbertCurveMapping.cpp
     FlattenMapping.cpp
-    Quast.cpp
     
   HEADER_DIRS 
     ${MOLLY_SOURCE_DIR}/include/molly 

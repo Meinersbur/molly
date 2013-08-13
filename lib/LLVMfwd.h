@@ -56,11 +56,18 @@ namespace llvm {
   class RegionInfo;
   class Region;
 
+  // #include <llvm/Analysis/RegionPass.h>
+  class RegionPass;
+
   // #include <llvm/Pass.h>
   class Pass;
   class ModulePass;
   class FunctionPass;
   class BasicBlockPass;
+  typedef const void* AnalysisID;
+
+  // #include <llvm/PassAnalysisSupport.h>
+  class AnalysisResolver;
 
   // #include <llvm/IR/IRBuilder.h>
   // TODO: Do not pass IRBuilder<> as argument to codegen functions
@@ -87,13 +94,8 @@ namespace llvm {
   // #include <llvm/IR/InstrTypes.h>
   class TerminatorInst;
 
-  namespace CodeGen {
-     // #include <llvm/CodeGen/FieldTypeMetadata.h>
-    class FieldTypeMetadata;
-
-    // #include <llvm/CodeGen/MollyRuntimeMetadata.h>
-    class MollyRuntimeMetadata;
-  } // namespace CodeGen
+  // #include <llvm/Analysis/ScalarEvolution.h>
+  class SCEV;
 
 } // namespace llvm
 

@@ -40,6 +40,12 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Module.h>
 
+#include "MollyModuleProcessor.h"
+#include "MollyFunctionProcessor.h"
+#include "MollyRegionProcessor.h"
+#include "MollyScopProcessor.h"
+#include "MollyScopStmtProcessor.h"
+
 using namespace molly;
 using namespace polly;
 using namespace llvm;
@@ -51,1242 +57,14 @@ cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape")
 
 namespace molly {
 
-  class MollyPassManager : public llvm::ModulePass {
-    typedef IRBuilder<> BuilderTy;
-
-#pragma region AnalysisResolver
-    class MollyResolver : public AnalysisResolver {
-    protected:
-      MollyPassManager *pm;
-
-      MollyResolver(MollyPassManager *pm) : AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm) {
-        assert(pm);
-      }
-
-    protected:
-      virtual Pass *getPass(AnalysisID PI, bool ifavailable) const = 0;
-
-    public:
-      Pass *findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
-        return findImplPass(P, PI, F);
-      }
-
-      Pass *findImplPass(AnalysisID PI) LLVM_OVERRIDE {
-        return getPass(PI, false);
-      }
-
-      Pass *getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
-        return getPass(ID, true);
-      }
-    }; // class MollyResolver
-
-
-    class MollyModuleResolver : public MollyResolver {
-    protected:
-      Pass *getPass(AnalysisID PI, bool ifavailable) const LLVM_OVERRIDE {
-        return ifavailable ? pm->findAnalysis(PI) : pm->findOrRunAnalysis(PI);
-      }
-    public:
-      MollyModuleResolver(MollyPassManager *pm) : MollyResolver(pm) {
-        assert(pm);
-      }
-    }; // class MollyModuleResolver
-
-    class MollyFunctionResolver : public MollyResolver {
-    private:
-      Function *func;
-
-    protected:
-      Pass *getPass(AnalysisID PI, bool ifavailable) const LLVM_OVERRIDE {
-        return ifavailable ?  pm->findAnalysis(PI, func) : pm->findOrRunAnalysis(PI, func);
-      }
-
-    public:
-      MollyFunctionResolver(MollyPassManager *pm, Function *func) : MollyResolver(pm) , func(func) {
-        assert(pm);
-        assert(func);
-      }
-    }; // class MollyFunctionResolver
-
-
-    class MollyRegionResolver : public MollyResolver {
-    private:
-      Region *region;
-
-    protected:
-      Pass *getPass(AnalysisID PI, bool ifavailable) const LLVM_OVERRIDE {
-        return ifavailable ? pm->findAnalysis(PI, region) : pm->findOrRunAnalysis(PI, region);
-      }
-
-    public:
-      MollyRegionResolver(MollyPassManager *pm, Region *region) : MollyResolver(pm) , region(region) {
-        assert(pm);
-        assert(region);
-      }
-    }; // class MollyRegionResolver
-#pragma endregion
-
-
-#pragma region Contexts
-    class MollyScopStmtContext {
-    private:
-      MollyPassManager *pm;
-      ScopStmt *stmt;
-
-    public:
-      MollyScopStmtContext(MollyPassManager *pm, ScopStmt *stmt) : pm(pm), stmt(stmt) {}
-
-
-#pragma region Apply whete to execute stmt
-
-      void applyWhere() {
-        auto scop = stmt->getParent();
-        auto func = getParentFunction(stmt);
-        //auto funcCtx = pm->getFuncContext(func);
-        auto scopCtx = pm->getScopContext(scop);
-        // auto se = pm->findOrRunAnalysis<ScalarEvolution>(func);
-
-        auto domain = getIterationDomain(stmt);
-        auto where = getWhereMap(stmt);
-        where.intersectDomain_inplace(domain);
-
-        auto nCoords = pm->clusterConf->getClusterDims();
-        auto coordSpace = pm->clusterConf->getClusterSpace();
-        auto coordValues = scopCtx->getClusterCoordinates();
-        assert(coordValues.size() == nCoords);
-
-        auto coordMatches = coordSpace.createUniverseBasicSet();
-        for (auto i = 0; i < nCoords; i+=1) {
-          // auto coordValue = coordValues[i];
-          auto scev = coordValues[i];
-          auto id = enwrap(scop->getIdForParam(scev));
-          coordMatches.alignParams_inplace(pm->getIslContext()->createParamsSpace(1).setParamDimId(0,id)); // Add the param if not exists yet
-          auto paramDim = coordMatches.findDim(id);
-          assert(paramDim.isValid());
-          auto coordDim = coordSpace.getSetDim(i);
-          assert(coordDim.isValid());
-
-          coordMatches.equate_inplace(paramDim, coordDim);
-        }
-
-        auto newDomain = where.intersectRange(coordMatches).getDomain();
-
-        stmt->setDomain(newDomain.take());
-        stmt->setWhereMap(nullptr);
-      }
-
-#pragma enregion
-    }; // class MollyScopStmtContext
-
-
-    class MollyScopContext {
-    private:
-      MollyPassManager *pm;
-      Scop *scop;
-      Function *func;
-      isl::Ctx *islctx;
-
-      ScalarEvolution *SE;
-
-      bool changedScop ;
-      void modifiedScop() {
-        changedScop = true;
-      }
-
-      void runPass(Pass *pass) {
-        switch (pass->getPassKind()) {
-        case PT_Region:
-          pm->runRegionPass( static_cast<RegionPass*>(pass), &scop->getRegion());
-          break;
-        case PT_Function:
-          pm->runFunctionPass(static_cast<FunctionPass*>(pass), func);
-          break;
-        case PT_Module:
-          pm->runModulePass(static_cast<ModulePass*>(pass));
-          break;
-        default:
-          llvm_unreachable("Unsupport pass type");
-        }
-      }
-
-      MollyFieldAccess getFieldAccess(ScopStmt *stmt) {
-        return pm->getFieldAccess(stmt);
-      }
-
-    public:
-      MollyScopContext(MollyPassManager *pm, Scop *scop) : pm(pm), scop(scop), changedScop(false) {
-        func = getParentFunction(scop);
-        islctx = pm->getIslContext();
-      }
-
-      
-    bool hasFieldAccess() {
-      // TODO: Cache result
-    for (auto stmt : *scop) {
-     auto facc = MollyFieldAccess::fromScopStmt(stmt);
-     if (facc.isValid())
-       return true;
-    }
-    return false;
-    }
-
-      const SCEV *getClusterCoordinate(int i) {
-        //TODO: Cache SCEV
-        auto funcCtx = pm->getFuncContext(func);
-        auto coordVal = funcCtx->getClusterCoordinate(i);
-        auto se = pm->findOrRunAnalysis<ScalarEvolution>(func);
-        auto coordSe = se->getSCEV(coordVal);
-        scop->addParam(coordSe);
-
-        return coordSe;
-      }
-
-      std::vector<const SCEV *> getClusterCoordinates() {
-        auto nClusterDims = pm->clusterConf->getClusterDims();
-        std::vector<const SCEV *> result;
-        result.reserve(nClusterDims);
-        for (auto i = 0; i < nClusterDims; i+=1) {
-          result.push_back(getClusterCoordinate(i));
-        }
-        return result;
-      }
-
-#pragma region Scop Distribution
-      void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
-        //if (acc.isPrologue() || acc.isEpilogue()) {
-        //  return; // These are not computed anywhere
-        //}
-
-        auto fieldVar = acc.getFieldVariable();
-        auto fieldTy = acc.getFieldType();
-        auto stmt = acc.getPollyScopStmt();
-        auto scop = stmt->getParent();
-
-        auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
-        auto home = fieldTy->getHomeAff(); /* field coord -> cluster coord */
-        auto relMap = rel.toMap().setOutTupleId(fieldTy->getIndexsetTuple());
-        auto it2rank = relMap.applyRange(home.toMap());
-
-        if (acc.isRead()) {
-          executeWhereRead = unite(executeWhereRead.subtractDomain(it2rank.getDomain()), it2rank);
-        }
-
-        if (acc.isWrite()) {
-          executeWhereWrite = unite(executeWhereWrite.subtractDomain(it2rank.getDomain()), it2rank);
-        }
-      }
-
-    protected:
-      void distributeScopStmt(ScopStmt *stmt) {
-        auto itDomain = getIterationDomain(stmt);
-        auto itSpace = itDomain.getSpace();
-
-        auto executeWhereWrite = islctx->createEmptyMap(itSpace, pm->clusterConf->getClusterSpace());
-        auto executeWhereRead = executeWhereWrite.copy();
-        auto executeEverywhere = islctx->createAlltoallMap(itDomain,  pm->clusterConf->getClusterShape());
-        auto executeMaster = islctx->createAlltoallMap(itDomain, pm->clusterConf->getMasterRank().toMap().getRange());
-
-        for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
-          auto memacc = *itAcc;
-          auto acc = pm->getFieldAccess(memacc);
-          if (!acc.isValid())
-            continue;
-
-          processFieldAccess(acc, executeWhereWrite, executeWhereRead);
-        }
-
-        auto result = executeEverywhere;
-        result = unite(result.subtractDomain(executeWhereRead.getDomain()), executeWhereRead);
-        result = unite(result.subtractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
-
-        result.setOutTupleId_inplace(pm->clusterConf->getClusterTuple());
-        stmt->setWhereMap(result.take());
-        // FIXME: We must ensure that depended instructions are executed on the same node. Execute on multiple nodes if necessary
-
-        modifiedScop();
-      }
-
-    public:
-      void computeScopDistibution() {
-        SE = pm->findOrRunAnalysis<ScalarEvolution>(&scop->getRegion());
-
-        for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
-          auto stmt = *itStmt;
-          distributeScopStmt(stmt);
-        }
-
-        SE = nullptr;
-      }
-#pragma endregion
-
-
-
-
-#pragma region Scop CommGen
-      static void spreadScatterings(Scop *scop, int multiplier) {
-        for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
-          auto stmt = *itStmt;
-          auto scattering = getScattering(stmt);
-          auto space = scattering.getSpace();
-          auto nParam = space.getParamDimCount();
-          auto nIn = space.getInDimCount();
-          auto nOut = space.getOutDimCount();
-          auto newScattering = space.emptyMap();
-
-          for (auto bmap : scattering.getBasicMaps()) {
-            auto newbmap = space.universeBasicMap();
-            for (auto c : bmap.getConstraints()) {
-              c.setConstant_inplace(c.getConstant()*multiplier);
-              for (auto i = nParam-nParam; i < nParam; i+=1) {
-                c.setCoefficient_inplace(isl_dim_param, i, c.getCoefficient(isl_dim_param, i)*multiplier);
-              }
-              for (auto i = nIn-nIn; i < nIn; i+=1) {
-                c.setCoefficient_inplace(isl_dim_in, i, c.getCoefficient(isl_dim_in, i)*multiplier);
-              }
-              newbmap.addConstraint_inplace(c);
-            }
-            newScattering = unite(move(newScattering), newbmap);
-          }
-
-          stmt->setScattering(newScattering.take());
-        }
-      }
-
-
-      void genCommunication() {
-        auto funcName = func->getName();
-        DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << funcName << "\n");
-        if (funcName == "sink") {
-          int a = 0;
-        }
-
-        //auto func = scop->getRegion().getEntry()->getParent();
-        auto &llvmContext = func->getContext();
-        auto module = func->getParent();
-        auto scatterTuple = getScatterTuple(scop);
-        auto clusterTuple = pm->clusterConf->getClusterTuple();
-        auto nodeSpace = pm->clusterConf->getClusterSpace();
-        auto nodes = pm->clusterConf->getClusterShape();
-        auto nClusterDims = nodeSpace.getSetDimCount();
-
-        // Make some space between the stmts in which we can insert our communication
-        spreadScatterings(scop, 2);
-
-        // Collect information
-        // Like polly::Dependences::collectInfo, but finer granularity (MemoryAccess instead ScopStmt)
-        //DenseMap<const isl_id*, polly::MemoryAccess*> tupleToAccess;
-        DenseMap<const isl_id*, ScopStmt*> tupleToStmt;
-        for (auto stmt : *scop) {
-          auto domainTuple = getDomainTuple(stmt);
-          assert(!tupleToStmt.count(domainTuple.keep()) && "tupleId must be unique");
-          tupleToStmt[domainTuple.keep()] = stmt;
-        }
-
-        DenseMap<const isl_id*,FieldType*> tupleToFty; //TODO: This is not per scop, so should be moved to PassManager
-
-        auto paramSpace = isl::enwrap(scop->getParamSpace());
-
-        auto readAccesses = paramSpace.createEmptyUnionMap(); /* { stmt[iteration] -> access[indexset] } */
-        auto writeAccesses = readAccesses.copy(); /* { stmt[iteration] -> access[indexset] } */
-        auto schedule = readAccesses.copy(); /* { stmt[iteration] -> scattering[scatter] } */
-
-
-        for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
-          auto stmt = *itStmt;
-
-          auto facc = getFieldAccess(stmt);
-          if (!facc.isValid())
-            continue; // Does not contain a field access
-
-          auto domainTuple = getDomainTuple(stmt);
-          auto domain = getIterationDomain(stmt); /* { stmt[domain] } */
-          assert(domain.getSpace().matchesSetSpace(domainTuple));
-
-          auto scattering = getScattering(stmt); /* { stmt[domain] -> scattering[scatter] }  */
-          assert(scattering.getSpace().matchesMapSpace(domainTuple, scatterTuple));
-          scattering.intersectDomain_inplace(domain);
-
-          auto fvar = facc.getFieldVariable();
-          auto fty = facc.getFieldType();
-          auto indexsetTuple = fty->getIndexsetTuple();
-
-          assert(!tupleToFty.count(indexsetTuple.keep()) || tupleToFty[indexsetTuple.keep()]==fty);
-          tupleToFty[indexsetTuple.keep()] = fty;
-
-          auto accessRel = facc.getAccessRelation(); /*  { stmt[domain] -> field[indexset] } */
-          assert(accessRel.getSpace().matchesMapSpace(domainTuple, indexsetTuple));
-          accessRel.intersectDomain_inplace(domain);
-
-          if (facc.isRead()) {
-            readAccesses.addMap_inplace(accessRel);
-          }
-          if (facc.isWrite()) {
-            writeAccesses.addMap_inplace(accessRel);
-          }
-          schedule.addMap_inplace(scattering);
-        }
-
-        // To find the data that needs to be written back after the scop has been executed, we add an artificial stmt that reads all the data after everything has been executed
-        auto epilogueId = islctx->createId("epilogue");
-        auto epilogueDomainSpace = islctx->createSetSpace(0,0).setSetTupleId(epilogueId);
-        auto scatterRangeSpace = getScatteringSpace(scop);
-        assert(scatterRangeSpace.isSetSpace());
-        auto scatterId = scatterRangeSpace.getSetTupleId();
-        auto nScatterRangeDims = scatterRangeSpace.getSetDimCount();
-        auto epilogueScatterSpace = isl::Space::createMapFromDomainAndRange(epilogueDomainSpace, scatterRangeSpace);
-
-        auto allScatters = range(schedule);
-        //assert(allScatters.nSet()==1);
-        auto scatterRange = allScatters.extractSet(scatterRangeSpace); 
-        assert(scatterRange.isValid());
-        auto nScatterDims = scatterRange.getDimCount();
-
-        auto max = scatterRange.dimMax(0) + 1;
-        max.setInTupleId_inplace(scatterId);
-        isl::Set epilogueDomain = epilogueDomainSpace.universeSet();
-        auto epilogieMapToZero = epilogueScatterSpace.createUniverseBasicMap();
-        for (auto d = 1; d < nScatterRangeDims; d+=1) {
-          epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
-        }
-
-        assert(!scatterRange.isEmpty());
-        auto min = scatterRange.dimMin(0) - 1; /* { [1] } */
-        min.addDims_inplace(isl_dim_in, nScatterDims);
-        min.setInTupleId_inplace(scatterId); /* { scattering[nScatterDims] -> [1] } */
-        auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
-        beforeScopScatter.setPwAff_inplace(0, min);
-        auto beforeScopScatterRange = beforeScopScatter.toMap().getRange();
-
-        auto afterBeforeScatter = beforeScopScatter.setPwAff(1, scatterRangeSpace.createConstantAff(1));
-        auto afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
-
-        // Insert fake read access after scop
-        auto epilogueScatter = max.toMap(); //scatterSpace.createMapFromAff(max);
-        epilogueScatter.addDims_inplace(isl_dim_out, nScatterRangeDims - 1);
-        //epilogueScatter.setTupleId(isl_dim_out, scatterRangeSpace.getTupleId(isl_dim_set));
-        epilogueScatter.setInTupleId_inplace(epilogueId);
-        epilogueScatter.setOutTupleId_inplace(scatterId);
-        epilogueScatter.intersect_inplace(epilogieMapToZero);
-
-        //auto allIterationDomains = domain(writeAccesses);
-        auto allIndexsets = range(writeAccesses);
-        //auto relateAll = isl::UnionMap::createFromDomainAndRange(
-        auto epilogueTouchEverything = isl::UnionMap::createFromDomainAndRange(epilogueDomain, allIndexsets);
-
-        // Find the data flows
-        readAccesses.unite_inplace(epilogueTouchEverything);
-        schedule.unite_inplace(epilogueScatter);
-        isl::UnionMap mustFlow;
-        isl::UnionMap mayFlow;
-        isl::UnionMap mustNosrc;
-        isl::UnionMap mayNosrc;
-        isl::computeFlow(readAccesses.copy(), writeAccesses.copy(), islctx->createEmptyUnionMap(), schedule.copy(), &mustFlow, &mayFlow, &mustNosrc, &mayNosrc);
-        assert(mayNosrc.isEmpty());
-        assert(mayFlow.isEmpty());
-        //TODO: verify that computFlow generates direct dependences
-
-        auto inputFlow = unite(mustNosrc, mayNosrc);
-        auto stmtFlow = mustFlow.getSpace().createEmptyUnionMap();
-        auto outputFlow = mustFlow.getSpace().createEmptyUnionMap();
-        for (auto dep : mustFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
-          //auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
-          //auto itDomainRead = dep.getRange(); /* read_acc[domain] */
-          if (dep.getOutTupleId() == epilogueId) {
-            outputFlow.addMap_inplace(dep);
-          } else {
-            stmtFlow.addMap_inplace(dep);
-          }
-        }
-
-
-        for (auto dep : inputFlow.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
-          // Value source is outside this scop 
-          // Value must be read from home location
-
-          auto stmtTuple = dep.getInTupleId();
-          auto fieldTuple = dep.getOutTupleId();
-          assert(dep.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
-
-          auto stmtRead = tupleToStmt[stmtTuple.keep()];
-          auto domainSpace = enwrap(stmtRead->getDomainSpace());
-          assert(domainSpace.getSetTupleId() == stmtTuple);
-
-          auto facc = getFieldAccess(stmtRead);
-          auto fvar = facc.getFieldVariable();
-          auto fty = facc.getFieldType();
-          assert(tupleToFty[fieldTuple.keep()] == fty);
-          auto indexsetSpace = fty->getIndexsetSpace();
-          auto readUsed = facc.getLoadInst();
-          auto nFieldDims = fty->getNumDimensions();
-          assert(indexsetSpace.getSetDimCount() == nFieldDims);
-
-          auto domainRead = dep.getDomain(); /* { stmtRead[domain] } */
-          assert(domainRead.getSpace().matchesSetSpace(domainSpace));
-
-          auto scatteringRead = getScattering(stmtRead); /* { stmtRead[domain] -> scattering[scatter] } */
-
-          auto accessRel = facc.getAccessRelation(); /* { stmtRead[domain] -> field[indexset] } */
-          assert(accessRel.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
-          accessRel.intersectDomain_inplace(domainRead);
-
-          auto whereRead = getWhereMap(stmtRead); /* { stmtRead[domain] -> cluster[node] } */
-          assert(whereRead.getSpace().matchesMapSpace(domainSpace, nodeSpace));
-          auto wherePairs = whereRead.wrap(); /* { (stmtRead[domain] -> rank[node]) } */ // All execution instances of this ScopStmt
-
-          // Find those who are already at their home location
-          // For every execution of a stmt on a specific node
-          auto homeRel = fty->getHomeRel(); /* { cluster[node] -> field[indexset] } */
-          homeRel.setInTupleId_inplace(pm->clusterConf->getClusterTuple());
-          assert(homeRel.getSpace().matchesMapSpace(clusterTuple, fieldTuple));
-
-          auto wherePairsAccesses = accessRel.addInDims(nodeSpace.getSetDimCount()); 
-          wherePairsAccesses.cast_inplace(wherePairs.getSpace().mapsTo(homeRel.getSpace().range()));
-          wherePairsAccesses = wherePairsAccesses.intersectDomain(wherePairs); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-          auto c = wherePairsAccesses.chain(homeRel.reverse()); /* { ((stmtRead[domain] -> cluster[node]) -> field[indexset]) -> cluster[node] } */ // Oh my goodness
-          // condition: node on which read is executed==node the read value is home
-          auto homePairAccesses = c;
-          for (auto i = 0; i < nClusterDims; i+=1) {
-            homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + i, isl_dim_out, i);
-          }
-          auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-          auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-
-
-          ScopEditor editor(scop);
-
-          // CodeGen already home
-          if (!alreadyHomeAccesses.isEmpty()) {
-            auto readLocalEdit = editor.replaceStmt(stmtRead, alreadyHomeAccesses.getDomain().unwrap(), "InputLocal");
-            auto bb = readLocalEdit.getBasicBlock();
-
-            //BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
-            IRBuilder<> builder(bb);
-
-            auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
-            readUsed->replaceAllUsesWith(val); 
-            readLocalEdit.getTerminator();
-            // TODO: Don't assume every stmt accessed just one value
-            //auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
-            //scop->addScopStmt(replacementStmt);
-
-            //TODO: Create polly::MemoryAccess
-          }
-
-          // CodeGen from other nodes
-          if (!notHomeAccesses.isEmpty()) {
-            // Where is the home node?
-            auto notHomeLocation = wherePairsAccesses.intersectDomain(notHomeAccesses.wrap()).curry(); /* { (stmtRead[domain] -> dst[node]) -> (field[indexset] -> src[node]) } */
-            auto instancesRecv = notHomeLocation.getDomain().unwrap(); /* { stmtRead[domain] -> cluster[node] } */
-            auto dataSource = notHomeLocation.getRange().unwrap(); /* { field[indexset] -> cluster[node] } */
-
-            // Create the communication buffer 
-            auto dataToSend = dataSource.reverse(); /* { cluster[node] -> field[indexset] } */
-            auto sendRelPerm = notHomeLocation.curry().getRange().unwrap(); /* { dst[node] -> (field[indexset] -> src[node]) } */
-
-            unsigned perm[] = { nClusterDims+nFieldDims, 0, nClusterDims };
-            auto sendRel = sendRelPerm.wrap().permuteDims(perm).unwrap() ; /* { (src[node] -> dst[node]) -> field[indexset] } */
-            auto combuf = pm->newCommunicationBuffer(fty, sendRel.copy());
-
-            // Send on source node
-            // Copy to buffer
-            auto copyArea = product(nodes, combuf->getRelation().getRange()); /* { [cluster,indexset] } */
-            auto copyAreaSpace = copyArea.getSpace();
-            auto copyScattering = islctx->createAlltoallMap(copyArea, beforeScopScatterRange);
-            auto copyWhere = fty->getHomeRel(); // Execute where that value is home
-            auto memmovEditor = editor.createStmt(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
-            auto memmovStmt = memmovEditor.getStmt();
-            BasicBlock *memmovBB = memmovStmt->getBasicBlock();
-
-            //BasicBlock::Create(llvmContext, "memmove_nonhome", func);
-            IRBuilder<> memmovBuilder(memmovBB);
-            auto copyValue = codegenReadLocal(memmovBuilder, fvar, facc.getCoordinates());
-            //auto memmovStmt = createScopStmt(scop, memmovBB, stmtRead->getRegion(), "memmove_nonhome", stmtRead->getLoopNests()/*not accurate*/, );
-            std::map<isl_id *, llvm::Value *> scalarMap;
-            editor.getParamsMap(scalarMap, memmovStmt);
-            combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/ );
-            memmovBuilder.CreateUnreachable(); // Terminator, removed by Scop code generator
-
-            // Execute send
-            auto singletonDomain = islctx->createSetSpace(0, 0).universeBasicSet();
-            auto sendStmtEditor = editor.createStmt(singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain,afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
-            BasicBlock *sendBB = sendStmtEditor.getBasicBlock();
-            IRBuilder<> sendBuilder(sendBB);
-
-            auto nodeCoords =  ArrayRef<Value*>(facc.getCoordinates()).slice(0, nodes.getSetDimCount());
-            auto dstRank = pm->clusterConf->codegenComputeRank(sendBuilder, nodeCoords);
-            codegenSendBuf(sendBuilder, combuf, dstRank);
-            sendBuilder.CreateUnreachable();
-
-            // Execute Recv
-            auto recvDomain = combuf->getRelation().getDomain(); /* { (src[coord], dst[coord]) } */
-            auto recvUserScatter = scatteringRead ;
-            auto recvScatter = recvUserScatter ; /* { (src[coord], dst[coord]) -> scattering[scatter] } */
-            auto recvWhere = recvDomain.unwrap().rangeMap(); /* { (src[coord], dst[coord]) -> dst[coord] } */
-            auto recvStmtEditor = editor.createStmt(recvDomain.copy(), recvScatter.copy(), recvWhere.copy(), "recv_nonhome" );
-
-            // Use the data where needed
-            auto useWhere = notHomeAccesses.getRange().unwrap(); /* { readStmt[domain] -> cluster[coord] } */
-            auto useEditor = editor.replaceStmt(stmtRead,useWhere.copy() , "use_nonhome");
-            IRBuilder<> useBuilder(useEditor.getTerminator());
-            auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
-            auto useLoad = facc.getLoadUse();
-            useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
-
-            //TODO: Create polly::MemoryAccess
-          }
-        }
-
-
-        for (auto dep : outputFlow.getMaps()) {
-          assert(dep.getOutTupleId() == epilogueId);
-          // This means the data is visible outside the scop and must be written to its home location
-          // There is no explicit read access
-
-          auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
-          auto stmtWrite = tupleToStmt[itDomainWrite.getTupleId().keep()];
-          assert(stmtWrite);
-          //auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
-          //assert(memaccWrite);
-          auto faccWrite = getFieldAccess(stmtWrite); 
-          assert(faccWrite.isValid());
-          auto memaccWrite = faccWrite.getPollyMemoryAccess();
-          //auto stmtWrite = faccWrite.getPollyScopStmt();
-          auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
-          auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
-          auto domainWrite = itDomainWrite.setTupleId(isl::Id::enwrap(stmtWrite->getTupleId())); /* write_stmt[domain] */
-          auto fvar = faccWrite.getFieldVariable();
-          auto fty = fvar->getFieldType();
-          auto nScatterDims = scatterWrite.getOutDimCount();
-          auto scatterSpace = scatterWrite.getRangeSpace();
-
-          // What is written here?
-          auto indexset = domainWrite.apply(relWrite); /* { field[indexset] } */
-
-          // Where is it written?
-          auto writtenLoc = getWhereMap(stmtWrite); /* { write_stmt[domain] -> [nodecoord] } */
-          writtenLoc.intersectDomain_inplace(domainWrite);
-          auto valueLoc = writtenLoc.applyDomain(relWrite); /* { field[indexset] -> [nodecoord] } */
-
-          // Get the subset that is already home
-          auto homeAff = fty->getHomeAff(); /* { field[indexset] -> [nodecoord] } */
-          homeAff = faccWrite.getHomeAff();
-          auto affectedNodes = indexset.apply(homeAff); /* { [nodecoord] } */
-          auto homeRel = homeAff.toMap().reverse().intersectRange(indexset); /* { [nodecoord] -> field[indexset] } */
-          auto alreadyHome = intersect(valueLoc.reverse(), homeRel).getRange(); /* { field[indexset] } */
-          auto writeAlreadyHomeDomain = alreadyHome.apply(relWrite.reverse()); /* { write_stmt[domain] } */
-
-          // For all others, where do they are to be transported?
-          writtenLoc;
-
-#pragma region CodeGen
-          auto store = faccWrite.getStoreInst();
-          auto val = store->getValueOperand();
-
-          IRBuilder<> prologueBuilder(func->getEntryBlock().getFirstNonPHI());
-          auto stackMem = prologueBuilder.CreateAlloca(val->getType());
-
-
-          // Add writes to local storage for already-home writes
-          auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
-          auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
-          auto wbWhere = homeRel.applyRange(relWrite.reverse()).reverse();
-
-          ScopEditor editor(scop);
-          auto writebackLocalStmtEditor = editor.createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"  ); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
-          auto writebackLocalStmt = writebackLocalStmtEditor.getStmt();
-          auto bb = writebackLocalStmtEditor.getBasicBlock();
-          //BasicBlock *bb = BasicBlock::Create(llvmContext, "OutputWrite", func);
-          IRBuilder<> builder(bb);
-
-          builder.CreateStore(val, stackMem); // stackMem contains a buffer with the value
-
-
-          SmallVector<Type*, 8> tys;
-          SmallVector<Value*, 8> args;
-          tys.push_back(fty->getType()->getPointerTo()); // target field
-          args.push_back(faccWrite.getFieldPtr());
-          tys.push_back(fty->getEltPtrType()); // source buffer
-          args.push_back(stackMem);
-          auto nDims = alreadyHome.getDimCount();
-          for (auto i = 0; i < nDims; i+=1) {
-            tys.push_back(Type::getInt32Ty(llvmContext));
-            args.push_back(faccWrite.getCoordinate(i));
-          }
-          auto intrSetLocal = Intrinsic::getDeclaration(module, Intrinsic::molly_set_local, tys);
-          builder.CreateCall(intrSetLocal, args);
-          //builder.CreateBr(bb); // This is a dummy branch; at the moment this is dead code, but Polly's code generator will hopefully incorperate it
-
-
-          //writebackLocalStmt->setWhereMap(homeRel.applyRange(relWrite.reverse()).reverse().take());
-          //writebackLocalStmt->addAccess(MemoryAccess::READ, 
-          //writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
-
-          //scop->addScopStmt(writebackLocalStmt);
-          modifiedScop();
-
-          // Do not execute the stmt this is ought to replace anymore
-          auto oldDomain = getIterationDomain(stmtWrite) ; /* { write_stmt[domain] } */
-          faccWrite.getPollyScopStmt()->setDomain(oldDomain.subtract(writeAlreadyHomeDomain).take());
-          modifiedScop();
-
-          // CodeGen to transfer data to their home location
-
-          // 1. Create a buffer
-          // 2. Write the data into that buffer
-          // 3. Send buffer
-          // 4. Receive buffer
-          // 5. Writeback buffer data to home location
-
-
-          writebackLocalStmtEditor.getTerminator();
-#pragma endregion
-        }
-
-
-        for (auto dep : stmtFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
-          auto itDomainWrite = dep.getDomain(); /* { write_acc[domain] } */
-          auto writeTuple = itDomainWrite.getTupleId();
-          auto stmtWrite = tupleToStmt[writeTuple.keep()];
-          assert(stmtWrite);
-          auto faccWrite =  getFieldAccess(stmtWrite);
-          auto memaccWrite = faccWrite.getPollyMemoryAccess();
-          //auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
-          //assert(memaccWrite);
-          //auto faccWrite = getFieldAccess(memaccWrite);
-          //auto stmtWrite = faccWrite.getPollyScopStmt();
-          auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
-          auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
-          auto domainWrite = itDomainWrite.setTupleId(isl::Id::enwrap(stmtWrite->getTupleId())); /* write_stmt[domain] */
-          auto fvar = faccWrite.getFieldVariable();
-          auto fty = fvar->getFieldType();
-
-          auto itDomainRead = dep.getRange();
-          auto itReadTuple = itDomainRead.getTupleId();
-          auto readStmt = tupleToStmt[itReadTuple.keep()];
-
-          //auto memaccRead = tupleToAccess[itDomainRead.getTupleId().keep()];
-          // auto faccRead = MollyFieldAccess::fromMemoryAccess(memaccRead);
-          auto faccRead = getFieldAccess(readStmt);
-          auto stmtRead = faccRead.getPollyScopStmt();
-          auto scatterRead = faccRead.getAccessScattering();
-
-          auto scatter = unite(scatterWrite, scatterRead);
-
-          assert(scatterWrite.getSpace() == scatterRead.getSpace());
-          auto scatterSpace = scatterRead.getSpace();
-
-          // Determine the level of independence
-          auto depScatter = dep.applyDomain(getScattering(stmtWrite)).applyRange(getScattering(stmtRead)); /* { write[scatter] -> read[scatter] } */
-          depScatter.reverse_inplace();
-
-          auto dependsVector = depScatter.getSpace().emptyMap(); /* { read[scatter] -> (read[scatter] - write[scatter]) } */
-          auto nParam = depScatter.getParamDimCount();
-          auto nIn = depScatter.getInDimCount();
-          auto nOut = depScatter.getOutDimCount();
-          assert(nIn==nOut);
-          for (auto basicDep : depScatter.getBasicMaps()) {
-            //TODO: Faster using (in)equality matrices
-            auto dependsBasicVector = basicDep.getSpace().universeBasicMap();
-            for (auto constraint : basicDep.getConstraints()) {
-              for (auto i = nIn-nIn; i < nIn; i+=1) {
-                auto valRead = constraint.getCoefficient(isl_dim_in, i);
-                auto valWrite = constraint.getCoefficient(isl_dim_out, i);
-                constraint.setCoefficient_inplace(isl_dim_out, i, valRead - valWrite);
-              }
-              dependsBasicVector.addConstraint_inplace(constraint);
-            }
-            dependsVector = unite(move(dependsVector), dependsBasicVector);
-          }
-
-          // get the first always-positive coordinate such that the dependence is satisfied
-          // Everything after that doesn't matter anymore to meet that dependence
-          //auto direction = scatterSpace.universeSet();
-          unsigned order = -1;
-          for (auto i = nIn-nIn; i < nIn; i+=1) {
-            auto positiveDepVectors = scatterSpace.zeroPoint().apply(scatterSpace.lexGtFirstMap(i));
-            auto fullfilledDeps = dependsVector.intersectRange(positiveDepVectors);
-            if ( fullfilledDeps.isSupersetOf(dependsVector)) {
-              // All dependences are fullfilled from here
-              // i.e. we can shuffel stuff as we want in lower dimensions
-              order = i;
-              break;
-            }
-          }
-          assert(order!=-1);
-
-          //FIXME: what if fullfiled only at last dimension?
-          auto insertPos = order+1;
-          auto ignored = nScatterRangeDims-insertPos;
-
-          auto indepScatter = scatter.moveDims(isl_dim_in, scatter.getInDimCount(), isl_dim_in, 0, order);
-
-          auto indepMin = indepScatter.lexminPwMultiAff();
-          auto indepMax = indepScatter.lexmaxPwMultiAff();
-
-          //indepMin
-
-
-#if 0
-          auto fulfilledPrefix = scatter.projectOut(isl_dim_set, insertPos, ignored);
-          auto prefix = fulfilledPrefix.projectOut(isl_dim_set, order, 1);
-
-          //FIXME: What if scatterRange is unbounded?
-          auto min = scatterRange.dimMin(insertPos) - 1;
-          auto max = scatterRange.dimMax(insertPos) + 1;
-
-          prefix.addDims(isl_dim_set, ignored);
-          for (auto i = insertPos+1; i < nScatterRangeDims; i+=1) {
-            prefix.fix(isl_dim_set, i, 0);
-          }
-
-
-          auto beforeConst = scatterRangeSpace.emptySet();
-          for (auto piece : min.getPieces()) {
-            auto set = piece.first;
-            auto aff = piece.second;
-            auto eqbset = set.addContraint(scatterRangeSpace.createEqConstraint(aff.copy(), isl_dim_set, insertPos));
-            beforeConst.union_inplace(eqbset);
-          }
-
-          auto beforeScatter = prefix.copy();
-
-
-          //prefix.addContraint(scatterRangeSpace.createVarAff(isl_dim_set, insertPos) == min.toExpr());
-
-          //intersect(scatterRangeSpace.universeBasicSet().addConstraint());
-#endif
-
-        }
-
-        //TODO: For every may-write, copy the original value into that the target memory (unless they are the same), so we copy the correct values into the buffers
-        // i.e. treat ever may write as, write original value if not written
-      }
-#pragma endregion
-
-
-#pragma region Polly
-      void pollyOptimize() {
-
-        switch (Optimizer) {
-#ifdef SCOPLIB_FOUND
-        case OPTIMIZER_POCC:
-          runPass(polly::createPoccPass());
-          break;
-#endif
-#ifdef PLUTO_FOUND
-        case OPTIMIZER_PLUTO:
-          runPass( polly::createPlutoOptimizerPass());
-          break;
-#endif
-        case OPTIMIZER_ISL:
-          runPass(polly::createIslScheduleOptimizerPass());
-          break;
-        case OPTIMIZER_NONE:
-          break; 
-        }
-      }
-
-      void pollyCodegen() {
-
-        switch (CodeGenerator) {
-#ifdef CLOOG_FOUND
-        case CODEGEN_CLOOG:
-          runPass(polly::createCodeGenerationPass());
-          if (PollyVectorizerChoice == VECTORIZER_BB) {
-            VectorizeConfig C;
-            C.FastDep = true;
-            runPass(createBBVectorizePass(C));
-          }
-          break;
-#endif
-        case CODEGEN_ISL:
-          runPass(polly::createIslCodeGenerationPass());
-          break;
-        case CODEGEN_NONE:
-          break;
-        }
-      }
-#pragma endregion
-
-    }; // class MollyScopContext
-
-
-    // This is actually not a pass
-    // It used internally for actions on functions and remembering function-specific data
-    // Could be changed to a pass in later versions once we find out how to pass data between passes, without unrelated passes in between destroying them
-    class MollyFunctionContext : public llvm::FunctionPass {
-    private:
-      MollyPassManager *pm;
-      Function *func;
-
-      void modifiedIR() {
-        pm->modifiedIR();
-      }
-
-    public:
-      static char ID;
-      MollyFunctionContext(MollyPassManager *pm, Function *func): FunctionPass(ID), pm(pm), func(func) {
-        assert(pm);
-        assert(func);
-
-        this->setResolver(new MollyFunctionResolver(pm , func));
-      }
-
-      bool runOnFunction(Function &F) LLVM_OVERRIDE {
-        llvm_unreachable("This is not a pass");
-      }
-
-#pragma region Access CodeGen
-    protected:
-      Value *createAlloca(Type *ty, const Twine &name = Twine()) {
-        auto entry = &func->getEntryBlock();
-        auto insertPos = entry->getFirstNonPHIOrDbgOrLifetime();
-        auto result = new AllocaInst(ty, name, insertPos);
-        return result;
-      }
-
-
-      Value *createPtrTo(BuilderTy &builder,  Value *val, const Twine &name = Twine()) {
-        auto valueSpace = createAlloca(val->getType(), name);
-        builder.CreateStore(val, valueSpace);
-        return valueSpace;
-      }
-
-
-      void emitRead(MollyFieldAccess &access){
-        assert(access.isRead());
-        auto accessor = access.getAccessor();
-        auto bb = accessor->getParent();
-        auto nDims = access.getNumDims();
-
-        IRBuilder<> builder(bb);
-        builder.SetInsertPoint(accessor->getNextNode()); // Behind the old load instr
-
-        auto buf = builder.CreateAlloca(access.getElementType(), NULL, "getbuf");
-
-        SmallVector<Value*,6> args;
-        args.push_back(access.getFieldVariable()->getVariable()); // "this" implicit argument
-        args.push_back(buf);
-        for (auto d = nDims-nDims; d < nDims; d+=1) {
-          auto coord = access.getCoordinate(d);
-          args.push_back(coord);
-        }
-
-        auto call =builder.CreateCall(access.getFieldType()->getFuncGetBroadcast(), args);
-        auto load = builder.CreateLoad(buf, "loadget");
-        accessor->replaceAllUsesWith(load);
-      }
-
-
-      void emitWrite(MollyFieldAccess &access) {
-        //TODO: Support structs
-        assert(access.isWrite());
-        auto accessor = cast<StoreInst>(access.getAccessor());
-        auto bb = accessor->getParent();
-        auto nDims = access.getNumDims();
-        auto writtenValue = accessor->getOperand(0);
-
-        IRBuilder<> builder(bb);
-        builder.SetInsertPoint(accessor->getNextNode()); // Behind the old store instr
-
-
-        SmallVector<Value*,6> args;
-        args.push_back(access.getFieldVariable()->getVariable()); // "this" implicit argument
-        auto stackPtr = createPtrTo(builder, writtenValue);
-        args.push_back(stackPtr);
-        for (auto d = nDims-nDims; d < nDims; d+=1) {
-          auto coord = access.getCoordinate(d);
-          args.push_back(coord);
-        }
-
-        builder.CreateCall(access.getFieldType()->getFuncSetBroadcast(), args);
-      }
-
-
-      void emitAccess(MollyFieldAccess &access) {
-        auto accessor = access.getAccessor();
-        auto bb = accessor->getParent();
-
-        if (access.isRead()) {
-          emitRead(access);
-        } else if (access.isWrite()) {
-          emitWrite(access);
-        } else {
-          llvm_unreachable("What is it?");
-        }
-
-        // Remove old access
-        auto call = access.getFieldCall();
-        accessor->eraseFromParent();
-        if (call != accessor) { //FIXME: Comparison after delete accessor
-          call->eraseFromParent();
-        }
-      }
-
-
-      void emitLocalLengthCall(CallInst *callInst) {
-        auto &context = callInst->getContext();
-        auto bb = callInst->getParent();
-
-        auto selfArg = callInst->getArgOperand(0);
-        auto dimArg = callInst->getArgOperand(1);
-
-        auto fty = pm->getFieldType(selfArg);
-        auto locallengthFunc = fty->getLocalLengthFunc();
-        assert(locallengthFunc);
-
-        //TODO: Optimize for common case where dim arg is constant, or will LLVM do proper inlining itself?
-
-        // BuilderTy builder(bb);
-        //builder.SetInsertPoint(callInst);
-        callInst->setCalledFunction(locallengthFunc);
-        modifiedIR();
-      }
-
-      void emitIslocalCall(CallInst *callInstr) {
-        auto &context = callInstr->getContext();
-        auto selfArg = callInstr->getArgOperand(0);
-        auto fty = pm->getFieldType(selfArg);
-
-        // This is just a redirection to the implentation
-        callInstr->setCalledFunction(fty->getIslocalFunc());
-
-        modifiedIR();
-      }
-
-    public:
-      void replaceRemainaingIntrinsics() {
-        if (func->getName() == "test") {
-          int a = 0;
-          DEBUG(llvm::dbgs() << "### before FieldCodeGen ########\n");
-          DEBUG(llvm::dbgs() << *func);
-          DEBUG(llvm::dbgs() << "################################\n");
-        }
-
-        //MollyContextPass &MollyContext = getAnalysis<MollyContextPass>();
-        //this->fields = &getAnalysis<FieldDetectionAnalysis>();
-        this->func = func;
-
-        modifiedIR();
-        SmallVector<Instruction*, 16> instrs;
-        collectInstructionList(func, instrs);
-
-        // Replace intrinsics
-        for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
-          auto instr = *it;
-          if (auto callInstr = dyn_cast<CallInst>(instr)) {
-            auto calledFunc = callInstr->getCalledFunction();
-            if (calledFunc) {
-              switch (calledFunc->getIntrinsicID()) {
-              case Intrinsic::molly_locallength:
-                emitLocalLengthCall(callInstr);
-                break;
-              case Intrinsic::molly_islocal:
-                emitIslocalCall(callInstr);
-                break;
-              default:
-                break;
-              }
-            }
-          }
-
-          auto access = pm->getFieldAccess(instr);
-          if (!access.isValid())
-            continue;  // Not an access to a field
-
-          emitAccess(access);
-        }
-
-        //bool funcEmitted = emitFieldFunctions();
-
-        if (func->getName() == "main" || func->getName() == "__molly_orig_main") {
-          DEBUG(llvm::dbgs() << "### after FieldCodeGen ########\n");
-          DEBUG(llvm::dbgs() << *func);
-          DEBUG(llvm::dbgs() << "###############################\n");
-        }
-      }
-
-#pragma endregion
-
-
-      Pass *findOrRunAnalysis(AnalysisID passID) {
-        return pm->findOrRunAnalysis(passID, func, nullptr);
-      }
-
-      template<typename T>
-      T *findOrRunAnalysis() {
-        return pm->findOrRunAnalysis<T>(func, nullptr);
-      }
-
-      void removePass(Pass *pass) {
-        pm->removePass(pass);
-      }
-
-
-      MollyFieldAccess getFieldAccess(Instruction* instr) {
-        return pm->getFieldAccess(instr);
-      }
-
-
-#pragma region Isolate field accesses
-
-      void isolateInBB(MollyFieldAccess &facc) {
-        auto accessInstr = facc.getAccessor();
-        auto callInstr = facc.getFieldCall();
-        auto bb = accessInstr->getParent();
-
-        //SmallVector<Instruction*, 8> isolate;
-
-        //if (callInstr)
-        //  isolate.push_back(accessInstr);
-
-
-
-        // FIXME: This creates trivial BasicBlocks, only containing PHI instrunctions and/or the callInstr, and arithmetic instructions to compute the coordinate; Those should be moved into the isolated BB
-        if (bb->getFirstNonPHI() != accessInstr) {
-          bb = SplitBlock(bb, accessInstr, this);
-        }
-        auto isolatedBB = bb;
-
-        auto followInstr = accessInstr->getNextNode();
-        if (followInstr && !isa<BranchInst>(followInstr)) {
-          bb = SplitBlock(bb, followInstr, this);
-        }
-
-        auto oldName = isolatedBB->getName();
-        if (oldName.endswith(".split")) 
-          oldName = oldName.drop_back(6);
-        isolatedBB->setName(oldName + ".isolated");
-
-        if (callInstr) {
-          assert(callInstr->hasOneUse());
-          callInstr->moveBefore(accessInstr);
-        }
-#if 0
-        // Move operands into the isolated block
-        // Required to detect the affine access relations
-        SmallVector<Instruction*,8> worklist;
-        worklist.push_back(accessInstr);
-
-        while(!worklist.empty()) {
-          auto instr = worklist.pop_back_val();    // instr is already in isolated block
-
-          for (auto it = instr->op_begin(), end = instr->op_end(); it!=end; ++it) {
-            assert( it->getUser() == instr);
-            auto val = it->get();
-            if (!isa<Instruction>(val))
-              continue;  // No need to move a constant
-            auto usedInstr = cast<Instruction>(val);
-
-            if (isa<PHINode>(usedInstr)) 
-              continue; // No need to move
-
-            if (usedInstr->)
-
-          }
-
-        }
-#endif
-      }
-
-      void isolateFieldAccesses() {
-        // "Normalize" existing BasicBlocks
-        auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-        removePass(ib);
-
-        //for (auto &b : *func) {
-        // auto bb = &b;
-
-        bool changed =false;
-        SmallVector<Instruction*, 16> instrs;
-        collectInstructionList(func, instrs);
-        for (auto instr : instrs){
-          auto facc = getFieldAccess(instr);
-          if (!facc.isValid())
-            continue;
-          // Create a distinct BB for this access
-          // polly::IndependentBlocks will then it independent from the other BBs and
-          // polly::ScopInfo create a ScopStmt for it
-          isolateInBB(facc);
-          changed = true;
-        }
-        //}
-
-        if (changed) {
-          // Also make new BBs independent
-          ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-        }
-
-
-        //auto sci = findOrRunAnalysis<TempScopInfo>();
-        //auto sd = findOrRunAnalysis<ScopDetection>();
-        //for (auto region : *sd) {
-        //}
-
-        // Check consistency
-#ifndef NDEBUG
-        for (auto &b : *func) {
-          auto bb = &b;
-
-          for (auto &i : *bb){
-            auto instr = &i;
-            auto facc = getFieldAccess(instr);
-            if (facc.isValid()) {
-              //assert(isFieldAccessBasicBlock(bb));
-              break;
-            }
-          }
-        }
-#endif
-      }
-
-#pragma endregion
-
-
-
-      Value* getClusterCoordinate(int i) {
-        auto &llvmContext = func->getContext();
-        auto intTy = Type::getInt32Ty(llvmContext);
-        //auto varSelfCoords = pm->runtimeMetadata.varSelfCoords;
-        auto funcLocalCoord = pm->runtimeMetadata.funcLocalCoord;
-        DefaultIRBuilder builder(func->getEntryBlock().getFirstNonPHI());
-
-        //auto coordsArray = builder.CreateConstGEP1_32(varSelfCoords, 0, "coords_array");
-        // auto coordPtr = builder.CreateConstGEP1_32(coordsArray, i, "coord");
-        //return builder.CreateLoad(coordPtr, false, "local coord");
-        return builder.CreateCall(funcLocalCoord, ConstantInt::get(intTy, i));
-      }
-
-
-      std::vector<Value*> getClusterCoordinates() {
-        vector<Value *>result;
-        auto nClusterDims = pm->clusterConf->getClusterDims();
-        result.reserve(nClusterDims);
-
-        for (auto i = 0; i < nClusterDims;i+=1) {
-          result.push_back(getClusterCoordinate(i));
-        } 
-
-        return result;
-      }
-    }; // class MollyFunctionContext
-
-
-    class MollyFieldContext {
-    public:
-    }; // class MollyFieldContext
-
-
-    class MollyModuleContext {
-    public:
-    }; // class MollyModuleContext
-#pragma endregion
-
+  class MollyPassManagerImpl : public MollyPassManager, public ModulePass {
+    typedef DefaultIRBuilder BuilderTy;
 
   private:
     bool changedIR;
+    bool changedScop;
 
-    void modifiedIR() {
+    void modifiedIR() LLVM_OVERRIDE {
       changedIR = true;
     }
 
@@ -1298,7 +76,7 @@ namespace molly {
     llvm::DenseMap<std::pair<llvm::AnalysisID, llvm::Function*>, llvm::FunctionPass*> currentFunctionAnalyses; 
     llvm::DenseMap<std::pair<llvm::AnalysisID,llvm::Region*>, llvm::RegionPass*> currentRegionAnalyses; 
 
-    void removePass(Pass *pass) {
+    void removePass(Pass *pass) LLVM_OVERRIDE {
       if (!pass)
         return;
 
@@ -1334,6 +112,9 @@ namespace molly {
       pass->releaseMemory();
       delete pass;
     }
+
+
+
 
 
     void removeUnpreservedAnalyses(const AnalysisUsage &AU, Function *func, Region *inRegion) {
@@ -1461,22 +242,24 @@ namespace molly {
 
   public:
     static char ID;
-    MollyPassManager() : ModulePass(ID) {
+    MollyPassManagerImpl() : ModulePass(ID), moduleCtx(nullptr) {
       //alwaysPreserve.insert(&polly::PollyContextPassID);
       //alwaysPreserve.insert(&molly::MollyContextPassID);
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
       //alwaysPreserve.insert(&polly::IndependentBlocksID);
 
-      this->    callToMain = nullptr;
+      this->callToMain = nullptr;
     }
 
 
-    ~MollyPassManager() {
+    ~MollyPassManagerImpl() {
       removeAllAnalyses();
     }
 
 
-    void runModulePass(llvm::ModulePass *pass, bool permanent = false) {
+    MollyModuleProcessor *moduleCtx;
+
+    void runModulePass(llvm::ModulePass *pass) LLVM_OVERRIDE {
       auto passID = pass->getPassID();
       assert(!currentModuleAnalyses.count(passID));
 
@@ -1491,7 +274,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(new MollyModuleResolver(this));
+      pass->setResolver(moduleCtx->asResolver());
       bool changed = pass->runOnModule(*module);
       if (changed)
         removeUnpreservedAnalyses(AU, nullptr, nullptr);
@@ -1504,14 +287,11 @@ namespace molly {
         auto intf = *it;
         auto intfPassID = intf->getTypeInfo();
         currentModuleAnalyses[intfPassID] = pass;
-        if (permanent) 
-          alwaysPreserve.insert(intfPassID);
       }
       currentModuleAnalyses[passID] = pass;
-      if (permanent) {
-        alwaysPreserve.insert(passID);
-      }
     }
+
+
 
 
     ModulePass *findAnalysis(AnalysisID passID) {
@@ -1542,7 +322,7 @@ namespace molly {
       auto pass = createPassFromId(passID);
       assert(pass->getPassKind() == PT_Module);
       auto modulePass = static_cast<ModulePass*>(pass);
-      runModulePass(modulePass, permanent);
+      runModulePass(modulePass);
       return modulePass;
     }
     ModulePass *findOrRunAnalysis(const char &passID, bool permanent = false) {
@@ -1558,7 +338,7 @@ namespace molly {
     }
 
 
-    void runFunctionPass(llvm::FunctionPass *pass, Function *func, bool permanent=false) {
+    void runFunctionPass(llvm::FunctionPass *pass, Function *func) LLVM_OVERRIDE {
       auto passID = pass->getPassID(); 
       assert(!currentFunctionAnalyses.count(std::make_pair(passID, func)));
 
@@ -1573,7 +353,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(new MollyFunctionResolver(this, func));
+      pass->setResolver(getFuncContext(func)->asResolver());
       bool changed = pass->runOnFunction(*func);
       if (changed)
         removeUnpreservedAnalyses(AU, func, nullptr);
@@ -1586,16 +366,12 @@ namespace molly {
         auto intf = *it;
         auto intfPassID = intf->getTypeInfo();
         currentFunctionAnalyses[std::make_pair(intfPassID, func)] = pass;
-        if (permanent) 
-          alwaysPreserve.insert(intfPassID);
       }
       currentFunctionAnalyses[std::make_pair(passID, func)] = pass;
-      if (permanent) {
-        alwaysPreserve.insert(passID);
-      }
     }
 
-    Pass *findAnalysis(AnalysisID passID, Function *func) {
+
+    Pass *findAnalysis(AnalysisID passID, Function *func) LLVM_OVERRIDE {
       auto it = currentFunctionAnalyses.find(make_pair(passID, func));
       if (it != currentFunctionAnalyses.end()) {
         return it->second;
@@ -1603,7 +379,9 @@ namespace molly {
 
       return findAnalysis(passID);
     }
-    Pass *findOrRunAnalysis(AnalysisID passID, Function *func, bool permanent = false) {
+
+
+    Pass *findOrRunAnalysis(AnalysisID passID, Function *func) LLVM_OVERRIDE {
       auto existing = findAnalysis(passID, func);
       if (existing)
         return existing;
@@ -1611,30 +389,47 @@ namespace molly {
       auto pass = createPassFromId(passID);
       switch (pass->getPassKind()) {
       case PT_Module:
-        runModulePass(static_cast<ModulePass*>(pass), permanent);
+        runModulePass(static_cast<ModulePass*>(pass));
         break;
       case PT_Function:
-        runFunctionPass(static_cast<FunctionPass*>(pass), func, permanent);
+        runFunctionPass(static_cast<FunctionPass*>(pass), func);
         break;
       default:
         llvm_unreachable("Wrong kind of pass");
       }
       return pass;
     }
-    Pass *findOrRunAnalysis(const char &passID,  Function *func,bool permanent ) {
-      return findOrRunAnalysis(&passID,func, permanent); 
+
+
+    Pass *findOrRunAnalysis(const char &passID, Function *func, bool permanent) {
+      return findOrRunAnalysis(&passID,func); 
     }
+
+
     template<typename T>
-    T *findOrRunAnalysis(Function *func,bool permanent = false) { 
-      return (T*)findOrRunAnalysis(&T::ID, func, permanent)->getAdjustedAnalysisPointer(&T::ID);
+    T *findOrRunAnalysis(Function *func, bool permanent = false) { 
+      return (T*)findOrRunAnalysis(T::ID, func, permanent)->getAdjustedAnalysisPointer(&T::ID);
     }
+
+
     template<typename T>
     T *findOrRunPemanentAnalysis(Function *func) {
       return (T*)findOrRunAnalysis(&T::ID, func, false)->getAdjustedAnalysisPointer(&T::ID); 
     }
 
 
-    void runRegionPass(llvm::RegionPass *pass, Region *region, bool permanent = false) {
+    private:
+      llvm::DenseMap<Region*, MollyRegionProcessor*> regionContexts;
+    MollyRegionProcessor *getRegionContext(Region *region) {
+      auto &result = regionContexts[region];
+      if (!result) {
+        result = MollyRegionProcessor::create(this, region);
+      }
+      return  result;
+    }
+
+    public:
+    void runRegionPass(llvm::RegionPass *pass, Region *region) LLVM_OVERRIDE {
       auto passID = pass->getPassID();
       assert(!currentRegionAnalyses.count(std::make_pair(passID, region)));
 
@@ -1649,7 +444,7 @@ namespace molly {
       }
 
       // Execute pass
-      pass->setResolver(new MollyRegionResolver(this, region));
+      pass->setResolver(getRegionContext(region)->asResolver());
       bool changed = pass->runOnRegion(region, *(static_cast<RGPassManager*>(nullptr)));
       if (changed)
         removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
@@ -1662,17 +457,12 @@ namespace molly {
         auto intf = *it;
         auto intfPassID = intf->getTypeInfo();
         currentRegionAnalyses[std::make_pair(intfPassID, region)] = pass;
-        if (permanent) 
-          alwaysPreserve.insert(intfPassID);
       }
       currentRegionAnalyses[std::make_pair(passID, region)] = pass;
-      if (permanent) {
-        alwaysPreserve.insert(passID);
-      } 
     }
 
 
-    Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) {
+    Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) LLVM_OVERRIDE {
       if (region && !func) {
         func = getParentFunction(region);
       }
@@ -1747,6 +537,8 @@ namespace molly {
       auto func = region->getEntry()->getParent();
       return findAnalysis(passID, func);
     }
+
+
     Pass *findOrRunAnalysis(AnalysisID passID, Region *region, bool permanent = false) {
       auto existing = findAnalysis(passID, region);
       if (existing)
@@ -1756,13 +548,13 @@ namespace molly {
       auto pass = createPassFromId(passID);
       switch (pass->getPassKind()) {
       case PT_Module:
-        runModulePass(static_cast<ModulePass*>(pass), permanent);
+        runModulePass(static_cast<ModulePass*>(pass));
         break;
       case PT_Function:
-        runFunctionPass(static_cast<FunctionPass*>(pass), func, permanent);
+        runFunctionPass(static_cast<FunctionPass*>(pass), func);
         break;
       case PT_Region:
-        runRegionPass(static_cast<RegionPass*>(pass), region, permanent);
+        runRegionPass(static_cast<RegionPass*>(pass), region);
         break;
       default:
         llvm_unreachable("Wrong kind of pass");
@@ -1776,6 +568,9 @@ namespace molly {
     T *findOrRunAnalysis( Region *region,bool permanent = false) { 
       return (T*)findOrRunAnalysis(&T::ID, region, permanent)->getAdjustedAnalysisPointer(&T::ID);
     }
+
+
+
     template<typename T>
     T *findOrRunPemanentAnalysis( Region *region) {
       return (T*)findOrRunAnalysis(&T::ID, region, false)->getAdjustedAnalysisPointer(&T::ID); 
@@ -1969,34 +764,51 @@ namespace molly {
 #pragma endregion
 
 
-    MollyFunctionContext *getFuncContext(Function *func) {
+    MollyFunctionProcessor *getFuncContext(Function *func) LLVM_OVERRIDE {
       auto &ctx = funcs[func];
       if (!ctx)
-        ctx = new MollyFunctionContext(this, func);
+        ctx = MollyFunctionProcessor::create(this, func);
       return ctx;
     }
 
-    MollyScopContext *getScopContext(Scop *scop) {
+
+
+    MollyScopProcessor *getScopContext(Scop *scop) LLVM_OVERRIDE {
       auto &ctx = scops[scop];
       if (!ctx)
-        ctx = new MollyScopContext(this, scop);
+        ctx = MollyScopProcessor::create(this, scop);
       return ctx;
     }
 
+  
+
+
   private:
-    DenseMap<ScopStmt*, MollyScopStmtContext*> stmts;
+    DenseMap<ScopStmt*, MollyScopStmtProcessor*> stmts;
   public:
-    MollyScopStmtContext *getScopStmtContext(ScopStmt *stmt) {
+    MollyScopStmtProcessor *getScopStmtContext(ScopStmt *stmt) {
       auto &ctx = stmts[stmt];
       if (!ctx)
-        ctx = new MollyScopStmtContext(this, stmt);
+        ctx = MollyScopStmtProcessor::create(this, stmt);
       return ctx;
+    }
+
+
+    private:
+    void setAlwaysPreserve(Pass *pass) {
+      alwaysPreserve.insert(pass);
+
+      AnalysisUsage AU;
+      pass->getAnalysisUsage(AU);
+      for (auto reqTrans : AU.getRequiredTransitiveSet()) {
+        assert(!"TODO: Also preserve transitive requirements");
+      }
     }
 
 #pragma region Scop Detection
   private:
-    DenseMap<Function*, MollyFunctionContext*> funcs;
-    DenseMap<Scop*, MollyScopContext*> scops;
+    DenseMap<Function*, MollyFunctionProcessor*> funcs;
+    DenseMap<Scop*, MollyScopProcessor*> scops;
 
     ScopInfo *si;
 
@@ -2006,19 +818,19 @@ namespace molly {
         if (func->isDeclaration())
           continue;
 
-        auto funcCtx = new MollyFunctionContext(this, func);
+        auto funcCtx = MollyFunctionProcessor::create(this, func);
         funcs[func] = funcCtx;
 
         auto regionInfo = findOrRunAnalysis<RegionInfo>(func);
         SmallVector<Region*,12> regions;
         collectAllRegions(regionInfo->getTopLevelRegion(), regions);
         for (auto region : regions) {
-          auto scopInfo = new ScopInfo(islctx->keep()); // We need ScopInfo to convice to take out isl_ctx
-          runRegionPass(scopInfo, region, true);
-          //findOrRunAnalysis<ScopInfo>(region);
+          auto scopInfo = new ScopInfo(islctx->keep()); // We need ScopInfo to convince to take out isl_ctx
+          runRegionPass(scopInfo, region);
+          setAlwaysPreserve(scopInfo);
           auto scop = scopInfo->getScop();
           if (scop) {
-            auto scopCtx = new MollyScopContext(this, scop);
+            auto scopCtx = MollyScopProcessor::create(this, scop);
             scops[scop] = scopCtx;
           }
         }
@@ -2080,7 +892,7 @@ namespace molly {
     }
 
 
-    MollyFieldAccess getFieldAccess(ScopStmt *stmt) {
+    MollyFieldAccess getFieldAccess(ScopStmt *stmt) LLVM_OVERRIDE {
       assert(stmt);
       auto result = MollyFieldAccess::fromScopStmt (stmt);
       augmentFieldVariable(result);
@@ -2088,12 +900,13 @@ namespace molly {
     }
 
 
-    MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) {
+    MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) LLVM_OVERRIDE {
       assert(memacc);
       auto result = MollyFieldAccess::fromMemoryAccess(memacc);
       augmentFieldVariable(result);
       return result;
     }
+
 
 
 #pragma region Communication buffers
@@ -2117,7 +930,7 @@ namespace molly {
       IRBuilder<> builder (bb);
       auto rtn = builder.CreateRetVoid();
 
-      auto editor = ScopEditor::newScop(rtn, getFuncContext(func));
+      auto editor = ScopEditor::newScop(rtn, getFuncContext(func)->asPass());
       auto scop = editor.getScop();
       auto scopCtx = getScopContext(scop);
 
@@ -2215,7 +1028,9 @@ namespace molly {
 
     bool runOnModule(llvm::Module &M) LLVM_OVERRIDE {
       this->changedIR = false;
+      this->changedScop = false;
       this->module = &M;
+      this->moduleCtx = MollyModuleProcessor::create(this, module);
 
       // PollyContext
       // Need one isl_ctx to combine isl objects from different SCoPs 
@@ -2291,19 +1106,36 @@ namespace molly {
       //FIXME: Find all the leaks
       //this->islctx.reset();
       this->clusterConf.reset();
+      delete this->moduleCtx;
       return changedIR;
+    }
+
+
+#pragma region molly::MollyPassManager
+     ClusterConfig *getClusterConfig() LLVM_OVERRIDE    {
+      return clusterConf.get();
+    }
+
+     clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE    {
+      return &runtimeMetadata;
+    }
+
+     void modifiedScop() LLVM_OVERRIDE    {
+     changedScop = true;
     }
 #pragma endregion
 
   }; // class MollyPassManager
+
+
+
 } // namespace molly
 
 
-char molly::MollyPassManager::ID = 0;
-extern char &molly::MollyPassManagerID = molly::MollyPassManager::ID;
+char molly::MollyPassManagerImpl::ID = 0;
+extern char &molly::MollyPassManagerID = molly::MollyPassManagerImpl::ID;
 ModulePass *molly::createMollyPassManager() {
-  return new MollyPassManager();
+  return new MollyPassManagerImpl();
 }
 
 
-char molly::MollyPassManager::MollyFunctionContext::ID;
