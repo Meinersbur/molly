@@ -65,6 +65,7 @@ namespace isl {
   /// isl returns int for anything boolean (is_empty, is_equal, etc.). On 
   /// error, it also returns -1. To avoid that this is gets silently converted 
   /// to true, insert this function
+  /// In future version, we could also raise an exception
   static inline bool checkBool(int val) {
     assert(val == 0 || val == 1);
     return val;

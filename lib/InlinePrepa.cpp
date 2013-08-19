@@ -1,4 +1,4 @@
-#include "MollyInlinePrepa.h"
+#include "InlinePrepa.h"
 
 #include <llvm/Support/Compiler.h>
 #include <llvm/Pass.h> 

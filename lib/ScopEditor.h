@@ -10,6 +10,7 @@
 #include <llvm/ADT/ArrayRef.h>
 #include <string>
 #include <polly/ScopPass.h>
+#include "molly/Mollyfwd.h"
 
 
 namespace molly {
@@ -49,7 +50,11 @@ namespace molly {
 
     void getParamsMap(std::map<isl_id *, llvm::Value *> &params, polly::ScopStmt *stmt);// TODO: Move to StmtEditor
 
-    //polly::ScopStmt *createBlock(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name);
+    isl::Space getParamSpace();
+    //unsigned getNumParamDims();
+    //llvm::Value *getParamDimValue(unsigned pos);
+    //isl::Id getParamDimId(unsigned pos);
+
     StmtEditor createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name);
     StmtEditor replaceStmt(polly::ScopStmt *model, isl::Map &&whereToReplace, const std::string &name);
   }; // class ScopEditor
@@ -93,12 +98,15 @@ namespace molly {
 
     llvm::TerminatorInst *getTerminator();
 
-    std::vector<llvm::Value*> getDomainValues();
+    //std::vector<llvm::Value*> getDomainValues();
+    //llvm::Value *getDomainDimValue(unsigned pos);
+    //isl::Id getDomainDimId(unsigned pos);
+
+    //std::map<isl_id *, llvm::Value *>
+
+
+    void addWriteAccess(llvm::StoreInst *instr, FieldVariable *fvar, isl::Map &&accessRelation);
   }; // class StmtEditor
-
-
-  //polly::ScopStmt *replaceScopStmt(polly::ScopStmt *model, llvm::BasicBlock *bb, const std::string &baseName, isl::Map &&);
-  //polly::ScopStmt *createScopStmt(polly::Scop *parent, llvm::BasicBlock *bb, const llvm::Region *region, const std::string &baseName, llvm::ArrayRef<llvm::Loop*> sourroundingLoops, isl::Set &&domain, isl::Map &&scattering);
 
 } // namespace molly
 #endif /* MOLLY_SCOPEDITOR_H */

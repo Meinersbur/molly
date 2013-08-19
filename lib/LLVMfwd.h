@@ -27,6 +27,8 @@ namespace llvm {
 
   // #include <llvm/IR/Instructions.h>
   class CallInst;
+  class StoreInst;
+  class LoadInst;
 
   // #include <llvm/IR/BasicBlock.h>
   class BasicBlock;

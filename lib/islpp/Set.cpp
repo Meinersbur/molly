@@ -20,7 +20,6 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-
 #include <isl/set.h>
 #include <isl/lp.h>
 #include <isl/union_map.h>
@@ -53,13 +52,16 @@ Set Set::createFromPoint(Point &&point) {
   return Set::enwrap(isl_set_from_point(point.take()));
 }
 
+
 Set Set:: createBocFromPoints(Point &&pnt1, Point &&pnt2) {
   return Set::enwrap(isl_set_box_from_points(pnt1.take(), pnt2.take()));
 }
 
+
 Set Set::readFrom(Ctx *ctx, FILE *input) {
   return Set::enwrap(isl_set_read_from_file(ctx->keep(), input));
 }
+
 
 Set Set::readFrom(Ctx *ctx, const char *str) {
   return Set::enwrap(isl_set_read_from_str(ctx->keep(), str));

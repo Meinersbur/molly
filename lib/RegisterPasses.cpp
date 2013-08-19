@@ -2,7 +2,7 @@
 #include "molly/RegisterPasses.h"
 
 #include "molly/LinkAllPasses.h"
-#include "MollyInlinePrepa.h"
+#include "InlinePrepa.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/CFGPrinter.h"

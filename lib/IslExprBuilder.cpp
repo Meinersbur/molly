@@ -420,24 +420,24 @@ Value *IslExprBuilder::create(__isl_take isl_ast_expr *Expr) {
 } // namespace molly
 
 
-llvm::Value* molly::buildIslAff(llvm::IRBuilder<> &builder, const isl::Aff &aff, std::map<isl_id *, Value *> &values) {
+llvm::Value* buildIslAff(llvm::IRBuilder<> &builder, const isl::Aff &aff, std::map<isl_id *, Value *> &values) {
   auto space = aff.getSpace();
   auto astbuild = space.createAstBuild();
   auto astexpr = astbuild.exprFromAff(aff);
 
-  IslExprBuilder exprBuilder(builder, values);
+  molly::IslExprBuilder exprBuilder(builder, values);
   Value *result = exprBuilder.create(astexpr.take());
   assert(result);
   return result;
 }
 
 
-llvm::Value* molly::buildIslAff(llvm::IRBuilder<> &builder, const isl::PwAff &aff, std::map<isl_id *, llvm::Value *> &values) {
+llvm::Value* buildIslAff(llvm::IRBuilder<> &builder, const isl::PwAff &aff, std::map<isl_id *, llvm::Value *> &values) {
   auto space = aff.getSpace();
   auto astbuild = space.createAstBuild();
   auto astexpr = astbuild.exprFromPwAff(aff);
 
-  IslExprBuilder exprBuilder(builder, values);
+  molly::IslExprBuilder exprBuilder(builder, values);
   Value *result = exprBuilder.create(astexpr.take());
   assert(result);
   return result;

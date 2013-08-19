@@ -9,6 +9,10 @@
 #include <llvm/Analysis/ScalarEvolutionExpander.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Analysis/LoopInfo.h>
+#include "FieldVariable.h"
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Value.h>
+
 
 using namespace molly;
 using namespace polly;
@@ -58,6 +62,22 @@ isl::Space ScopEditor::getScatterSpace() {
 }
 
 
+isl::Space ScopEditor::getParamSpace() {
+  return enwrap(scop->getContext()).getSpace().params();
+}
+#if 0
+unsigned ScopEditor::getNumParamDims() {
+  return getParamSpace().getParamDimCount();
+}
+llvm::Value *ScopEditor::getParamDimValue(unsigned pos) {
+  auto id = getParamSpace().getParamDimId(pos);
+  auto scev = id.getUser<const SCEV*>();
+}
+isl::Id ScopEditor::getParamDimId(unsigned pos) {
+  return getParamSpace().getParamDimId(pos);
+}
+#endif
+
 void ScopEditor::getParamsMap(std::map<isl_id *, llvm::Value *> &params, ScopStmt *stmt) {
   params.clear(); 
   //SCEVExpander expander(
@@ -102,6 +122,7 @@ static void addBasicBlockToLoop(BasicBlock *headerBB, Loop* loop, LoopInfo *LI) 
     }
   }
 }
+
 
 StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name) {
   assert(isSubset(domain, scattering.getDomain()));
@@ -357,9 +378,20 @@ llvm::TerminatorInst *StmtEditor::getTerminator() {
   return new UnreachableInst(bb->getContext(), bb);
 }
 
+#if 0
+llvm::Value *StmtEditor::getDomainDimValue(unsigned pos) {
+ auto result = stmt->getInductionVariableForDimension(pos);
+ return const_cast<PHINode*>(result);
+}
 
-std::vector<llvm::Value*> StmtEditor:: getDomainValues() {
-  //FIXME: Fill!
-  std::vector<llvm::Value*> result;
-  return result;
+
+isl::Id StmtEditor::getDomainDimId(unsigned pos) {
+  auto result = getIterationDomain().getDimId(pos);
+  assert(result.isValid());
+    return result;
+}
+#endif
+
+void StmtEditor::addWriteAccess(llvm::StoreInst *instr, FieldVariable *fvar, isl::Map &&accessRelation) {
+  stmt->addAccess(MemoryAccess::MUST_WRITE, fvar->getVariable(), accessRelation.take(), instr);
 }

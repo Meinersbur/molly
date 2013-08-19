@@ -193,8 +193,8 @@ namespace isl {
 #pragma region Multi
     EltType getPwAff(int pos) const { return EltType::enwrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
     MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos, el.take())); }
-    void setPwAff_inplace(int pos, PwAff &&el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.take())); }
-    void setPwAff_inplace(int pos, const PwAff &el) { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.takeCopy())); }
+    void setPwAff_inplace(int pos, PwAff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.take())); }
+    void setPwAff_inplace(int pos, const PwAff &el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.takeCopy())); }
 
     void push_back(PwAff &&);
 #pragma endregion
@@ -207,6 +207,9 @@ namespace isl {
     //void gistParams(Set &&context) { give(isl_multi_pw_aff_gist_params(take(), context.take())); }
     //void gist(Set &&context) { give(isl_multi_pw_aff_gist(take(), context.take())); }
     //void lift() { give(isl_multi_pw_aff_lift(take(), nullptr)); }
+
+
+    EltType operator[](unsigned pos) const { return getPwAff(pos); } 
   }; // class MultiAff
 
   //static inline bool plainIsEqual(const Multi<PwAff> &maff1, const Multi<PwAff> &maff2) { return isl_multi_pw_aff_plain_is_equal(maff1.keep(), maff2.keep()); }

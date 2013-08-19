@@ -39,6 +39,7 @@
 #include "IslExprBuilder.h"
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Module.h>
+#include <polly/CodeGen/CodeGeneration.h>
 
 #include "MollyModuleProcessor.h"
 #include "MollyFunctionProcessor.h"
@@ -56,9 +57,7 @@ using isl::enwrap;
 cl::opt<string> MollyShape("shape", cl::desc("Molly - MPI cartesian grid shape"));
 
 
-
 namespace {
-
 
   class MollyPassManagerImpl : public MollyPassManager, public ModulePass {
     typedef DefaultIRBuilder BuilderTy;
@@ -290,8 +289,6 @@ namespace {
       }
       currentModuleAnalyses[passID] = pass;
     }
-
-
 
 
     ModulePass *findAnalysis(AnalysisID passID) {
@@ -871,6 +868,13 @@ namespace {
     }
 
 
+    FieldVariable *getFieldVariable(llvm::Value *val) LLVM_OVERRIDE {
+      if (!isa<GlobalVariable>(val))
+        return nullptr;
+      return getFieldVariable(cast<GlobalVariable>(val));
+    }
+
+
     void augmentFieldVariable(MollyFieldAccess &facc) {
       if (!facc.isValid())
         return;
@@ -947,13 +951,14 @@ namespace {
       auto sendScattering = islctx->createAlltoallMap(sendDomain, singletonSet) ; /* { dst[coord] -> scattering[] } */
       auto stmtEditor = editor.createStmt(sendDomain.copy(), sendScattering.copy(), sendWhere.copy(), "sendcombuf_create");
       auto sendStmt = stmtEditor.getStmt();
+      auto sendCtx = getScopStmtContext(sendStmt);
       auto sendBB = stmtEditor.getBasicBlock();
       IRBuilder<> sendBuilder(stmtEditor. getTerminator());
-      auto domainVars = stmtEditor.getDomainValues();
+      auto domainVars = sendCtx->getDomainValues();
       auto sendDstRank = clusterConf->codegenComputeRank(sendBuilder,domainVars);
       std::map<isl_id *, llvm::Value *> sendParams;
       editor.getParamsMap( sendParams, sendStmt);
-      auto sendSize =  buildIslAff(sendBuilder, eltCount, sendParams);
+      auto sendSize = buildIslAff(sendBuilder.GetInsertPoint(), eltCount.takeCopy(), sendParams, this);
       Value* sendArgs[] = { sendDstRank, sendSize };
       sendBuilder.CreateCall(runtimeMetadata.funcCreateSendCombuf, sendArgs);
 
@@ -963,13 +968,15 @@ namespace {
       auto recvScatter = islctx->createAlltoallMap(recvDomain, singletonSet) ; /* { src[coord] -> scattering[] } */
       auto recvEditor = editor.createStmt(sendDomain.copy(), sendScattering.copy(), sendWhere.copy(), "sendcombuf_create");
       auto recvStmt = recvEditor.getStmt();
+      auto recvCtx = getScopStmtContext(recvStmt);
       auto recvBB = recvEditor.getBasicBlock();
       IRBuilder<> recvBuilder(recvEditor.getTerminator());
-      auto recvVars = recvEditor.getDomainValues();
+      auto recvVars = recvCtx->getDomainValues();
       auto recvSrcRank = clusterConf->codegenComputeRank(sendBuilder,recvVars);
       std::map<isl_id *, llvm::Value *> recvParams;
       editor.getParamsMap(recvParams, recvStmt);
-      auto recvSize = buildIslAff(recvBuilder, eltCount, recvParams);
+      //auto recvSize = buildIslAff(recvBuilder, eltCount, recvParams);
+      auto recvSize =  buildIslAff(recvBuilder.GetInsertPoint(), eltCount.takeCopy(), recvParams, this);
       Value* recvArgs[] = { recvSrcRank, recvSize };
       sendBuilder.CreateCall(runtimeMetadata.funcCreateRecvCombuf, sendArgs);
 
@@ -1085,6 +1092,8 @@ namespace {
       for (auto &it : scops) {
         auto scop = it.first;
         auto scopCtx = it.second;
+        if (!scopCtx->hasFieldAccess())
+          continue;
 
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
@@ -1112,15 +1121,15 @@ namespace {
 
 
 #pragma region molly::MollyPassManager
-    ClusterConfig *getClusterConfig() LLVM_OVERRIDE    {
+    ClusterConfig *getClusterConfig() LLVM_OVERRIDE {
       return clusterConf.get();
     }
 
-    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE    {
+    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE {
       return &runtimeMetadata;
     }
 
-    void modifiedScop() LLVM_OVERRIDE    {
+    void modifiedScop() LLVM_OVERRIDE {
       changedScop = true;
     }
 #pragma endregion

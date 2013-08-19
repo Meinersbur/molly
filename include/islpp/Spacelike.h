@@ -282,6 +282,8 @@ namespace isl {
     Id getOutTupleId() const { return getDerived()->getTupleId(isl_dim_out); }
     Id getSetTupleId() const { return getDerived()->getTupleId(isl_dim_set); }
 
+    Id getParamDimId(unsigned pos) const { return getDerived()->getDimId(isl_dim_param, pos); }
+
     void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, std::move(id)); }
     void setTupleId_inplace(isl_dim_type type, const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, id.copy()); }
     SpaceTy setTupleId(isl_dim_type type, Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(type, std::move(id)); return std::move(result); }

@@ -17,6 +17,39 @@ using namespace llvm;
 using namespace std;
 
 
+llvm::CallInst *molly::callLocalPtrIntrinsic(FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, llvm::Instruction *insertBefore) {
+  auto fty = fvar->getFieldType();
+  assert(fty->getNumDimensions() == indices.size());
+  auto nDims = indices.size();
+  auto gvar = fvar->getVariable();
+auto module = gvar->getParent();
+
+  SmallVector<Type*, 8> tys;
+  tys.reserve(1+nDims);
+  SmallVector<Value*, 8> args;
+  args.reserve(nDims);
+
+  // Return type
+  tys.push_back(fty->getEltPtrType());
+
+  // target field
+  tys.push_back(fty->getType()->getPointerTo()); 
+  args.push_back(fvar->getVariable());
+
+  // coordinates
+   for (auto i = nDims-nDims; i < nDims; i+=1) {
+     auto idx = indices[i];
+     assert(idx);
+     tys.push_back(idx->getType());
+     args.push_back(idx);
+   }
+
+  auto intrinsic = Intrinsic::getDeclaration(module, Intrinsic::molly_ptr_local, tys);
+ auto result = CallInst::Create(intrinsic, args, "ptr_local", insertBefore);
+  return result;
+}
+
+
 Value *molly::codegenReadLocal(IRBuilder<> &builder, FieldVariable *fvar, ArrayRef<Value*> indices) {
   auto fty = fvar->getFieldType();
   auto funcPtrLocal = fty->getFuncPtrLocal();

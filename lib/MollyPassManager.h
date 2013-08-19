@@ -28,12 +28,14 @@ namespace molly {
 
     virtual MollyFunctionProcessor *getFuncContext(llvm::Function * func) = 0;
     virtual MollyScopProcessor *getScopContext(polly::Scop *scop) = 0;
+    virtual MollyScopStmtProcessor *getScopStmtContext(polly::ScopStmt *stmt) = 0;
 
     virtual MollyFieldAccess getFieldAccess(polly::ScopStmt *stmt) = 0;
     virtual MollyFieldAccess getFieldAccess(polly::MemoryAccess *) = 0;
     virtual MollyFieldAccess getFieldAccess(llvm::Instruction *) = 0;
     virtual FieldType *getFieldType(llvm::StructType *ty) = 0;
     virtual FieldType *getFieldType(llvm::Value *val) = 0;
+    virtual FieldVariable *getFieldVariable(llvm::Value *val) = 0;
 
     virtual void runRegionPass(llvm::RegionPass *, llvm::Region *) = 0;
     virtual void runFunctionPass(llvm::FunctionPass *, llvm::Function *) = 0;
@@ -66,37 +68,8 @@ namespace molly {
      virtual CommunicationBuffer *newCommunicationBuffer(FieldType *fty, isl::Map &&relation) = 0;
   }; // class MollyPassManager
 
-
   extern char &MollyPassManagerID;
   llvm::ModulePass *createMollyPassManager();
-
-
-#if 0
-  class MollyResolver : public AnalysisResolver {
-  protected:
-    MollyPassManager *pm;
-
-    MollyResolver(MollyPassManager *pm) : AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm) {
-      assert(pm);
-    }
-
-  protected:
-    virtual Pass *getPass(AnalysisID PI, bool ifavailable) const = 0;
-
-  public:
-    Pass *findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
-      return findImplPass(P, PI, F);
-    }
-
-    Pass *findImplPass(AnalysisID PI) LLVM_OVERRIDE {
-      return getPass(PI, false);
-    }
-
-    Pass *getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
-      return getPass(ID, true);
-    }
-  }; // class MollyResolver
-#endif
 
 } // namespace molly
 #endif /* MOLLY_MOLLYPASSMANAGER_H */

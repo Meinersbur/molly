@@ -254,7 +254,7 @@ isl::PwMultiAff FieldType::getHomeAff() {
 }
 
 
-isl::Map FieldType::getHomeRel(){
+isl::Map FieldType::getHomeRel() {
   return getHomeAff().toMap().reverse().intersectRange(getLogicalIndexset());
 }
 
@@ -271,3 +271,5 @@ uint64_t molly::FieldType::getEltSize() const {
   return datalayout->getTypeAllocSize(getEltType());
 }
 #endif
+
+

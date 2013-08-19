@@ -21,11 +21,21 @@ namespace molly {
   // #include "MollyScopProcessor.h"
   class MollyScopProcessor;
 
+  // #include "MollyScopStmtProcessor.h"
+  class MollyScopStmtProcessor;
+
   // #include "ClusterConfig.h"
   class ClusterConfig;
 
   // #include "CommunicationBuffer.h"
   class CommunicationBuffer;
+
+  // #include "Codegen.h"
+  class MollyCodeGenerator;
+
+  // #include "ScopEditor.h"
+  class ScopEditor;
+  class StmtEditor;
 
 } // namespace molly
 #endif /* MOLLY_MOLLYFWD_H */

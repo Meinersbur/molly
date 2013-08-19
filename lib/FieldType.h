@@ -168,6 +168,8 @@ namespace molly {
     llvm::StringRef getName() const;
 
     //uint64_t getEltSize() const;
+
+    //llvm::CallInst *callLocalPtrIntrinsic(llvm::Value *fieldvar, llvm::ArrayRef<llvm::Value> indices, llvm::Instruction *insertBefore = nullptr);
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

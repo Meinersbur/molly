@@ -1,12 +1,14 @@
 #ifndef ISLPP_ISLFWD_H
 #define ISLPP_ISLFWD_H
 
+
 #pragma region Forward declarations for original isl
 
 // #include <isl/id.h>
 struct isl_id;
 
 #pragma endregion
+
 
 #pragma region Forward declarations for Islpp
 namespace isl {
@@ -143,5 +145,6 @@ namespace isl {
 
 } // namespace isl
 #pragma endregion
+
 
 #endif /* ISLPP_ISLFWD_H */

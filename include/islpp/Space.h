@@ -103,36 +103,6 @@ namespace isl {
     void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_space_add_dims(take(), type, count)); }
 #pragma endregion
 
-#if 0
-#ifndef NDEBUG
-    std::string _printed;
-#endif
-
-#pragma region Low-Level
-  private:
-    isl_space *space;
-
-  protected:
-    //explicit Space(isl_space *space);
-
-  public:
-    isl_space *take() { assert(space); isl_space *result = space; space = nullptr; return result; }
-    isl_space *takeCopy() const;
-    isl_space *keep() const { return space; }
-    void give(isl_space *space);
-
-    static Space wrap(isl_space *space) { Space result; result.give(space); return result; }
-#pragma endregion
-
-  public:
-    Space() : space(nullptr) {};
-    /* implicit */ Space(Space &&that) : space(nullptr) { give(that.take()); }
-    /* implicit */ Space(const Space &that) : space(nullptr) { give(that.takeCopy()); }
-    ~Space();
-
-    const Space &operator=(const Space &that) { give(that.takeCopy()); return *this; }
-    const Space &operator=(Space &&that) { give(that.take()); return *this; }
-#endif
 
 #pragma region Creational
     static Space createMapSpace(const Ctx *ctx, unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
@@ -143,18 +113,7 @@ namespace isl {
     static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.take(), range.takeCopy())); }
     static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.take())); }
     static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
-
-    //Space copy() const { return Space::wrap(takeCopy()); }
-    //Space &&move() { return std::move(*this); }
 #pragma endregion
-
-#if 0
-#pragma region Printing
-    void print(llvm::raw_ostream &out) const;
-    std::string toString() const;
-    void dump() const;
-#pragma endregion
-#endif
 
 
 #pragma region Create other spaces
@@ -335,11 +294,11 @@ namespace isl {
 
     Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
     Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
+    Space params() const { return Space::enwrap(isl_space_params(takeCopy())); }
 
     void fromDomain();
 
     void fromRange();
-    void params();
     void setFromParams();
     void reverse();
     void insertDims(isl_dim_type type, unsigned pos, unsigned n);

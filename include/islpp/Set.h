@@ -104,6 +104,7 @@ namespace isl {
     void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_dims(take(), type, count)); }
 #pragma endregion
 
+
     bool hasTupleId() const { return isl_set_has_tuple_id(keep()); }
     const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }
     Id getTupleId() const { return Id::enwrap(isl_set_get_tuple_id(keep())); }
@@ -118,7 +119,8 @@ namespace isl {
 #endif
 
     unsigned getDimCount() const { return isl_set_dim(keep(), isl_dim_set); }
-
+    bool hasDimId(unsigned pos) const { return checkBool(isl_set_has_dim_id(keep(), isl_dim_set, pos)); }
+    Id getDimId(unsigned pos) const { return Id::enwrap(isl_set_get_dim_id(keep(), isl_dim_set, pos)); }
 
 #pragma region Conversion
     // From BasicSet
@@ -156,8 +158,6 @@ namespace isl {
     //std::string toString() const;
     //void dump() const;
 #pragma endregion
-
-    //Space getSpace() const;
 
     void addConstraint_inplace(const Constraint &c) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_constraint(take(), c.takeCopy())); }
     Set addContraint(const Constraint &c) const { return Set::enwrap(isl_set_add_constraint(takeCopy(), c.takeCopy())); }
@@ -256,10 +256,14 @@ namespace isl {
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
+
+    bool isSubsetOf(const Set &&that) const { return isl_set_is_subset(keep(), that.keep()); }
+    bool isSupersetOf(const Set &&that) const { return isl_set_is_subset(that.keep(), keep()); }
   }; // class Set
 
 
   static inline Set enwrap(isl_set *obj) { return Set::enwrap(obj); }
+  static inline Set enwrapCopy(isl_set *obj) { return Set::enwrapCopy(obj); }
 
   /// @brief Convex hull
   /// If the input set or relation has any existentially quantified variables, then the result of these operations is currently undefined.

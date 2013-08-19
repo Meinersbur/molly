@@ -58,7 +58,8 @@ namespace isl {
 
 #pragma region Properties
     const char *getName() const;
-    void *getUser() const ;
+    void *getUser() const;
+    template<typename T> T getUser() { return static_cast<T>(getUser()); }
 
     void setFreeUser_inline(void (*freefunc)(void *));
     Id setFreeUser(void (*freefunc)(void *));

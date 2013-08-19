@@ -5,8 +5,10 @@ add_molly_library(LLVMMolly
     RegisterPasses.cpp
   
     # LLVM Passes
-    MollyInlinePrepa.cpp
+    InlinePrepa.cpp
     MollyPassManager.cpp
+    
+    # Processing contexts
     MollyScopProcessor.cpp
     MollyFunctionProcessor.cpp
     MollyModuleProcessor.cpp
@@ -33,6 +35,7 @@ add_molly_library(LLVMMolly
     ScopUtils.cpp
     MollyUtils.cpp
     ScopEditor.cpp
+    Codegen.cpp
     
     # To be used in the future
     RectangularMapping.cpp

@@ -123,42 +123,13 @@ llvm::Module *molly::getParentModule(llvm::IRBuilder<> &builder) {
   return getParentModule(builder.GetInsertBlock());
 }
 
-#if 0
-bool molly::isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt) {
-  return isFieldAccessBasicBlock(scopStmt->getBasicBlock());
+
+llvm::Region *molly::getParentRegion(polly::Scop *scop) {
+  return &scop->getRegion();
 }
-
-
-bool molly::isFieldAccessBasicBlock(llvm::BasicBlock *bb) {
-  assert(bb);
-
-  MollyFieldAccess facc;
-  for (auto &i : *bb) {
-    auto instr = &i;
-    facc = MollyFieldAccess::create(instr, nullptr, nullptr);
-    if (facc.isValid())
-      break;
-  }
-
-  if (!facc.isValid())
-    return false;
-
-
-  for (auto &i : *bb) {
-    auto instr = &i;
-
-    if (instr == facc.getAccessor())
-      continue;
-
-    if (instr == facc.getFieldCall())
-      continue;
-
-    return false;
-  }
-
-  return true;
+llvm::Region *molly::getParentRegion(polly::ScopStmt *scopStmt) {
+  return getParentRegion(scopStmt->getParent());
 }
-#endif 
 
 
 llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
@@ -180,4 +151,3 @@ llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, 
   auto funcTy = FunctionType::get(rtnTy, false);
  return Function::Create(funcTy, linkage, name, module);
 }
-

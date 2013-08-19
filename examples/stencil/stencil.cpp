@@ -38,7 +38,7 @@ extern "C" void fill() {
   }
 }
 
-
+#if 0
 extern "C" void test() {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
@@ -61,14 +61,14 @@ extern "C" void sink() {
     std::cout << "FieldSrc["<<i<<"] = " << val;
   }
 }
-
+#endif
 
 int main(int argc, char *argv[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
   fill();
-  test();
-  sink();
+  //test();
+  //sink();
 
   return 0;
 }

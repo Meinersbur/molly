@@ -282,13 +282,11 @@ void Space::fromDomain(){
   give(isl_space_from_domain(take()));
 }
 
-void Space:: fromRange() {
+void Space::fromRange() {
   give(isl_space_from_range(take()));
 }
-void Space::params(){ 
-  give(isl_space_params(take()));
 
-}
+
 void Space::setFromParams(){
   give(isl_space_set_from_params(take()));
 }
