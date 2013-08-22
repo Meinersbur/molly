@@ -22,6 +22,7 @@ namespace molly {
     /* implicit */ MollyPassManager(const MollyPassManager &) LLVM_DELETED_FUNCTION;
 
   public:
+    virtual llvm::LLVMContext &getLLVMContext() const = 0;
     virtual isl::Ctx *getIslContext() = 0;
     virtual ClusterConfig *getClusterConfig() = 0;
     virtual clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() = 0;

@@ -18,6 +18,9 @@ namespace molly {
     /* implicit */ MollyScopProcessor(const MollyScopProcessor &that) LLVM_DELETED_FUNCTION;
 
   public:
+    virtual void dump() const = 0;
+    virtual void validate() const = 0;
+
     virtual std::vector<const llvm::SCEV *> getClusterCoordinates() = 0;
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;

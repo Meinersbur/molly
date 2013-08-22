@@ -639,6 +639,33 @@ Map Set::chain(const Map &map) const{
 }
 
 
+Map Set::chainNested(const Map &map) const {
+  auto domainTuple = map.getInTupleId();
+  auto space = getSpace();
+
+  unsigned firstTupleDim;
+  unsigned tupleDimCount;
+  auto success = space.findTuple(isl_dim_set, domainTuple, firstTupleDim, tupleDimCount);
+  assert(success);
+  assert(map.getInDimCount() == tupleDimCount);
+  assert(space.extractNestedTupleSpace(isl_dim_set, domainTuple).matchesSetSpace(map.getDomainSpace()));
+
+  auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, firstTupleDim, tupleDimCount, isl_dim_out, 0); 
+  return chain(equator).applyDomain(map);
+}
+
+
+Map Set::chainNested(const Map &map, unsigned tuplePos) const {
+  auto domainTuple = map.getInTupleId();
+  auto space = getSpace();
+  unsigned tupleDimCount = map.getInDimCount();
+  assert(space.extractNestedTupleSpace(isl_dim_set, space.findTuplePos(isl_dim_set, domainTuple)) == map.getDomainSpace());
+
+  auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, tuplePos, tupleDimCount, isl_dim_out, 0); 
+  return chain(equator).applyDomain(map);
+}
+
+
 void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER {
   llvm::SmallVector<unsigned, 4> poss(order.begin(), order.end());
   auto nDims = getSetDimCount();
@@ -668,6 +695,36 @@ void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUAL
     nextDst += len;
   }
 }
+
+
+
+#if 0
+Map Set::unwrapTuple_internal(unsigned tuplePos) ISLPP_INTERNAL_QUALIFIER {
+  auto space = getSpace();
+  auto nestedSpace = space.getNested();
+  // assert(nestedSpace.isValid() && "Cannot unwrap something that is not wrapped (would result in a Map with zero-dimensional domain which isl does not really allow)");
+  if (nestedSpace.isNull()) {
+    assert(tuplePos==0);
+    auto result = Map::createFromRange(move());
+    result.setOutTupleId_inplace(space.getTupleId());
+    return result;
+  }
+
+  unsigned pos,n;
+  Id id;
+  bool found = findNestedTuple(space, tuplePos, pos, n, id);
+  assert(found);
+
+  auto result = Map::createFromDomain(move());
+  result.moveDims_inplace(isl_dim_out, 0, isl_dim_in, pos, n);
+  result.cast_inplace();
+  return result;
+}
+
+
+Map Set:: unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER {
+}
+#endif
 
 
 Set isl::alignParams(Set &&set, Space &&model) {

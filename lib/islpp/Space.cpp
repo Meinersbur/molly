@@ -13,6 +13,7 @@
 #include "islpp/Constraint.h"
 #include "islpp/UnionMap.h"
 #include "islpp/AstBuild.h"
+#include "islpp/DimRange.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -61,6 +62,18 @@ BasicMap Space::universeBasicMap() const {
 
 BasicMap Space::equalBasicMap(unsigned n_equal) const {
   return BasicMap::enwrap(isl_basic_map_equal(takeCopy(), n_equal));
+}
+
+
+BasicMap Space:: equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const {
+  auto result = universeBasicMap();
+
+  // TODO: There might be something more efficient
+  for (auto i = count-count; i < count; i+=1) {
+    result.equate_inplace(type1, pos1, type2, pos2);
+  }
+
+  return result;
 }
 
 
@@ -269,13 +282,6 @@ bool Space::isMapSpace() const {
 bool Space::isWrapping() const{
   return isl_space_is_wrapping(keep());
 }
-void Space::wrap() {
-  give(isl_space_wrap(take()));
-}
-void Space::unwrap() {
-  give(isl_space_unwrap(take()));
-}
-
 
 
 void Space::fromDomain(){
@@ -294,18 +300,7 @@ void Space::reverse(){
   give(isl_space_reverse(take()));
 }
 
-void Space::insertDims(isl_dim_type type, unsigned pos, unsigned n){
-  give(isl_space_insert_dims(take(), type, pos, n));
-}
-void Space:: addDims(isl_dim_type type, unsigned n) {
-  give(isl_space_add_dims(take(), type, n));
-}
-void Space::dropDims(isl_dim_type type, unsigned first, unsigned num) {
-  give(isl_space_drop_dims(take(), type, first, num));
-}
-void Space::moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) {
-  give(isl_space_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n));
-}
+
 void Space::mapFromSet(){
   give(isl_space_map_from_set(take()));
 }
@@ -350,6 +345,590 @@ LocalSpace Space::asLocalSpace() const {
 
 AstBuild Space::createAstBuild() const {
   return AstBuild::enwrap(isl_ast_build_from_context(isl_set_universe(takeCopy())));
+}
+
+
+static bool findNestedTuple_recursive(const Space &space, const Id &tupleToFind, unsigned &pos, unsigned &n) {
+  auto startPos = pos;
+
+  auto dom = space.getNestedDomain();
+  if (dom.isValid()) {
+    auto retval = findNestedTuple_recursive(dom, tupleToFind, pos, n);
+    if (retval) {
+      assert(pos == startPos);
+      return true;
+    }
+  } else {
+    auto domId = space.getInTupleId();
+    if (domId == tupleToFind) {
+      n = space.getInDimCount();
+      return true;
+    }
+    pos += space.getInDimCount();
+  }
+  assert(pos == startPos+space.getInDimCount());
+
+  auto range = space.getNestedRange();
+  if (range.isValid()) {
+    auto retval = findNestedTuple_recursive(range, tupleToFind, pos, n);
+    if (retval) {
+      assert(pos == startPos);
+      return true;
+    }
+  } else {
+    auto rangeId = space.getInTupleId();
+    if (rangeId == tupleToFind) {
+      n = space.getOutDimCount();
+      return true;
+    }
+    pos += space.getOutDimCount();
+  }
+  assert(pos == startPos+space.getOutDimCount());
+
+  return false;
+}
+
+
+
+static bool findNestedTuple_recursive(const Space &space, unsigned &tuplePos, unsigned &pos, unsigned &n, Id &id) {
+  auto dom = space.getNestedDomain();
+  if (dom.isValid()) {
+    auto retval = findNestedTuple_recursive(dom, tuplePos, pos, n, id);
+    if (retval)
+      return true;
+  } else if (tuplePos == 0) {
+    n = space.getInDimCount();
+    id = space.getInTupleId();
+    return true;
+  }  else {
+    pos += space.getInDimCount();
+    tuplePos -= 1;
+  }
+
+  auto range = space.getNestedRange();
+  if (range.isValid()) {
+    auto retval = findNestedTuple_recursive(range, tuplePos, pos, n, id);
+    if (retval)
+      return true;
+  } else if (tuplePos == 0) {
+    n = space.getOutDimCount();
+    id = space.getOutTupleId();
+    return true;
+  } else {
+    pos += space.getOutDimCount();
+  }
+
+  return false;
+}
+
+
+DimRange Space::findNestedTuple(unsigned tuplePos) const {
+  if (isMapSpace()) {
+    unsigned pos,count;
+    Id id;
+    if (findNestedTuple_recursive(*this, tuplePos, pos, count, id)) {
+      auto nDomainDims = getInDimCount();
+      if (pos >= nDomainDims) 
+        return DimRange::enwrap(*this, isl_dim_in, pos, count);
+      else
+        return DimRange::enwrap(*this, isl_dim_out, pos-nDomainDims, count); 
+    }
+  } else if (isSetSpace()) {
+    auto nested = getNested();
+    unsigned pos,count;
+    Id id;
+    if (findNestedTuple_recursive(nested, tuplePos, pos, count, id)) {
+      return DimRange::enwrap(*this, isl_dim_set, pos, count); 
+    }
+  }
+
+  return DimRange();
+}
+
+
+DimRange Space:: findNestedTuple(const Id &tupleId) const {
+  if (isMapSpace()) {
+    unsigned pos,count;
+    if (findNestedTuple_recursive(*this, tupleId, pos, count)) {
+      auto nDomainDims = getInDimCount();
+      if (pos >= nDomainDims) 
+        return DimRange::enwrap(*this, isl_dim_in, pos, count);
+      else
+        return DimRange::enwrap(*this, isl_dim_out, pos-nDomainDims, count); 
+    }
+  } else if (isSetSpace()) {
+    auto nested = getNested();
+    unsigned pos,count;
+    Id id;
+    if (findNestedTuple_recursive(nested, tupleId, pos, count)) {
+      return DimRange::enwrap(*this, isl_dim_set, pos, count); 
+    }
+  }
+
+  return DimRange();
+}
+
+
+
+static Space removeTuple_recursive(const Space &space, unsigned tuplePos, unsigned &first, unsigned &count, Space &remainder) {
+  auto dom = space.getNestedDomain();
+
+  auto range = space.getNestedRange();
+
+}
+
+
+
+
+void Space:: unwrapTuple_inplace(unsigned tuplePos) ISLPP_INPLACE_QUALIFIER {
+  assert(isSetSpace());
+}
+
+
+void Space:: unwrapTuple_inplace(const Id &tupleId) ISLPP_INPLACE_QUALIFIER {
+  assert(isSetSpace());
+}
+
+
+
+static isl_dim_type reverseDimType(isl_dim_type type) {
+  assert(type==isl_dim_in||type==isl_dim_out);
+  if (type==isl_dim_out)
+    return isl_dim_in;
+  return isl_dim_out;
+}
+
+
+static bool removeTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/unsigned soughtTuplePos, /*out*/unsigned &numTuples, /*out*/unsigned &first, /*out*/unsigned &count, /*out*/Id &id) {
+  auto runningDimPos = 0;
+  auto runningTuplePos = 0;
+
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    auto tupleDimCount = space.dim(type);
+
+    if (space.isNested(type)) {
+      // Inner node
+      auto nested = space.getNested(type);
+
+      Space nestedResult;
+      unsigned nestedTupleCount,nestedFirst;
+      if (removeTuple(nestedResult, nested, soughtTuplePos-runningTuplePos, nestedTupleCount, nestedFirst, count, id)) {
+        // Tuple found, therefore replace tuple in space
+
+        if (nestedResult.isNull()) {
+          // Remove tuple from space, i.e. return the other tuple
+          result = space.isMapSpace() ? space.getNested(reverseDimType(type)) : Space();
+        } else {
+          // Replace the previously nested space by the new one
+          result = space.setNested(type, nestedResult);
+        }
+        first = runningDimPos + nestedFirst;
+        return true;
+      } else {
+        // Tuple not found here, continue searching
+        assert(first == tupleDimCount);
+        assert(nestedTupleCount >= 1);
+        runningTuplePos += nestedTupleCount;
+      }
+
+    } else {
+      // Leaf node
+
+      if (runningTuplePos == soughtTuplePos) {
+        // Tuple found
+        first = runningDimPos;
+        count = tupleDimCount;
+        if (space.hasTupleId(type))
+          id = space.getTupleId(type);
+        result = Space(); // The caller is supposed to remove this tuple
+        return true;
+      }
+
+      // Not the tupled sought, continue searching
+      runningTuplePos += 1;
+    }
+
+    runningDimPos += tupleDimCount;
+  }
+
+  first = runningDimPos;
+  numTuples = runningTuplePos;
+  return false;
+}
+
+
+static bool insertTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/const Space &insert, /*in*/unsigned insertTuplePos, /*out*/unsigned &first, /*out*/unsigned &tupleCount) {
+  unsigned runningTuplePos = 0;
+  unsigned runningDimPos = 0;
+
+  if (space.isMapSpace()) {
+    auto nDomainDims = space.getInDimCount();
+    auto domainDimPos = 0;
+    auto domainTuplePos = 0;
+    auto nRangeDims = space.getOutDimCount();
+    auto rangeDimPos = domainDimPos+nDomainDims;
+    unsigned rangeTuplePos;
+
+    if (insertTuplePos==domainTuplePos) {
+      // Insert here, before the domain
+      // That is, we insert as a new domain an move the current space as new range
+      result = space.wrap();
+      result.insertDims_inplace(isl_dim_in, 0, space.getInDimCount()+space.getOutDimCount());
+      result.setOutNested(space);
+      //TODO: Copy DimIds
+      first = 0;
+      return true;
+    }
+
+    if (space.isNestedDomain()) {
+      auto nestedDomain = space.getNestedDomain();
+
+      Space nestedResult;
+      unsigned nestedFirst,nestedTupleCount;
+      if (insertTuple(nestedResult, nestedDomain, insert, insertTuplePos+domainTuplePos, nestedFirst, nestedTupleCount)) {
+        result = space.setInNested(nestedResult);
+        first = domainDimPos+nestedFirst;
+        return true;
+      }
+
+      rangeTuplePos = domainTuplePos + nestedTupleCount;
+    } else {
+      rangeTuplePos = domainTuplePos + 1;
+    }
+
+
+    if (insertTuplePos==rangeTuplePos) {
+      // insert here, between domain and range
+      // We create a new nested range of the space to insert and the old range
+      auto insertDimCount = insert.getInDimCount()+insert.getOutDimCount();
+      auto nestedRange = space.range();
+      nestedRange.wrap_inplace();
+      nestedRange.addDims_inplace(isl_dim_in, insertDimCount);
+      nestedRange.setInNested_inplace(insert);
+      result = space.insertDims(isl_dim_out, 0, insertDimCount);
+      result.setNested_inplace(isl_dim_out, nestedRange);
+      first = rangeDimPos;
+      return true;
+    }
+
+    if (space.isNestedRange()) {
+      auto nestedRange = space.getNestedRange();
+      Space nestedResult;
+      unsigned nestedFirst,nestedTupleCount;
+      if (insertTuple(nestedResult, nestedRange, insert, insertTuplePos-rangeTuplePos, nestedFirst, nestedTupleCount)) {
+        result = space.setOutNested(nestedRange);
+        first = rangeDimPos+ nestedFirst;
+        return true;
+      }
+
+      runningTuplePos = rangeTuplePos + nestedTupleCount;
+    } else {
+      runningTuplePos = rangeTuplePos + 1;
+    }
+  } else {
+    assert(space.isSetSpace());
+
+    if (insertTuplePos==runningTuplePos) {
+      // Insert before
+      first = runningTuplePos;
+      result = space.insertDims(isl_dim_in, 0, insert.getInDimCount()+insert.getOutDimCount());
+      result.setNested_inplace(isl_dim_in, insert);
+      return true;
+    }
+
+    auto nDims = space.getSetDimCount();
+    if (space.isNestedSet()) {
+      auto nested = space.getNested();
+
+      Space nestedResult;
+      unsigned nestedFirst,nestedTupleCount;
+      if (insertTuple(nestedResult, nested, insert, insertTuplePos-runningTuplePos, nestedFirst, nestedTupleCount)) {
+        first = runningTuplePos + nestedFirst;
+        result = nestedResult;
+        return true;
+      }
+
+      runningTuplePos += nestedTupleCount;
+    }
+
+    auto tupleId = space.getSetTupleId();
+
+  }
+
+  first = runningDimPos;
+  tupleCount = runningTuplePos;
+  return false;
+}
+
+
+Space Space::moveTuple(isl_dim_type dst_type, unsigned dst_tuplePos, isl_dim_type src_type, unsigned src_tuplePos) const {
+  assert(dst_type==isl_dim_in || dst_type==isl_dim_out);
+  assert(src_type==isl_dim_in || src_type==isl_dim_out);
+
+  if (dst_type==src_type && dst_tuplePos==src_tuplePos)
+    return copy();
+
+  Space tmp;
+  unsigned numTuples;
+  unsigned first;
+  unsigned count;
+  Id id;
+  bool removeSuccessful = removeTuple(tmp, *this, src_tuplePos, numTuples, first, count, id);
+  assert(removeSuccessful);
+
+  Space result;
+  unsigned tupleCount;
+  bool insertSuccessful = insertTuple(result, tmp, this->params().addDims(isl_dim_set, count), dst_tuplePos, first, tupleCount); 
+  assert(insertSuccessful);
+
+  return result;
+}
+
+
+
+static void queryNesting_recursive(const Space &space, /*out*/unsigned &nestedCount, /*out*/unsigned &nestedDepth) {
+  if (space.isNull() || space.isParamsSpace()) {
+    nestedCount = 0;
+    nestedDepth = 0;
+    return;
+  }
+
+  unsigned tupleCount = 0;
+  unsigned maxDepth = 1;
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    if (space.isNested(type)) {
+
+      auto part = space.getNested(type);
+      unsigned partNestedCount,partNestedDepth;
+      queryNesting_recursive(part,partNestedCount, partNestedDepth);
+      maxDepth = std::max(maxDepth, partNestedDepth+1);
+      tupleCount += partNestedCount;
+    } else {
+      tupleCount += 1;
+    }
+  }
+
+  nestedCount = tupleCount;
+  nestedDepth = maxDepth;
+}
+
+
+unsigned Space::nestedTupleCount() const {
+  unsigned nestedCount, nestedDepth;
+  queryNesting_recursive(*this, nestedCount, nestedDepth);
+  return nestedCount;
+}
+
+
+
+
+unsigned Space::nestedMaxDepth() const {
+  unsigned nestedCount, nestedDepth;
+  queryNesting_recursive(*this, nestedCount, nestedDepth);
+  return nestedDepth;
+}
+
+
+
+static bool findTupleByPosition_recursive(const Space &space, unsigned searchTuplePos, /*inout*/unsigned &currentTuplePos, /*inout*/unsigned &currentDimPos, /*out*/unsigned &foundTupleDimCount, /*out*/Id &tupleId) {
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    if (currentTuplePos > searchTuplePos)
+      return false;
+
+    auto dimCount = space.dim(type);
+    auto startDimPos = currentDimPos;
+
+    if (searchTuplePos == searchTuplePos) {
+      // Found the tuple
+      foundTupleDimCount = dimCount;
+      tupleId = space.getTupleIdOrNull(type);
+      return true; // Abort the recursion
+    }
+
+    if (space.isNested(type)) {
+      auto nestedSpace = space.getNested(type);
+      if (findTupleByPosition_recursive(nestedSpace, searchTuplePos, currentTuplePos, currentDimPos, foundTupleDimCount, tupleId)) {
+        return true;
+      }
+    } else {
+      currentTuplePos += 1;
+      currentDimPos += dimCount;
+    }
+
+    assert(currentDimPos == startDimPos+dimCount);
+  }
+
+  return false;
+}
+
+
+bool Space::findTuple(isl_dim_type type, unsigned tuplePos, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount, /*out*/Id &tupleId) const {
+  if (!isNested(type)) {
+    firstDim = 0;
+    dimCount = dim(type);
+    tupleId = getTupleIdOrNull(type);
+    return tuplePos==0;
+  }
+
+  dimCount = -1;
+  tupleId = Id();
+  unsigned currentTuplePos = 0;
+  firstDim = 0;
+  return findTupleByPosition_recursive(getNested(type), tuplePos, currentTuplePos, firstDim, dimCount, tupleId);
+}
+
+
+static bool findTupleByDimPosition_recursive(const Space &space, unsigned searchDimPos, /*inout*/unsigned &currentTuplePos, /*inout*/unsigned &currentDimPos, /*out*/unsigned &foundTupleDimCount, /*out*/Id &tupleId) {
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    if (currentDimPos > searchDimPos)
+      return false;
+
+    auto dimCount = space.dim(type);
+    auto startDimPos = currentDimPos;
+
+    if (space.isNested(type)) {
+      auto nestedSpace = space.getNested(type);
+      if (findTupleByDimPosition_recursive(nestedSpace, searchDimPos, currentTuplePos, currentDimPos, foundTupleDimCount, tupleId)) {
+        return true;
+      }
+    } else {
+      if (currentDimPos <= searchDimPos && searchDimPos < currentDimPos+dimCount) {
+        // Found the tuple
+        foundTupleDimCount = dimCount;
+        tupleId = space.getTupleIdOrNull(type);
+        return true; // Abort the recursion
+      }
+
+
+      currentTuplePos += 1;
+      currentDimPos += dimCount;
+    }
+
+    assert(currentDimPos == startDimPos+dimCount);
+  }
+
+  return false;
+}
+
+
+bool Space::findTupleAt(isl_dim_type type, unsigned dimPos, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount, /*out*/Id &tupleId, /*out*/unsigned &tuplePos) const {
+  if (!isNested(type)) {
+    firstDim = 0;
+    dimCount = dim(type);
+    tupleId = getTupleIdOrNull(type);
+    tuplePos = 0;
+    return tuplePos==0;
+  }
+
+  dimCount = -1;
+  tupleId.clear();
+  tuplePos = 0;
+  firstDim = 0;
+  return findTupleByPosition_recursive(getNested(type), tuplePos, tuplePos, firstDim, dimCount, tupleId);
+}
+
+
+static bool findTupleById_recursive(const Space &space, const Id &searchTupleId, /*inout*/unsigned &currentTuplePos, /*inout*/unsigned &currentDimPos, /*out*/unsigned &foundTupleDimCount) {
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    auto dimCount = space.dim(type);
+    auto startDimPos = currentDimPos;
+
+    if (searchTupleId == space.getTupleIdOrNull(type)) {
+      // Found the tuple
+      foundTupleDimCount = dimCount;
+      return true; // Abort the recursion
+    }
+
+    if (space.isNested(type)) {
+      auto nestedSpace = space.getNested(type);
+      if (findTupleById_recursive(nestedSpace, searchTupleId, currentTuplePos, currentDimPos, foundTupleDimCount)) {
+        return true;
+      }
+    } else {
+      currentTuplePos += 1;
+      currentDimPos += dimCount;
+    }
+
+    assert(currentDimPos == startDimPos+dimCount);
+  }
+
+  return false;
+}
+
+
+bool Space::findTuple(isl_dim_type type, const Id &tupleToFind, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount) const {
+  if (!isNested(type)) {
+    firstDim = 0;
+    dimCount = dim(type);
+    return tupleToFind==getTupleIdOrNull(type);
+  }
+
+  dimCount = -1;
+  unsigned currentTuplePos = 0;
+  firstDim = 0;
+  return findTupleById_recursive(getNested(type), tupleToFind, currentTuplePos, firstDim, dimCount);
+}
+
+
+unsigned Space:: findTuplePos(isl_dim_type type, const Id &tupleToFind) const {
+  if (!isNested(type)) {
+    assert(getTupleId(type)==tupleToFind);
+    return 0;
+  }
+
+  unsigned dimCount = -1;
+  unsigned currentTuplePos = 0;
+  unsigned firstDim = 0;
+  auto retval = findTupleById_recursive(getNested(type), tupleToFind, currentTuplePos, firstDim, dimCount);
+  assert(retval);
+  return currentTuplePos;
+}
+
+
+Space Space::extractNestedTupleSpace(isl_dim_type type, unsigned tuplePos) const {
+  unsigned firstDim,dimCount;
+  Id id;
+  if (!findTuple(type, tuplePos, firstDim, dimCount, id))
+    return Space();
+
+  auto result = extractDimRange(type, firstDim, dimCount);
+  result.setTupleId_inplace(type, id);
+  return result;
+}
+
+
+Space Space::extractNestedTupleSpace(isl_dim_type type, const Id &tupleToFind) const {
+  return extractNestedTupleSpace(type, findTuplePos(type, tupleToFind));
+}
+
+
+Space Space:: extractDimRange(isl_dim_type type, unsigned first, unsigned count) const {
+  auto result = extractTuple(type);
+  result.removeDims_inplace(type, first+count, result.dim(type)-first-count);
+  result.removeDims_inplace(type, 0, first);
+  return result;
+}
+
+
+static void flattenNestedSpaces_recursive(/*inout*/std::vector<Space> &result, /*in*/const Space &space) {
+  if (space.isParamsSpace())
+    return;
+
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    if (space.isNested(type)) {
+      auto nested = space.getNested(type);
+      flattenNestedSpaces_recursive(result, nested);
+    } else {
+      result.push_back(space.extractTuple(type));
+    }
+  }
+}
+
+
+std::vector<Space> Space::flattenNestedSpaces() const {
+  std::vector<Space> result;
+  flattenNestedSpaces_recursive(result, *this);
+  return result;
 }
 
 

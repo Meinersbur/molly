@@ -250,15 +250,26 @@ namespace isl {
 
     Map unwrap() const;
 
-    // { A } and { A' -> B } to { A*A' -> B }
+    // { A } and { A' -> B } to { A*A' -> B } (where * means intersection)
     Map chain(const Map &map) const;
 
+    // { (A -> B -> C ) } and { B' -> D } to { (A -> B*B' -> C) -> D }
+    Map chainNested(const Map &map) const;
+    Map chainNested(const Map &map, unsigned tuplePos) const;
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
 
-    bool isSubsetOf(const Set &&that) const { return isl_set_is_subset(keep(), that.keep()); }
-    bool isSupersetOf(const Set &&that) const { return isl_set_is_subset(that.keep(), keep()); }
+    bool isSubsetOf(const Set &that) const { return checkBool(isl_set_is_subset(keep(), that.keep())); }
+    bool isSupersetOf(const Set &that) const { return checkBool(isl_set_is_subset(that.keep(), keep())); }
+
+    /// moves the dimensions of one nested tuple to the range of a map
+    /// The tuple is identified by its position relative to the other nested spaces or by its identifier, where the first space with this id is chosen
+    /// examples:
+    ///   { ((A -> B) -> C) }.unwrapTuple(1) = { (A -> C) -> B }
+    ///   { (A -> (B -> C)) }.unwrapTuple(B) = { (A -> C) -> B }
+    Map unwrapTuple_internal(unsigned TuplePos) ISLPP_INTERNAL_QUALIFIER;
+    Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
   }; // class Set
 
 
@@ -325,13 +336,14 @@ namespace isl {
 
   Set preimage(Set &&set, MultiAff &&ma);
   Set preimage(Set &&set, PwMultiAff &&ma);
+
   /// @brief Cartesian product
   /// The above functions compute the cross product of the given sets or relations. The domains and ranges of the results are wrapped maps between domains and ranges of the inputs.
   Set product(Set &&set1, Set &&set2);
- static inline Set product(const Set &set1, Set &set2) { return Set::enwrap(isl_set_product(set1.takeCopy(), set2.takeCopy())); }
+  static inline Set product(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_product(set1.takeCopy(), set2.takeCopy())); }
 
   Set flatProduct(Set &&set1,Set &&set2);
-   static inline Set flatProduct(const Set &set1,const Set &set2) { return Set::enwrap(isl_set_flat_product(set1.takeCopy(), set2.takeCopy())); }
+  static inline Set flatProduct(const Set &set1,const Set &set2) { return Set::enwrap(isl_set_flat_product(set1.takeCopy(), set2.takeCopy())); }
 
   Set gist(Set &&set, Set &&context);
   Set gistParams(Set &&set, Set &&context);

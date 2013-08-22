@@ -176,6 +176,7 @@ namespace isl {
 
     static Map createFromBasicMap(BasicMap &&bmap) { return Map::enwrap(isl_map_from_basic_map(bmap.take())); }
     static Map createFromDomain(Set &&set) { return Map::enwrap(isl_map_from_domain(set.take())); }
+    static Map createFromRange(Set &&set) { return Map::enwrap(isl_map_from_range(set.take())); }
 
     static Map createFromDomainAndRange(Set &&domain, Set &&range) { return Map::enwrap(isl_map_from_domain_and_range(domain.take(), range.take())); }
     static Map createFromSet(Set &&set, Space &&dim) { return Map::enwrap(isl_map_from_set(set.take(), dim.take())); }
@@ -476,9 +477,14 @@ namespace isl {
       return result;
     }
 
+    Map chainNested(const Map &map) const;
+    Map chainNested(const Map &map, unsigned tuplePos) const;
+
     /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy()));} 
 
+    /// Overwrite the space information (tuple ids, dim ids, space nesting); Number of dimensions must be the same, separately for isl_dim_in and isl_dim_out
+    /// param dimensions are not changes, these are aligned automatically.
     void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_map_cast(take(), space.takeCopy())); }
     Map cast(const Space &space) const { return Map::enwrap(isl_map_cast(takeCopy(), space.takeCopy())); }
   }; // class Map
@@ -500,7 +506,7 @@ namespace isl {
   static inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 
   static inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(map.take())); } 
 
-  // "union" is a reserved word; "unite"?
+  // "union" is a reserved word
   static inline Map unite(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_union(map1.take(), map2.take())); }
   static inline Map unite(Map &&map1, const Map &map2) { return Map::enwrap(isl_map_union(map1.take(), map2.takeCopy())); }
   static inline Map unite(const Map &map1, Map &&map2) { return Map::enwrap(isl_map_union(map1.takeCopy(), map2.take())); }
@@ -564,5 +570,20 @@ namespace isl {
   static inline Map lexLtMap(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_lex_lt_map(map1.take(), map2.take())); } 
 
   static inline PwAff dimMax(Map &&map, int pos) { return PwAff::enwrap(isl_map_dim_max(map.take(), pos)); }
+
+  /// Create a cartesian product with a subset of dimensions are equated
+  /// e.g.
+  /// join({ (A -> B1) }, { (B2 -> C) }) = { (A -> B1) -> (B2 -> C) | B1==B2 }
+  Map join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate);
+
+  /// Select the dimensions to equate itself, that is all nested tuples and dims with same id 
+  Map naturalJoin(const Set &domain, const Set &range);
+
+  // Note these are NOT total orders
+  static inline bool operator<=(const Map &map1, const Map &map2) { return checkBool(isl_map_is_subset(map1.keep(), map2.keep())); }
+   static inline bool operator<(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map1.keep(), map2.keep())); }
+   static inline bool operator>=(const Map &map1, const Map &map2) { return checkBool(isl_map_is_subset(map2.keep(), map1.keep())); }
+   static inline bool operator>(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map2.keep(), map1.keep())); }
+
 } // namespace isl
 #endif /* ISLPP_MAP_H */

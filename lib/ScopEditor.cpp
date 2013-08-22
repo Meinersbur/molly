@@ -10,6 +10,7 @@
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include "FieldVariable.h"
+#include "FieldType.h"
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 
@@ -238,45 +239,15 @@ StmtEditor ScopEditor::replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDom
 
   auto stmtBB = BasicBlock::Create(llvmContext, name, function);
   auto stmt = new ScopStmt(scop, stmtBB, name, nullptr, model->getLoopNests(), createdModelDomain.take(), scattering.take());
-  stmt->setWhereMap(replaceDomainWhere.take());
+  StmtEditor stmtEditor(stmt);
+  replaceDomainWhere.setInTupleId_inplace(stmtEditor.getDomainTupleId());
+  stmtEditor.setWhere(replaceDomainWhere.move());
+  //stmt->setWhereMap(replaceDomainWhere.take());
   //auto result = createStmt(createdModelDomain.move(), scattering.move(), replaceDomainWhere.move(), name);
   model->setDomain(newModelDomain.take());
 
   return StmtEditor(stmt);
 }
-
-
-#if 0
-polly::ScopStmt *molly::replaceScopStmt(polly::ScopStmt *model, llvm::BasicBlock *bb, const std::string &baseName, isl::Map &&replaceDomainWhere) {
-  auto scop = model->getParent();
-  auto origDomain = getIterationDomain(model);
-  auto origWhere = getWhereMap(model);
-  origWhere.intersectDomain_inplace(origDomain);
-  auto scattering = getScattering(model);
-
-  assert(isSubset(replaceDomainWhere, origWhere));
-  auto newModelDomainWhere = origWhere.subtract(replaceDomainWhere);
-  auto newModelDomain = newModelDomainWhere.getDomain();
-  auto createdModelDomain = replaceDomainWhere.getDomain();
-
-  auto result = createScopStmt(
-    scop,
-    bb,
-    model->getRegion(),
-    baseName,
-    model->getLoopNests(),
-    createdModelDomain.move(),
-    scattering.move()
-    );
-  model->setDomain(newModelDomain.take());
-  return result;
-}
-
-
-polly::ScopStmt *molly::createScopStmt(polly::Scop *parent, llvm::BasicBlock *bb, const llvm::Region *region, const std::string &baseName, llvm::ArrayRef<llvm::Loop*> sourroundingLoops, isl::Set &&domain, isl::Map &&scattering) {
-  return new ScopStmt(parent, bb, baseName, region, sourroundingLoops, domain.take(), scattering.take());
-}
-#endif
 
 
 polly::Scop *StmtEditor::getParentScop() {
@@ -365,6 +336,7 @@ isl::Map StmtEditor::getWhere() {
 void StmtEditor::setWhere(isl::Map &&where) {
   assert(where.getDomainSpace().matchesSetSpace(getDomainSpace()));
   assert(where.hasOutTupleId());
+  assert(where.getDomain().isSupersetOf(getIterationDomain()));
   stmt->setWhereMap(where.take());
 }
 
@@ -378,20 +350,8 @@ llvm::TerminatorInst *StmtEditor::getTerminator() {
   return new UnreachableInst(bb->getContext(), bb);
 }
 
-#if 0
-llvm::Value *StmtEditor::getDomainDimValue(unsigned pos) {
- auto result = stmt->getInductionVariableForDimension(pos);
- return const_cast<PHINode*>(result);
-}
-
-
-isl::Id StmtEditor::getDomainDimId(unsigned pos) {
-  auto result = getIterationDomain().getDimId(pos);
-  assert(result.isValid());
-    return result;
-}
-#endif
 
 void StmtEditor::addWriteAccess(llvm::StoreInst *instr, FieldVariable *fvar, isl::Map &&accessRelation) {
+  assert(accessRelation.matchesMapSpace(getDomainSpace(), fvar->getFieldType()->getIndexsetSpace()));
   stmt->addAccess(MemoryAccess::MUST_WRITE, fvar->getVariable(), accessRelation.take(), instr);
 }

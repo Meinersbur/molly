@@ -211,6 +211,15 @@ namespace isl {
     BasicMap equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
     void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
   BasicMap equate(Dim dim1, Dim dim2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
+
+  void orderGt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type1, pos1, type2, pos2)); }
+  BasicMap orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type1, pos1, type2, pos2)); }
+    void orderGe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type1, pos1, type2, pos2)); }
+  BasicMap orderGe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type1, pos1, type2, pos2)); }
+   void orderLt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type2, pos2, type1, pos1)); }
+  BasicMap orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type2, pos2, type1, pos1)); }
+     void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
+  BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
   }; // class BasicMap
 
 

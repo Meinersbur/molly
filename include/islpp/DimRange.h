@@ -2,33 +2,33 @@
 #define ISLPP_DIMRANGE_H
 
 #include <isl/space.h> // enum isl_dim_type
-
-struct isl_space;
-struct isl_local_space;
-struct isl_map;
-struct isl_basic_map;
-struct isl_set;
-struct isl_basic_set;
-
+#include "Islfwd.h"
+#include "Space.h"
+#include "LocalSpace.h"
 
 namespace isl {
 
-    class DimRange {
-  protected:
-        union {
-      isl_space *space;
-      isl_local_space *lspace;
-      isl_map *map;
-      isl_basic_map *bmap;
-      isl_set *set;
-      isl_basic_set *bset;
-    } owner;
-    isl_dim_type type;
-    unsigned pos;
-    unsigned n;
+   class DimRange {
+    private:
+      isl_dim_type type;
+    unsigned first;
+    unsigned count;
+
+    // TODO: PointerUnion
+    Space space;
+    //LocalSpace localspace;
+
+   protected:
+     DimRange(Space &&space, isl_dim_type type, unsigned first, unsigned count) : space(space.move()), first(first), count(count)  {}
+     //DimRange(LocalSpace &&localspace, isl_dim_type type, unsigned first, unsigned count) : space(), localspace(localspace.move()), first(first), count(count)  {}
+
+   public:
+     DimRange() : space(), type(isl_dim_cst), first(0),count(0) {}
+     static DimRange enwrap(Space space, isl_dim_type type, unsigned first, unsigned count) { return DimRange(space.move(), type, first, count); }
+
+
   }; // class DimRange
 
 
 } // namespace isl
-
 #endif /* ISLPP_DIMRANGE_H */

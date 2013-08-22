@@ -19,6 +19,12 @@ namespace isl {
   // Spacelike.h
   template<typename> class Spacelike;
 
+  // Dim.h
+  class Dim;
+
+  // DimRange.h
+  class DimRange;
+
   // Ctx.h
   class Ctx;
 

@@ -147,7 +147,12 @@ namespace isl {
   }
 
 
+  bool spacelike_matchesMapSpace(const Space &space, const Space &domainSpace, const Space &rangeSpace);
+
+
   // TODO: Conditionally enable_if Set/Map operations depending on D
+  // Actually, I'd prefer a code generator that generatores complete classes isl::Set, isl::Map without deriving from anything
+  // This would avoid problems with incomplete classes and we could hide any definitions in .cpp files. The link-time-optimization has to do the inlining then
   template <typename D>
   class Spacelike {
     typedef D SpaceTy;
@@ -353,9 +358,9 @@ namespace isl {
     SpaceTy addOutDims(unsigned count) const { assert(getDerived()->isMap()); return addDims(isl_dim_in, count); }
     SpaceTy addSetDims(unsigned count) const { assert(getDerived()->isSet()); return addDims(isl_dim_set, count); }
 
-    SpaceTy insertDims(isl_dim_type type, unsigned count) const { auto result = getDerived()->copy(); result.insertDims_inplace(type, count); return result; }
+    SpaceTy insertDims(isl_dim_type type, unsigned pos, unsigned count) const { auto result = getDerived()->copy(); result.insertDims_inplace(type, pos, count); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    SpaceTy insertDims(isl_dim_type type, unsigned count) && { getDerived()->insertDims_inplace(type, count); return this->move(); }
+    SpaceTy insertDims(isl_dim_type type, unsigned pos, unsigned count) && { getDerived()->insertDims_inplace(type, pos, count); return this->move(); }
 #endif
 
     SpaceTy moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) const { auto result = getDerived()->copy(); result.moveDims_inplace(dst_type, dst_pos, src_type, src_pos, count); return result; }
@@ -396,6 +401,104 @@ namespace isl {
     }
 
     Dim getSetDim(unsigned pos) const { assert(isSet()); return Dim::enwrap(getDerived()->getSpacelike(), isl_dim_set, pos); }
+
+
+
+#pragma region Matching spaces
+    bool matchesSpace(const Space &that) const {
+      if (that.isSetSpace())
+        return matchesSetSpace(that);
+
+      if (that.isMapSpace())
+        return matchesMapSpace(that);
+
+      auto space = getDerived()->getSpace();
+      assert(space.isParamsSpace());
+      return that.isParamsSpace();
+    }
+
+
+    bool matchesSetSpace(const Id &id) const { 
+      if (!getDerived()->isSetSpace())
+        return false;
+      if (getDerived()->getSetTupleId() != id)
+        return false;
+      return true;
+    }
+
+
+    bool matchesSetSpace(const Space &that) const {
+      assert(that.isSetSpace());
+      auto space = getDerived()->getSpace();
+
+      if (!getDerived()->isSet())
+        return false;
+      return space.matches(isl_dim_set, that, isl_dim_set);
+
+      if (getDerived()->getSetDimCount() != that.getSetDimCount())
+        return false;
+
+      auto thisHasTupleId = getDerived()->hasTupleId(isl_dim_set);
+      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
+      if (thisHasTupleId != thatHasTupleId)
+        return false;
+
+      if (thisHasTupleId && getDerived()->getSetTupleId() != that.getSetTupleId()) 
+        return false;
+
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Id &rangeId) const {
+      if (!getDerived()->isMap())
+        return false;
+      if (getDerived()->getInTupleId() != domainId)
+        return false;
+      if (getDerived()->getOutTupleId() != rangeId)
+        return false;
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) const {
+      if (!getDerived()->isMap()) {
+        assert(!spacelike_matchesMapSpace(getDerived()->getSpace(), domainSpace, rangeSpace));
+        return false;
+      }
+
+      // Try to remove the requirement of isl::space being complete. This doesn't work. getSpace() returns a temporary for which the compiler needs to know how much space it uses.
+      // However, getDerived() makes it a dependent lookup, i.e. isl::Space only needs to be complete in the derived classes and therefore becomes a requirement for using Spacelike
+      return spacelike_matchesMapSpace(getDerived()->getSpace(), domainSpace, rangeSpace);
+    }
+
+
+    bool matchesMapSpace(const Space &that)  const {
+      assert(that.isMapSpace());
+      if (!getDerived()->isMapSpace())
+        return false;
+
+      auto space = getDerived()->getSpace();
+      return space.matches(isl_dim_in, that, isl_dim_in) && space.matches(isl_dim_out, that, isl_dim_out);
+    }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Id &rangeId)const {
+      if (!getDerived()->isMapSpace())
+        return false;
+      auto space = getDerived()->getSpace();
+      return space.matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) const{
+      if (!getDerived()->isMapSpace())
+        return false;
+
+      auto space = getDerived()->getSpace();
+      return (getDerived()->getInTupleId() == domainId) && space.matches(isl_dim_out, rangeSpace, isl_dim_set);
+    }
+#pragma endregion
   }; // class Spacelike
 
 

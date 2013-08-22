@@ -586,6 +586,7 @@ namespace {
     isl::Ctx *islctx;
 
   public:
+    llvm::LLVMContext &getLLVMContext() const LLVM_OVERRIDE { return module->getContext(); }
     isl::Ctx *getIslContext() { return islctx; }
 
   private:
@@ -1081,9 +1082,11 @@ namespace {
 
         // Decide on which node(s) a ScopStmt should execute 
         scopCtx->computeScopDistibution();
+        scopCtx->validate();
 
         // Insert communication between ScopStmt
         scopCtx->genCommunication();
+        scopCtx->validate();
       }
 
       // Create some SCoPs that init the combufs
@@ -1098,6 +1101,7 @@ namespace {
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
           stmtCtx->applyWhere();
+          stmtCtx->validate();
         }
 
         // Let polly optimize and and codegen the scops
@@ -1115,7 +1119,7 @@ namespace {
       //FIXME: Find all the leaks
       //this->islctx.reset();
       this->clusterConf.reset();
-      delete this->moduleCtx;
+      //delete this->moduleCtx;
       return changedIR;
     }
 

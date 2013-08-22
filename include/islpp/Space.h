@@ -135,6 +135,9 @@ namespace isl {
     /// create a map where the first n_equal dimensions map to equal value
     BasicMap equalBasicMap(unsigned n_equal) const;
 
+     /// Create a map that equates the selected dimensions
+    BasicMap equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const;
+
     /// Create a relation the maps a value to everything that is lexically smaller at dimension pos
     BasicMap lessAtBasicMap(unsigned pos) const;
 
@@ -196,115 +199,40 @@ namespace isl {
     bool matches(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return isl_space_match(keep(), thisType, that.keep(), thatType); }
 
 
-#pragma region  Matching spaces
-    bool matchesSetSpace(const Id &id) { 
-      if (!this->isSetSpace())
-        return false;
-      if (this->getSetTupleId() != id)
-        return false;
-      return true;
-    }
-
-
-    bool matchesSetSpace(const Space &that) {
-      assert(that.isSetSpace());
-
-      if (!this->isSetSpace())
-        return false;
-      return matches(isl_dim_set, that, isl_dim_set);
-
-      if (this->getSetDimCount() != that.getSetDimCount())
-        return false;
-
-      auto thisHasTupleId = this->hasTupleId(isl_dim_set);
-      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
-      if (thisHasTupleId != thatHasTupleId)
-        return false;
-
-      if (thisHasTupleId && this->getSetTupleId()!= that.getSetTupleId()) 
-        return false;
-
-      return true;
-    }
-
-
-    bool matchesMapSpace(const Id &domainId, const Id &rangeId) {
-      if (!this->isMapSpace())
-        return false;
-      if (this->getInTupleId() != domainId)
-        return false;
-      if (this->getOutTupleId() != rangeId)
-        return false;
-      return true;
-    }
-
-
-    bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) {
-      assert(domainSpace.isSetSpace());
-      assert(rangeSpace.isSetSpace());
-
-      if (!this->isMapSpace())
-        return false;
-      return matches(isl_dim_in, domainSpace, isl_dim_set) &&  matches(isl_dim_out, rangeSpace, isl_dim_set);
-
-      if (this->getInDimCount() != domainSpace.getSetDimCount())
-        return false;
-
-      auto thisHasInTupleId = this->hasInTupleId();
-      auto thatDomainHasTupleId = domainSpace.hasSetTupleId();
-      if (thisHasInTupleId !=thatDomainHasTupleId )
-        return false;
-
-      if (this->getOutDimCount() != rangeSpace.getSetDimCount())
-        return false;
-
-      if (thisHasInTupleId && this->getInTupleId()!=domainSpace.getSetTupleId())
-        return false;
-
-      auto thisHasOutTupleId = this->hasOutTupleId();
-      auto thatRangeHasTupleId = rangeSpace.hasSetTupleId();
-      if (thisHasOutTupleId !=thatRangeHasTupleId )
-        return false;
-
-      if (thisHasOutTupleId && this->getOutTupleId()!=rangeSpace.getSetTupleId())
-        return false;
-
-      return true;
-    }
-
-
-    bool matchesMapSpace(const Space &domainSpace, const Id &rangeId) {
-      if (!this->isMapSpace())
-        return false;
-      return matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
-    }
-
-
-    bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) {
-      if (!this->isMapSpace())
-        return false;
-      return (getInTupleId() == domainId) && matches(isl_dim_out, rangeSpace, isl_dim_set);
-    }
-#pragma endregion
-
-
     bool isWrapping() const;
-    void wrap();
-    void unwrap();
+    void wrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_wrap(take())); }
+    Space wrap() const { return Space::enwrap(isl_space_wrap(takeCopy())); }
+    void unwrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_unwrap(take())); }
+    Space unwrap() const { return Space::enwrap(isl_space_unwrap(takeCopy())); }
 
     Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
     Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
     Space params() const { return Space::enwrap(isl_space_params(takeCopy())); }
+    Space extractTuple(isl_dim_type type) const {
+      switch(type) {
+      case isl_dim_param:
+        return params();
+      case isl_dim_in:
+        return domain();
+      case isl_dim_out:
+        return range();
+      case isl_dim_all:
+        return copy();
+      default:
+        llvm_unreachable("Invalid dim type");
+        return Space();
+      }
+    }
 
     void fromDomain();
 
     void fromRange();
     void setFromParams();
     void reverse();
-    void insertDims(isl_dim_type type, unsigned pos, unsigned n);
-    void addDims(isl_dim_type type, unsigned n);
-    void dropDims(isl_dim_type type, unsigned first, unsigned n);
-    void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n);
+    //void insertDims(isl_dim_type type, unsigned pos, unsigned n);
+    //void addDims(isl_dim_type type, unsigned n);
+    //void dropDims(isl_dim_type type, unsigned first, unsigned n);
+    //void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n);
     void mapFromSet();
     void zip();
     void curry();
@@ -323,9 +251,53 @@ namespace isl {
 
     LocalSpace asLocalSpace() const;
 
+    bool isNested(isl_dim_type type) const { return checkBool(isl_space_is_nested(keep(), type)); }
+    bool isNestedDomain() const {assert(isMapSpace()); return checkBool(isl_space_is_nested(keep(), isl_dim_in)); }
+    bool isNestedRange() const {assert(isMapSpace()); return checkBool(isl_space_is_nested(keep(), isl_dim_out)); }
+    bool isNestedSet() const {assert(isSetSpace()); return checkBool(isl_space_is_nested(keep(), isl_dim_set)); }
+    Space getNested(isl_dim_type type) const { return Space::enwrap(isl_space_get_nested(takeCopy(), type)); }
+    Space getNestedDomain() const { assert(isMapSpace()); return Space::enwrap(isl_space_get_nested(takeCopy(), isl_dim_in)); }
+    Space getNestedRange() const { assert(isMapSpace()); return Space::enwrap(isl_space_get_nested(takeCopy(), isl_dim_out)); }
+    Space getNested() const { assert(isSetSpace()); return Space::enwrap(isl_space_get_nested(takeCopy(), isl_dim_set)); }
+
+
+    /// Set the nested spaces
+    void setNested_inplace(isl_dim_type type, const Space &nest) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_nested(take(), type, nest.takeCopy())); } 
     Space setNested(isl_dim_type type, const Space &nest) const { return Space::enwrap(isl_space_set_nested(takeCopy(), type, nest.takeCopy())); }
+    void setInNested_inplace(const Space &nest) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_nested(takeCopy(), isl_dim_in, nest.takeCopy())); }
     Space setInNested(const Space &nest) const  { return Space::enwrap(isl_space_set_nested(takeCopy(), isl_dim_in, nest.takeCopy())); }
+    void setOutNested_inplace(const Space &nest) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_nested(take(), isl_dim_out, nest.takeCopy())); }
     Space setOutNested(const Space &nest) const  { return Space::enwrap(isl_space_set_nested(takeCopy(), isl_dim_out, nest.takeCopy())); }
+
+    DimRange findNestedTuple(unsigned tuplePos) const;
+    DimRange findNestedTuple(const Id &tupleId) const;
+
+    void unwrapTuple_inplace(unsigned tuplePos) ISLPP_INPLACE_QUALIFIER;
+    void unwrapTuple_inplace(const Id &tupleId) ISLPP_INPLACE_QUALIFIER;
+
+    Space moveTuple(isl_dim_type dst_type, unsigned dst_tuplePos, isl_dim_type src_type, unsigned src_tuplePos) const;
+
+    /// 0=isNull();
+    /// 1=isSetSpace()
+    /// 2=isMapSpace() or a set with a simple wrapped set
+    /// ...
+    unsigned nestedTupleCount() const;
+
+    /// 0=isNull()
+    /// 1=no nesting (!isWrapping()): set{ A } or map{ A -> B }
+    /// 2=up to one level of nesting: set{ (A -> B) } or map{ (A -> B) -> (C -> D) }
+    /// ...
+    unsigned nestedMaxDepth() const;
+    bool findTuple(isl_dim_type type, unsigned tuplePos, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount, /*out*/Id &tupleId) const;
+    bool findTupleAt(isl_dim_type type, unsigned dimPos, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount, /*out*/Id &tupleId, /*out*/unsigned &tuplePos) const;
+    bool findTuple(isl_dim_type type, const Id &tupleToFind, /*out*/unsigned &firstDim, /*out*/unsigned &dimCount) const;
+    unsigned findTuplePos(isl_dim_type type, const Id &tupleToFind) const;
+
+    Space extractNestedTupleSpace(isl_dim_type type, unsigned tuplePos) const;
+    Space extractNestedTupleSpace(isl_dim_type type, const Id &tupleToFind) const;
+
+    Space extractDimRange(isl_dim_type type, unsigned first, unsigned count) const;
+    std::vector<Space> flattenNestedSpaces() const;
   }; // class Space
 
 

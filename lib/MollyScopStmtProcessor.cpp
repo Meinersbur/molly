@@ -37,7 +37,7 @@ namespace {
     FieldVariable *fvar;
 
   public:
-    MollyScopStmtProcessorImpl(MollyPassManager *pm, ScopStmt *stmt) : pm(pm), stmt(stmt), fmemacc(nullptr), fvar(nullptr) {
+    MollyScopStmtProcessorImpl(MollyPassManager *pm, ScopStmt *stmt) : MollyScopStmtProcessor(this), pm(pm), stmt(stmt), fmemacc(nullptr), fvar(nullptr) {
       assert(pm);
       assert(stmt);
 
@@ -60,21 +60,20 @@ namespace {
     }
 
   protected:
-    Scop *getParent() { return stmt->getParent(); }
+    Scop *getParent() const { return stmt->getParent(); }
     MollyScopProcessor *getParentProcessor() { return pm->getScopContext(getParent()); }
 
-    isl::Set getDomain() const {  
+    isl::Set getDomain() const LLVM_OVERRIDE {  
       return enwrap(stmt->getDomain());
     }
-    isl::Map getScattering() const {
-      auto result = enwrap(stmt->getScattering());
-      assert(isSubset(getDomain(), result.getDomain()));
-      return result;
+    isl::Map getScattering() const LLVM_OVERRIDE {
+      return enwrap(stmt->getScattering());
     }
-    isl::Map getWhere() {
-      auto result = enwrap(stmt->getWhereMap());
-      assert(result.getDomain().isSupersetOf(getDomain()));
-      return result;
+    bool hasWhere() const {
+      return enwrap(stmt->getWhereMap()).isValid();
+    }
+    isl::Map getWhere() const LLVM_OVERRIDE {
+      return enwrap(stmt->getWhereMap());
     }
     BasicBlock *getBasicBlock() LLVM_OVERRIDE {
       return stmt->getBasicBlock();
@@ -87,38 +86,14 @@ namespace {
       return getParentProcessor()->asPass();
     }
 
-#if 0
-  private:
-    std::map<isl_id *, llvm::Value *> valueMap;
-  public:
-    std::map<isl_id *, llvm::Value *> *getValueMap() {
-      if (!valueMap.empty())
-        return &valueMap;
-
-      // 1. The parent SCoP's context/parameters
-      auto parentMap = getParentProcessor()->getValueMap();
-      for (auto i : *parentMap) {
-        valueMap[i.first] = i.second; 
-      }
-
-      // 2. The statements domain induction variables
-      auto domain = getDomain();
-      auto nDims = domain.getDimCount();
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
-        auto id = domain.getDimId(i);
-        valueMap[id.keep()] = const_cast<PHINode*>(stmt->getInductionVariableForDimension(i));
-      }
-
-      return &valueMap;
-    }
-#endif
 
     MollyCodeGenerator makeCodegen() LLVM_OVERRIDE {
-      return MollyCodeGenerator(this, getBasicBlock()->getTerminator());
+      auto term = getBasicBlock()->getTerminator();
+      return MollyCodeGenerator(this, term);
     }
 
 
-    void applyWhere() {
+    void applyWhere() LLVM_OVERRIDE {
       auto scop = stmt->getParent();
       auto func = getParentFunction(stmt);
       //auto funcCtx = pm->getFuncContext(func);
@@ -230,7 +205,7 @@ namespace {
     }
 
 
-    void dump() LLVM_OVERRIDE {
+    void dump() const LLVM_OVERRIDE {
       dbgs() << "ScopStmtProcessorImpl:\n";
       if (stmt)
         stmt->dump();
@@ -244,13 +219,13 @@ namespace {
     }
 
 
-    FieldVariable *getFieldVariable() const {
+    FieldVariable *getFieldVariable() const LLVM_OVERRIDE {
       assert(fvar);
       return fvar;
     }
 
 
-    FieldType *getFieldType() const { 
+    FieldType *getFieldType() const LLVM_OVERRIDE { 
       return fvar->getFieldType();
     }
 
@@ -289,7 +264,7 @@ namespace {
     }
 #endif
 
-    isl::Map/*iteration coord -> field coord*/ getAccessRelation() const {
+    isl::Map/*iteration coord -> field coord*/ getAccessRelation() const LLVM_OVERRIDE {
       assert(isFieldAccess());
       auto fty = getFieldType();
       auto ftyTuple = fty->getIndexsetTuple();
@@ -340,6 +315,68 @@ namespace {
       auto use = *ld->use_begin();
       return cast<StoreInst>(use);
     }
+
+
+    void validate() const LLVM_OVERRIDE {
+#ifndef NDEBUG
+      assert(stmt);
+
+      auto scop = getParent();
+      auto clusterConf = pm->getClusterConfig();
+
+      auto domain = getDomain();
+      auto domainSpace = domain.getSpace();
+      assert(domain.hasTupleId());
+
+      auto scatter = getScattering();
+      assert(scatter.getSpace().matchesMapSpace(domainSpace, getScatterTuple(scop)));
+      assert(scatter.getDomain().isSupersetOf(domain));
+
+      if (hasWhere()) {
+        auto where = getWhere();
+        assert(where.isValid());
+        auto clusterSpace = clusterConf->getClusterSpace();
+        assert(where.getSpace().matchesMapSpace(domainSpace, clusterSpace));
+        assert(where.getDomain().isSupersetOf(domain));
+      }
+
+      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
+        auto memacc = *it;
+        auto accrel = enwrap(memacc->getAccessRelation());
+        assert(accrel.getDomainSpace().matchesSpace(domainSpace));
+      }
+
+      if (isFieldAccess()) {
+        auto fvar = getFieldVariable();
+        assert(fvar);
+        auto fty = fvar->getFieldType();
+        assert(fty);
+        auto indexsetSpace = fty->getLogicalIndexsetSpace();
+
+        auto accrel = getAccessRelation();
+        assert(accrel.getSpace().matchesMapSpace(domainSpace, indexsetSpace));
+
+        //TODO: Check that nothing notable is going on except the access to a field
+      }
+#endif
+    }
+
+
+    llvm::LLVMContext &getLLVMContext() const LLVM_OVERRIDE {
+      return pm->getLLVMContext();
+    }
+
+
+          bool isReadAccess() const LLVM_OVERRIDE {
+            assert(isFieldAccess());
+            return fmemacc->isRead();
+          }
+
+
+       bool isWriteAccess() const LLVM_OVERRIDE {
+         assert(isFieldAccess());
+         return fmemacc->isWrite();
+       }
 
   }; // class MollyScopStmtProcessorImpl
 } // namespace 

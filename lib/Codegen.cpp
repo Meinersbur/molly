@@ -15,10 +15,22 @@
 #include "islpp/Map.h"
 
 using namespace molly;
-//using namespace polly;
+using namespace polly;
 using namespace llvm;
 using namespace std;
-//using isl::enwrap;
+using isl::enwrap;
+
+
+MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()) {
+  auto bb = stmtCtx->getBasicBlock();
+  if (insertBefore) {
+    assert(insertBefore->getParent() == bb);
+    irBuilder.SetInsertPoint(insertBefore);
+  } else {
+    // Insert at end of block instead
+    irBuilder.SetInsertPoint(bb);
+  }
+}
 
 
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()) {
@@ -69,6 +81,7 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
   auto store = irBuilder.CreateStore(val, ptrVal);
 
   auto editor = getStmtEditor();
+  accessRelation.setInTupleId_inplace(editor.getDomainTupleId());
   editor.addWriteAccess(store, fvar, accessRelation.move());
 }
 

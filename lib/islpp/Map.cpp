@@ -13,22 +13,22 @@ using namespace llvm;
 using namespace std;
 
 
-  MultiPwAff Map::toMultiPwAff() const {
-    return toPwMultiAff().toMultiPwAff();
-  }
+MultiPwAff Map::toMultiPwAff() const {
+  return toPwMultiAff().toMultiPwAff();
+}
 
 
-    UnionMap Map::toUnionMap() const {
-      return UnionMap::enwrap(isl_union_map_from_map(takeCopy()));
-    }
+UnionMap Map::toUnionMap() const {
+  return UnionMap::enwrap(isl_union_map_from_map(takeCopy()));
+}
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-     UnionMap Map::toUnionMap() && {
-     return UnionMap::enwrap(isl_union_map_from_map(take()));
-     }
+UnionMap Map::toUnionMap() && {
+  return UnionMap::enwrap(isl_union_map_from_map(take()));
+}
 #endif
 
 
-    
+
 
 Map Map::readFrom(Ctx *ctx, const char *str) {
   return Map::enwrap(isl_map_read_from_str(ctx->keep() , str));
@@ -71,7 +71,7 @@ void Map::print(llvm::raw_ostream &out) const {
 Map Map::createFromUnionMap(UnionMap &&umap) {
   return Map::enwrap(isl_map_from_union_map(umap.take()));
 }
- 
+
 
 static int foreachBasicMapCallback(__isl_take isl_basic_map *bmap, void *user) {
   assert(user);
@@ -101,4 +101,56 @@ std::vector<BasicMap> Map::getBasicMaps() const {
 
 Map BasicMap::toMap() const {
   return Map::enwrap(isl_map_from_basic_map(takeCopy()));
+}
+
+
+    Map Map:: chainNested(const Map &map) const {
+      return this->wrap().chainNested(map);
+    }
+
+
+    Map Map::chainNested(const Map &map, unsigned tuplePos) const {
+      return this->wrap().chainNested(map, tuplePos);
+    }
+
+
+Map isl:: join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate) {
+  auto cartesian = product(domain, range).unwrap();
+  cartesian.intersect(cartesian.getSpace().equalBasicMap(isl_dim_in, firstDomainDim, countEquate, isl_dim_out, firstRangeDim));
+  return cartesian;
+}
+
+
+Map isl::naturalJoin(const Set &domain, const Set &range) {
+  auto cartesian = product(domain, range).unwrap();
+
+  auto domainSpace =  domain.getSpace();
+  auto rangeSpace = range.getSpace();
+  auto productSpace = cartesian.getSpace();
+
+  auto domainSpaces = domainSpace.flattenNestedSpaces();
+  unsigned domainPos = 0;
+  for (auto &space : domainSpaces) {
+    unsigned first,count;
+    if (! rangeSpace.findTuple(isl_dim_set, space.getTupleId(isl_dim_set), first, count))
+      continue;
+    assert(count = space.getSetDimCount());
+    cartesian.intersect(productSpace.equalBasicMap(isl_dim_in, domainPos, count, isl_dim_out, first));
+    domainPos += space.getSetDimCount();
+  }
+
+  auto nDims = domainSpace.getSetDimCount();
+  for (auto i = nDims-nDims; i < nDims; i+=1) {
+    if (!domainSpace.hasDimId(isl_dim_set, i))
+      continue;
+
+    auto id = domain.getSetTupleId();
+    auto pos = rangeSpace.findDimById(isl_dim_set, id); // This assumes that thare is at most one match of this id in rangeSpace
+    if (pos < 0)
+      continue;
+
+    cartesian.equate_inplace(isl_dim_in, i, isl_dim_out, pos);
+  }
+
+  return cartesian;
 }

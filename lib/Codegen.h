@@ -23,7 +23,7 @@ namespace molly {
     std::map<isl_id *, llvm::Value *> &getIdToValueMap();
 
   public:
-    MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) : stmtCtx(stmtCtx), irBuilder(insertBefore) {}
+    MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
 
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }

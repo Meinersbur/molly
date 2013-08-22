@@ -82,8 +82,8 @@ namespace {
     bool hasFieldAccess() {
       // TODO: Cache result
       for (auto stmt : *scop) {
-        auto facc = MollyFieldAccess::fromScopStmt(stmt);
-        if (facc.isValid())
+        auto stmtCtx = getScopStmtContext(stmt);
+        if (stmtCtx->isFieldAccess())
           return true;
       }
       return false;
@@ -149,7 +149,7 @@ namespace {
     }
 
 
-    MollyScopStmtProcessor *getScopStmtContext(ScopStmt *stmt) {
+    MollyScopStmtProcessor *getScopStmtContext(ScopStmt *stmt) const {
       return pm->getScopStmtContext(stmt);
     }
 
@@ -254,6 +254,8 @@ namespace {
   private:
     DenseMap<const isl_id*, ScopStmt*> tupleToStmt;
     isl::Id epilogueId;
+    isl::Set beforeScopScatterRange;
+    isl::Set afterBeforeScatterRange;
 
   public:
     void genCommunication() {
@@ -359,10 +361,10 @@ namespace {
       min.setInTupleId_inplace(scatterId); /* { scattering[nScatterDims] -> [1] } */
       auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
       beforeScopScatter.setPwAff_inplace(0, min);
-      auto beforeScopScatterRange = beforeScopScatter.toMap().getRange();
+      beforeScopScatterRange = beforeScopScatter.toMap().getRange();
 
       auto afterBeforeScatter = beforeScopScatter.setPwAff(1, scatterRangeSpace.createConstantAff(1));
-      auto afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
+      afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
 
       // Insert fake read access after scop
       auto epilogueScatter = max.toMap(); //scatterSpace.createMapFromAff(max);
@@ -406,228 +408,21 @@ namespace {
       for (auto dep : inputFlow.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
         // Value source is outside this scop 
         // Value must be read from home location
-
-        auto stmtTuple = dep.getInTupleId();
-        auto fieldTuple = dep.getOutTupleId();
-        assert(dep.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
-
-        auto stmtRead = tupleToStmt[stmtTuple.keep()];
-        auto domainSpace = enwrap(stmtRead->getDomainSpace());
-        assert(domainSpace.getSetTupleId() == stmtTuple);
-
-        auto facc = getFieldAccess(stmtRead);
-        auto fvar = facc.getFieldVariable();
-        auto fty = facc.getFieldType();
-        assert(tupleToFty[fieldTuple.keep()] == fty);
-        auto indexsetSpace = fty->getIndexsetSpace();
-        auto readUsed = facc.getLoadInst();
-        auto nFieldDims = fty->getNumDimensions();
-        assert(indexsetSpace.getSetDimCount() == nFieldDims);
-
-        auto domainRead = dep.getDomain(); /* { stmtRead[domain] } */
-        assert(domainRead.getSpace().matchesSetSpace(domainSpace));
-
-        auto scatteringRead = getScattering(stmtRead); /* { stmtRead[domain] -> scattering[scatter] } */
-
-        auto accessRel = facc.getAccessRelation(); /* { stmtRead[domain] -> field[indexset] } */
-        assert(accessRel.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
-        accessRel.intersectDomain_inplace(domainRead);
-
-        auto whereRead = getWhereMap(stmtRead); /* { stmtRead[domain] -> cluster[node] } */
-        assert(whereRead.getSpace().matchesMapSpace(domainSpace, nodeSpace));
-        auto wherePairs = whereRead.wrap(); /* { (stmtRead[domain] -> rank[node]) } */ // All execution instances of this ScopStmt
-
-        // Find those who are already at their home location
-        // For every execution of a stmt on a specific node
-        auto homeRel = fty->getHomeRel(); /* { cluster[node] -> field[indexset] } */
-        homeRel.setInTupleId_inplace(clusterConf->getClusterTuple());
-        assert(homeRel.getSpace().matchesMapSpace(clusterTuple, fieldTuple));
-
-        auto wherePairsAccesses = accessRel.addInDims(nodeSpace.getSetDimCount()); 
-        wherePairsAccesses.cast_inplace(wherePairs.getSpace().mapsTo(homeRel.getSpace().range()));
-        wherePairsAccesses = wherePairsAccesses.intersectDomain(wherePairs); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-        auto c = wherePairsAccesses.chain(homeRel.reverse()); /* { ((stmtRead[domain] -> cluster[node]) -> field[indexset]) -> cluster[node] } */ // Oh my goodness
-        // condition: node on which read is executed==node the read value is home
-        auto homePairAccesses = c;
-        for (auto i = 0; i < nClusterDims; i+=1) {
-          homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + i, isl_dim_out, i);
-        }
-        auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-        auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
-
-
-        ScopEditor editor(scop);
-
-        // CodeGen already home
-        if (!alreadyHomeAccesses.isEmpty()) {
-          auto readLocalEdit = editor.replaceStmt(stmtRead, alreadyHomeAccesses.getDomain().unwrap(), "InputLocal");
-          auto bb = readLocalEdit.getBasicBlock();
-
-          //BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
-          DefaultIRBuilder builder(bb);
-
-          auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
-          readUsed->replaceAllUsesWith(val); 
-          readLocalEdit.getTerminator();
-          // TODO: Don't assume every stmt accessed just one value
-          //auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
-          //scop->addScopStmt(replacementStmt);
-
-          //TODO: Create polly::MemoryAccess
-        }
-
-        // CodeGen from other nodes
-        if (!notHomeAccesses.isEmpty()) {
-          // Where is the home node?
-          auto notHomeLocation = wherePairsAccesses.intersectDomain(notHomeAccesses.wrap()).curry(); /* { (stmtRead[domain] -> dst[node]) -> (field[indexset] -> src[node]) } */
-          auto instancesRecv = notHomeLocation.getDomain().unwrap(); /* { stmtRead[domain] -> cluster[node] } */
-          auto dataSource = notHomeLocation.getRange().unwrap(); /* { field[indexset] -> cluster[node] } */
-
-          // Create the communication buffer 
-          auto dataToSend = dataSource.reverse(); /* { cluster[node] -> field[indexset] } */
-          auto sendRelPerm = notHomeLocation.curry().getRange().unwrap(); /* { dst[node] -> (field[indexset] -> src[node]) } */
-
-          unsigned perm[] = { nClusterDims+nFieldDims, 0, nClusterDims };
-          auto sendRel = sendRelPerm.wrap().permuteDims(perm).unwrap() ; /* { (src[node] -> dst[node]) -> field[indexset] } */
-          auto combuf = pm->newCommunicationBuffer(fty, sendRel.copy());
-
-          // Send on source node
-          // Copy to buffer
-          auto copyArea = product(nodes, combuf->getRelation().getRange()); /* { [cluster,indexset] } */
-          auto copyAreaSpace = copyArea.getSpace();
-          auto copyScattering = islctx->createAlltoallMap(copyArea, beforeScopScatterRange);
-          auto copyWhere = fty->getHomeRel(); // Execute where that value is home
-          auto memmovEditor = editor.createStmt(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
-          auto memmovStmt = memmovEditor.getStmt();
-          BasicBlock *memmovBB = memmovStmt->getBasicBlock();
-
-          //BasicBlock::Create(llvmContext, "memmove_nonhome", func);
-          DefaultIRBuilder memmovBuilder(memmovBB);
-          auto copyValue = codegenReadLocal(memmovBuilder, fvar, facc.getCoordinates());
-          //auto memmovStmt = createScopStmt(scop, memmovBB, stmtRead->getRegion(), "memmove_nonhome", stmtRead->getLoopNests()/*not accurate*/, );
-          std::map<isl_id *, llvm::Value *> scalarMap;
-          editor.getParamsMap(scalarMap, memmovStmt);
-          combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/ );
-          memmovBuilder.CreateUnreachable(); // Terminator, removed by Scop code generator
-
-          // Execute send
-          auto singletonDomain = islctx->createSetSpace(0, 0).universeBasicSet();
-          auto sendStmtEditor = editor.createStmt(singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain,afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
-          BasicBlock *sendBB = sendStmtEditor.getBasicBlock();
-          IRBuilder<> sendBuilder(sendBB);
-
-          auto nodeCoords =  ArrayRef<Value*>(facc.getCoordinates()).slice(0, nodes.getSetDimCount());
-          auto dstRank = clusterConf->codegenComputeRank(sendBuilder, nodeCoords);
-          codegenSendBuf(sendBuilder, combuf, dstRank);
-          sendBuilder.CreateUnreachable();
-
-          // Execute Recv
-          auto recvDomain = combuf->getRelation().getDomain(); /* { (src[coord], dst[coord]) } */
-          auto recvUserScatter = scatteringRead ;
-          auto recvScatter = recvUserScatter ; /* { (src[coord], dst[coord]) -> scattering[scatter] } */
-          auto recvWhere = recvDomain.unwrap().rangeMap(); /* { (src[coord], dst[coord]) -> dst[coord] } */
-          auto recvStmtEditor = editor.createStmt(recvDomain.copy(), recvScatter.copy(), recvWhere.copy(), "recv_nonhome" );
-
-          // Use the data where needed
-          auto useWhere = notHomeAccesses.getRange().unwrap(); /* { readStmt[domain] -> cluster[coord] } */
-          auto useEditor = editor.replaceStmt(stmtRead,useWhere.copy() , "use_nonhome");
-          IRBuilder<> useBuilder(useEditor.getTerminator());
-          auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
-          auto useLoad = facc.getLoadUse();
-          useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
-
-          //TODO: Create polly::MemoryAccess
-        }
+        genInputCommunication(dep.getDomain());
       }
-
-
-      for (auto dep : outputFlow.getMaps()) {
-        getOutputCommunication(dep);
-      }
-
 
       for (auto dep : stmtFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
-        auto itDomainWrite = dep.getDomain(); /* { write_acc[domain] } */
-        auto writeTuple = itDomainWrite.getTupleId();
-        auto stmtWrite = tupleToStmt[writeTuple.keep()];
-        assert(stmtWrite);
-        auto faccWrite =  getFieldAccess(stmtWrite);
-        auto memaccWrite = faccWrite.getPollyMemoryAccess();
-        //auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
-        //assert(memaccWrite);
-        //auto faccWrite = getFieldAccess(memaccWrite);
-        //auto stmtWrite = faccWrite.getPollyScopStmt();
-        auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
-        auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
-        auto domainWrite = itDomainWrite.setTupleId(isl::Id::enwrap(stmtWrite->getTupleId())); /* write_stmt[domain] */
-        auto fvar = faccWrite.getFieldVariable();
-        auto fty = fvar->getFieldType();
-
-        auto itDomainRead = dep.getRange();
-        auto itReadTuple = itDomainRead.getTupleId();
-        auto readStmt = tupleToStmt[itReadTuple.keep()];
-
-        //auto memaccRead = tupleToAccess[itDomainRead.getTupleId().keep()];
-        // auto faccRead = MollyFieldAccess::fromMemoryAccess(memaccRead);
-        auto faccRead = getFieldAccess(readStmt);
-        auto stmtRead = faccRead.getPollyScopStmt();
-        auto scatterRead = faccRead.getAccessScattering();
-
-        auto scatter = unite(scatterWrite, scatterRead);
-
-        assert(scatterWrite.getSpace() == scatterRead.getSpace());
-        auto scatterSpace = scatterRead.getSpace();
-
-        // Determine the level of independence
-        auto depScatter = dep.applyDomain(getScattering(stmtWrite)).applyRange(getScattering(stmtRead)); /* { write[scatter] -> read[scatter] } */
-        depScatter.reverse_inplace();
-
-        auto dependsVector = depScatter.getSpace().emptyMap(); /* { read[scatter] -> (read[scatter] - write[scatter]) } */
-        auto nParam = depScatter.getParamDimCount();
-        auto nIn = depScatter.getInDimCount();
-        auto nOut = depScatter.getOutDimCount();
-        assert(nIn==nOut);
-        for (auto basicDep : depScatter.getBasicMaps()) {
-          //TODO: Faster using (in)equality matrices
-          auto dependsBasicVector = basicDep.getSpace().universeBasicMap();
-          for (auto constraint : basicDep.getConstraints()) {
-            for (auto i = nIn-nIn; i < nIn; i+=1) {
-              auto valRead = constraint.getCoefficient(isl_dim_in, i);
-              auto valWrite = constraint.getCoefficient(isl_dim_out, i);
-              constraint.setCoefficient_inplace(isl_dim_out, i, valRead - valWrite);
-            }
-            dependsBasicVector.addConstraint_inplace(constraint);
-          }
-          dependsVector = unite(move(dependsVector), dependsBasicVector);
-        }
-
-        // get the first always-positive coordinate such that the dependence is satisfied
-        // Everything after that doesn't matter anymore to meet that dependence
-        //auto direction = scatterSpace.universeSet();
-        unsigned order = -1;
-        for (auto i = nIn-nIn; i < nIn; i+=1) {
-          auto positiveDepVectors = scatterSpace.zeroPoint().apply(scatterSpace.lexGtFirstMap(i));
-          auto fullfilledDeps = dependsVector.intersectRange(positiveDepVectors);
-          if ( fullfilledDeps.isSupersetOf(dependsVector)) {
-            // All dependences are fullfilled from here
-            // i.e. we can shuffel stuff as we want in lower dimensions
-            order = i;
-            break;
-          }
-        }
-        assert(order!=-1);
-
-        //FIXME: what if fullfiled only at last dimension?
-        auto insertPos = order+1;
-        auto ignored = nScatterRangeDims-insertPos;
-
-        auto indepScatter = scatter.moveDims(isl_dim_in, scatter.getInDimCount(), isl_dim_in, 0, order);
-
-        auto indepMin = indepScatter.lexminPwMultiAff();
-        auto indepMax = indepScatter.lexmaxPwMultiAff();
-
-        //indepMin
+        genFlowCommunication(dep);
       }
+
+      for (auto dep : outputFlow.getMaps()) {
+        // This means the data is visible outside the scop and must be written to its home location
+        // There is no explicit read access
+        assert(dep.getOutTupleId() == epilogueId);
+
+        genOutputCommunication(dep.getDomain());
+      }
+
 
       //TODO: For every may-write, copy the original value into that the target memory (unless they are the same), so we copy the correct values into the buffers
       // i.e. treat ever may write as, write original value if not written
@@ -636,12 +431,350 @@ namespace {
 
 
   private:
-    void getOutputCommunication(const isl::Map &dep) {
-      assert(dep.getOutTupleId() == epilogueId);
-      // This means the data is visible outside the scop and must be written to its home location
-      // There is no explicit read access
+    void genInputCommunication(const isl::Set &instances) {
+      auto clusterConf = pm->getClusterConfig();
+      auto clusterTuple = clusterConf->getClusterTuple();
+      auto nClusterDims = clusterConf->getClusterDims();
+      auto nodeSpace = clusterConf->getClusterSpace();
+      auto nodes = clusterConf->getClusterShape();
 
-      auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
+      auto stmtTuple = instances.getTupleId();
+      //auto fieldTuple = dep.getOutTupleId();
+      //assert(dep.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
+
+      auto stmtRead = tupleToStmt[stmtTuple.keep()];
+      auto domainSpace = enwrap(stmtRead->getDomainSpace());
+      assert(domainSpace.getSetTupleId() == stmtTuple);
+
+      auto facc = getFieldAccess(stmtRead);
+      auto fvar = facc.getFieldVariable();
+      auto fty = facc.getFieldType();
+      //assert(tupleToFty[fieldTuple.keep()] == fty);
+      auto fieldTuple = fty->getIndexsetTuple();
+      auto indexsetSpace = fty->getIndexsetSpace();
+      auto readUsed = facc.getLoadInst();
+      auto nFieldDims = fty->getNumDimensions();
+      assert(indexsetSpace.getSetDimCount() == nFieldDims);
+
+      auto domainRead = instances;//dep.getDomain(); /* { stmtRead[domain] } */
+      assert(domainRead.getSpace().matchesSetSpace(domainSpace));
+
+      auto scatteringRead = getScattering(stmtRead); /* { stmtRead[domain] -> scattering[scatter] } */
+
+      auto accessRel = facc.getAccessRelation(); /* { stmtRead[domain] -> field[indexset] } */
+      assert(accessRel.getSpace().matchesMapSpace(stmtTuple, fieldTuple));
+      accessRel.intersectDomain_inplace(domainRead);
+
+      auto whereRead = getWhereMap(stmtRead); /* { stmtRead[domain] -> cluster[node] } */
+      assert(whereRead.getSpace().matchesMapSpace(domainSpace, nodeSpace));
+      auto wherePairs = whereRead.wrap(); /* { (stmtRead[domain] -> rank[node]) } */ // All execution instances of this ScopStmt
+
+      // Find those who are already at their home location
+      // For every execution of a stmt on a specific node
+      auto homeRel = fty->getHomeRel(); /* { cluster[node] -> field[indexset] } */
+      homeRel.setInTupleId_inplace(clusterConf->getClusterTuple());
+      assert(homeRel.getSpace().matchesMapSpace(clusterTuple, fieldTuple));
+
+      auto wherePairsAccesses = accessRel.addInDims(nodeSpace.getSetDimCount()); 
+      wherePairsAccesses.cast_inplace(wherePairs.getSpace().mapsTo(homeRel.getSpace().range()));
+      wherePairsAccesses = wherePairsAccesses.intersectDomain(wherePairs); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
+      auto c = wherePairsAccesses.chain(homeRel.reverse()); /* { ((stmtRead[domain] -> cluster[node]) -> field[indexset]) -> cluster[node] } */ // Oh my goodness
+      // condition: node on which read is executed==node the read value is home
+      auto homePairAccesses = c;
+      for (auto i = 0; i < nClusterDims; i+=1) {
+        homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + i, isl_dim_out, i);
+      }
+      auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
+      auto notHomeAccesses = wherePairs.subtract(alreadyHomeAccesses.getDomain()).chain(wherePairsAccesses); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */
+
+
+      ScopEditor editor(scop);
+
+      // CodeGen already home
+      if (!alreadyHomeAccesses.isEmpty()) {
+        auto readLocalEdit = editor.replaceStmt(stmtRead, alreadyHomeAccesses.getDomain().unwrap(), "InputLocal");
+        auto bb = readLocalEdit.getBasicBlock();
+
+        //BasicBlock *bb = BasicBlock::Create(llvmContext, "InputLocal", func);
+        DefaultIRBuilder builder(bb);
+
+        auto val = codegenReadLocal(builder, fvar, facc.getCoordinates());
+        readUsed->replaceAllUsesWith(val); 
+        readLocalEdit.getTerminator();
+        // TODO: Don't assume every stmt accessed just one value
+        //auto replacementStmt = replaceScopStmt(stmtRead, bb, "home_input_flow", alreadyHomeAccesses.getDomain().unwrap());
+        //scop->addScopStmt(replacementStmt);
+
+        //TODO: Create polly::MemoryAccess
+      }
+
+      // CodeGen from other nodes
+      if (!notHomeAccesses.isEmpty()) {
+        // Where is the home node?
+        auto notHomeLocation = wherePairsAccesses.intersectDomain(notHomeAccesses.wrap()).curry(); /* { (stmtRead[domain] -> dst[node]) -> (field[indexset] -> src[node]) } */
+        auto instancesRecv = notHomeLocation.getDomain().unwrap(); /* { stmtRead[domain] -> cluster[node] } */
+        auto dataSource = notHomeLocation.getRange().unwrap(); /* { field[indexset] -> cluster[node] } */
+
+        // Create the communication buffer 
+        auto dataToSend = dataSource.reverse(); /* { cluster[node] -> field[indexset] } */
+        auto sendRelPerm = notHomeLocation.curry().getRange().unwrap(); /* { dst[node] -> (field[indexset] -> src[node]) } */
+
+        unsigned perm[] = { nClusterDims+nFieldDims, 0, nClusterDims };
+        auto sendRel = sendRelPerm.wrap().permuteDims(perm).unwrap() ; /* { (src[node] -> dst[node]) -> field[indexset] } */
+        auto combuf = pm->newCommunicationBuffer(fty, sendRel.copy());
+
+        // Send on source node
+        // Copy to buffer
+        auto copyArea = product(nodes, combuf->getRelation().getRange()); /* { [cluster,indexset] } */
+        auto copyAreaSpace = copyArea.getSpace();
+        auto copyScattering = islctx->createAlltoallMap(copyArea, beforeScopScatterRange);
+        auto copyWhere = fty->getHomeRel(); // Execute where that value is home
+        auto memmovEditor = editor.createStmt(copyArea.copy(), copyScattering.copy(), copyWhere.copy(), "memmove_nonhome");
+        auto memmovStmt = memmovEditor.getStmt();
+        BasicBlock *memmovBB = memmovStmt->getBasicBlock();
+
+        //BasicBlock::Create(llvmContext, "memmove_nonhome", func);
+        DefaultIRBuilder memmovBuilder(memmovBB);
+        auto copyValue = codegenReadLocal(memmovBuilder, fvar, facc.getCoordinates());
+        //auto memmovStmt = createScopStmt(scop, memmovBB, stmtRead->getRegion(), "memmove_nonhome", stmtRead->getLoopNests()/*not accurate*/, );
+        std::map<isl_id *, llvm::Value *> scalarMap;
+        editor.getParamsMap(scalarMap, memmovStmt);
+        combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/ );
+        memmovBuilder.CreateUnreachable(); // Terminator, removed by Scop code generator
+
+        // Execute send
+        auto singletonDomain = islctx->createSetSpace(0, 0).universeBasicSet();
+        auto sendStmtEditor = editor.createStmt(singletonDomain.copy(), islctx->createAlltoallMap(singletonDomain, afterBeforeScatterRange), homeRel.copy(), "send_nonhome");
+        BasicBlock *sendBB = sendStmtEditor.getBasicBlock();
+        DefaultIRBuilder sendBuilder(sendBB);
+
+        auto nodeCoords =  ArrayRef<Value*>(facc.getCoordinates()).slice(0, nodes.getSetDimCount());
+        auto dstRank = clusterConf->codegenComputeRank(sendBuilder, nodeCoords);
+        codegenSendBuf(sendBuilder, combuf, dstRank);
+        sendBuilder.CreateUnreachable();
+
+        // Execute Recv
+        auto recvDomain = combuf->getRelation().getDomain(); /* { (src[coord], dst[coord]) } */
+        auto recvUserScatter = scatteringRead ;
+        auto recvScatter = recvUserScatter ; /* { (src[coord], dst[coord]) -> scattering[scatter] } */
+        auto recvWhere = recvDomain.unwrap().rangeMap(); /* { (src[coord], dst[coord]) -> dst[coord] } */
+        auto recvStmtEditor = editor.createStmt(recvDomain.copy(), recvScatter.copy(), recvWhere.copy(), "recv_nonhome" );
+
+        // Use the data where needed
+        auto useWhere = notHomeAccesses.getRange().unwrap(); /* { readStmt[domain] -> cluster[coord] } */
+        auto useEditor = editor.replaceStmt(stmtRead,useWhere.copy() , "use_nonhome");
+        IRBuilder<> useBuilder(useEditor.getTerminator());
+        auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
+        auto useLoad = facc.getLoadUse();
+        useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
+
+        //TODO: Create polly::MemoryAccess
+      }
+    }
+
+
+    MollyScopStmtProcessor *getScopStmtContext(const isl::Id &id) {
+      auto stmt = tupleToStmt[id.keep()];
+      assert(stmt);
+      return getScopStmtContext(stmt);
+    }
+
+
+    private:
+    /// return the first dimension from which on all dependencies are always lexicographically positive
+    /// examples:
+    /// { (1,0,0) -> (0,1,0) } returns 1
+    /// { (0,i,0) -> (0,i+1,-1) } returns 1
+    /// { (0,0) -> (0,0) } returns 2, these are never lexicographically positive
+    unsigned computeLevelOfInpendence(const isl::Map &depScatter) {  /* dep: { scattering[scatter] -> scattering[scatter] } */
+      auto depMap = depScatter.getSpace();
+      auto dependsVector = depMap.emptyMap(); /* { read[scatter] -> (read[scatter] - write[scatter]) } */
+      auto nParam = depScatter.getParamDimCount();
+      auto nIn = depScatter.getInDimCount();
+      auto nOut = depScatter.getOutDimCount();
+      assert(nIn==nOut);
+      auto scatterSpace = depScatter.getDomainSpace(); /* { scattering[scatter] } */
+      auto nCompareDims = std::min(nIn,nOut);
+
+        // get the first always-positive coordinate such that the dependence is satisfied
+      // Everything after that doesn't matter anymore to meet that dependence
+      for (auto i = nCompareDims-nCompareDims; i < nCompareDims; i+=1) {
+        auto orderMap = depMap.universeBasicMap();
+        orderMap.orderLt_inplace(isl_dim_in, i, isl_dim_out, i);
+           // auto fulfilledDeps = depScatter.intersect(orderMap);
+        if (orderMap >= depScatter) {
+           // All dependences are fullfilled from here
+          // i.e. we can shuffle stuff as we want in lower dimensions
+          return i;
+        }
+      }
+
+      // No always-positive dependence, therefore return the first out-of-range
+      return nCompareDims;
+
+#if 0
+      for (auto basicDep : depScatter.getBasicMaps()) {
+        auto dependsBasicVector = basicDep.getSpace().universeBasicMap();
+        for (auto constraint : basicDep.getConstraints()) {
+          for (auto i = nIn-nIn; i < nIn; i+=1) {
+            auto valRead = constraint.getCoefficient(isl_dim_in, i);
+            auto valWrite = constraint.getCoefficient(isl_dim_out, i);
+            constraint.setCoefficient_inplace(isl_dim_out, i, valRead - valWrite);
+          }
+          dependsBasicVector.addConstraint_inplace(constraint);
+        }
+        dependsVector = unite(move(dependsVector), dependsBasicVector);
+      }
+
+
+      // get the first always-positive coordinate such that the dependence is satisfied
+      // Everything after that doesn't matter anymore to meet that dependence
+      for (auto i = nIn-nIn; i < nIn; i+=1) {
+        auto positiveDepVectors = scatterSpace.zeroPoint().apply(scatterSpace.lexGtFirstMap(i));
+        auto fullfilledDeps = dependsVector.intersectRange(positiveDepVectors);
+        if (fullfilledDeps.isSupersetOf(dependsVector)) {
+          // All dependences are fullfilled from here
+          // i.e. we can shuffle stuff as we want in lower dimensions
+          return i;
+        }
+      }
+
+      // No always-positive dependence, therefore 
+      return nIn;
+#endif
+    }
+
+
+    void genFlowCommunication(const isl::Map &dep) { /* dep: { writeStmt[domain] -> readStmt[domain] } */
+      auto scatterTupleId = getScatterTuple(scop);
+
+      auto readStmt = getScopStmtContext(dep.getInTupleId());
+      assert(readStmt->isReadAccess());
+      auto readDomain = readStmt->getDomain();
+      assert(readStmt->isFieldAccess());
+      auto readFVar = readStmt->getFieldVariable();
+      auto readAccRel = readStmt->getAccessRelation(); /* { readStmt[domain] -> field[index] } */
+      assert(readAccRel.getSpace().matchesMapSpace(readDomain.getSpace(), readFVar->getFieldType()->getIndexsetSpace()));
+      auto readScatter = readStmt->getScattering();
+      assert(readScatter.getSpace().matchesMapSpace(readDomain.getSpace(), scatterTupleId));
+      //auto readFieldTuple = readAccRel.getOutTupleId();
+      //readFieldTuple = islctx->createId(Twine() + readFieldTuple.getName() + "_read", readFVar);
+      //readAccRel.setOutTupleId_inplace(readFieldTuple); /* { readStmt[domain] -> field_read[index] } */
+      auto readWhere = readStmt->getWhere(); // { stmtRead[domain] -> node[cluster] }
+
+      auto writeStmt = getScopStmtContext(dep.getOutTupleId());
+      assert(writeStmt->isReadAccess());
+      auto writeDomain = writeStmt->getDomain();
+      assert(writeStmt->isFieldAccess());
+      auto writeFVar = writeStmt->getFieldVariable();
+      auto writeAccRel = writeStmt->getAccessRelation(); /* { writeStmt[domain] -> field[index] } */
+      assert(writeAccRel.getSpace().matchesMapSpace(writeDomain.getSpace(), writeFVar->getFieldType()->getIndexsetSpace()));
+      auto writeScatter = writeStmt->getScattering();
+      assert(writeScatter.getSpace().matchesMapSpace(writeDomain.getSpace(), scatterTupleId));
+      //auto writeFieldTuple = writeAccRel.getOutTupleId();
+      //writeFieldTuple = islctx->createId(Twine() + writeFieldTuple.getName() + "_write", writeFVar);
+      //writeAccRel.setOutTupleId_inplace(writeFieldTuple); /* { writeStmt[domain] -> field_write[index] } */
+      auto writeWhere = writeStmt->getWhere(); // { writeRead[domain] -> node[cluster] }
+
+     // A statment is either reading writing, but not both
+      assert(readStmt != writeStmt);
+
+      // flow is data transfer from a writing statement to a reding statement of the same location, i.e. also same field
+      assert(readFVar == writeFVar);
+      auto fvar = readFVar;
+      auto fty = fvar->getFieldType();
+       
+
+      auto scatterDep = dep.applyDomain(writeScatter); /* { scatteringWrite[scatter] -> scatteringRead[scatter] } */
+      scatterDep.applyRange_inplace(readScatter);
+      auto levelOfIndep = computeLevelOfInpendence(scatterDep);
+
+#if 0
+      //auto table = dep.chain(readAccRel);  /* { (writeStmt[domain] -> readStmt[domain]) -> field_read[index] } */
+      //table = table.chainNested(writeAccRel); /* (writeStmt[domain] -> readStmt[domain] -> field_read[index]) -> field_write[index] } */
+
+
+      auto scatterRangeSpace = getScatteringSpace(scop);
+      auto nScatterRangeDims = scatterRangeSpace.getSetDimCount();
+
+      auto itDomainWrite = dep.getDomain(); /* { write_acc[domain] } */
+      auto writeTuple = itDomainWrite.getTupleId();
+      auto stmtWrite = tupleToStmt[writeTuple.keep()];
+      assert(stmtWrite);
+      auto faccWrite =  getFieldAccess(stmtWrite);
+      auto memaccWrite = faccWrite.getPollyMemoryAccess();
+      auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
+      auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
+      auto domainWrite = itDomainWrite.setTupleId(isl::Id::enwrap(stmtWrite->getTupleId())); /* write_stmt[domain] */
+      //auto fvar = faccWrite.getFieldVariable();
+      //auto fty = fvar->getFieldType();
+
+      auto itDomainRead = dep.getRange();
+      auto itReadTuple = itDomainRead.getTupleId();
+      auto readStmt = tupleToStmt[itReadTuple.keep()];
+
+      auto faccRead = getFieldAccess(readStmt);
+      auto stmtRead = faccRead.getPollyScopStmt();
+      auto scatterRead = faccRead.getAccessScattering();
+
+      auto scatter = unite(scatterWrite, scatterRead);
+
+      assert(scatterWrite.getSpace() == scatterRead.getSpace());
+      auto scatterSpace = scatterRead.getSpace();
+
+      // Determine the level of independence
+      auto depScatter = dep.applyDomain(getScattering(stmtWrite)).applyRange(getScattering(stmtRead)); /* { write[scatter] -> read[scatter] } */
+      depScatter.reverse_inplace();
+
+      auto dependsVector = depScatter.getSpace().emptyMap(); /* { read[scatter] -> (read[scatter] - write[scatter]) } */
+      auto nParam = depScatter.getParamDimCount();
+      auto nIn = depScatter.getInDimCount();
+      auto nOut = depScatter.getOutDimCount();
+      assert(nIn==nOut);
+      for (auto basicDep : depScatter.getBasicMaps()) {
+        //TODO: Faster using (in)equality matrices
+        auto dependsBasicVector = basicDep.getSpace().universeBasicMap();
+        for (auto constraint : basicDep.getConstraints()) {
+          for (auto i = nIn-nIn; i < nIn; i+=1) {
+            auto valRead = constraint.getCoefficient(isl_dim_in, i);
+            auto valWrite = constraint.getCoefficient(isl_dim_out, i);
+            constraint.setCoefficient_inplace(isl_dim_out, i, valRead - valWrite);
+          }
+          dependsBasicVector.addConstraint_inplace(constraint);
+        }
+        dependsVector = unite(move(dependsVector), dependsBasicVector);
+      }
+
+      // get the first always-positive coordinate such that the dependence is satisfied
+      // Everything after that doesn't matter anymore to meet that dependence
+      unsigned order = -1;
+      for (auto i = nIn-nIn; i < nIn; i+=1) {
+        auto positiveDepVectors = scatterSpace.zeroPoint().apply(scatterSpace.lexGtFirstMap(i));
+        auto fullfilledDeps = dependsVector.intersectRange(positiveDepVectors);
+        if ( fullfilledDeps.isSupersetOf(dependsVector)) {
+          // All dependences are fullfilled from here
+          // i.e. we can shuffel stuff as we want in lower dimensions
+          order = i;
+          break;
+        }
+      }
+      assert(order!=-1);
+
+      //FIXME: what if fullfiled only at last dimension?
+      auto insertPos = order+1;
+      auto ignored = nScatterRangeDims-insertPos;
+
+      auto indepScatter = scatter.moveDims(isl_dim_in, scatter.getInDimCount(), isl_dim_in, 0, order);
+
+      auto indepMin = indepScatter.lexminPwMultiAff();
+      auto indepMax = indepScatter.lexmaxPwMultiAff();
+
+      //indepMin
+#endif
+    }
+
+    void genOutputCommunication(const isl::Set &instances) {
+      auto itDomainWrite = instances; //dep.getDomain(); /* write_acc[domain] */
       auto stmtWrite = tupleToStmt[itDomainWrite.getTupleId().keep()];
       assert(stmtWrite);
       //auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
@@ -691,7 +824,8 @@ namespace {
       auto wbWhere = homeRel.applyRange(relWrite.reverse()).reverse();
 
       ScopEditor editor(scop);
-      auto writebackLocalStmtEditor = editor.createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
+      auto writebackLocalStmtEditor = editor.replaceStmt(stmtWrite, wbWhere.copy(), "writeback_local");
+        //createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
       auto writebackLocalStmt = writebackLocalStmtEditor.getStmt();
       auto writebackLocalStmtCtx = getScopStmtContext(writebackLocalStmt);
 
@@ -714,7 +848,13 @@ namespace {
       // Do not execute the stmt this is ought to replace anymore
       auto oldDomain = getIterationDomain(stmtWrite) ; /* { write_stmt[domain] } */
       faccWrite.getPollyScopStmt()->setDomain(oldDomain.subtract(writeAlreadyHomeDomain).take());
+
+      auto stmtWriteCtx = getScopStmtContext(stmtWrite);
+      stmtWriteCtx->validate();
+      writebackLocalStmtCtx->validate();
+
       modifiedScop();
+
 
       // CodeGen to transfer data to their home location
 
@@ -792,6 +932,25 @@ namespace {
 
     llvm::Value *codegenScev( const llvm::SCEV *scev, llvm::Instruction *insertBefore) {
       return scevCodegen.expandCodeFor(scev, nullptr, insertBefore);
+    }
+
+  public:
+    void dump() const LLVM_OVERRIDE {
+      dbgs() << "ScopProcessor:\n";
+      if (scop)
+        scop->dump();
+    }
+
+
+    void validate() const LLVM_OVERRIDE {
+#ifdef NDEBUG
+      return;
+#endif
+
+      for (auto stmt : *scop) {
+        auto stmtCtx = getScopStmtContext(stmt);
+        stmtCtx->validate();
+      }
     }
 
   }; // class MollyScopContextImpl

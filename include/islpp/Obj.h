@@ -113,6 +113,11 @@ namespace isl {
        return &obj; 
      }
 
+
+    void clear() LLVM_LVALUE_FUNCTION {
+      reset();
+    }
+
   public:
     void give(StructTy *obj) ISLPP_INPLACE_QUALIFIER {
       assert(obj); 
