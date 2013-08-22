@@ -16,12 +16,41 @@ mollycc_compile(${stencil_path}
   LIBS ${MollyRT_LOCATION} ${MPI_CXX_LIBRARIES}
   COMMENT "mollycc MollyRT stencil.cpp...")
 
-add_custom_target(stencil-mollycc ALL
+add_custom_target(stencil-mollycc
   DEPENDS ${stencil_path}
   COMMENT "Built stencil using mollycc"
   VERBATIM)
 add_dependencies(stencil-mollycc MollyRT)
 set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
+
+
+
+
+get_filename_component(stencil_ll_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil.ll" ABSOLUTE)
+mollycc_compile_link(${stencil_ll_path} LL
+  SOURCES stencil.cpp
+  FLAGS -mllvm -shape=4
+  COMMENT "mollycc stencil.cpp -o stencil.ll..."
+)
+add_custom_target(stencil-ll
+  DEPENDS "${stencil_ll_path}"
+  COMMENT "Built stencil.ll using mollycc"
+  VERBATIM)
+set_target_properties(stencil-ll PROPERTIES FOLDER "Molly")
+
+get_filename_component(stencil_ll_c_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil.ll.c" ABSOLUTE)
+add_custom_command(
+  OUTPUT "${stencil_ll_c_path}"
+  COMMAND llc -march=c ${stencil_ll_path} -o ${stencil_ll_c_path}
+  DEPENDS "${stencil_ll_path}"
+  COMMENT "Invoke CBackend on stencil.ll"
+  VERBATIM
+)
+add_custom_target(stencil-ll-c
+  DEPENDS ${stencil_ll_c_path}
+  COMMENT "Built stencil.ll.c"
+)
+set_target_properties(stencil-ll-c PROPERTIES FOLDER "Molly")
 
 
 

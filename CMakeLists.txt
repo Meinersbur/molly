@@ -155,12 +155,12 @@ macro(mollycc_compile_link _outfile)
     if (PARM_BC)
       mollycc_compile(${_outfile} ${_plain}
         SOURCES ${PARM_SOURCES}
-        FLAGS -emit-llvm -c -S ${PARM_FLAGS}
+        FLAGS -emit-llvm -c ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_LL)
       mollycc_compile(${_outfile} ${_plain}
         SOURCES ${PARM_SOURCES}
-        FLAGS -emit-llvm -c ${PARM_FLAGS}
+        FLAGS -emit-llvm -S ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_OBJ)
       mollycc_compile(${_outfile} ${_plain}
@@ -253,7 +253,7 @@ endmacro()
 
 set(MOLLYCC_LL_LIBS ${LLVM_BINARY_DIR}/lib/molly.ll ${MPI_CXX_LIBRARIES})
 macro(mollycc_ll_compile _outfile)
-  parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "" ${ARGN})
+  parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "" ${ARGN})
   mollycc_compile(${_outfile}
     SOURCES ${PARM_SOURCES}
     FLAGS ${PARM_FLAGS}
@@ -264,7 +264,7 @@ endmacro()
 
 
 
-set(MOLLYCC_BC_FLAGS ${LLVM_BINARY_DIR}/lib/molly.bc ${MPI_CXX_LIBRARIES})
+set(MOLLYCC_BC_LIBS ${LLVM_BINARY_DIR}/lib/molly.bc ${MPI_CXX_LIBRARIES})
 macro(mollycc_bc_compile _outfile)
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "" ${ARGN})
   mollycc_compile(${_outfile}

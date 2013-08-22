@@ -87,7 +87,7 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
 
 
 void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::MultiPwAff index) {
-  auto &indices = codegenMultiAff(index);
+  auto indices = codegenMultiAff(index);
   auto accessRel = index.toMap();
   codegenStoreLocal(val, fvar, indices, accessRel);
 }

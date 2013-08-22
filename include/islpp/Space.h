@@ -199,6 +199,94 @@ namespace isl {
     bool matches(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return isl_space_match(keep(), thisType, that.keep(), thatType); }
 
 
+#pragma region Matching spaces
+    bool matchesSpace(const Space &that) const {
+  if (that.isSetSpace())
+    return matchesSetSpace(that);
+
+  if (that.isMapSpace())
+    return matchesMapSpace(that);
+
+  assert(that.isParamsSpace());
+  return isParamsSpace();
+    }
+
+
+    bool matchesSetSpace(const Id &id) const { 
+      if (!this->isSetSpace())
+        return false;
+      if (this->getSetTupleId() != id)
+        return false;
+      return true;
+    }
+
+
+    bool matchesSetSpace(const Space &that) const {
+      assert(that.isSetSpace());
+
+      if (!this->isSetSpace())
+        return false;
+      return matches(isl_dim_set, that, isl_dim_set);
+
+      if (this->getSetDimCount() != that.getSetDimCount())
+        return false;
+
+      auto thisHasTupleId = this->hasTupleId(isl_dim_set);
+      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
+      if (thisHasTupleId != thatHasTupleId)
+        return false;
+
+      if (thisHasTupleId && this->getSetTupleId()!= that.getSetTupleId()) 
+        return false;
+
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Id &rangeId) const {
+      if (!this->isMapSpace())
+        return false;
+      if (this->getInTupleId() != domainId)
+        return false;
+      if (this->getOutTupleId() != rangeId)
+        return false;
+      return true;
+    }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) const {
+  assert(domainSpace.isSetSpace());
+  assert(rangeSpace.isSetSpace());
+  if (!isMapSpace())
+    return false;
+  return matches(isl_dim_in, domainSpace, isl_dim_set) && matches(isl_dim_out, rangeSpace, isl_dim_set);
+    }
+
+
+    bool matchesMapSpace (const Space &that)  const {
+      assert(that.isMapSpace());
+      if (!this->isMapSpace())
+        return false;
+
+      return matches(isl_dim_in, that, isl_dim_in) &&  matches(isl_dim_out, that, isl_dim_out);
+    }
+
+
+    bool matchesMapSpace(const Space &domainSpace, const Id &rangeId)const {
+      if (!this->isMapSpace())
+        return false;
+      return matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
+    }
+
+
+    bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) const{
+      if (!this->isMapSpace())
+        return false;
+      return (getInTupleId() == domainId) && matches(isl_dim_out, rangeSpace, isl_dim_set);
+    }
+#pragma endregion
+
+
     bool isWrapping() const;
     void wrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_wrap(take())); }
     Space wrap() const { return Space::enwrap(isl_space_wrap(takeCopy())); }

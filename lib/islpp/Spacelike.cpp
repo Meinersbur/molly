@@ -6,10 +6,21 @@
 using namespace isl;
 
 
+bool isl:: spacelike_matchesSpace(const Space &space, const Space &that) {
+  return space.matchesSpace(that);
+}
+
+
 bool isl::spacelike_matchesMapSpace(const Space &space, const Space &domainSpace, const Space &rangeSpace) {
-  assert(domainSpace.isSetSpace());
-  assert(rangeSpace.isSetSpace());
-  if (!space.isMapSpace())
-    return false;
-  return space.matches(isl_dim_in, domainSpace, isl_dim_set) && space.matches(isl_dim_out, rangeSpace, isl_dim_set);
+  return space.matchesMapSpace(domainSpace, rangeSpace);
+}
+
+
+bool isl:: spacelike_matchesSetSpace(const Space &space,  const Space &that)  {
+  return space.matchesSetSpace(that);
+}
+
+
+bool isl:: spacelike_matchesMapSpace(const Space &space, const Space &that) {
+  return space.matchesMapSpace(that);
 }

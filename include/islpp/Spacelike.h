@@ -147,8 +147,10 @@ namespace isl {
   }
 
 
-  bool spacelike_matchesMapSpace(const Space &space, const Space &domainSpace, const Space &rangeSpace);
-
+  bool spacelike_matchesMapSpace(const Space &, const Space &domainSpace, const Space &rangeSpace);
+  bool spacelike_matchesSpace(const Space &, const Space &that);
+  bool spacelike_matchesSetSpace(const Space &,  const Space &) ;
+  bool spacelike_matchesMapSpace(const Space &, const Space &that);
 
   // TODO: Conditionally enable_if Set/Map operations depending on D
   // Actually, I'd prefer a code generator that generatores complete classes isl::Set, isl::Map without deriving from anything
@@ -406,20 +408,12 @@ namespace isl {
 
 #pragma region Matching spaces
     bool matchesSpace(const Space &that) const {
-      if (that.isSetSpace())
-        return matchesSetSpace(that);
-
-      if (that.isMapSpace())
-        return matchesMapSpace(that);
-
-      auto space = getDerived()->getSpace();
-      assert(space.isParamsSpace());
-      return that.isParamsSpace();
+      return spacelike_matchesSpace(getDerived()->getSpace(), that);
     }
 
 
     bool matchesSetSpace(const Id &id) const { 
-      if (!getDerived()->isSetSpace())
+      if (!getDerived()->isSet())
         return false;
       if (getDerived()->getSetTupleId() != id)
         return false;
@@ -428,25 +422,11 @@ namespace isl {
 
 
     bool matchesSetSpace(const Space &that) const {
-      assert(that.isSetSpace());
-      auto space = getDerived()->getSpace();
-
-      if (!getDerived()->isSet())
+      if (!getDerived()->isSet()) {
+        assert(!spacelike_matchesSetSpace(getDerived()->getSpace(), that));
         return false;
-      return space.matches(isl_dim_set, that, isl_dim_set);
-
-      if (getDerived()->getSetDimCount() != that.getSetDimCount())
-        return false;
-
-      auto thisHasTupleId = getDerived()->hasTupleId(isl_dim_set);
-      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
-      if (thisHasTupleId != thatHasTupleId)
-        return false;
-
-      if (thisHasTupleId && getDerived()->getSetTupleId() != that.getSetTupleId()) 
-        return false;
-
-      return true;
+      }
+      return spacelike_matchesSetSpace(getDerived()->getSpace(), that);
     }
 
 
@@ -473,13 +453,13 @@ namespace isl {
     }
 
 
-    bool matchesMapSpace(const Space &that)  const {
-      assert(that.isMapSpace());
-      if (!getDerived()->isMapSpace())
+    bool matchesMapSpace(const Space &that) const {
+      if (!getDerived()->isMap()) {
+        assert(!spacelike_matchesMapSpace(getDerived()->getSpace(), that));
         return false;
+      }
 
-      auto space = getDerived()->getSpace();
-      return space.matches(isl_dim_in, that, isl_dim_in) && space.matches(isl_dim_out, that, isl_dim_out);
+      return spacelike_matchesMapSpace(getDerived()->getSpace(), that);
     }
 
 

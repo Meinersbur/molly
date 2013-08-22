@@ -159,9 +159,9 @@ namespace isl {
     void eliminate(isl_dim_type type, unsigned first, unsigned n);
 
     void fix_inplace(isl_dim_type type, unsigned pos, const Int &value) ISLPP_INPLACE_QUALIFIER {   give(isl_basic_set_fix(take(), type, pos, value.keep())); }
-    BasicSet fix(isl_dim_type type, unsigned pos, const Int &value) const {      BasicSet  ::enwrap(isl_basic_set_fix(takeCopy(), type, pos, value.keep())); }
-    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_QUALIFIER {      give(isl_basic_set_fix_si(take(), type, pos, value));    }
-    BasicSet fix(isl_dim_type type, unsigned pos, int value) const {    return  BasicSet  ::enwrap(isl_basic_set_fix_si(takeCopy(), type, pos, value));    }
+    BasicSet fix(isl_dim_type type, unsigned pos, const Int &value) const { return  BasicSet::enwrap(isl_basic_set_fix(takeCopy(), type, pos, value.keep())); }
+    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_fix_si(take(), type, pos, value)); }
+    BasicSet fix(isl_dim_type type, unsigned pos, int value) const { return BasicSet::enwrap(isl_basic_set_fix_si(takeCopy(), type, pos, value)); }
 
     void detectEqualities();
     void removeRedundancies();
