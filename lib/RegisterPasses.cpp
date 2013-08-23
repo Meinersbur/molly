@@ -20,6 +20,7 @@
 #include "llvm/Assembly/PrintModulePass.h"
 #include "MollyPassManager.h"
 #include <polly/CodeGen/BlockGenerators.h>
+#include <llvm/Transforms/IPO.h>
 
 using namespace llvm;
 using namespace std;
@@ -45,6 +46,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 
   llvm::errs() << "Molly: Enabled lvl " << optLevel << "\n";
 
+  PM.add(llvm::createStripSymbolsPass(true));
 
   std::string infoDummy;
   auto  OSorig = new raw_fd_ostream("0_orig.ll", infoDummy);
@@ -88,9 +90,29 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createPrintModulePass(OSaftermolly, false, "After Molly did its work\n\n"));
 
 #ifndef NDEBUG
-  // Cleanup
-  //PM.add(llvm::createCFGSimplificationPass());
-  //PM.add(llvm::createPromoteMemoryToRegisterPass());
+  // cleanup function
+  PM.add(llvm::createCFGSimplificationPass());
+  PM.add(llvm::createEarlyCSEPass());
+  PM.add(llvm::createPromoteMemoryToRegisterPass());
+  PM.add(llvm::createCorrelatedValuePropagationPass());
+  PM.add(llvm::createInstructionCombiningPass());
+  PM.add(llvm::createReassociatePass());
+  PM.add(llvm::createLICMPass());
+  PM.add(llvm::createIndVarSimplifyPass());  
+  PM.add(llvm::createLoopDeletionPass());
+  PM.add(llvm::createAggressiveDCEPass());
+  PM.add(llvm::createCFGSimplificationPass());
+
+  // cleanup module
+  PM.add(llvm::createGlobalOptimizerPass());     
+  PM.add(llvm::createIPSCCPPass());              
+  //PM.add(llvm::createDeadArgEliminationPass());  
+  PM.add(llvm::createGVNPass());
+  PM.add(llvm::createGlobalDCEPass());        
+  PM.add(llvm::createConstantMergePass());     
+
+  auto OSaftercleanup = new raw_fd_ostream("5_cleaned.ll", infoDummy);
+  PM.add(llvm::createPrintModulePass(OSaftercleanup, false, "After cleanup\n\n"));
 #endif
 }
 

@@ -74,7 +74,7 @@ endmacro(add_molly_library)
 
 
 macro(add_molly_executable name)
-  add_llvm_executable( ${name} ${ARGN} )
+  add_llvm_executable(${name} ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_executable)
 
