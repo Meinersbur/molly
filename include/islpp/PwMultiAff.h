@@ -84,18 +84,6 @@ namespace isl {
     //void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_add_dims(take(), type, count)); }
 #pragma endregion
 
-#if 0
-#pragma region Low-level
-  public:
-    isl_pw_multi_aff *takeCopy() const LLVM_OVERRIDE { return isl_pw_multi_aff_copy(keep()); }
-  protected:
-    void release() LLVM_OVERRIDE;
-  public:
-    ~Pw() { release(); }
-    Pw() : Obj2() { }
-    static PwMultiAff enwrap(isl_pw_multi_aff *pwmaff) { assert(pwmaff); PwMultiAff result; result.give(pwmaff); return result; }
-#pragma endregion
-#endif
 
 #pragma region Creational 
     static PwMultiAff create(Set &&set, MultiAff &&maff);
@@ -109,9 +97,6 @@ namespace isl {
     static PwMultiAff createFromMap(Map &&map);
 
     static PwMultiAff readFromStr(Ctx *ctx, const char *str) { return enwrap(isl_pw_multi_aff_read_from_str(ctx->keep(), str)); }
-
-    //PwMultiAff copy() const { return enwrap(isl_pw_multi_aff_copy(keep())); }
-    //PwMultiAff &&move() { return std::move(*this); }
 #pragma endregion
 
 
@@ -124,30 +109,12 @@ namespace isl {
 #endif
 
     Map toMap() const;
+    //operator Map() const { return toMap(); }
 
     MultiPwAff toMultiPwAff() const;
+    //operator MultiPwAff() const { return toMultiPwAff(); }
 #pragma endregion
 
-
-#if 0
-#pragma region Spacelike
-    unsigned dim(isl_dim_type type) const { return isl_pw_multi_aff_dim(keep(), type); }
-
-    bool hasTupleId(isl_dim_type type) const { return isl_pw_multi_aff_has_tuple_id(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_pw_multi_aff_get_tuple_id(keep(), type)); }
-    void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER{ give(isl_pw_multi_aff_set_tuple_id(take(), type, id.take())); }
-    bool hasTupleName(isl_dim_type type) const { return isl_pw_multi_aff_has_tuple_name(keep(), type); }
-    const char *getTupleName(isl_dim_type type) const { return isl_pw_multi_aff_get_tuple_name(keep(), type);  }
-
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_pw_multi_aff_get_dim_id(keep(), type, pos)); }
-    void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_set_dim_id(take(), type, pos, id.take())); }
-    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_pw_multi_aff_get_dim_name(keep(), type, pos); }
-
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned n) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing APU function"); }
-    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing APU function"); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_drop_dims(take(), type, first, n)); }
-#pragma endregion
-#endif
 
 #pragma region Printing
     //void print(llvm::raw_ostream &out) const;
@@ -167,7 +134,10 @@ namespace isl {
     PwAff getPwAff(int pos) const { return PwAff::enwrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
     PwMultiAff setPwAff(int pos, PwAff &&pa) const { return enwrap(isl_pw_multi_aff_set_pw_aff(takeCopy(), pos, pa.take())); }
 
+    /// The set of elements for which this affine mapping is defined
     Set domain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
+    Set getDomain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
+
     PwMultiAff scale(Val &&v) const { return enwrap(isl_pw_multi_aff_scale_val(takeCopy(), v.take())); }
     //PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_multi_val(takeCopy(), v.take())); }
 

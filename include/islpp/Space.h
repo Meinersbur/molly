@@ -131,6 +131,7 @@ namespace isl {
 
     BasicMap emptyBasicMap() const;
     BasicMap universeBasicMap() const;
+    BasicMap identityBasicMap() const;
 
     /// create a map where the first n_equal dimensions map to equal value
     BasicMap equalBasicMap(unsigned n_equal) const;
@@ -146,6 +147,7 @@ namespace isl {
 
     Map emptyMap() const;
     Map universeMap() const;
+    Map identityMap() const;
 
     /// Maps vectors to anything that is lexically smaller
     Map lexLtMap() const;
@@ -227,19 +229,6 @@ namespace isl {
       if (!this->isSetSpace())
         return false;
       return matches(isl_dim_set, that, isl_dim_set);
-
-      if (this->getSetDimCount() != that.getSetDimCount())
-        return false;
-
-      auto thisHasTupleId = this->hasTupleId(isl_dim_set);
-      auto thatHasTupleId = that.hasTupleId(isl_dim_set);
-      if (thisHasTupleId != thatHasTupleId)
-        return false;
-
-      if (thisHasTupleId && this->getSetTupleId()!= that.getSetTupleId()) 
-        return false;
-
-      return true;
     }
 
 
@@ -268,7 +257,7 @@ namespace isl {
       if (!this->isMapSpace())
         return false;
 
-      return matches(isl_dim_in, that, isl_dim_in) &&  matches(isl_dim_out, that, isl_dim_out);
+      return matches(isl_dim_in, that, isl_dim_in) && matches(isl_dim_out, that, isl_dim_out);
     }
 
 
@@ -287,11 +276,26 @@ namespace isl {
 #pragma endregion
 
 
+    /// Returns whether this is a set space which wraps a map space
     bool isWrapping() const;
-    void wrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_wrap(take())); }
+
+    /// Wraps a map space into a set space
+    /// map{ A -> B }.wrap() = set{ (A -> B) }
+    ///  or with alternative notation: { A -> B }.wrap() = { (A, B) }
     Space wrap() const { return Space::enwrap(isl_space_wrap(takeCopy())); }
-    void unwrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_unwrap(take())); }
+    void wrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_wrap(take())); }
+    Space wrap_consume() { return Space::enwrap(isl_space_wrap(take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Space wrap() && { return Space::enwrap(isl_space_wrap(take())); }
+#endif
+
+    /// Undoes wrap()
     Space unwrap() const { return Space::enwrap(isl_space_unwrap(takeCopy())); }
+    void unwrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_unwrap(take())); }
+    Space unwrap_consume() { return Space::enwrap(isl_space_unwrap(take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+     Space unwrap() && { return Space::enwrap(isl_space_unwrap(take())); }
+#endif
 
     Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
     Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
@@ -348,6 +352,8 @@ namespace isl {
     Space getNestedRange() const { assert(isMapSpace()); return Space::enwrap(isl_space_get_nested(takeCopy(), isl_dim_out)); }
     Space getNested() const { assert(isSetSpace()); return Space::enwrap(isl_space_get_nested(takeCopy(), isl_dim_set)); }
 
+    Space getNestedOrDefault(isl_dim_type type) const;
+
 
     /// Set the nested spaces
     void setNested_inplace(isl_dim_type type, const Space &nest) ISLPP_INPLACE_QUALIFIER { give(isl_space_set_nested(take(), type, nest.takeCopy())); } 
@@ -359,6 +365,7 @@ namespace isl {
 
     DimRange findNestedTuple(unsigned tuplePos) const;
     DimRange findNestedTuple(const Id &tupleId) const;
+    DimRange findSubspace(isl_dim_type type, const Space &subspace) const;
 
     void unwrapTuple_inplace(unsigned tuplePos) ISLPP_INPLACE_QUALIFIER;
     void unwrapTuple_inplace(const Id &tupleId) ISLPP_INPLACE_QUALIFIER;
@@ -386,6 +393,8 @@ namespace isl {
 
     Space extractDimRange(isl_dim_type type, unsigned first, unsigned count) const;
     std::vector<Space> flattenNestedSpaces() const;
+
+    Space removeSubspace(const Space &subspace) const;
   }; // class Space
 
 

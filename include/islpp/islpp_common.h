@@ -40,7 +40,6 @@ namespace llvm {
 #define ISLPP_INTERNAL_QUALIFIER
 #endif
 
-
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__)
 #define ISLPP_INLINE_DECLARATION extern inline
 #define ISLPP_INLINE_DEFINITION inline

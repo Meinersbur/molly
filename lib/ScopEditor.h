@@ -56,6 +56,10 @@ namespace molly {
     //isl::Id getParamDimId(unsigned pos);
 
     StmtEditor createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name);
+    StmtEditor createStmtRelative(polly::ScopStmt *model, const isl::Map &subscattering, int relative, const isl::Map &where, const std::string &name);
+    StmtEditor createStmtBefore(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name);
+        StmtEditor createStmtAfter(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) ;
+
     StmtEditor replaceStmt(polly::ScopStmt *model, isl::Map &&whereToReplace, const std::string &name);
   }; // class ScopEditor
 
@@ -106,6 +110,12 @@ namespace molly {
 
 
     void addWriteAccess(llvm::StoreInst *instr, FieldVariable *fvar, isl::Map &&accessRelation);
+
+    /// Change the domain of this stmt
+    /// Information on the old domain will be preserved using the given map
+    /// The map should better be right-unique (ie a function) and injective
+    /// A new environment will be created suitable for the new domain
+    //void changeDomain(const isl::Map &oldToNew);
   }; // class StmtEditor
 
 } // namespace molly

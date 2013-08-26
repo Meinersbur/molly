@@ -4,6 +4,7 @@
 #include "islpp/Printer.h"
 #include "islpp/UnionMap.h"
 #include "islpp/MultiPwAff.h"
+#include "islpp/DimRange.h"
 
 #include <isl/map.h>
 #include <llvm/Support/raw_ostream.h>
@@ -104,17 +105,74 @@ Map BasicMap::toMap() const {
 }
 
 
-    Map Map:: chainNested(const Map &map) const {
-      return this->wrap().chainNested(map);
-    }
+Map Map:: chainNested(const Map &map) const {
+  return this->wrap().chainNested(map);
+}
 
 
-    Map Map::chainNested(const Map &map, unsigned tuplePos) const {
-      return this->wrap().chainNested(map, tuplePos);
-    }
+Map Map::chainNested(const Map &map, unsigned tuplePos) const {
+  return this->wrap().chainNested(map, tuplePos);
+}
 
 
-Map isl:: join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate) {
+Map Map::chainNested(isl_dim_type type, const Map &map) const {
+  // assume type==isl_dim_in
+  // this = { (A, B, C) -> D }
+  // map = { B -> E }
+  // return { ((A, B, C) -> E) -> D }
+
+  auto space = getSpace(); // { (A, B, C) -> D }
+  auto seekNested = map.getDomainSpace(); // { B }
+
+  auto dims = space.findSubspace(type, seekNested);
+  if (dims.isNull()) {
+    assert(!"Nested space not found");
+    return Map();
+  }
+
+  auto expandDomainSpace = Space::createMapFromDomainAndRange(map.getDomainSpace(), getTupleSpace(type)); // { B -> (A, B', C) }
+  auto expandDomain = expandDomainSpace.equalBasicMap(isl_dim_in, 0, dims.getCount(), isl_dim_out, dims.getBeginPos()); // { B -> (A, B', C) | B=B' }
+
+  auto resultSpace = Space::createMapFromDomainAndRange(getTupleSpace(type), map.getRangeSpace()); // { (A, B, C) -> E }
+  auto expandRangeSpace = Space::createMapFromDomainAndRange(map.getRangeSpace(), resultSpace); // { E -> ((A, B, C) -> E') }
+  auto expandRange = expandRangeSpace.equalBasicMap(isl_dim_in, 0, map.getOutDimCount(), isl_dim_out, resultSpace.getInDimCount()); // { E -> ((A, B, C) -> E') | E=E' }
+
+  auto expandedMap = map.applyDomain(expandDomain).applyRange(expandRange); // { (A, B, C) -> ((A, B, C) -> E)  }
+  if (type==isl_dim_in)
+    return applyDomain(expandedMap);
+  else if (type==isl_dim_out)
+    return applyRange(expandedMap);
+  else
+    llvm_unreachable("invalid dim type");
+}
+
+
+void Map:: projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+  auto myspace = getSpace();
+  auto dims = myspace.findSubspace(type, subspace);
+  if (dims.isNull()) {
+    llvm_unreachable("Subspace not found");
+    reset();
+    return;
+  }
+
+  auto shrinkSpace = getTupleSpace(type).removeSubspace(subspace); 
+  auto shrinkMapSpace = Space::createMapFromDomainAndRange(getTupleSpace(type), shrinkSpace);
+  auto shrinkMap = shrinkMapSpace.equalBasicMap(isl_dim_in, 0, dims.getCount(), isl_dim_out, 0);
+
+  this->projectOut_inplace(type, dims.getBeginPos(), dims.getCount());
+  this->cast_inplace(shrinkSpace);
+}
+
+
+Map Map::projectOutSubspace(isl_dim_type type, const Space &subspace) const {
+  auto result = copy();
+  result.projectOutSubspace_inplace(type, subspace);
+  return result;
+}
+
+
+Map isl::join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate) {
   auto cartesian = product(domain, range).unwrap();
   cartesian.intersect(cartesian.getSpace().equalBasicMap(isl_dim_in, firstDomainDim, countEquate, isl_dim_out, firstRangeDim));
   return cartesian;

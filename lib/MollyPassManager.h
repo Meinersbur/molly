@@ -66,7 +66,7 @@ namespace molly {
     virtual void modifiedIR() = 0;
     virtual void modifiedScop() = 0;
 
-     virtual CommunicationBuffer *newCommunicationBuffer(FieldType *fty, isl::Map &&relation) = 0;
+     virtual CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) = 0;
   }; // class MollyPassManager
 
   extern char &MollyPassManagerID;

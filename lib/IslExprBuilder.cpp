@@ -18,6 +18,7 @@ namespace molly {
 #pragma region From polly IslCodeGenerator.h 
 
   /// @brief Calculate the Value of a certain isl_ast_expr
+  /// deprecated; Use the one in polly instead
 class IslExprBuilder {
 public:
   IslExprBuilder(IRBuilder<> &Builder, std::map<isl_id *, Value *> &IDToValue)

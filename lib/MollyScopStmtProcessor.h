@@ -59,6 +59,7 @@ namespace molly {
     virtual std::map<isl_id *, llvm::Value *> &getIdToValueMap() = 0;
     virtual std::vector<llvm::Value *> getDomainValues() = 0;
     virtual MollyCodeGenerator makeCodegen() = 0;
+    virtual StmtEditor getEditor() = 0;
 
     // Process
     virtual void applyWhere() = 0;

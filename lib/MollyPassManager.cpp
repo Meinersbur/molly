@@ -919,10 +919,10 @@ namespace {
     std::vector<CommunicationBuffer *> combufs;
 
   public :
-    CommunicationBuffer *newCommunicationBuffer(FieldType *fty, isl::Map &&relation) {
+    CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
       auto comvarSend = new GlobalVariable(*module, runtimeMetadata.tyCombufSend, false, GlobalValue::PrivateLinkage, nullptr, "combufsend");
       auto comvarRecv = new GlobalVariable(*module, runtimeMetadata.tyCombufRecv, false, GlobalValue::PrivateLinkage, nullptr, "combufrecv");
-      auto result =  CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy());
+      auto result = CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy());
       combufs.push_back(result);
       return result;
     }

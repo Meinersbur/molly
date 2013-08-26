@@ -104,3 +104,13 @@ std::vector<Constraint> BasicMap::getConstraints() const {
   assert(retval==0);
   return result;
 }
+
+
+Map BasicMap::domainProduct(const Map &that) const { 
+  return Map::enwrap(isl_map_domain_product(isl_map_from_basic_map(this->takeCopy()), that.takeCopy())); 
+}
+
+
+Map BasicMap::rangeProduct(const Map &that) const { 
+  return Map::enwrap(isl_map_range_product(isl_map_from_basic_map(this->takeCopy()), that.takeCopy()));
+}

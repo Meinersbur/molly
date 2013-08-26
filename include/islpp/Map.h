@@ -195,9 +195,24 @@ namespace isl {
 
     //Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
     //Space getSpacelike() const { return getSpace(); }
+    Space getParamSpace() const { return Space::enwrap(isl_space_params(isl_map_get_space(keep()))); }
     Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_map_get_space(keep()))); }
     Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_map_get_space(keep()))); }
-
+    Space getTupleSpace(isl_dim_type type ) const {
+      switch (type) {
+      case isl_dim_param:
+        return getParamSpace();
+      case isl_dim_in:
+        return getDomainSpace();
+      case isl_dim_out:
+        return getRangeSpace();
+      case isl_dim_all:
+        return getSpace();
+      default:
+        llvm_unreachable("Invlid dim type");
+        return Space();
+      }
+    }
 
     bool isEmpty() const { return checkBool(isl_map_is_empty(keep())); }
 
@@ -219,11 +234,23 @@ namespace isl {
 
     void lexmin_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_lexmin(take())); } 
     Map lexmin() const { return Map::enwrap(isl_map_lexmin(takeCopy())); }
-      PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
+    
+     /// For every element in the map's domain, compute the lexical minimum of the set the element is mapped to
+    PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
+    PwMultiAff lexminPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    PwMultiAff lexminPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+#endif
 
     void lexmax_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_lexmax(take())); } 
     Map lexmax() const { return Map::enwrap(isl_map_lexmax(takeCopy())); }
+
+    /// For every element in the map's domain, compute the lexical maximum of the set the element is mapped to
     PwMultiAff lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
+    PwMultiAff lexmaxPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    PwMultiAff lexmaxPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+#endif
 
 #if 0
     // This is internal, use unite() instead
@@ -306,8 +333,11 @@ namespace isl {
     void subtract_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { return give(isl_map_subtract(take(), map.takeCopy())); }
     Map subtract(const Map &map) const { return Map::enwrap(isl_map_subtract(takeCopy(), map.takeCopy())); }
 
-    void substractRange(Set &&dom) { give(isl_map_subtract_range(take(), dom.take())); }
-    void complement() { give(isl_map_complement(take())); }
+    void substractRange_inplace(const Set &dom) ISLPP_INPLACE_QUALIFIER { give(isl_map_subtract_range(take(), dom.takeCopy())); }
+    Map substractRange(const Set &dom) const { return Map::enwrap(isl_map_subtract_range(takeCopy(), dom.takeCopy())); }
+
+    void complement_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_complement(take())); }
+    Map complement() const { return Map::enwrap(isl_map_complement(takeCopy())); }
 
     Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
     Set getDomain() const { return Set::enwrap(isl_map_domain(takeCopy())); }
@@ -339,7 +369,10 @@ namespace isl {
     void detectEqualities() { give(isl_map_detect_equalities(take())); }
 
 
-    void projectOut( isl_dim_type type, unsigned first, unsigned n) { give(isl_map_project_out(take(), type, first, n)); }
+    void projectOut_inplace( isl_dim_type type, unsigned first, unsigned n) ISLPP_INPLACE_QUALIFIER { give(isl_map_project_out(take(), type, first, n)); }
+    Map projectOut( isl_dim_type type, unsigned first, unsigned n) const { return Map::enwrap(isl_map_project_out(takeCopy(), type, first, n)); }
+
+
     void removeUnknowsDivs() { give(isl_map_remove_unknown_divs(take())); } 
     void removeDivs() { give(isl_map_remove_divs(take())); } 
     void eliminate(isl_dim_type type, unsigned first, unsigned n) { give(isl_map_eliminate(take(), type, first, n)); }
@@ -356,7 +389,9 @@ namespace isl {
     void flatten_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_flatten(take()));} 
     Map flatten() const { return Map::enwrap(isl_map_flatten(takeCopy()));} 
 
+    /// { A -> B } to { (A, B) -> A }
     Map domainMap() const { return Map::enwrap(isl_map_domain_map(takeCopy())); }
+    /// { A -> B } to { (A, B) -> B }
     Map rangeMap() const { return Map::enwrap(isl_map_range_map(takeCopy())); }
 
     bool plainIsEmpty() const { return isl_map_plain_is_empty(keep()); }
@@ -446,7 +481,7 @@ namespace isl {
     void alignParams_inplace(Space &&model) ISLPP_INPLACE_QUALIFIER { give(isl_map_align_params(take(), model.take())); }
     void alignParams_inplace(const Space &model) ISLPP_INPLACE_QUALIFIER { give(isl_map_align_params(take(), model.takeCopy())); }
     Map alignParams(Space &&model) const { return Map::enwrap(isl_map_align_params(takeCopy(), model.take())); }
-       Map alignParams(const Space &model) const { return Map::enwrap(isl_map_align_params(takeCopy(), model.takeCopy())); }
+    Map alignParams(const Space &model) const { return Map::enwrap(isl_map_align_params(takeCopy(), model.takeCopy())); }
 
     PwAff dimMax_consume(unsigned pos) { return PwAff::enwrap(isl_map_dim_max(take(), pos)); }
     PwAff dimMax(unsigned pos) const { return PwAff::enwrap(isl_map_dim_max(takeCopy(), pos)); }
@@ -480,6 +515,8 @@ namespace isl {
     Map chainNested(const Map &map) const;
     Map chainNested(const Map &map, unsigned tuplePos) const;
 
+    Map chainNested(isl_dim_type type, const Map &map) const;
+
     /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy()));} 
 
@@ -487,6 +524,15 @@ namespace isl {
     /// param dimensions are not changes, these are aligned automatically.
     void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_map_cast(take(), space.takeCopy())); }
     Map cast(const Space &space) const { return Map::enwrap(isl_map_cast(takeCopy(), space.takeCopy())); }
+
+    /// Search for the subspace and the project out its dimensions
+    /// example:
+    /// { (A, B, C) -> D }.projectOutSubspace(isl_dim_in, { B }) = { (A, C) -> D }
+    void projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_QUALIFIER;
+    Map projectOutSubspace(isl_dim_type type, const Space &subspace) const;
+
+    Map domainProduct(const Map &that) const { return Map::enwrap(isl_map_domain_product(this->takeCopy(), that.takeCopy())); }
+    Map rangeProduct(const Map &that) const { return Map::enwrap(isl_map_range_product(this->takeCopy(), that.takeCopy())); }
   }; // class Map
 
 
@@ -516,6 +562,7 @@ namespace isl {
   static inline Map applyRange(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_range(map1.take(), map2.take())); }
   static inline Map domainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_domain_product(map1.take(), map2.take())); }
   static inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_range_product(map1.take(), map2.take())); }
+    static inline Map rangeProduct(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_range_product(map1.takeCopy(), map2.takeCopy())); }
   static inline Map flatProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_product(map1.take(), map2.take())); }
   static inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
   static inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_range_product(map1.take(), map2.take())); }
@@ -581,9 +628,9 @@ namespace isl {
 
   // Note these are NOT total orders
   static inline bool operator<=(const Map &map1, const Map &map2) { return checkBool(isl_map_is_subset(map1.keep(), map2.keep())); }
-   static inline bool operator<(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map1.keep(), map2.keep())); }
-   static inline bool operator>=(const Map &map1, const Map &map2) { return checkBool(isl_map_is_subset(map2.keep(), map1.keep())); }
-   static inline bool operator>(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map2.keep(), map1.keep())); }
+  static inline bool operator<(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map1.keep(), map2.keep())); }
+  static inline bool operator>=(const Map &map1, const Map &map2) { return checkBool(isl_map_is_subset(map2.keep(), map1.keep())); }
+  static inline bool operator>(const Map &map1, const Map &map2) { return checkBool(isl_map_is_strict_subset(map2.keep(), map1.keep())); }
 
 } // namespace isl
 #endif /* ISLPP_MAP_H */

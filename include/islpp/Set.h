@@ -388,5 +388,11 @@ namespace isl {
   __isl_give isl_set *isl_set_from_union_set(__isl_take isl_union_set *uset);
 #endif
 
+  // Note these are NOT total orders
+  static inline bool operator<=(const Set &map1, const Set &map2) { return checkBool(isl_set_is_subset(map1.keep(), map2.keep())); }
+  static inline bool operator<(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map1.keep(), map2.keep())); }
+  static inline bool operator>=(const Set &map1, const Set &map2) { return checkBool(isl_set_is_subset(map2.keep(), map1.keep())); }
+  static inline bool operator>(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map2.keep(), map1.keep())); }
+
 } // namespace isl
 #endif /* ISLPP_SET_H */

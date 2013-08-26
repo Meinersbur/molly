@@ -34,7 +34,7 @@ molly::array<int, 128> FieldDst;
 extern "C" void fill() {
   auto len = FieldSrc.length();
   for (int i = 0; i < len; i+=1) {
-    FieldSrc[i] = i+2;
+    FieldSrc[i] = i+3;
   }
 }
 
@@ -52,8 +52,21 @@ extern "C" void test() {
   //std::cerr << "cerr: Rank " << molly::world_self() << " got value " << val << std::endl;
   std::cout << "cout: Rank " << molly::world_self() << " got value " << val << std::endl;
 }
+#endif
 
 
+extern "C" void test() {
+  MOLLY_DEBUG_FUNCTION_SCOPE
+
+  auto len = FieldDst.length();
+  for (int i = 0; i < len-1; i+=1) {
+    FieldSrc[i] = i+3;
+    FieldDst[i+1] = 2*FieldSrc[i];
+  }
+}
+
+
+#if 0
 extern "C" void sink() {
   auto len = FieldSrc.length();
   for (int i = 0; i < len; i+=1) {
@@ -66,7 +79,9 @@ extern "C" void sink() {
 int main(int argc, char *argv[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
-  fill();
+  test();
+
+  //fill();
   //test();
   //sink();
 

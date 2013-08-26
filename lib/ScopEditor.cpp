@@ -221,6 +221,90 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
 }
 
 
+static isl::Map computeRelativeScatter(const isl::Map &scatter, const isl::Map subscatter, int relative) {
+    auto scatterSpace = scatter.getSpace();
+  auto nScatterDims = scatter.getOutDimCount();
+  auto subscatterSpace = subscatter.getRangeSpace();
+  auto nSubscatterDims = subscatter.getOutDimCount();
+  assert(nScatterDims >= nSubscatterDims); 
+
+  auto resultSpace = isl::Space::createMapFromDomainAndRange(subscatter.getDomainSpace(), scatterSpace);
+  auto mapSpace = isl::Space::createMapFromDomainAndRange(subscatterSpace, scatterSpace);
+  isl::Map newScatter;
+  if (nScatterDims == nSubscatterDims) {
+    isl::PwMultiAff origin;
+    if (relative > 0)
+      origin = scatter.lexmaxPwMultiAff();
+    else if (relative < 0)
+      origin = scatter.lexminPwMultiAff();
+  else
+    return scatter; // Order doesn't seem to matter
+
+    auto originMPA = origin.toMultiPwAff();
+    auto leastmostPA = originMPA[nSubscatterDims-1];
+    auto relativePA = leastmostPA + relative;
+    auto relativeMPA = originMPA.setPwAff(nSubscatterDims-1, relativePA);
+    auto result = relativeMPA.toMap();
+    assert(result.matchesMapSpace(resultSpace));
+    return result;
+  } else {
+    auto cutscatter = scatter.projectOut(isl_dim_out, nSubscatterDims+1, nScatterDims-nSubscatterDims-1);
+    isl::PwMultiAff origin;
+        if (relative > 0)
+      origin = cutscatter.lexmaxPwMultiAff();
+    else if (relative < 0)
+      origin = cutscatter.lexminPwMultiAff();
+    else 
+      return scatter; // Execut in parallel/order unimportant
+    assert(origin.getDomain() >= cutscatter.getDomain() && "No undefined areas, for instance because of unboundedness");
+
+     auto originMPA = origin.toMultiPwAff();
+     auto leastmostPA = originMPA[originMPA.getOutDimCount()-1];
+     auto relativePA = leastmostPA + relative;
+
+     auto resultMPA = resultSpace.createZeroMultiPwAff();
+     for (auto i = 0; i < nSubscatterDims; i+=1) {
+       resultMPA.setPwAff_inplace(i, originMPA[i]);
+     }
+     resultMPA.setPwAff_inplace(nSubscatterDims, relativePA);
+         auto result = resultMPA.toMap();
+         result.cast_inplace(resultSpace);
+         return result;
+  }
+}
+
+StmtEditor ScopEditor::createStmtRelative(polly::ScopStmt *model, const isl::Map &subscatter, int relative, const isl::Map &where, const std::string &name) {
+  auto domain = enwrap(model->getDomain());
+  auto scatter = enwrap(model->getScattering()).intersectDomain(domain);
+
+  auto newScatter = computeRelativeScatter(scatter, subscatter, relative);
+
+  auto &llvmContext = getLLVMContext();
+  auto function = getParentFunction();
+  auto loopNests = model->getLoopNests();
+
+  auto bb = BasicBlock::Create(llvmContext, name, function);
+  DefaultIRBuilder builder(bb);
+  builder.CreateUnreachable();
+
+  auto stmt = new ScopStmt(scop, bb, name, nullptr, loopNests, domain.take(), newScatter.take());
+  auto newWhere = where.setInTupleId(enwrap(stmt->getDomainId()));
+  stmt->setWhereMap(newWhere.takeCopy());
+  scop->addScopStmt(stmt);
+  return StmtEditor(stmt);
+}
+
+
+StmtEditor ScopEditor:: createStmtBefore(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) {
+  return createStmtRelative(model, subscattering, -1, where, name);
+}
+
+
+StmtEditor ScopEditor::createStmtAfter(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) {
+  return createStmtRelative(model, subscattering, +1, where, name);
+}
+
+
 StmtEditor ScopEditor::replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDomainWhere, const std::string &name) {
   auto scop = model->getParent();
   auto function = getParentFunction();

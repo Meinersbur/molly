@@ -60,6 +60,11 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER {
+       auto space = getSpace();
+       space.setTupleId_inplace(type, id.move());
+       give(isl_basic_map_cast(take(), space.take()));
+    }
     //void setDimId_internal(isl_dim_type type, unsigned, Id &&id) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing API function"); }
 
     void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_insert_dims(take(), type, pos, count)); }
@@ -86,6 +91,7 @@ namespace isl {
 #pragma region Conversion
   public:
     Map toMap() const;
+    //operator Map() const { return toMap(); }
 #pragma endregion
 
 
@@ -129,9 +135,6 @@ namespace isl {
     static BasicMap createFromAff(Aff &&aff) { return BasicMap::enwrap(isl_basic_map_from_aff(aff.take())); }
     static BasicMap createFromMultiAff(MultiAff &&maff) { return BasicMap::enwrap(isl_basic_map_from_multi_aff(maff.take())); }
     static BasicMap createFromAffList(Space &&space, AffList &&list) { return BasicMap::enwrap(isl_basic_map_from_aff_list(space.take(), list.take())); }
-
-    //BasicMap copy() const { return BasicMap::enwrap(takeCopy()); }
-    //BasicMap &&move() { return std::move(*this); }
 #pragma endregion
 
 
@@ -158,6 +161,7 @@ namespace isl {
     //    void dump() const;
     void print(FILE *out, int indent, const char *prefix, const char *suffix, unsigned output_format) const { isl_basic_map_print(keep(), out, indent, prefix, suffix, output_format); }
 
+    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_fix_si(take(), type, pos, value)); }
     BasicMap fix(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_fix_si(takeCopy(), type, pos, value)); }
 
     BasicMap lowerBound(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_lower_bound_si(takeCopy(), type, pos, value)); }
@@ -220,6 +224,12 @@ namespace isl {
   BasicMap orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type2, pos2, type1, pos1)); }
      void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
   BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
+
+  Space getDomainSpace() const { return Space::enwrap( isl_space_domain(  isl_basic_map_get_space(takeCopy())) ); }
+    Space getRangeSpace() const { return Space::enwrap( isl_space_domain(  isl_basic_map_get_space(takeCopy())) ); }
+
+    Map domainProduct(const Map &that) const ;
+    Map rangeProduct(const Map &that) const ;
   }; // class BasicMap
 
 

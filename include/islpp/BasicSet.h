@@ -102,6 +102,11 @@ namespace isl {
 #pragma endregion
 
 
+        unsigned getDimCount() const { return isl_basic_set_dim(keep(), isl_dim_set); }
+        bool hasDimId(unsigned pos) const { return Spacelike<BasicSet>::hasDimId(isl_dim_set, pos); }
+    Id getDimId(unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), isl_dim_set, pos)); }
+
+
 #pragma region Creational
     static BasicSet create(const Space &space);
     static BasicSet create(Space &&space);

@@ -60,13 +60,25 @@ BasicMap Space::universeBasicMap() const {
 }
 
 
+BasicMap Space::identityBasicMap() const {
+ return BasicMap::enwrap(isl_basic_map_identity(takeCopy()));
+}
+
+
 BasicMap Space::equalBasicMap(unsigned n_equal) const {
   return BasicMap::enwrap(isl_basic_map_equal(takeCopy(), n_equal));
 }
 
 
-BasicMap Space:: equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const {
+BasicMap Space::equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const {
   auto result = universeBasicMap();
+
+  if (type1==isl_dim_in && pos1==0 && type2==isl_dim_out && pos2==0) {
+    return equalBasicMap(count);
+  }
+    if (type1==isl_dim_out && pos1==0 && type2==isl_dim_in && pos2==0) {
+    return equalBasicMap(count);
+  }
 
   // TODO: There might be something more efficient
   for (auto i = count-count; i < count; i+=1) {
@@ -94,6 +106,11 @@ Map Space::emptyMap() const {
 
 Map Space::universeMap() const {
   return Map::enwrap(isl_map_universe(takeCopy()));
+}
+
+
+Map Space::identityMap() const {
+ return Map::enwrap(isl_map_identity(takeCopy()));
 }
 
 
@@ -348,6 +365,13 @@ AstBuild Space::createAstBuild() const {
 }
 
 
+Space Space:: getNestedOrDefault(isl_dim_type type) const {
+  if (isNested(type))
+    return getNested(type);
+  return extractTuple(type);
+}
+
+
 static bool findNestedTuple_recursive(const Space &space, const Id &tupleToFind, unsigned &pos, unsigned &n) {
   auto startPos = pos;
 
@@ -468,6 +492,44 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
   return DimRange();
 }
 
+
+
+
+static bool findNestedSpace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    auto dimCount = space.dim(type);
+    auto startDimPos = currentDimPos;
+
+    if (spaceToFind == space.getNested(type)) {
+      // Found the space
+      return true; // Abort the recursion
+    }
+
+    if (space.isNested(type)) {
+      auto nestedSpace = space.getNested(type);
+      if (findNestedSpace_recursive(nestedSpace, spaceToFind, currentDimPos)) {
+        return true;
+      }
+    } else {
+      currentDimPos += dimCount;
+    }
+
+    assert(currentDimPos == startDimPos+dimCount);
+  }
+
+  return false;
+}
+
+
+DimRange Space:: findSubspace(isl_dim_type type, const Space &subspace) const {
+  assert((isSetSpace() && type==isl_dim_set) || (isMapSpace() && (type==isl_dim_in || type==isl_dim_out)));
+
+  unsigned currentDimPos = 0;
+  if (findNestedSpace_recursive(getNestedOrDefault(type), subspace, currentDimPos))
+    return DimRange::enwrap(*this, type, currentDimPos, subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out));
+
+  return DimRange();
+}
 
 
 static Space removeTuple_recursive(const Space &space, unsigned tuplePos, unsigned &first, unsigned &count, Space &remainder) {
@@ -720,14 +782,11 @@ unsigned Space::nestedTupleCount() const {
 }
 
 
-
-
 unsigned Space::nestedMaxDepth() const {
   unsigned nestedCount, nestedDepth;
   queryNesting_recursive(*this, nestedCount, nestedDepth);
   return nestedDepth;
 }
-
 
 
 static bool findTupleByPosition_recursive(const Space &space, unsigned searchTuplePos, /*inout*/unsigned &currentTuplePos, /*inout*/unsigned &currentDimPos, /*out*/unsigned &foundTupleDimCount, /*out*/Id &tupleId) {
@@ -928,6 +987,59 @@ static void flattenNestedSpaces_recursive(/*inout*/std::vector<Space> &result, /
 std::vector<Space> Space::flattenNestedSpaces() const {
   std::vector<Space> result;
   flattenNestedSpaces_recursive(result, *this);
+  return result;
+}
+
+
+static bool removeSubspace_recursive(/*inout*/ Space &space, const Space &subspace) {
+  if (space == subspace) {
+    space = Space(); // To be removed by parent
+    return true;
+  }
+  
+  if (space.isSetSpace()) {
+    if (space.isNested(isl_dim_set)) {
+      auto nested = space.getNested(isl_dim_set);
+      if (removeSubspace_recursive(nested, subspace)) {
+        space = nested;
+        return true;
+      } 
+    }
+  } else if (space.isMapSpace()) {
+    auto nestedDomain = space.getNestedOrDefault(isl_dim_in);
+    if (nestedDomain == subspace) {
+       space = space.getNestedOrDefault(isl_dim_out);
+       return true;
+    }
+    if (removeSubspace_recursive(nestedDomain, subspace)) {
+      if (nestedDomain.isNull()) 
+        space = space.getNestedOrDefault(isl_dim_out);
+      else 
+        space = Space::createMapFromDomainAndRange(nestedDomain, space.getNestedOrDefault(isl_dim_out));
+      return true;
+    }
+
+    auto nestedRange = space.getNestedOrDefault(isl_dim_out);
+    if (nestedRange == subspace) {
+      space = space.getNestedOrDefault(isl_dim_in);
+      return true;
+    }
+     if (removeSubspace_recursive(nestedRange, subspace)) {
+       if (nestedRange.isNull()) 
+         space = space.getNestedOrDefault(isl_dim_in);
+        else 
+          space = Space::createMapFromDomainAndRange(nestedDomain, nestedRange);
+      return true;
+    }
+  }
+  return false;
+}
+
+
+Space Space::removeSubspace(const Space &subspace) const {
+  auto result = copy();
+  auto retval = removeSubspace_recursive(result, subspace);
+  assert(retval && "Subspace must be somewhere in the space");
   return result;
 }
 

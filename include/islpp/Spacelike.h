@@ -464,7 +464,7 @@ namespace isl {
 
 
     bool matchesMapSpace(const Space &domainSpace, const Id &rangeId)const {
-      if (!getDerived()->isMapSpace())
+      if (!getDerived()->isMap())
         return false;
       auto space = getDerived()->getSpace();
       return space.matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
@@ -472,7 +472,7 @@ namespace isl {
 
 
     bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) const{
-      if (!getDerived()->isMapSpace())
+      if (!getDerived()->isMap())
         return false;
 
       auto space = getDerived()->getSpace();

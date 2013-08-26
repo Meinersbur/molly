@@ -93,6 +93,12 @@ namespace {
     }
 
 
+      StmtEditor getEditor() LLVM_OVERRIDE {
+        assert(stmt);
+        return StmtEditor(stmt);
+      }
+
+
     void applyWhere() LLVM_OVERRIDE {
       auto scop = stmt->getParent();
       auto func = getParentFunction(stmt);

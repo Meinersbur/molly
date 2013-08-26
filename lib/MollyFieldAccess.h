@@ -17,6 +17,7 @@ namespace molly {
 
   /// A utility class to embrace anything that is to know about acessing a field
   /// Polly requires a subset of this so it knows what are field accesses and what they access
+  /// deprecated; use MollyScopStmtProcessor instead
   class MollyFieldAccess : public polly::FieldAccess {
     friend class FieldDetectionAnalysis;
   private:
