@@ -79,6 +79,8 @@ namespace isl {
     UnionSet lexmax() const {return UnionSet::enwrap(isl_union_set_lexmax(takeCopy())); }
 
     UnionSet addSet(const Set &set) const { return UnionSet::enwrap(isl_union_set_add_set(takeCopy(), set.takeCopy())); }
+    void addSet_inplace(const Set &set) ISLPP_INPLACE_QUALIFIER { give(isl_union_set_add_set(take(), set.takeCopy())); }
+
     UnionSet unite(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_union(takeCopy(), uset2.takeCopy())); }
 
     UnionSet substract(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_subtract(takeCopy(), uset2.takeCopy())); }

@@ -31,10 +31,12 @@ molly::array<int, 128> FieldDst;
 //molly::array<int, 44> MySecondField;
 
 
-extern "C" void fill() {
-  auto len = FieldSrc.length();
-  for (int i = 0; i < len; i+=1) {
-    FieldSrc[i] = i+3;
+extern "C" {
+  static void fill() {
+    auto len = FieldSrc.length();
+    for (int i = 0; i < len; i+=1) {
+      FieldSrc[i] = i+3;
+    }
   }
 }
 

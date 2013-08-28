@@ -151,15 +151,22 @@ namespace isl {
 
     /// Maps vectors to anything that is lexically smaller
     Map lexLtMap() const;
+    Map lexLeMap() const;
 
     /// Maps vectors to anything that is lexically greater
     Map lexGtMap() const;
+    Map lexGeMap() const;
 
     /// Maps vectors to any vector that is lexically less in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexLtFirstMap(unsigned pos) const;
+      Map lexLeFirstMap(unsigned pos) const;
 
     /// Maps vectors to any vector that is lexically greater in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexGtFirstMap(unsigned pos) const;
+    Map lexGeFirstMap(unsigned pos) const;
+
+    UnionMap emptyUnionMap() const;
+    UnionSet emptyUnionSet() const;
 
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
@@ -196,6 +203,7 @@ namespace isl {
 
     bool isParamsSpace() const;
     bool isSetSpace() const;
+    bool isNontrivialSetSpace() const { return isSetSpace() && !isParamsSpace(); }
     bool isMapSpace() const;
 
     bool matches(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return isl_space_match(keep(), thisType, that.keep(), thatType); }
@@ -395,6 +403,7 @@ namespace isl {
     std::vector<Space> flattenNestedSpaces() const;
 
     Space removeSubspace(const Space &subspace) const;
+    Space replaceSubspace(const Space &subspaceToReplace, const Space &replaceBy) const;
   }; // class Space
 
 
@@ -413,8 +422,8 @@ namespace isl {
   Space setTupleId(const Space &space, isl_dim_type type, Id &&id);
   Space setTupleId(const Space &space, isl_dim_type type, const Id &id);
 
-  static inline bool operator==(const Space &lhs, const Space &rhs) { return isEqual(lhs, rhs); }
-  static inline bool operator!=(const Space &lhs, const Space &rhs) { return !isEqual(lhs, rhs); }
+  static inline bool operator==(const Space &lhs, const Space &rhs) { return (lhs.isNull() && rhs.isNull()) || (lhs.isValid() && rhs.isValid() && isEqual(lhs, rhs)); }
+  static inline bool operator!=(const Space &lhs, const Space &rhs) { return !operator==(lhs, rhs); }
 
 } // namespace isl
 #endif /* ISLPP_SPACE_H */

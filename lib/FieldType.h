@@ -55,8 +55,6 @@ namespace molly {
     FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata);
 
     void readMetadata();
-
-    isl::Ctx *getIslContext() const;
     llvm::LLVMContext *getLLVMContext();
     llvm::Module *getModule();
 
@@ -67,6 +65,7 @@ namespace molly {
       return new FieldType(islctx, module, metadata);
     }
 
+    isl::Ctx *getIslContext() const;
     void dump();
 
     unsigned getNumDimensions() const {

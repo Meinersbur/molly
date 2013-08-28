@@ -259,7 +259,7 @@ isl::Map FieldType::getHomeRel() {
 }
 
 
-llvm::StringRef FieldType:: getName() const {
+llvm::StringRef FieldType::getName() const {
   auto result = StringRef(metadata.clangTypeName);
   if (result.empty())
     result = metadata.llvmType->getName();
@@ -271,5 +271,3 @@ uint64_t molly::FieldType::getEltSize() const {
   return datalayout->getTypeAllocSize(getEltType());
 }
 #endif
-
-

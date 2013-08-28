@@ -143,6 +143,13 @@ namespace isl {
     void extendConstraints(unsigned n_eq, unsigned n_ineq) { give(isl_basic_map_extend_constraints(take(), n_eq, n_ineq)); }
 
     void removeRedundancies() { give(isl_basic_map_remove_redundancies(take())); } 
+
+    void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
+    BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
+
+    Map intersect(Map &&that) const ;
+    Map intersect(const Map &that) const ;
+
     void intersectDomain(BasicSet &&bset) { give(isl_basic_map_intersect_domain(take(), bset.take())); }
     void intersectRange(BasicSet &&bset) { give(isl_basic_map_intersect_range(take(), bset.take())); }
 

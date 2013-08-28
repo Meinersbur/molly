@@ -75,7 +75,7 @@ namespace molly {
     //void augmentFieldVariable(FieldVariable *fieldvar);
     //void augmentScEv(llvm::ScalarEvolution *se) {}
 
-    FieldVariable *getFieldVariable() { assert(fieldvar); return fieldvar; }
+    FieldVariable *getFieldVariable() const { assert(fieldvar); return fieldvar; }
     FieldType *getFieldType() const;
 
     isl::Space getLogicalSpace(isl::Ctx *); // returns a set space with getNumDims() dimensions

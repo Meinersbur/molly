@@ -190,10 +190,9 @@ isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
 
 isl::Map MollyFieldAccess::getAccessRelation() const {
   assert(scopAccess);
-  auto fty = getFieldType();
-  auto ftyTuple = fty->getIndexsetTuple();
+  auto fvar = getFieldVariable();
   auto rel = isl::enwrap(scopAccess->getAccessRelation());
-  rel.setOutTupleId_inplace(ftyTuple);//TODO: This should have been done when Molly detects SCoPs
+  rel.setOutTupleId_inplace(fvar->getTupleId());//TODO: This should have been done when Molly detects SCoPs
   return rel;
 }
 

@@ -19,7 +19,7 @@ namespace isl {
     //LocalSpace localspace;
 
    protected:
-     DimRange(Space &&space, isl_dim_type type, unsigned first, unsigned count) : space(space.move()), first(first), count(count)  {}
+     DimRange(Space &&space, isl_dim_type type, unsigned first, unsigned count) : space(space.move()), type(type), first(first), count(count)  {}
      //DimRange(LocalSpace &&localspace, isl_dim_type type, unsigned first, unsigned count) : space(), localspace(localspace.move()), first(first), count(count)  {}
 
    public:

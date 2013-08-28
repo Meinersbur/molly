@@ -6,15 +6,15 @@
 
 // TODO: What namespace?
 
-class Tribool final {
+class Tribool {
 public:
   enum Consts {
-    False,
-    True,
-    Indeterminate
+    False = 0,
+    True = 1,
+    Indeterminate = 2
   };
 private:
-  Consts state : 2;
+  Consts state;
 public:
   Tribool() { 
 #ifndef NDEBUG
@@ -31,19 +31,22 @@ public:
   Tribool &operator=(bool that) { this->state = (Consts)that; return *this; }
   Tribool &operator=(Consts that) { this->state = that; return *this; }
 
+  static Tribool maybeFalsePositive(bool that) { return that ? Indeterminate : False; }
+  static Tribool maybeFalseNegative(bool that) { return that ? True : Indeterminate; }
+
 #ifndef NDEBUG
 private:
-  bool isValid() { return state==False || state==True || state==Indeterminate; }
+  bool isValid() const { return state==False || state==True || state==Indeterminate; }
 public:
 #endif
-  bool isIndeterminate() {  assert(isValid()); return state == Indeterminate; }
-  bool isFalse () {assert(isValid()); return state == False; }
-  bool isTrue() { assert(isValid());return state==True; }
-  bool maybeTrue() { assert(isValid());return !isFalse(); }
-  bool maybeFalse() { assert(isValid());return !isTrue(); }
-  bool isDetermined() {assert(isValid()); return !isIndeterminate(); }
+  bool isIndeterminate() const { assert(isValid()); return state==Indeterminate; }
+  bool isFalse () const { assert(isValid()); return state==False; }
+  bool isTrue() const { assert(isValid()); return state==True; }
+  bool maybeTrue() const { assert(isValid()); return !isFalse(); }
+  bool maybeFalse() const { assert(isValid()); return !isTrue(); }
+  bool isDetermined() const { assert(isValid()); return !isIndeterminate(); }
 
-  bool asBool() { 
+  bool asBool() const { 
     assert(isValid());  
     if (isIndeterminate()) {
       llvm_unreachable("Indetermined boolean");
@@ -62,7 +65,7 @@ public:
   friend Tribool operator||(Tribool lhs, Tribool rhs);
 };
 
-inline Tribool operator==(Tribool lhs, Tribool rhs) {
+static inline Tribool operator==(Tribool lhs, Tribool rhs) {
   assert(lhs.isValid());
   assert(rhs.isValid());
   if (lhs.isIndeterminate() || rhs.isIndeterminate())
@@ -70,37 +73,37 @@ inline Tribool operator==(Tribool lhs, Tribool rhs) {
   return lhs.state == rhs.state;
 }
 
-inline Tribool operator!=(Tribool lhs, Tribool rhs) {
+static inline Tribool operator!=(Tribool lhs, Tribool rhs) {
   assert(lhs.isValid());
   assert(rhs.isValid());
-  if (lhs.state == Tribool::Indeterminate || rhs.state == Tribool::Indeterminate)
+  if (lhs.isIndeterminate() || rhs.isIndeterminate())
     return Tribool::Indeterminate;
   return lhs.state != rhs.state;
 }
 
-inline Tribool operator!(Tribool arg) {
+static inline Tribool operator!(Tribool arg) {
   assert(arg.isValid());
-  if (arg.state == Tribool::Indeterminate)
+  if (arg.isIndeterminate())
     return Tribool::Indeterminate;
   return !arg.state;
 }
 
-inline Tribool operator&&(Tribool lhs, Tribool rhs) {
+static inline Tribool operator&&(Tribool lhs, Tribool rhs) {
   assert(lhs.isValid());
   assert(rhs.isValid());
-  if (lhs.state == Tribool::False || rhs.state == Tribool::False)
+  if (lhs.state==Tribool::False || rhs.state==Tribool::False)
     return Tribool::False;
-  if (lhs.state == Tribool::True && rhs.state == Tribool::True)
+  if (lhs.state==Tribool::True && rhs.state==Tribool::True)
     return Tribool::True;
   return Tribool::Indeterminate;
 }
 
-inline Tribool operator||(Tribool lhs, Tribool rhs) {
+static inline Tribool operator||(Tribool lhs, Tribool rhs) {
   assert(lhs.isValid());
   assert(rhs.isValid());
-  if (lhs.state == Tribool::True || rhs.state == Tribool::True)
+  if (lhs.state==Tribool::True || rhs.state==Tribool::True)
     return Tribool::True;
-  if (lhs.state == Tribool::False && rhs.state == Tribool::False)
+  if (lhs.state==Tribool::False && rhs.state==Tribool::False)
     return Tribool::False;
   return Tribool::Indeterminate;
 }

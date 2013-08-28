@@ -146,7 +146,7 @@ namespace isl {
     bool foreachMap(const std::function<bool(isl::Map)> &/*return true to break enumeration*/) const;
     std::vector<Map> getMaps() const;
 
-    bool contains(const Space &space) const { return isl_union_map_contains(keep(), space.keep()); }
+    bool contains(const Space &space) const { return checkBool(isl_union_map_contains(keep(), space.keep())); }
 
     void fixedPower(const Int &exp) { give(isl_union_map_fixed_power(take(), exp.keep())); } 
     void mapPower(bool &exact) { 
@@ -177,11 +177,14 @@ namespace isl {
     UnionMap unite(UnionMap &&that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.take())); }
     UnionMap unite(const UnionMap &that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.takeCopy())); }
 #endif
+
+    Map extractMap(const Space &mapSpace) const { assert(mapSpace.isMapSpace()); return Map::enwrap(isl_union_map_extract_map(keep(), mapSpace.takeCopy())); }
+    Map operator[](const Space &mapSpace) const { assert(mapSpace.isMapSpace()); return Map::enwrap(isl_union_map_extract_map(keep(), mapSpace.takeCopy())); } 
   }; // class UnionMap
 
 
-  //static inline UnionMap wrap(isl_union_map *map) { return UnionMap::wrap(map); }
   static inline UnionMap enwrap(isl_union_map *map) { return UnionMap::enwrap(map); }
+  static inline UnionMap enwrapCopy(isl_union_map *map) { return UnionMap::enwrapCopy(map); }
 
   static inline Set params(UnionMap &&umap) { return Set::enwrap(isl_union_map_params(umap.take())); }
   static inline Set params(const UnionMap &umap) { return Set::enwrap(isl_union_map_params(umap.takeCopy())); }
@@ -209,7 +212,7 @@ namespace isl {
   static inline UnionSet deltas(UnionMap &&umap) { return UnionSet::enwrap(isl_union_map_deltas(umap.take())); }
 
   static inline bool isSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_subset(umap1.keep(), umap2.keep()); }
-  static inline  bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
+  static inline bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
   static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
 
   static inline Map extractMap(const UnionMap &umap, Space &&dim) { return Map::enwrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
@@ -235,6 +238,16 @@ namespace isl {
     if (mustNoSource) *mustNoSource = UnionMap::enwrap(mustNoSourceObj);
     if (mayNoSource) *mayNoSource = UnionMap::enwrap(mayNoSourceObj);
   }
+
+
+  /// Inputs:
+  ///   sink   = {  readStmt[domain] -> array[index] }
+  ///   source = { writeStmt[domain] -> array[index] }
+  ///   schedule = { stmt[domain] -> scattering[scatter] }
+  /// Output:
+  ///   dep =   { writeStmt[domain] -> stmtRead[domain] }
+  ///   nosrc = {  readStmt[domain] -> array[index] }
+  void simpleFlow(const UnionMap &sink, const UnionMap &source, const UnionMap &schedule, UnionMap *dep, UnionMap *nosrc); 
 
 } // namespace isl
 #endif /* ISLPP_UNIONMAP_H */

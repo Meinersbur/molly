@@ -128,6 +128,7 @@ namespace isl {
 
 
     UnionMap createEmptyUnionMap();
+    UnionSet createEmptyUnionSet();
     //AstBuild createAstBuild();
    
 

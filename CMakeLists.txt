@@ -98,7 +98,7 @@ option(MOLLYCC_DEBUG "Compile Debug version of MollyRT (and anything compiled wi
 
 if (MOLLYCC_DEBUG)
 message("MollyRT Debug build")
-  set(MOLLYCC_DEBUG_FLAGS -g)
+  set(MOLLYCC_DEBUG_FLAGS -O0 -g -DDEBUG)
 else ()
 message("MollyRT Release build")
   set(MOLLYCC_DEBUG_FLAGS -O3 -g0 -DNDEBUG)

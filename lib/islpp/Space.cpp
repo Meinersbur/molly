@@ -61,7 +61,7 @@ BasicMap Space::universeBasicMap() const {
 
 
 BasicMap Space::identityBasicMap() const {
- return BasicMap::enwrap(isl_basic_map_identity(takeCopy()));
+  return BasicMap::enwrap(isl_basic_map_identity(takeCopy()));
 }
 
 
@@ -76,7 +76,7 @@ BasicMap Space::equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count,
   if (type1==isl_dim_in && pos1==0 && type2==isl_dim_out && pos2==0) {
     return equalBasicMap(count);
   }
-    if (type1==isl_dim_out && pos1==0 && type2==isl_dim_in && pos2==0) {
+  if (type1==isl_dim_out && pos1==0 && type2==isl_dim_in && pos2==0) {
     return equalBasicMap(count);
   }
 
@@ -110,7 +110,7 @@ Map Space::universeMap() const {
 
 
 Map Space::identityMap() const {
- return Map::enwrap(isl_map_identity(takeCopy()));
+  return Map::enwrap(isl_map_identity(takeCopy()));
 }
 
 
@@ -119,8 +119,18 @@ Map Space::lexLtMap() const {
 }
 
 
+Map Space::lexLeMap() const {
+  return Map::enwrap(isl_map_lex_le(takeCopy()));
+}
+
+
 Map Space::lexGtMap() const {
   return Map::enwrap(isl_map_lex_gt(takeCopy()));
+}
+
+
+Map Space::lexGeMap() const {
+  return Map::enwrap(isl_map_lex_ge(takeCopy()));
 }
 
 
@@ -129,8 +139,30 @@ Map Space::lexLtFirstMap(unsigned pos) const {
 }
 
 
+Map Space::lexLeFirstMap(unsigned pos) const {
+  return Map::enwrap(isl_map_lex_le_first(takeCopy(), pos));
+}
+
+
 Map Space::lexGtFirstMap(unsigned pos) const {
   return Map::enwrap(isl_map_lex_gt_first(takeCopy(), pos));
+}
+
+
+Map Space::lexGeFirstMap(unsigned pos) const {
+  return Map::enwrap(isl_map_lex_ge_first(takeCopy(), pos));
+}
+
+
+UnionMap Space::emptyUnionMap() const {
+  assert(isParamsSpace());
+  return UnionMap::enwrap(isl_union_map_empty(takeCopy()));
+}
+
+
+UnionSet Space::emptyUnionSet() const {
+  assert(isParamsSpace());
+  return UnionSet::enwrap(isl_union_set_empty(takeCopy()));
 }
 
 
@@ -283,15 +315,16 @@ BasicSet Space::universeBasicSet() const {
 
 
 bool Space::isParamsSpace() const {
-  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_params(keep());
 }
+
+
 bool Space::isSetSpace() const {
-  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_set(keep());
 }
+
+
 bool Space::isMapSpace() const {
-  assert(1 == isl_space_is_params(keep()) + isl_space_is_set(keep()) + isl_space_is_map(keep()));
   return isl_space_is_map(keep());
 }
 
@@ -493,14 +526,14 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 }
 
 
-
-
 static bool findNestedSpace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
+  assert(spaceToFind.isValid());
+
   for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
     auto dimCount = space.dim(type);
     auto startDimPos = currentDimPos;
 
-    if (spaceToFind == space.getNested(type)) {
+    if (spaceToFind == space.getNestedOrDefault(type)) {
       // Found the space
       return true; // Abort the recursion
     }
@@ -991,44 +1024,55 @@ std::vector<Space> Space::flattenNestedSpaces() const {
 }
 
 
-static bool removeSubspace_recursive(/*inout*/ Space &space, const Space &subspace) {
-  if (space == subspace) {
-    space = Space(); // To be removed by parent
+static Space combineSpaces(const Space &lhs, const Space &rhs) {
+  if (lhs.isNull() && rhs.isNull())
+    return Space();
+
+  if (rhs.isNull())
+    return lhs;
+
+  if (lhs.isNull())
+    return rhs;
+
+  return Space::createMapFromDomainAndRange(lhs.isMapSpace() ? lhs.wrap() : lhs , rhs.isMapSpace() ? rhs.wrap() : rhs);
+}
+
+
+static bool replaceSubspace_recursive(/*inout*/Space &space, const Space &toBeReplaced, const Space &replacement) {
+  assert(space.isValid());
+  assert(toBeReplaced.isValid());
+
+  if (space == toBeReplaced) {
+    space = replacement;
     return true;
   }
-  
+
   if (space.isSetSpace()) {
     if (space.isNested(isl_dim_set)) {
       auto nested = space.getNested(isl_dim_set);
-      if (removeSubspace_recursive(nested, subspace)) {
+      if (replaceSubspace_recursive(nested, toBeReplaced, replacement)) {
         space = nested;
         return true;
       } 
     }
   } else if (space.isMapSpace()) {
     auto nestedDomain = space.getNestedOrDefault(isl_dim_in);
-    if (nestedDomain == subspace) {
-       space = space.getNestedOrDefault(isl_dim_out);
-       return true;
+    if (nestedDomain == toBeReplaced) {
+      space = combineSpaces(replacement, space.getNestedOrDefault(isl_dim_out));
+      return true;
     }
-    if (removeSubspace_recursive(nestedDomain, subspace)) {
-      if (nestedDomain.isNull()) 
-        space = space.getNestedOrDefault(isl_dim_out);
-      else 
-        space = Space::createMapFromDomainAndRange(nestedDomain, space.getNestedOrDefault(isl_dim_out));
+    if (replaceSubspace_recursive(nestedDomain, toBeReplaced, replacement)) {
+      space = combineSpaces(nestedDomain, space.getNestedOrDefault(isl_dim_out));
       return true;
     }
 
     auto nestedRange = space.getNestedOrDefault(isl_dim_out);
-    if (nestedRange == subspace) {
-      space = space.getNestedOrDefault(isl_dim_in);
+    if (nestedRange == toBeReplaced) {
+      space = combineSpaces(nestedDomain, replacement);
       return true;
     }
-     if (removeSubspace_recursive(nestedRange, subspace)) {
-       if (nestedRange.isNull()) 
-         space = space.getNestedOrDefault(isl_dim_in);
-        else 
-          space = Space::createMapFromDomainAndRange(nestedDomain, nestedRange);
+    if (replaceSubspace_recursive(nestedRange, toBeReplaced, replacement)) {
+      space = combineSpaces(nestedDomain, nestedRange);
       return true;
     }
   }
@@ -1038,8 +1082,24 @@ static bool removeSubspace_recursive(/*inout*/ Space &space, const Space &subspa
 
 Space Space::removeSubspace(const Space &subspace) const {
   auto result = copy();
-  auto retval = removeSubspace_recursive(result, subspace);
+  bool wasSetSpace = isSetSpace();
+  auto retval = replaceSubspace_recursive(result, subspace, Space());
   assert(retval && "Subspace must be somewhere in the space");
+
+  if (wasSetSpace && result.isMapSpace())
+    result.wrap_inplace();
+  return result;
+}
+
+
+Space Space::replaceSubspace(const Space &subspaceToReplace, const Space &replaceBy) const {
+  auto result = copy();
+  bool wasSetSpace = isSetSpace();
+  auto retval = replaceSubspace_recursive(result, subspaceToReplace, replaceBy);
+  assert(retval && "Subspace must be somewhere in the space");
+
+  if (wasSetSpace && result.isMapSpace())
+    result.wrap_inplace();
   return result;
 }
 

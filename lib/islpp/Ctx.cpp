@@ -222,23 +222,32 @@ BasicMap Ctx::createUniverseBasicMap(Space &&space) {
 }
 
 
- UnionMap Ctx::createEmptyUnionMap() {
-   return UnionMap::enwrap(isl_union_map_empty(isl_space_alloc(keep(), 0,0,0)));
- }
+UnionMap Ctx::createEmptyUnionMap() {
+  return UnionMap::enwrap(isl_union_map_empty(isl_space_alloc(keep(), 0,0,0)));
+}
+
+
+UnionSet Ctx::createEmptyUnionSet() {
+  return UnionSet::enwrap(isl_union_set_empty(isl_space_alloc(keep(),0,0,0)));
+}
 
 
 Id Ctx::createId(const char *name, const void *user) {
+  //TODO: Check for invalid characters in name 
   return Id::enwrap(isl_id_alloc(keep(), name, const_cast<void*>(user)));
 }
 
+
 Id Ctx::createId(const std::string &name, const void *user ){
-  return createId(name.c_str(), user);
-}
-Id Ctx::createId(llvm::StringRef name, const void *user ) {
-   return createId(name.str(), user);
+  return Id::enwrap(isl_id_alloc(keep(), name.c_str(), const_cast<void*>(user)));
 }
 
 
-  Id Ctx::createId(const llvm::Twine& name, const void *user){
- return createId(name.str(), user);
-  }
+Id Ctx::createId(llvm::StringRef name, const void *user) {
+  return Id::enwrap(isl_id_alloc(keep(), name.str().c_str(), const_cast<void*>(user)));
+}
+
+
+Id Ctx::createId(const llvm::Twine& name, const void *user){
+  return Id::enwrap(isl_id_alloc(keep(), name.str().c_str(), const_cast<void*>(user)));
+}

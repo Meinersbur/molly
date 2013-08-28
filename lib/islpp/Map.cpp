@@ -147,21 +147,54 @@ Map Map::chainNested(isl_dim_type type, const Map &map) const {
 }
 
 
-void Map:: projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_QUALIFIER {
-  auto myspace = getSpace();
-  auto dims = myspace.findSubspace(type, subspace);
-  if (dims.isNull()) {
-    llvm_unreachable("Subspace not found");
-    reset();
-    return;
-  }
+Map Map::applyNested(isl_dim_type type, const Map &map) const {
+  auto space = getSpace();
+  auto typeSpace = space.extractTuple(type);
+  auto seekNested = map.getDomainSpace();
 
-  auto shrinkSpace = getTupleSpace(type).removeSubspace(subspace); 
-  auto shrinkMapSpace = Space::createMapFromDomainAndRange(getTupleSpace(type), shrinkSpace);
-  auto shrinkMap = shrinkMapSpace.equalBasicMap(isl_dim_in, 0, dims.getCount(), isl_dim_out, 0);
+  auto dims = space.findSubspace(type, seekNested);
+  assert(dims.isValid());
 
+  auto nPrefixDims = dims.getBeginPos();
+  auto nDomainDims = map.getInDimCount();
+  auto nRangeDims = map.getOutDimCount();
+  auto nPosfixDims = typeSpace.getSetDimCount() - dims.getEndPos();
+  assert(nPrefixDims + nDomainDims + nPosfixDims == typeSpace.getSetDimCount());
+
+  //auto tuple = space.extractTuple(type);
+  auto applySpace = Space::createMapFromDomainAndRange(typeSpace, typeSpace.replaceSubspace(seekNested, map.getRangeSpace()));
+  assert(applySpace.getInDimCount() == nPrefixDims + nDomainDims + nPosfixDims);
+  assert(applySpace.getOutDimCount() == nPrefixDims + nRangeDims + nPosfixDims);
+
+  auto apply = map.insertDims(isl_dim_in, 0, nPrefixDims);
+  apply.insertDims_inplace(isl_dim_out, 0, nPrefixDims);
+  apply.addDims_inplace(isl_dim_in, nPosfixDims);
+  apply.addDims_inplace(isl_dim_out, nPosfixDims);
+
+  apply.intersect_inplace(apply.getSpace().equalBasicMap(isl_dim_in, 0, nPrefixDims, isl_dim_out, 0 ));
+  apply.intersect_inplace(apply.getSpace().equalBasicMap(isl_dim_in, nPrefixDims + nDomainDims, nPosfixDims, isl_dim_out,nPrefixDims + nRangeDims));
+  apply.cast_inplace(applySpace);
+
+  if (type==isl_dim_in)
+    return applyDomain(apply);
+  else
+    return applyRange(apply);
+}
+
+
+void Map::projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+  auto myspace = getTupleSpace(type);
+  auto dims = getSpace().findSubspace(type, subspace);
+  assert(dims.isValid());
+  assert(dims.getType() == type);
+
+  auto shrinkSpace = myspace.removeSubspace(subspace); 
   this->projectOut_inplace(type, dims.getBeginPos(), dims.getCount());
-  this->cast_inplace(shrinkSpace);
+
+  if (isl_dim_in == type)
+    this->cast_inplace(Space::createMapFromDomainAndRange(shrinkSpace, getRangeSpace()));
+  else
+    this->cast_inplace(Space::createMapFromDomainAndRange(getDomainSpace(), shrinkSpace));
 }
 
 

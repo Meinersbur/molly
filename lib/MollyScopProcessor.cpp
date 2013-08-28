@@ -222,7 +222,43 @@ namespace {
 
 
 #pragma region Scop CommGen
-    static void spreadScatterings(Scop *scop, int multiplier) {
+    static void spreadScatteringsByInsertingDims(Scop *scop) {
+      auto nOrigScatterDims = scop->getScatterDim();
+      auto origScatterSpace = enwrap(scop->getScatteringSpace());
+      auto islctx = enwrap(scop->getIslCtx());
+      auto scatterTuple = getScatterTuple(scop);
+
+      auto nScatterDims = nOrigScatterDims*2 + 1;
+      auto scatterSpace = origScatterSpace.addDims(isl_dim_out, nScatterDims - nOrigScatterDims).setSetTupleId(scatterTuple);
+
+      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+        auto stmt = *itStmt;
+        auto scatter = enwrap(stmt->getScattering());
+        auto nOldDimCount = scatter.getOutDimCount();
+
+        scatter.insertDims_inplace(isl_dim_out, 0, 1);
+        scatter.fix_inplace(isl_dim_out, 0, 0);
+        for (auto i = nOldDimCount-nOldDimCount; i < nOldDimCount; i+=1) {
+          scatter.insertDims_inplace(isl_dim_out, 2+2*i, 1);
+          scatter.fix_inplace(isl_dim_out, 2+2*i, 0);
+        }
+        for (auto i = scatter.getOutDimCount(); i < nScatterDims; i+=1) {
+          scatter.insertDims_inplace(isl_dim_out, i, 1);
+          scatter.fix_inplace(isl_dim_out, i, 0);
+        }
+        //assert(scatter.matchesMapSpace(enwrap(stmt->getDomain()).getSpace(), scatterSpace));
+        scatter.setOutTupleId_inplace(scatterTuple);
+        stmt->setScattering(scatter.take());
+      }
+    }
+
+
+    static void spreadScatteringByMultiplying(Scop *scop, int multiplier) {
+      auto nScatterDims = scop->getScatterDim();
+      auto scatterSpace = enwrap(scop->getScatteringSpace());
+      auto islctx = enwrap(scop->getIslCtx());
+      auto scatterTuple = scatterSpace.getOutTupleId();
+
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;
         auto scattering = getScattering(stmt);
@@ -230,8 +266,24 @@ namespace {
         auto nParam = space.getParamDimCount();
         auto nIn = space.getInDimCount();
         auto nOut = space.getOutDimCount();
-        auto newScattering = space.emptyMap();
+        auto mapSpace = isl::Space::createMapFromDomainAndRange(space.range(), scatterSpace);
+        auto map = mapSpace.universeBasicMap();
 
+        for (auto i = 1; i < nOut; i+=2) {
+          map.equate_inplace(isl_dim_in, i, isl_dim_out, i);
+        }
+        for (auto i = 0; i < nOut; i+=2) {
+          auto c = mapSpace.createEqualityConstraint();
+          c.setCoefficient_inplace(isl_dim_in, i, -4);
+          c.setCoefficient_inplace(isl_dim_out, i, 1);
+          map.addConstraint_inplace(c);
+        }
+        for (auto i = nOut; i < nScatterDims; i+=1) {
+          map.fix_inplace(isl_dim_out, i, 0);
+        }
+
+#if 0
+        auto newScattering = scatterSpace.emptyMap();
         for (auto bmap : scattering.getBasicMaps()) {
           auto newbmap = space.universeBasicMap();
           for (auto c : bmap.getConstraints()) {
@@ -246,7 +298,9 @@ namespace {
           }
           newScattering = unite(move(newScattering), newbmap);
         }
+#endif
 
+        auto newScattering = scattering.applyRange(map);
         stmt->setScattering(newScattering.take());
       }
     }
@@ -276,7 +330,7 @@ namespace {
       auto nClusterDims = nodeSpace.getSetDimCount();
 
       // Make some space between the stmts in which we can insert our communication
-      spreadScatterings(scop, 2);
+      spreadScatteringByMultiplying(scop, 4);
 
       // Collect information
       // Like polly::Dependences::collectInfo, but finer granularity (MemoryAccess instead ScopStmt)
@@ -289,6 +343,7 @@ namespace {
       }
 
       DenseMap<const isl_id*,FieldType*> tupleToFty; //TODO: This is not per scop, so should be moved to PassManager
+      DenseMap<const isl_id*,FieldVariable*> tupleToFvar;
 
       auto paramSpace = isl::enwrap(scop->getParamSpace());
 
@@ -299,6 +354,7 @@ namespace {
 
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;
+        auto stmtCtx = getScopStmtContext(stmt);
 
         auto facc = getFieldAccess(stmt);
         if (!facc.isValid())
@@ -312,16 +368,26 @@ namespace {
         assert(scattering.getSpace().matchesMapSpace(domainTuple, scatterTuple));
         scattering.intersectDomain_inplace(domain);
 
-        auto fvar = facc.getFieldVariable();
-        auto fty = facc.getFieldType();
-        auto indexsetTuple = fty->getIndexsetTuple();
+        auto fvar = stmtCtx->getFieldVariable();
+        auto accessTuple = fvar->getTupleId();
+        auto accessSpace = fvar->getAccessSpace();
+        assert(!tupleToFvar.count(accessTuple.keep()) || tupleToFvar[accessTuple.keep()]==fvar);
+        tupleToFvar[accessTuple.keep()] = fvar;
 
+        auto fty = stmtCtx->getFieldType();
+        auto indexsetTuple = fty->getIndexsetTuple();
         assert(!tupleToFty.count(indexsetTuple.keep()) || tupleToFty[indexsetTuple.keep()]==fty);
         tupleToFty[indexsetTuple.keep()] = fty;
 
-        auto accessRel = facc.getAccessRelation(); /*  { stmt[domain] -> field[indexset] } */
-        assert(accessRel.getSpace().matchesMapSpace(domainTuple, indexsetTuple));
+        auto accessRel = facc.getAccessRelation(); /*  { stmt[domain] -> fvar[indexset] } */
+        assert(accessRel.getSpace().matchesMapSpace(domainTuple, accessSpace));
         accessRel.intersectDomain_inplace(domain);
+
+        // auto scatter = stmtCtx->getScattering();
+        // accessRel.applyDomain_inplace(scatter); // Accesses depend on order for flow computation, hence we must apply the scattering
+        // assert(scatter.isInjective()); // The instance must still be uniquely identifyable; If this restriction must be lifted, isl::computeFlow must learn how to preserve the domain
+        // The scattering also contains the information of order within a loop
+        // accessRel.setInTupleId_inplace(domain.getTupleId()); // Still, we need to uniquely identify the statement it came from
 
         if (facc.isRead()) {
           readAccesses.addMap_inplace(accessRel);
@@ -374,6 +440,8 @@ namespace {
       epilogueScatter.setOutTupleId_inplace(scatterId);
       epilogueScatter.intersect_inplace(epilogieMapToZero);
 
+      //auto epilogieScatterAsDomain = epilogueScatter.getRange().setTupleId(epilogueId);
+
       //auto allIterationDomains = domain(writeAccesses);
       auto allIndexsets = range(writeAccesses);
       //auto relateAll = isl::UnionMap::createFromDomainAndRange(
@@ -386,41 +454,50 @@ namespace {
       isl::UnionMap mayFlow;
       isl::UnionMap mustNosrc;
       isl::UnionMap mayNosrc;
+      
+#if 0
+      isl::simpleFlow(readAccesses, writeAccesses, schedule, &mustFlow, &mustNosrc);
+#else
       isl::computeFlow(readAccesses.copy(), writeAccesses.copy(), islctx->createEmptyUnionMap(), schedule.copy(), &mustFlow, &mayFlow, &mustNosrc, &mayNosrc);
       assert(mayNosrc.isEmpty());
       assert(mayFlow.isEmpty());
       //TODO: verify that computFlow generates direct dependences
+#endif
 
-      auto inputFlow = unite(mustNosrc, mayNosrc);
-      auto stmtFlow = mustFlow.getSpace().createEmptyUnionMap();
-      auto outputFlow = mustFlow.getSpace().createEmptyUnionMap();
+      auto inputFlow = paramSpace.emptyUnionSet();
+      auto dataFlow = paramSpace.emptyUnionMap();
+      auto outputFlow = paramSpace.emptyUnionSet();
+
+      for (auto inpMap : mustNosrc.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
+        auto inp = inpMap.getDomain();
+        inputFlow.addSet_inplace(inp);
+      }
+
       for (auto dep : mustFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
-        //auto itDomainWrite = dep.getDomain(); /* write_acc[domain] */
-        //auto itDomainRead = dep.getRange(); /* read_acc[domain] */
-        if (dep.getOutTupleId() == epilogueId) {
-          outputFlow.addMap_inplace(dep);
+        auto readTuple = dep.getOutTupleId();
+        if (readTuple == epilogueId) {
+          auto out = dep.getDomain();
+          outputFlow.addSet_inplace(out);
         } else {
-          stmtFlow.addMap_inplace(dep);
+          dataFlow.addMap_inplace(dep);
         }
       }
 
 
-      for (auto dep : inputFlow.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
+      for (auto inp : inputFlow.getSets()) { 
         // Value source is outside this scop 
         // Value must be read from home location
-        genInputCommunication(dep.getDomain());
+        genInputCommunication(inp);
       }
 
-      for (auto dep : stmtFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
+      for (auto dep : dataFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
         genFlowCommunication(dep);
       }
 
-      for (auto dep : outputFlow.getMaps()) {
+      for (auto out : outputFlow.getSets()) {
         // This means the data is visible outside the scop and must be written to its home location
         // There is no explicit read access
-        assert(dep.getOutTupleId() == epilogueId);
-
-        genOutputCommunication(dep.getDomain());
+        genOutputCommunication(out);
       }
 
 
@@ -580,7 +657,7 @@ namespace {
     }
 
 
-    private:
+  private:
     /// return the first dimension from which on all dependencies are always lexicographically positive
     /// examples:
     /// { (1,0,0) -> (0,1,0) } returns 1
@@ -596,14 +673,14 @@ namespace {
       auto scatterSpace = depScatter.getDomainSpace(); /* { scattering[scatter] } */
       auto nCompareDims = std::min(nIn,nOut);
 
-        // get the first always-positive coordinate such that the dependence is satisfied
+      // get the first always-positive coordinate such that the dependence is satisfied
       // Everything after that doesn't matter anymore to meet that dependence
       for (auto i = nCompareDims-nCompareDims; i < nCompareDims; i+=1) {
         auto orderMap = depMap.universeBasicMap();
         orderMap.orderLt_inplace(isl_dim_in, i, isl_dim_out, i);
-           // auto fulfilledDeps = depScatter.intersect(orderMap);
+        // auto fulfilledDeps = depScatter.intersect(orderMap);
         if (orderMap >= depScatter) {
-           // All dependences are fullfilled from here
+          // All dependences are fullfilled from here
           // i.e. we can shuffle stuff as we want in lower dimensions
           return i;
         }
@@ -675,7 +752,7 @@ namespace {
     isl::Map scatterBefore(const isl::Map &subscatter) {
       return scatterRelative(subscatter, -1);
     }
-      isl::Map scatterAfter(const isl::Map &subscatter) {
+    isl::Map scatterAfter(const isl::Map &subscatter) {
       return scatterRelative(subscatter, +1);
     }
 #endif
@@ -685,7 +762,7 @@ namespace {
       auto clusterSpace = getClusterConfig()->getClusterSpace();
       auto clusterShape = getClusterConfig()->getClusterShape();
 
-      auto readStmt = getScopStmtContext(dep.getInTupleId());
+      auto readStmt = getScopStmtContext(dep.getOutTupleId());
       assert(readStmt->isReadAccess());
       auto readDomain = readStmt->getDomain();
       assert(readStmt->isFieldAccess());
@@ -700,7 +777,7 @@ namespace {
       auto readWhere = readStmt->getWhere().intersectDomain(readDomain); // { stmtRead[domain] -> node[cluster] }
       auto readEditor = readStmt->getEditor();
 
-      auto writeStmt = getScopStmtContext(dep.getOutTupleId());
+      auto writeStmt = getScopStmtContext(dep.getInTupleId());
       assert(writeStmt->isReadAccess());
       auto writeDomain = writeStmt->getDomain();
       assert(writeStmt->isFieldAccess());
@@ -715,7 +792,7 @@ namespace {
       auto writeWhere = writeStmt->getWhere().intersectDomain(writeDomain); // { writeRead[domain] -> node[cluster] }
       auto writeEditor = writeStmt->getEditor();
 
-     // A statment is either reading or writing, but not both
+      // A statment is either reading or writing, but not both
       assert(readStmt != writeStmt);
 
       // flow is data transfer from a writing statement to a reading statement of the same location, i.e. also same field
@@ -730,7 +807,7 @@ namespace {
       // Scatter spaces must be the same
       auto scatterSpace = readScatter.getRangeSpace();
       assert(writeScatter.getRangeSpace() == scatterSpace);
-       
+
       // Which elements are transfered?
       auto transferedMap = dep.applyDomain(writeAccRel).applyRange(readAccRel);
       // Logically, this should be the identity map, but the requirement is only that at least the data that is read be existing in the communication buffer
@@ -769,7 +846,7 @@ namespace {
       auto writeInstSubScatter = writeInstDomain.chainNested(writeSubScatter); // { (writeStmt[domain], node[cluster]) -> subscattering[scatter] }
       auto readInstAccess = readInstDomain.chainNested(readAccRel);            // { (readStmt[domain], node[cluster]) -> field[index] }
       auto writeInstAccess = writeInstDomain.chainNested(writeAccRel);         // { (writeStmt[domain], node[cluster]) -> field[index] }
-      
+
       auto depInst = dep.applyDomain(writeInstMap).applyRange(readInstMap);       // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
       auto depSubInst = depSub.applyDomain(writeInstMap).applyRange(readInstMap); // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
 
@@ -780,7 +857,7 @@ namespace {
 
       // No need to transfer values that are written and used on the same node (ie. same where[cluster])
       auto depSubInstLocal = depSubInst.intersect(depSubInst.getSpace().equalBasicMap(isl_dim_in, writeDomain.getDimCount(), clusterShape.getDimCount(), isl_dim_out, readDomain.getDimCount()));
-      
+
       // The instances of which we know can get their value locally
       auto localReads = depSubInstLocal.getRange(); // { (readStmt[domain], node[cluster]) }
       auto localWrites = depSubInstLocal.getDomain(); // { (writeStmt[domain], node[cluster]) }
@@ -798,18 +875,18 @@ namespace {
       depSubInstLoc.uncurry_inplace();
       // { (writeNode[cluster], readNode[cluster]) -> field[index] }
 
-       auto communicationSet = depSubInstLoc; /* { (nodeSrc[cluster], nodeDst[cluster]) -> field[indexset] } */
+      auto communicationSet = depSubInstLoc; /* { (nodeSrc[cluster], nodeDst[cluster]) -> field[indexset] } */
 
 
       // Codegen
-       auto combuf = pm->newCommunicationBuffer(fty, communicationSet); 
-       ScopEditor editor(scop);
+      auto combuf = pm->newCommunicationBuffer(fty, communicationSet); 
+      ScopEditor editor(scop);
 
-       // send
-       auto sendEditor = editor.createStmtAfter(writeStmt->getStmt(), writeSubScatter, depSubInst.getDomain().unwrap(), "send");
+      // send
+      auto sendEditor = editor.createStmtAfter(writeStmt->getStmt(), writeSubScatter, depSubInst.getDomain().unwrap(), "send");
 
-       // recv
-       auto recvEditor = editor.createStmtBefore(readStmt->getStmt(), readSubScatter, depSubInst.getRange().unwrap(), "recv");
+      // recv
+      auto recvEditor = editor.createStmtBefore(readStmt->getStmt(), readSubScatter, depSubInst.getRange().unwrap(), "recv");
 
 
 #if 0
@@ -948,7 +1025,7 @@ namespace {
 
       ScopEditor editor(scop);
       auto writebackLocalStmtEditor = editor.replaceStmt(stmtWrite, wbWhere.copy(), "writeback_local");
-        //createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
+      //createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
       auto writebackLocalStmt = writebackLocalStmtEditor.getStmt();
       auto writebackLocalStmtCtx = getScopStmtContext(writebackLocalStmt);
 

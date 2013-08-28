@@ -93,10 +93,10 @@ namespace {
     }
 
 
-      StmtEditor getEditor() LLVM_OVERRIDE {
-        assert(stmt);
-        return StmtEditor(stmt);
-      }
+    StmtEditor getEditor() LLVM_OVERRIDE {
+      assert(stmt);
+      return StmtEditor(stmt);
+    }
 
 
     void applyWhere() LLVM_OVERRIDE {
@@ -272,10 +272,10 @@ namespace {
 
     isl::Map/*iteration coord -> field coord*/ getAccessRelation() const LLVM_OVERRIDE {
       assert(isFieldAccess());
-      auto fty = getFieldType();
-      auto ftyTuple = fty->getIndexsetTuple();
+      assert(fmemacc);
+      auto fvar = getFieldVariable();
       auto rel = isl::enwrap(fmemacc->getAccessRelation());
-      rel.setOutTupleId_inplace(ftyTuple);//TODO: This should have been done when Molly detects SCoPs
+      rel.setOutTupleId_inplace(fvar->getTupleId());//TODO: This should have been done when Molly detects SCoPs
       return rel;
     }
 
@@ -358,9 +358,10 @@ namespace {
         auto fty = fvar->getFieldType();
         assert(fty);
         auto indexsetSpace = fty->getLogicalIndexsetSpace();
+        auto accessSpace = fvar->getAccessSpace();
 
         auto accrel = getAccessRelation();
-        assert(accrel.getSpace().matchesMapSpace(domainSpace, indexsetSpace));
+        assert(accrel.getSpace().matchesMapSpace(domainSpace, accessSpace));
 
         //TODO: Check that nothing notable is going on except the access to a field
       }
@@ -373,16 +374,16 @@ namespace {
     }
 
 
-          bool isReadAccess() const LLVM_OVERRIDE {
-            assert(isFieldAccess());
-            return fmemacc->isRead();
-          }
+    bool isReadAccess() const LLVM_OVERRIDE {
+      assert(isFieldAccess());
+      return fmemacc->isRead();
+    }
 
 
-       bool isWriteAccess() const LLVM_OVERRIDE {
-         assert(isFieldAccess());
-         return fmemacc->isWrite();
-       }
+    bool isWriteAccess() const LLVM_OVERRIDE {
+      assert(isFieldAccess());
+      return fmemacc->isWrite();
+    }
 
   }; // class MollyScopStmtProcessorImpl
 } // namespace 

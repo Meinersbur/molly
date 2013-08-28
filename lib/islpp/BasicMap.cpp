@@ -27,6 +27,16 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
 }
 
 
+    Map BasicMap:: intersect(Map &&that) const {
+      return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.take())); 
+    } 
+
+
+    Map  BasicMap::intersect(const Map &that) const { 
+      return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
+    } 
+
+
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 
   isl_set *rawempty = 0;
   auto result = Map::enwrap(isl_basic_map_partial_lexmax(bmap.take(), dom.take(), &rawempty)); 

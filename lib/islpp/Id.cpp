@@ -47,11 +47,15 @@ void *Id::getUser() const {
   return isl_id_get_user(keep()); 
 }
 
+
+Id Id::setFreeUser(void (*freefunc)(void *)) { 
+  return Id::enwrap(isl_id_set_free_user(keep(), freefunc)); 
+}
 void Id::setFreeUser_inline(void (*freefunc)(void *)) {
   give(isl_id_set_free_user(keep(), freefunc)); 
 }
-Id Id::setFreeUser(void (*freefunc)(void *)) { 
-  return Id::enwrap(isl_id_set_free_user(keep(), freefunc)); 
+Id Id::setFreeUser_consume(void (*freefunc)(void *)) { 
+  return Id::enwrap(isl_id_set_free_user(take(), freefunc));
 }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
 Id Id::setFreeUser(void (*freefunc)(void *)) && { 

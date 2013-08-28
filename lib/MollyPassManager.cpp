@@ -861,11 +861,16 @@ namespace {
     }
 
 
+    private:
+      DenseMap<const GlobalVariable*, FieldVariable*> fvars;
   public:
     FieldVariable *getFieldVariable(GlobalVariable *gvar) {
       auto fieldTy = getFieldType(cast<StructType>(gvar->getType()->getPointerElementType()));
-      auto res = FieldVariable::create(gvar, fieldTy);
-      return res;
+      auto &fvar = fvars[gvar];
+      if (!fvar) {
+        fvar = FieldVariable::create(gvar, fieldTy);
+      }
+      return fvar;
     }
 
 

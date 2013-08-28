@@ -37,7 +37,7 @@ namespace isl {
 
   public:
     Id() { }
-    static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
+    //static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
     /* implicit */ Id(const ObjTy &that) : Obj(that) { }
     /* implicit */ Id(ObjTy &&that) : Obj(std::move(that)) { }
@@ -61,16 +61,20 @@ namespace isl {
     void *getUser() const;
     template<typename T> T getUser() { return static_cast<T>(getUser()); }
 
-    void setFreeUser_inline(void (*freefunc)(void *));
+    /// Set the function to be executued when the last user frees this Id
+    /// NOTE: Id's are interned and the freefunc does not change the Id's identity, therefore the freefunc applies to all id's with this identity (name + user)
     Id setFreeUser(void (*freefunc)(void *));
+    void setFreeUser_inline(void (*freefunc)(void *));
+    Id setFreeUser_consume(void (*freefunc)(void *));
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    Id setFreeUser(void (*freefunc)(void *)) && ;
+    Id setFreeUser(void (*freefunc)(void *)) &&;
 #endif
 #pragma endregion
   }; // class Id
 
 
   static inline Id enwrap(__isl_take isl_id *id) { return Id::enwrap(id); }
+  static inline Id enwrapCopy(__isl_take isl_id *id) { return Id::enwrap(id); }
 
   Id setFreeUser(const Id &id, void (*freefunc)(void *)) ;
   Id setFreeUser(Id &&id, void (*freefunc)(void *)) ;

@@ -45,9 +45,16 @@ namespace isl {
 namespace isl {
 
   enum class Accuracy {
+    /// Always returns correct result
     Exact,
+
+    /// Use simpler algorithm, but do not always return correct result
     Fast,
+
+    /// Only queries some flag; constant execution time
     Plain,
+
+    /// Always returns "don't know"
     None
   };
   enum class Approximation {
@@ -179,6 +186,7 @@ namespace isl {
     static Map createFromRange(Set &&set) { return Map::enwrap(isl_map_from_range(set.take())); }
 
     static Map createFromDomainAndRange(Set &&domain, Set &&range) { return Map::enwrap(isl_map_from_domain_and_range(domain.take(), range.take())); }
+    static Map createFromDomainAndRange(const Set &domain, const Set &range) { return Map::enwrap(isl_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
     static Map createFromSet(Set &&set, Space &&dim) { return Map::enwrap(isl_map_from_set(set.take(), dim.take())); }
 
     static Map fromAff(Aff &&aff) { return Map::enwrap(isl_map_from_aff(aff.take())); }
@@ -214,8 +222,22 @@ namespace isl {
       }
     }
 
+    bool plainIsEmpty() const { return checkBool(isl_map_plain_is_empty(keep())); }
+    bool fastIsEmpty() const { return checkBool(isl_map_fast_is_empty(keep())); }
     bool isEmpty() const { return checkBool(isl_map_is_empty(keep())); }
-
+    Tribool isEmpty(Accuracy accuracy) const {
+      switch (accuracy) {
+      case isl::Accuracy::None:
+        return Tribool::Indeterminate;
+      case  isl::Accuracy::Plain:
+        return Tribool::maybeFalseNegative(checkBool(isl_map_plain_is_empty(keep())));
+      case isl::Accuracy::Fast:
+        return Tribool::maybeFalseNegative(checkBool(isl_map_fast_is_empty(keep())));
+      case isl::Accuracy::Exact:
+      default:
+        return checkBool(isl_map_is_empty(keep()));
+      }
+    }
 
     void removeRedundancies() { give (isl_map_remove_redundancies(take())); } 
     void neg() { give(isl_map_neg(take())); }
@@ -234,8 +256,8 @@ namespace isl {
 
     void lexmin_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_lexmin(take())); } 
     Map lexmin() const { return Map::enwrap(isl_map_lexmin(takeCopy())); }
-    
-     /// For every element in the map's domain, compute the lexical minimum of the set the element is mapped to
+
+    /// For every element in the map's domain, compute the lexical minimum of the set the element is mapped to
     PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
     PwMultiAff lexminPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
@@ -333,8 +355,8 @@ namespace isl {
     void subtract_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { return give(isl_map_subtract(take(), map.takeCopy())); }
     Map subtract(const Map &map) const { return Map::enwrap(isl_map_subtract(takeCopy(), map.takeCopy())); }
 
-    void substractRange_inplace(const Set &dom) ISLPP_INPLACE_QUALIFIER { give(isl_map_subtract_range(take(), dom.takeCopy())); }
-    Map substractRange(const Set &dom) const { return Map::enwrap(isl_map_subtract_range(takeCopy(), dom.takeCopy())); }
+    void subtractRange_inplace(const Set &dom) ISLPP_INPLACE_QUALIFIER { give(isl_map_subtract_range(take(), dom.takeCopy())); }
+    Map subtractRange(const Set &dom) const { return Map::enwrap(isl_map_subtract_range(takeCopy(), dom.takeCopy())); }
 
     void complement_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_complement(take())); }
     Map complement() const { return Map::enwrap(isl_map_complement(takeCopy())); }
@@ -394,8 +416,7 @@ namespace isl {
     /// { A -> B } to { (A, B) -> B }
     Map rangeMap() const { return Map::enwrap(isl_map_range_map(takeCopy())); }
 
-    bool plainIsEmpty() const { return isl_map_plain_is_empty(keep()); }
-    bool fastIsEmpty() const { return isl_map_fast_is_empty(keep()); }
+
     bool plainIsUniverse() const { return isl_map_plain_is_universe(keep()); }
 
 
@@ -403,7 +424,7 @@ namespace isl {
     bool isSingleValued() const { return isl_map_plain_is_single_valued(keep()); }
 
     bool plainIsInjective() const { return checkBool(isl_map_plain_is_injective(keep())); }
-    bool isInjective() const { return checkBool( isl_map_is_injective(keep())); }
+    bool isInjective() const { return checkBool(isl_map_is_injective(keep())); }
     bool isBijective() const { return checkBool(isl_map_is_bijective(keep())); }
     bool isTranslation() const { return checkBool(isl_map_is_translation(keep())); }
 
@@ -416,10 +437,15 @@ namespace isl {
     Map curry() const { return Map::enwrap(isl_map_curry(takeCopy())); }
 
     bool canUnurry() const { return isl_map_can_uncurry(keep()); }
-    void uncurry_inplace() ISLPP_INPLACE_QUALIFIER{ give(isl_map_uncurry(take()));}
+    void uncurry_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_uncurry(take()));}
     Map uncurry() const { return Map::enwrap(isl_map_uncurry(takeCopy()));  }
 
-    void makeDisjoint() { give(isl_map_make_disjoint(take()));}
+    Map makeDisjoint() const { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
+    void makeDisjoint_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_make_disjoint(take()));}
+      Map makeDisjoint_consume() { return Map::enwrap(isl_map_make_disjoint(take()));}
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+        Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
+#endif
 
     void computeDivs() { give(isl_map_compute_divs(take()));}
     void alignDivs() { give(isl_map_align_divs(take()));}
@@ -438,7 +464,13 @@ namespace isl {
     void gistRange(Set &&context) { give(isl_map_gist_range(take(), context.take())); }
     void gistParams(Set &&context) { give(isl_map_gist_params(take(), context.take())); }
 
-    void coalesce() { give(isl_map_coalesce(take())); } 
+    Map coalesce() const { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
+    void coalesce_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_coalesce(take())); } 
+    Map coalesce_consume() { return Map::enwrap(isl_map_coalesce(take())); } 
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Map coalesce() && { return Map::enwrap(isl_map_coalesce(take())); } 
+#endif
+
     uint32_t getHash() const { return isl_map_get_hash(keep()); } 
 
     bool foreachBasicMap(std::function<bool(BasicMap&&)> func) const;
@@ -512,10 +544,15 @@ namespace isl {
       return result;
     }
 
+
     Map chainNested(const Map &map) const;
     Map chainNested(const Map &map, unsigned tuplePos) const;
 
+    /// { (A, B, C) -> D }.chainNested(isl_dim_in, { B -> E }) = { (A, B, C, D) ->E }
     Map chainNested(isl_dim_type type, const Map &map) const;
+
+    /// { (A, B, C) -> D }.applyNested(isl_dim_in, { B -> E })  = { (A, E, C) -> D }
+    Map applyNested(isl_dim_type type, const Map &map) const;
 
     /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy()));} 
@@ -562,7 +599,7 @@ namespace isl {
   static inline Map applyRange(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_range(map1.take(), map2.take())); }
   static inline Map domainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_domain_product(map1.take(), map2.take())); }
   static inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_range_product(map1.take(), map2.take())); }
-    static inline Map rangeProduct(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_range_product(map1.takeCopy(), map2.takeCopy())); }
+  static inline Map rangeProduct(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_range_product(map1.takeCopy(), map2.takeCopy())); }
   static inline Map flatProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_product(map1.take(), map2.take())); }
   static inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
   static inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_range_product(map1.take(), map2.take())); }
