@@ -101,13 +101,6 @@ namespace isl {
 
 
 #pragma region Conversion
-#if 0
-    /* implicit */ Pw(const PwMultiAff &that) { give(that.takeCopy()); }
-    /* implicit */ Pw(PwMultiAff &&that) { give(that.take()); }
-    const PwMultiAff &operator=(const PwMultiAff &that) { give(that.takeCopy()); return *this; }
-    const PwMultiAff &operator=(PwMultiAff &&that) { give(that.take()); return *this; }
-#endif
-
     Map toMap() const;
     //operator Map() const { return toMap(); }
 
@@ -125,14 +118,13 @@ namespace isl {
 
 
 #pragma region Properties
-    //Ctx *getCtx() const { return Ctx::wrap(isl_pw_multi_aff_get_ctx(keep())); }
     Space getDomainSpace() const { return Space::enwrap(isl_pw_multi_aff_get_domain_space(keep())); }
-    //Space getSpace() const { Space::wrap(isl_pw_multi_aff_get_space(keep())); }
 #pragma endregion
 
 
     PwAff getPwAff(int pos) const { return PwAff::enwrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
     PwMultiAff setPwAff(int pos, PwAff &&pa) const { return enwrap(isl_pw_multi_aff_set_pw_aff(takeCopy(), pos, pa.take())); }
+    void setPwAff_inplace(int pos, PwAff &&pa) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_set_pw_aff(take(), pos, pa.take())); }
 
     /// The set of elements for which this affine mapping is defined
     Set domain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
@@ -153,6 +145,13 @@ namespace isl {
 
     bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
     unsigned nPieces() const { unsigned result=0;  foreachPiece([&result] (Set&& , MultiAff&&)->bool{ result+=1; return true; } ) ; return result; }
+
+    Map reverse() const;
+    PwMultiAff neg() const;
+
+    PwMultiAff operator-() const { return neg(); }
+
+    void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_QUALIFIER  { give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
   }; // class Pw<MultiAff>
 
 

@@ -15,8 +15,6 @@ namespace molly {
   private:
     isl::PwAff mapping;
 
-    //llvm::Function *getMappingFunc(llvm::Module *module);
-
   public:
     AffineMapping(isl::PwAff &&mapping) : mapping(std::move(mapping)) { }
 

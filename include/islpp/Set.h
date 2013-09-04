@@ -81,7 +81,10 @@ namespace isl {
     void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
     void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
 
-  public:
+  public:    
+    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_reset_tuple_id(take())); }
+    //void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_reset_dim_id(take(), pos)); }
+
     void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_insert_dims(take(), type, pos, count)); }
     void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
     void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_remove_dims(take(), type, first, count)); }
@@ -254,7 +257,9 @@ namespace isl {
     Map chain(const Map &map) const;
 
     // { (A -> B -> C ) } and { B' -> D } to { (A -> B*B' -> C) -> D }
-    Map chainNested(const Map &map) const;
+    Map chainNested(const Map &map) const; // deprecated; use chainSubspace
+    Map chainSubspace(const Map &map) const;
+    Map chainSubspace_consume(const Map &map);
     Map chainNested(const Map &map, unsigned tuplePos) const;
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
@@ -270,6 +275,15 @@ namespace isl {
     ///   { (A -> (B -> C)) }.unwrapTuple(B) = { (A -> C) -> B }
     Map unwrapTuple_internal(unsigned TuplePos) ISLPP_INTERNAL_QUALIFIER;
     Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
+
+    Set intersect(const Set &that) const { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
+    void intersect_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_intersect(take(), that.takeCopy())); }
+
+    /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
+    /// { (A, B, C) }.subspspaceMap({ B }) = { (A, B, C) -> B }
+    Map subspaceMap(const Space &space) const;
+
+    Set resetTupleId() const { return Set::enwrap(isl_set_reset_tuple_id(takeCopy())); }
   }; // class Set
 
 

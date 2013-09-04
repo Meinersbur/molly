@@ -33,7 +33,6 @@ namespace isl {
 
   public:
     Expr() { }
-    //static ObjTy enwrap(StructTy *obj) { ObjTy result; result.give(obj); return result; }
 
     /* implicit */ Expr(const ObjTy &that) : Obj(that) { }
     /* implicit */ Expr(ObjTy &&that) : Obj(std::move(that)) { }

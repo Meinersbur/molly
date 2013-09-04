@@ -212,6 +212,7 @@ namespace isl {
     }
 
   public:
+    //FIXME: Name collision with isl_space_reset
     void reset(StructTy *obj = nullptr) {
       if (this->obj)
         getDerived()->release();
@@ -288,9 +289,9 @@ namespace isl {
     }
 
   public:
-    bool isValid () const { return obj; }
+    bool isValid() const { return obj; }
     bool isNull() const { return !obj; }
-    LLVM_EXPLICIT operator bool() { return obj; }
+    //LLVM_EXPLICIT operator bool() { return isValid(); }
 
     std::string toString() {
       std::string buf;

@@ -110,15 +110,19 @@ namespace isl {
     static Space createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
 
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
-    static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.take(), range.takeCopy())); }
-    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.take())); }
-    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { assert(domain.getCtx() == range.getCtx()); return Space::enwrap(isl_space_map_from_domain_and_range(domain.takeCopy(), range.takeCopy())); }
+    static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { return createMapFromDomainAndRange(domain.move(), range.copy()); }
+    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { return createMapFromDomainAndRange(domain.copy(), range.move()); }
+    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { return createMapFromDomainAndRange(domain.copy(), range.copy()); }
 #pragma endregion
 
 
 #pragma region Create other spaces
     Space mapsTo(const Space &range) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
     Space mapsTo(unsigned nOut) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut) )); }
+
+    // If this is a param space
+    Space createSetSpace(unsigned nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
+    Space createMapSpace(unsigned nDomainDims, unsigned nRangeDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_alloc(getCtx()->keep(), 0, nDomainDims, nRangeDims), takeCopy())); }
 #pragma endregion
 
 
@@ -136,8 +140,10 @@ namespace isl {
     /// create a map where the first n_equal dimensions map to equal value
     BasicMap equalBasicMap(unsigned n_equal) const;
 
-     /// Create a map that equates the selected dimensions
+    /// Create a map that equates the selected dimensions
     BasicMap equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const;
+    BasicMap equalSubspaceBasicMap(const Space &domainSubpace, const Space &rangeSubspace) const;
+    BasicMap equalSubspaceBasicMap(const Space &subspace) const;
 
     /// Create a relation the maps a value to everything that is lexically smaller at dimension pos
     BasicMap lessAtBasicMap(unsigned pos) const;
@@ -159,7 +165,7 @@ namespace isl {
 
     /// Maps vectors to any vector that is lexically less in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexLtFirstMap(unsigned pos) const;
-      Map lexLeFirstMap(unsigned pos) const;
+    Map lexLeFirstMap(unsigned pos) const;
 
     /// Maps vectors to any vector that is lexically greater in the first n coordinates (other coordinates are ignored, meaning vectors are lexically equal if their first pos coordinates are equal)
     Map lexGtFirstMap(unsigned pos) const;
@@ -170,7 +176,12 @@ namespace isl {
 
     Aff createZeroAff() const;
     Aff createConstantAff(const Int &) const;
+
     Aff createVarAff(isl_dim_type type, unsigned pos) const;
+    Aff createAffOnVar(unsigned pos) const;
+    Aff createAffOnParam(const Id &dimId) const;
+
+    AffExpr createVarAffExpr(isl_dim_type type, unsigned pos) const;
 
     // Piecewise without pieces (i.e. defined on nothing)
     PwAff createEmptyPwAff() const;
@@ -206,19 +217,19 @@ namespace isl {
     bool isNontrivialSetSpace() const { return isSetSpace() && !isParamsSpace(); }
     bool isMapSpace() const;
 
-    bool matches(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return isl_space_match(keep(), thisType, that.keep(), thatType); }
+    bool match(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType)); }
 
 
 #pragma region Matching spaces
     bool matchesSpace(const Space &that) const {
-  if (that.isSetSpace())
-    return matchesSetSpace(that);
+      if (that.isSetSpace())
+        return matchesSetSpace(that);
 
-  if (that.isMapSpace())
-    return matchesMapSpace(that);
+      if (that.isMapSpace())
+        return matchesMapSpace(that);
 
-  assert(that.isParamsSpace());
-  return isParamsSpace();
+      assert(that.isParamsSpace());
+      return isParamsSpace();
     }
 
 
@@ -236,7 +247,7 @@ namespace isl {
 
       if (!this->isSetSpace())
         return false;
-      return matches(isl_dim_set, that, isl_dim_set);
+      return this->match(isl_dim_set, that, isl_dim_set);
     }
 
 
@@ -252,11 +263,11 @@ namespace isl {
 
 
     bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) const {
-  assert(domainSpace.isSetSpace());
-  assert(rangeSpace.isSetSpace());
-  if (!isMapSpace())
-    return false;
-  return matches(isl_dim_in, domainSpace, isl_dim_set) && matches(isl_dim_out, rangeSpace, isl_dim_set);
+      assert(domainSpace.isSetSpace());
+      assert(rangeSpace.isSetSpace());
+      if (!isMapSpace())
+        return false;
+      return match(isl_dim_in, domainSpace, isl_dim_set) && match(isl_dim_out, rangeSpace, isl_dim_set);
     }
 
 
@@ -265,21 +276,21 @@ namespace isl {
       if (!this->isMapSpace())
         return false;
 
-      return matches(isl_dim_in, that, isl_dim_in) && matches(isl_dim_out, that, isl_dim_out);
+      return match(isl_dim_in, that, isl_dim_in) && match(isl_dim_out, that, isl_dim_out);
     }
 
 
     bool matchesMapSpace(const Space &domainSpace, const Id &rangeId)const {
       if (!this->isMapSpace())
         return false;
-      return matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
+      return match(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
     }
 
 
     bool matchesMapSpace(const Id &domainId, const Space &rangeSpace) const{
       if (!this->isMapSpace())
         return false;
-      return (getInTupleId() == domainId) && matches(isl_dim_out, rangeSpace, isl_dim_set);
+      return (getInTupleId() == domainId) && match(isl_dim_out, rangeSpace, isl_dim_set);
     }
 #pragma endregion
 
@@ -302,7 +313,7 @@ namespace isl {
     void unwrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_unwrap(take())); }
     Space unwrap_consume() { return Space::enwrap(isl_space_unwrap(take())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-     Space unwrap() && { return Space::enwrap(isl_space_unwrap(take())); }
+    Space unwrap() && { return Space::enwrap(isl_space_unwrap(take())); }
 #endif
 
     Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
@@ -323,6 +334,10 @@ namespace isl {
         return Space();
       }
     }
+
+    Space getParamsSpace() const { return Space::enwrap(isl_space_params(takeCopy())); }
+    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(takeCopy())); }
+      Space getRangeSpace() const { return Space::enwrap(isl_space_range(takeCopy())); }
 
     void fromDomain();
 
@@ -375,9 +390,6 @@ namespace isl {
     DimRange findNestedTuple(const Id &tupleId) const;
     DimRange findSubspace(isl_dim_type type, const Space &subspace) const;
 
-    void unwrapTuple_inplace(unsigned tuplePos) ISLPP_INPLACE_QUALIFIER;
-    void unwrapTuple_inplace(const Id &tupleId) ISLPP_INPLACE_QUALIFIER;
-
     Space moveTuple(isl_dim_type dst_type, unsigned dst_tuplePos, isl_dim_type src_type, unsigned src_tuplePos) const;
 
     /// 0=isNull();
@@ -404,6 +416,33 @@ namespace isl {
 
     Space removeSubspace(const Space &subspace) const;
     Space replaceSubspace(const Space &subspaceToReplace, const Space &replaceBy) const;
+
+    Space alignParams(const Space &that) const { return Space::enwrap(isl_space_align_params(this->takeCopy(), that.takeCopy())); }
+    Space alignParams(Space &&that) const { return Space::enwrap(isl_space_align_params(this->takeCopy(), that.take())); }
+    Space alignParams_consume(const Space &that) { return Space::enwrap(isl_space_align_params(this->take(), that.takeCopy())); }
+    Space alignParams_consume( Space &&that) { return Space::enwrap(isl_space_align_params(this->take(), that.take())); }
+    void alignParams_inplace(const Space &that) ISLPP_INPLACE_QUALIFIER { give(isl_space_align_params(this->take(), that.takeCopy())); }
+    void alignParams_inplace(Space &&that) ISLPP_INPLACE_QUALIFIER { give(isl_space_align_params(this->take(), that.take())); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+    Space alignParams(const Space &that) && { return Space::enwrap(isl_space_align_params(this->take(), that.takeCopy())); } 
+    Space alignParams(Space &&that) && { return Space::enwrap(isl_space_align_params(this->take(), that.take())); } 
+#endif
+
+    /// If a nested set space, unwrap it
+    /// May return set and map spaces
+    Space normalizeUnwrapped() const {
+      if (isWrapping())
+        return unwrap();
+      return copy();
+    }
+
+    /// Guaranteed to return a set space
+     Space normalizeWrapped() const {
+      if (isMapSpace())
+        return wrap();
+      return copy();
+    }
+
   }; // class Space
 
 
@@ -424,6 +463,12 @@ namespace isl {
 
   static inline bool operator==(const Space &lhs, const Space &rhs) { return (lhs.isNull() && rhs.isNull()) || (lhs.isValid() && rhs.isValid() && isEqual(lhs, rhs)); }
   static inline bool operator!=(const Space &lhs, const Space &rhs) { return !operator==(lhs, rhs); }
+
+  // Test for equality of domain and range dimensions, but not param dims as these are aligned automatically
+  static inline bool matchesSpace(const Space &lhs, const Space &rhs) { return lhs.matchesSpace(rhs); }
+
+  /// Ensure both spaces have the same param dimensions in the same order
+  void compatibilize(/*inout*/Space &space1, /*inout*/Space &space2);
 
 } // namespace isl
 #endif /* ISLPP_SPACE_H */

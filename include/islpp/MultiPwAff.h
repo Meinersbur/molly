@@ -80,62 +80,20 @@ namespace isl {
 #pragma endregion
 
 
-#if 0
-#ifndef NDEBUG
-  private:
-    std::string _printed;
-#endif
-
-  public:
-    typedef isl_multi_pw_aff IslType;
-    typedef PwAff EltType;
-    typedef Multi<PwAff> MultiType;
-
-#pragma region Low-level
-  private:
-    IslType *multi;
-
-  public: // Public because otherwise we had to add a lot of friends
-    IslType *take() { assert(multi); IslType *result = multi; multi = nullptr; return result; }
-    IslType *takeCopy() const { assert(multi); return isl_multi_pw_aff_copy(multi); }
-    IslType *keep() const { assert(multi); return multi; }
-  protected:
-    void give(IslType *multi) { assert(multi); if (this->multi) isl_multi_pw_aff_free(this->multi); this->multi = multi;
-#ifndef NDEBUG
-    this->_printed = toString();
-#endif
-    }
-
-    //explicit Multi(IslType *multi) : multi(multi) { }
-  public:
-    static MultiType wrap(IslType *multi) { MultiType result; result.give(multi); return result; }
-#pragma endregion
-
-  public:
-    Multi() : multi(nullptr) {}
-    Multi(const MultiType &that) : multi(nullptr) {give(that.takeCopy());}
-    Multi(MultiType &&that) : multi(nullptr) { give(that.take()); }
-    ~Multi() {
-      if (this->multi)
-        isl_multi_pw_aff_free(this->multi); 
-#ifndef NDEBUG
-      this->multi = nullptr;
-#endif
-    }
-
-    const MultiType &operator=(const MultiType &that) { give(that.takeCopy()); return *this; }
-    const MultiType &operator=(MultiType &&that) { give(that.take()); return *this; }
-
-    Ctx *getCtx() const { return Ctx::wrap(isl_multi_pw_aff_get_ctx(keep())); }
-#endif
 
     //Space getSpace() const { return Space::wrap(isl_multi_pw_aff_get_space(keep())); }
     Space getDomainSpace() const { return Space::enwrap(isl_multi_pw_aff_get_domain_space(keep())); }
 
 
 #pragma region Conversion
+    /* implicit */ Multi(const MultiAff &madd); 
+    MultiPwAff &operator=(const MultiAff &madd);
+
     Map toMap() const;
     //operator Map() const { return toMap(); }
+
+    /// Warning: exponential expansion!!
+    PwMultiAff toPwMultiAff() const;
 #pragma endregion
 
 
@@ -146,47 +104,10 @@ namespace isl {
     static MultiType createIdentity(Space &&space) { return MultiPwAff::enwrap(isl_multi_pw_aff_identity(space.take())); }
 
     //static MultiType readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_pw_aff_read_from_str(ctx->keep(), str)); } 
-
-        //MultiType copy() const { return wrap(takeCopy()); }
 #pragma endregion
 
-#if 0
-#pragma region Dimensions
-    unsigned dim(enum isl_dim_type type) const { return isl_multi_pw_aff_dim(keep(), type); }
-
-    //bool hasTupleName(isl_dim_type type) const { return isl_multi_aff_has_tuple_name(keep(), type); } 
-    const char *getTupleName(isl_dim_type type) const { return isl_multi_pw_aff_get_tuple_name(keep(), type); }
-    void setTupleName(isl_dim_type type, const char *s) { give(isl_multi_pw_aff_set_tuple_name(take(), type, s)); }
-
-    //bool hasTupleId(isl_dim_type type) const { return isl_multi_aff_has_tuple_id(keep(), type); }
-    //Id getTupleId(isl_dim_type type) const { return Id::wrap(isl_multi_aff_get_tuple_id(keep(), type)); }
-    void setTupleId(isl_dim_type type, Id &&id) { llvm_unreachable("API function missing"); }
-
-    //bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_multi_aff_has_dim_name(keep(), type, pos); }
-    //const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_multi_aff_get_dim_name(keep(), type, pos); }
-    void setDimName(isl_dim_type type, unsigned pos, const char *s) { give(isl_multi_pw_aff_set_dim_name(take(), type, pos, s)); }
-    //int findDimByName(isl_dim_type type, const char *name) const { return isl_multi_aff_find_dim_by_name(keep(), type, name); }
-
-    //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_multi_aff_has_dim_id(keep(), type, pos); }
-    //Id getDimId(isl_dim_type type, unsigned pos) const { return Id::wrap(isl_multi_aff_get_dim_id(keep(), type, pos)); }
-    //void setDimId(isl_dim_type type, unsigned pos, Id &&id) { give(isl_multi_aff_set_dim_id(take(), type, pos, id.take())); }
-    void setDimId(isl_dim_type type, unsigned pos, Id &&id) { llvm_unreachable("API function missing"); }
-    //int findDimById(isl_dim_type type, const Id &id) const { return isl_multi_aff_find_dim_by_id(keep(), type, id.keep()); }
-
-    void addDims(isl_dim_type type, unsigned n) { give(isl_multi_pw_aff_add_dims(take(), type, n)); }
-    void insertDims(isl_dim_type type, unsigned pos, unsigned n) { give(isl_multi_pw_aff_insert_dims(take(), type, pos, n)); }
-    //void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { give(isl_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n)); }
-    void moveDims(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n) { llvm_unreachable("API function missing"); }
-    //void dropDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_multi_pw_aff_drop_dims(take(), type, first, n)); }
-
-    void removeDims(isl_dim_type type, unsigned first, unsigned n) { llvm_unreachable("API function missing"); }
-#pragma endregion
-#endif
 
 #pragma region Printing
-    //void print(llvm::raw_ostream &out) const;
-    //std::string toString() const;
-    //void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
 #pragma endregion
 
@@ -194,7 +115,7 @@ namespace isl {
 #pragma region Multi
     EltType getPwAff(int pos) const { return EltType::enwrap(isl_multi_pw_aff_get_pw_aff(keep(), pos)); }
     MultiType setPwAff(int pos, PwAff &&el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos, el.take())); }
-     MultiType setPwAff(int pos, const PwAff &el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos, el.takeCopy())); }
+    MultiType setPwAff(int pos, const PwAff &el) const { return MultiType::enwrap(isl_multi_pw_aff_set_pw_aff(takeCopy(), pos, el.takeCopy())); }
     void setPwAff_inplace(int pos, PwAff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.take())); }
     void setPwAff_inplace(int pos, const PwAff &el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.takeCopy())); }
 

@@ -125,11 +125,11 @@ isl::Map FieldType::getDistributionMapping() {
 /* global coordinate -> node coordinate */
 isl::MultiAff FieldType::getDistributionAff() {
   auto islctx = getIslContext();
-  isl::MultiAff result;
-  auto indexspace = getLogicalIndexsetSpace();
 
+  auto indexspace = getLogicalIndexsetSpace();
   auto lengths = getLengths();
   auto dims = lengths.size();
+  auto result = indexspace.mapsTo(islctx->createSetSpace(0, dims)).createZeroMultiAff();
   for (auto d = 0; d < dims; d+=1){
     auto len = lengths[d];
     // gcoord = nodecoord*len + lcoord

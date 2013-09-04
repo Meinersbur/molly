@@ -12,24 +12,17 @@ Map Multi<PwAff>::toMap() const {
 }
 
 
+PwMultiAff Multi<PwAff>::toPwMultiAff() const {
+  return PwMultiAff::enwrap(isl_pw_multi_aff_from_map( toMap().take() ));
+}
+
+
 void Multi<PwAff>::print(llvm::raw_ostream &out) const{
   auto printer = Printer::createToStr(getCtx());
   printer.print(*this);
   out << printer.getString();
 }
-#if 0
-std::string Multi<PwAff>::toString() const {
-  if (!keep())
-    return std::string();
-  std::string buf;
-  llvm::raw_string_ostream out(buf);
-  print(out);
-  return out.str();
-}
-void Multi<PwAff>::dump() const { 
-  isl_multi_pw_aff_dump(keep()); 
-}
-#endif
+
 void Multi<PwAff>::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);
@@ -37,6 +30,17 @@ void Multi<PwAff>::printProperties(llvm::raw_ostream &out, int depth, int indent
     out << "...";
   }
 }
+
+
+    /* implicit */  Multi<PwAff>:: Multi(const MultiAff &madd) 
+      : Obj(madd.isValid() ? madd.toMultiPwAff().take() : nullptr) { 
+    }
+
+
+    MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) { 
+      give(madd.isValid() ? madd.toMultiPwAff().take() : nullptr); 
+return *this;
+    }
 
 
 void Multi<PwAff>::push_back(PwAff &&aff) {

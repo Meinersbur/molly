@@ -49,6 +49,9 @@ namespace isl {
   // Aff.h
   class Aff;
 
+  // AffExpr.h
+  class AffExpr;
+
   // BasicSet.h
   class BasicSet;
 

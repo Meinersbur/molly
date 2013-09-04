@@ -25,6 +25,9 @@ namespace molly {
     AffineMapping *mapping;
     isl::PwAff countElts;
 
+    AffineMapping *dstMapping;
+    AffineMapping *srcMapping;
+
     llvm::Value *getSendBufferBase(DefaultIRBuilder &builder);
     llvm::Value *getRecvBufferBase(DefaultIRBuilder &builder);
 
@@ -62,6 +65,10 @@ namespace molly {
     void doLayoutMapping();
      const AffineMapping *getMapping() { return mapping; }
      isl::PwAff getEltCount() { return countElts; }
+
+     /// Mapping from sets of cluster nodes to a linearized rank
+     const AffineMapping *getDstMapping() { return dstMapping; }
+     const AffineMapping *getSrcMapping() { return srcMapping; }
 
     llvm::Value *codegenReadFromBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices);
     void codegenWriteToBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices);

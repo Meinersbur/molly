@@ -36,16 +36,39 @@ namespace isl {
 
 namespace isl {
 
+  /// methods between isl::Aff and isl::AffExpr
+  template<typename AffTy>
+  class AffCommon {
+  private:
+    AffTy &getDerived() { return *static_cast<AffTy*>(this); }
+    const AffTy &getDerived() const { return *static_cast<const AffTy*>(this); }
+
+#pragma region isl::Obj
+    friend class isl::Obj<AffTy, isl_aff>;
+  protected:
+    void release() { isl_aff_free(getDerived().takeOrNull()); }
+    isl_aff *addref() const { return isl_aff_copy(getDerived().keepOrNull()); }
+
+  public:
+    Ctx *getCtx() const { return Ctx::enwrap(isl_aff_get_ctx(getDerived().keep())); }
+    void dump() const { isl_aff_dump(getDerived().keep()); }
+#pragma endregion
+
+  public:
+    Int getConstant() const {  
+        Int result;
+        isl_aff_get_constant(getDerived().keep(), result.change());
+        return result;
+    }
+  }; // AffCommon
+
+
   Aff div(Aff &&, const Int &);
- 
-  class Aff : public Obj<Aff, isl_aff>, public Spacelike<Aff> {
+
+  class Aff : public Obj<Aff, isl_aff>, public Spacelike<Aff>, public AffCommon<Aff> {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
-  protected:
-    void release() { isl_aff_free(takeOrNull()); }
-    StructTy *addref() const { return isl_aff_copy(keepOrNull()); }
-
   public:
     Aff() { }
 
@@ -54,9 +77,7 @@ namespace isl {
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
-    Ctx *getCtx() const { return Ctx::enwrap(isl_aff_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_aff_dump(keep()); }
 #pragma endregion
 
 
@@ -125,11 +146,12 @@ namespace isl {
     //LocalSpace getLocalSpace() const;
 
     //const char *getDimName( isl_dim_type type, unsigned pos) const;
-    Int getConstant() const;
+
     Int getCoefficient(isl_dim_type type, unsigned pos) const;
     Int getDenominator() const;
 
-    void setConstant(const Int &);
+    Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); } 
+    void setConstant_inplace(const Int &) ISLPP_INPLACE_QUALIFIER;
     void setCoefficient(isl_dim_type type, unsigned pos, int);
     void setCoefficient(isl_dim_type type, unsigned pos, const Int &);
     void setDenominator(const Int &);
@@ -149,7 +171,7 @@ namespace isl {
     bool isPlainZero() const;
     Aff getDiv(int pos) const;
 
-    void neg();
+    Aff neg() const { return Aff::enwrap(isl_aff_neg(takeCopy())); }
     void ceil();
     void floor();
     void mod(const Int &mod);
@@ -192,8 +214,8 @@ namespace isl {
   static inline bool isPlainEqual(const Aff &aff1, const Aff &aff2)  { return isl_aff_plain_is_equal(aff1.keep(), aff2.keep()); }
   static inline Aff mul(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_mul(aff1.take(), aff2.take())); }
   static inline Aff div(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
-   static inline Aff div(Aff &&aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
-static inline Aff add(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
+  static inline Aff div(Aff &&aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
+  static inline Aff add(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
 
   static inline Aff floor(Aff &&aff) { return Aff::enwrap(isl_aff_floor(aff.take())); }
   static inline Aff floor(const Aff &aff) { return Aff::enwrap(isl_aff_floor(aff.takeCopy())); }
@@ -203,6 +225,7 @@ static inline Aff add(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_add(aff1.t
   BasicSet leBasicSet(Aff &aff1, Aff &aff2);
   BasicSet geBasicSet(Aff &aff1, Aff &aff2);
 
+  static inline Aff operator+(const Aff &aff, int v) { return add(aff.copy(), aff.getLocalSpace().createConstantAff(v)); }
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

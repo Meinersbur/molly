@@ -51,7 +51,7 @@ namespace isl {
     /* implicit */ Union(const ObjTy &that) : Obj(that) { }
     const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
-    
+
     static UnionTy enwrap(StructTy *map) { ObjTy result; result.give(map); return result; }
 #pragma endregion
 
@@ -211,9 +211,9 @@ namespace isl {
 
   static inline UnionSet deltas(UnionMap &&umap) { return UnionSet::enwrap(isl_union_map_deltas(umap.take())); }
 
-  static inline bool isSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_subset(umap1.keep(), umap2.keep()); }
-  static inline bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_equal(umap1.keep(), umap2.keep()); }
-  static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return isl_union_map_is_strict_subset(umap1.keep(), umap2.keep()); }
+  static inline bool isSubset(const UnionMap &umap1, const UnionMap &umap2) { return checkBool(isl_union_map_is_subset(umap1.keep(), umap2.keep())); }
+  static inline bool isEqual(const UnionMap &umap1, const UnionMap &umap2) { return checkBool(isl_union_map_is_equal(umap1.keep(), umap2.keep())); }
+  static inline bool isStrictSubset(const UnionMap &umap1, const UnionMap &umap2) { return checkBool(isl_union_map_is_strict_subset(umap1.keep(), umap2.keep())); }
 
   static inline Map extractMap(const UnionMap &umap, Space &&dim) { return Map::enwrap(isl_union_map_extract_map(umap.keep(), dim.take())); }
 
@@ -225,6 +225,14 @@ namespace isl {
   static inline UnionMap lexGe(UnionMap &&umap1, UnionMap &&umap2) { return UnionMap::enwrap(isl_union_map_lex_ge_union_map(umap1.take(), umap2.take())); }
 
   static inline UnionSet wrap(UnionMap &&umap) { return UnionSet::enwrap(isl_union_map_wrap(umap.take())); }
+
+  static inline bool operator==(const UnionMap &lhs, const UnionMap &rhs) { return (lhs.isNull() && rhs.isNull()) || (lhs.isValid() && rhs.isValid() && isEqual(lhs, rhs));  } 
+  static inline bool operator!=(const UnionMap &lhs, const UnionMap &rhs) { return !operator==(lhs, rhs); } 
+  static inline bool operator<(const UnionMap &lhs, const UnionMap &rhs) { return isStrictSubset(lhs, rhs); } 
+  static inline bool operator<=(const UnionMap &lhs, const UnionMap &rhs) { return isSubset(lhs, rhs); } 
+  static inline bool operator>(const UnionMap &lhs, const UnionMap &rhs) { return isStrictSubset(rhs, lhs); } 
+  static inline bool operator>=(const UnionMap &lhs, const UnionMap &rhs) { return isSubset(rhs, lhs); } 
+
 
   static inline void computeFlow(UnionMap &&sink, UnionMap &&mustSource, UnionMap &&maySource, UnionMap &&schedule, UnionMap *mustDep, UnionMap *mayDep, UnionMap *mustNoSource, UnionMap *mayNoSource) {
     isl_union_map *mustDepObj = nullptr;

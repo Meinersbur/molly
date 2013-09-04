@@ -27,14 +27,14 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
 }
 
 
-    Map BasicMap:: intersect(Map &&that) const {
-      return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.take())); 
-    } 
+Map BasicMap:: intersect(Map &&that) const {
+  return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.take())); 
+} 
 
 
-    Map  BasicMap::intersect(const Map &that) const { 
-      return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
-    } 
+Map  BasicMap::intersect(const Map &that) const { 
+  return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
+} 
 
 
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 
@@ -123,4 +123,14 @@ Map BasicMap::domainProduct(const Map &that) const {
 
 Map BasicMap::rangeProduct(const Map &that) const { 
   return Map::enwrap(isl_map_range_product(isl_map_from_basic_map(this->takeCopy()), that.takeCopy()));
+}
+
+
+Map BasicMap::applyDomain(const Map &that) const { 
+  return Map::enwrap(isl_map_apply_domain(isl_map_from_basic_map(takeCopy()), that.takeCopy()));
+}
+
+
+Map BasicMap::applyRange(const Map &that) const { 
+  return Map::enwrap(isl_map_apply_domain(isl_map_from_basic_map(takeCopy()), that.takeCopy()));
 }

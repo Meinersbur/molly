@@ -115,7 +115,7 @@ namespace isl {
     Dim operator*() {
       assert(!isEnd());
       assert(curPos < curTypeDims);
-      return Dim::enwrap(space.getSpacelike(), curType, curPos);
+      return Dim::enwrap(curType, curPos, space.getSpace());
       //return Dim::enwrap(curType, curPos, space.getDimIdOrNull(curType, curPos), curTypeDims, space.getTupleIdOrNull(curType));
     }
 
@@ -204,6 +204,7 @@ namespace isl {
     void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_inplace(type, pos, getDerived()->getCtx()->createId(s)); }
 
     void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { getDerived()->insertDims_inplace(type, dim(type), count); }
+    void resetSpace_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { getDerived()->addDims_inplace(type, 0); }
 #pragma endregion
 
 
@@ -268,6 +269,9 @@ namespace isl {
     dim_iterator dim_begin() const { return dim_iterator(*getDerived(), DimTypeFlags::All); }
     dim_iterator dim_end() const { return dim_iterator(*getDerived(), DimTypeFlags::All, isl_dim_all, 0); }
 
+    //Space getParamsSpace() const { return getDerived()->getSpace().getParamsSpace(); }
+    //Space getDomainSpace() const { return getDerived()->getSpace().getDomainSpace(); }
+    //Space getRangeSpace() const { return getDerived()->getSpace().getRangeSpace(); }
 
     Id getTupleIdOrNull(isl_dim_type type) const {
       if (getDerived()->hasTupleId(type))
@@ -332,6 +336,8 @@ namespace isl {
     SpaceTy setTupleName(isl_dim_type type, const char *s) && { getDerived()->setTupleName_inplace(type, s); return std::move(*this); }
 #endif
 
+    SpaceTy resetTupleId(isl_dim_type type) { auto result = getDerived()->copy(); result.resetTupleId_inplace(type); return std::move(result); }
+
     void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, pos, std::move(id)); }
     void setDimId_inplace(isl_dim_type type, unsigned pos,const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, pos, id.copy()); }
     SpaceTy setDimId(isl_dim_type type, unsigned pos,Id &&id) const { auto result = getDerived()->copy(); result.setDimId_internal(type, pos, std::move(id)); return std::move(result); }
@@ -392,17 +398,25 @@ namespace isl {
       auto space = getDerived()->getSpace().keep();
       auto resultParam = isl_space_find_dim_by_id(space, isl_dim_param, id.keep());
       if (resultParam != -1)
-        return Dim::enwrap(space, isl_dim_param, resultParam);
+        return Dim::enwrap(isl_dim_param, resultParam, space);
       auto resultDomain = isl_space_find_dim_by_id(space, isl_dim_out, id.keep());
       if (resultDomain != -1)
-        return Dim::enwrap(space, isl_dim_out, resultDomain);
+        return Dim::enwrap(isl_dim_out, resultDomain, space);
       auto resultRange = isl_space_find_dim_by_id(space, isl_dim_in, id.keep());
       if (resultRange != -1)
-        return Dim::enwrap(space, isl_dim_in, resultRange);
+        return Dim::enwrap(isl_dim_in, resultRange, space);
       return Dim();
     }
 
-    Dim getSetDim(unsigned pos) const { assert(isSet()); return Dim::enwrap(getDerived()->getSpacelike(), isl_dim_set, pos); }
+
+    Dim findDim(isl_dim_type type, unsigned pos) {
+    if (pos < getDerived()->dim(type))
+      return Dim::enwrap(type, pos, getDerived()->getSpace());
+    return Dim();
+    }
+
+
+    Dim getSetDim(unsigned pos) const { assert(isSet()); return Dim::enwrap(isl_dim_set, pos, getDerived()->getSpacelike()); }
 
 
 
@@ -467,7 +481,7 @@ namespace isl {
       if (!getDerived()->isMap())
         return false;
       auto space = getDerived()->getSpace();
-      return space.matches(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
+      return space.match(isl_dim_in, domainSpace, isl_dim_set) && (getOutTupleId() == rangeId);
     }
 
 
@@ -476,9 +490,11 @@ namespace isl {
         return false;
 
       auto space = getDerived()->getSpace();
-      return (getDerived()->getInTupleId() == domainId) && space.matches(isl_dim_out, rangeSpace, isl_dim_set);
+      return (getDerived()->getInTupleId() == domainId) && space.match(isl_dim_out, rangeSpace, isl_dim_set);
     }
 #pragma endregion
+
+    SpaceTy resetSpace(isl_dim_type type) const { auto result = getDerived()->copy(); result.resetSpace_inplace(type); return result; }
   }; // class Spacelike
 
 

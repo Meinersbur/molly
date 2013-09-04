@@ -303,6 +303,7 @@ namespace {
         assert(callInstr->hasOneUse());
         callInstr->moveBefore(accessInstr);
       }
+
 #if 0
       // Move operands into the isolated block
       // Required to detect the affine access relations
@@ -326,6 +327,13 @@ namespace {
 
         }
 
+      }
+#endif
+
+#ifndef NDEBUG
+            auto RI = this->getAnalysisIfAvailable<RegionInfo>();
+      if (RI) {
+        RI->verifyAnalysis();
       }
 #endif
     }

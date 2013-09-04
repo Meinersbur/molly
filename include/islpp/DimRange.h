@@ -3,39 +3,41 @@
 
 #include <isl/space.h> // enum isl_dim_type
 #include "Islfwd.h"
-#include "Space.h"
-#include "LocalSpace.h"
+#include <assert.h>
+
 
 namespace isl {
 
-   class DimRange {
-    private:
-      isl_dim_type type;
+  /// May also have sth like LocalDimRange
+  class DimRange {
+  private:
+    isl_dim_type type;
     unsigned first;
     unsigned count;
+    isl_space *space;
 
-    // TODO: PointerUnion
-    Space space;
-    //LocalSpace localspace;
+    DimRange(isl_dim_type type, unsigned first, unsigned count, __isl_take isl_space *space) : type(type), first(first), count(count), space(space) {
+      assert(first + count <= isl_space_dim(space, type));
+    }
 
-   protected:
-     DimRange(Space &&space, isl_dim_type type, unsigned first, unsigned count) : space(space.move()), type(type), first(first), count(count)  {}
-     //DimRange(LocalSpace &&localspace, isl_dim_type type, unsigned first, unsigned count) : space(), localspace(localspace.move()), first(first), count(count)  {}
+  public:
+    DimRange() : type(isl_dim_cst/*cst dimension is for internal use only*/) {}
+    ~DimRange() { isl_space_free(space); space = NULL; }
 
-   public:
-     DimRange() : space(), type(isl_dim_cst), first(0),count(0) {}
-     static DimRange enwrap(Space space, isl_dim_type type, unsigned first, unsigned count) { return DimRange(space.move(), type, first, count); }
+    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, __isl_take isl_space *space);
+    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, Space &&space);
+    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, const Space &space);
 
-     bool isValid() { return type!=isl_dim_cst; }
-       bool isNull() { return type==isl_dim_cst; }
+  public:
+    bool isNull() { return type==isl_dim_cst; }
+    bool isValid() { return type!=isl_dim_cst; }
 
-       isl_dim_type getType() const { return type; }
-       unsigned getBeginPos() const {return first;}
-       unsigned getCount() const { return count; }
-       unsigned getEndPos() const { return first+count; }
+    isl_dim_type getType() const { return type; }
+    unsigned getBeginPos() const {return first;}
+    unsigned getCount() const { return count; }
+    unsigned getEndPos() const { return first+count; }
 
-       Space getSpace() const { return space; }
-
+    Space getSpace() const;
   }; // class DimRange
 
 } // namespace isl

@@ -95,22 +95,6 @@ void ScopEditor::getParamsMap(std::map<isl_id *, llvm::Value *> &params, ScopStm
   //TODO: Also add ids for induction variables
 } 
 
-#if 0
-polly::ScopStmt *ScopEditor::createBlock(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name) {
-  assert(isSubset(domain, scattering.getDomain()));
-  assert(isSubset(domain, where.getDomain()));
-
-  auto &llvmContext = getLLVMContext();
-  auto function = getParentFunction();
-
-  auto bb = BasicBlock::Create(llvmContext, name, function);
-
-  auto stmt = new ScopStmt(scop, bb, name, nullptr, ArrayRef<Loop*>(), domain.take(), scattering.take());
-  stmt->setWhereMap(where.take());
-  return stmt;
-}
-#endif
-
 
 static void addBasicBlockToLoop(BasicBlock *headerBB, Loop* loop, LoopInfo *LI) {
   if (LI) {
@@ -122,6 +106,173 @@ static void addBasicBlockToLoop(BasicBlock *headerBB, Loop* loop, LoopInfo *LI) 
       L = L->getParentLoop();
     }
   }
+}
+
+
+/// Create a new natural loop. It will look like:
+///  LoopEntry  
+///      |
+///  LoopHeader <-
+///   |     |     \
+///   | LoopBody   |
+///   |     |      |
+///   |    LoopFooter
+///   |
+/// LoopExit
+static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entryBB, BasicBlock *&exitBB, Pass *pass, Loop *parentLoop, /*out*/Loop *&loop, Region *parentRegion, /*out*/Region *&region) {
+  auto &llvmContext = func->getContext();
+  auto intTy = nIterations->getType();
+  assert(!loop);
+  assert(!region);
+
+  auto entryCreated = false;
+  if (!entryBB) {
+    entryBB = BasicBlock::Create(llvmContext, "LoopEntry", func);
+    entryCreated = true;
+  }
+  auto headerBB = BasicBlock::Create(llvmContext, "LoopHeader", func);
+  auto bodyBB = BasicBlock::Create(llvmContext, "LoopBody", func);
+  auto footerBB = BasicBlock::Create(llvmContext, "LoopFooter", func);
+  auto exitCreated = false;
+  if (!exitBB) {
+    exitBB = BasicBlock::Create(llvmContext, "LoopExit", func);
+    exitCreated = true;
+  }
+
+
+  // LoopEntry (also called preheader)
+  if (auto term = entryBB->getTerminator())
+    term->eraseFromParent();
+  BranchInst::Create(headerBB, entryBB);
+
+  // LoopHeader
+  auto indvar = PHINode::Create(intTy, 2, "indvar", headerBB);
+  indvar->addIncoming(Constant::getNullValue(intTy), entryBB);
+  auto cmp = new ICmpInst(*headerBB, ICmpInst::ICMP_SLE, indvar, nIterations, "indvarcmp");
+  BranchInst::Create(bodyBB, exitBB, cmp, headerBB);
+
+  // LoopBody
+  // Caller is meant to insert something here
+  BranchInst::Create(footerBB, bodyBB);
+
+  // LoopFooter
+  auto indvarinc = BinaryOperator::CreateNSWAdd(indvar, ConstantInt::get(intTy, 1), "indvarinc", footerBB);
+  BranchInst::Create(headerBB, footerBB); // Backedge
+  indvar->addIncoming(indvarinc, footerBB);
+
+  // LoopExit
+  if (exitCreated) {
+    new UnreachableInst(llvmContext, exitBB);
+  }
+
+
+  RegionInfo *RI = nullptr;
+  LoopInfo *LI = nullptr;
+  DominatorTree *DT = nullptr; 
+  if (pass) {
+    RI = pass->getAnalysisIfAvailable<RegionInfo>();
+    LI = pass->getAnalysisIfAvailable<LoopInfo>();
+    DT = pass->getAnalysisIfAvailable<DominatorTree>();
+    assert(!RI == !DT);
+  }
+
+  if (DT) {
+    SmallVector<DomTreeNode *, 8> OldChildren;
+    auto entryNode = DT->getNode(entryBB);
+    if (entryNode) {
+      for (DomTreeNode::iterator I = entryNode->begin(), E = entryNode->end(); I != E; ++I)
+        OldChildren.push_back(*I);
+    } else { 
+      entryNode = DT->addNewBlock(entryBB, DT->getRoot());
+    }
+
+    // What the newly created BBs domainate
+    auto headerNode = DT->addNewBlock(headerBB, entryBB);
+    DT->addNewBlock(bodyBB, headerBB);
+    DT->addNewBlock(footerBB, bodyBB);
+    
+    auto exitNode = DT->getNode(exitBB);
+    if (exitNode) {
+      // exitBB is now below headerBB
+      if (DT->findNearestCommonDominator(exitBB, entryBB) == entryBB)
+        DT->changeImmediateDominator(exitBB, headerBB);
+    } else {
+      exitNode = DT->addNewBlock(exitBB, headerBB);
+    }
+
+    // Append everything that followed the entryNode to the headerNode
+    for (auto I = OldChildren.begin(), E = OldChildren.end(); I != E; ++I) { 
+      auto oldChild = *I; 
+      //if (oldChild != exitNode)
+        DT->changeImmediateDominator(oldChild, headerNode);
+    }
+
+    DT->verifyAnalysis();
+  }
+
+  if (RI) {
+    Region *commonRegion = nullptr;
+    if (!entryCreated && !entryCreated)
+      commonRegion = RI->getCommonRegion(entryBB, exitBB);
+    else if (!entryCreated)
+      commonRegion = RI->getRegionFor(entryBB);
+    else if (!exitCreated)
+      commonRegion = RI->getRegionFor(exitBB);
+    else
+      commonRegion = RI->getTopLevelRegion();
+    assert(!parentRegion || parentRegion  == commonRegion);
+    if (!parentRegion)
+      parentRegion = commonRegion;
+
+    region = new Region(entryBB, exitBB, RI, DT, parentRegion);
+    //parentRegion->addSubRegion(region);
+    if (entryCreated)
+      RI->setRegionFor(entryBB, region);
+    RI->setRegionFor(headerBB, region);
+    RI->setRegionFor(bodyBB, region);
+    RI->setRegionFor(footerBB, region);
+    if (exitCreated)
+      RI->setRegionFor(exitBB, region);
+
+    RI->verifyAnalysis();
+  }
+
+  if (LI) {
+    auto commonLoop = LI->getLoopFor(entryBB);
+    assert(!parentLoop || parentLoop==commonLoop);
+    if (!parentLoop)
+      parentLoop = commonLoop;
+
+    loop = new Loop();
+    //loop->setParentLoop(parentLoop);
+    parentLoop->addChildLoop(loop);
+    addBasicBlockToLoop(headerBB, loop, LI);
+    addBasicBlockToLoop(bodyBB, loop, LI);
+    addBasicBlockToLoop(footerBB, loop, LI);
+
+    LI->verifyAnalysis();
+  }
+
+  return bodyBB;
+}
+
+
+static BasicBlock* insertLoop(BasicBlock *into, Instruction *insertBefore, Value *nIterations, Pass *pass,Loop *parentLoop, /*out*/Loop *&loop, Region *parentRegion, /*out*/Region *&region) {
+  auto func = getParentFunction(into);
+
+  BasicBlock *entryBB = nullptr;
+  BasicBlock *exitBB = nullptr;
+  if (insertBefore) {
+    exitBB = SplitBlock(into, insertBefore, pass);
+    entryBB = into;
+  } else {
+    entryBB = into;
+    auto term = cast<BranchInst>(into->getTerminator());
+    assert(term->isUnconditional());
+    exitBB = term->getSuccessor(0);
+  }
+
+  return newLoop(into->getParent(), nIterations, entryBB, exitBB, pass, parentLoop, loop, parentRegion, region); 
 }
 
 
@@ -150,7 +301,6 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
     // Loop header
     auto headerBB = BasicBlock::Create(llvmContext, "LoopHeader", function);
     addBasicBlockToLoop(headerBB, loop, LI);
-    //DefaultIRBuilder headerBuilder(headerBB);
 
     // Loop footer
     auto footerBB = BasicBlock::Create(llvmContext, "LoopFooter", function);
@@ -166,7 +316,7 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
   }
 
   auto entryBB = &function->getEntryBlock();
-  auto junctionBB = BasicBlock::Create(llvmContext, "dummyForScopStmt",function, entryBB);
+  auto junctionBB = BasicBlock::Create(llvmContext, "dummyForScopStmt", function, entryBB);
   DefaultIRBuilder junctionBuilder(junctionBB);
   junctionBuilder.CreateCondBr(ConstantInt::get(boolTy, 0), loopNests[0]->getHeader(), entryBB);
   auto incoming = junctionBB;
@@ -221,8 +371,136 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
 }
 
 
+
+
+
+
+/// { (i,j) -> (0, i, 0, j, 4) }, 2, -1 -> { (i, j) -> (0, i, -1,   0, 0) }
+/// { (i,j) -> (0, i, 0, j, 4) }, 2, +1 -> { (i, j) -> (0, i, +1,   0, 0) }
+/// { (i,j) -> (0, i, 0, j, 4) }, 3, -1 -> { (i, j) -> (0, i,  0, j-1, 0) }
+/// { (i,j) -> (0, i, 0, j, 4) }, *,  0 -> { (i, j) -> (0, i,  0,   j, 4) }
+static isl::Map relativeScatter(const isl::Map &modelScatter,  unsigned atLevel, int relative) {
+  if (relative == 0)
+    return modelScatter;
+
+  auto islctx = modelScatter.getCtx();
+  auto origSpace = modelScatter.getSpace();
+
+  auto nPrefixDims = atLevel;
+  auto nSuffixDims = modelScatter.getOutDimCount()-atLevel-1;
+  //auto scatter = modelScatter.projectOut(isl_dim_out, atLevel + 1, nSuffixDims);
+  //scatter.addDims_inplace(isl_dim_out, nSuffixDims);
+  auto result = modelScatter.resetTupleId(isl_dim_out);
+
+  auto scatterSpace = result.getRangeSpace();
+  auto mapSpace = isl::Space::createMapFromDomainAndRange(scatterSpace, scatterSpace);
+  auto map = mapSpace.createZeroMultiAff();
+
+  for (auto i = 0; i < nPrefixDims; i+=1) {
+    map.setAff_inplace(i, scatterSpace.createVarAff(isl_dim_in, i));
+  }
+  map.setAff_inplace(nPrefixDims, scatterSpace.createVarAff(isl_dim_in, nPrefixDims) + relative);
+  // Rest remains zero
+
+  result.applyRange_inplace(map);
+  result.cast_inplace(origSpace);
+  return result;
+}
+
+
+StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &subscatter_, const isl::Map &where, const std::string &name) {
+  auto &llvmContext = getLLVMContext();
+  auto function = getParentFunction();
+  auto modelLoopNests = stmt->getLoopNests();
+  auto scop = getParentScop();
+  auto region = getParentRegion(this->stmt);
+  auto intTy = Type::getInt32Ty(llvmContext);
+
+  auto model = this;
+  auto modelDomain = getIterationDomain().resetSpace(isl_dim_set);
+  auto subdomain = newdomain.projectOut(isl_dim_set, modelDomain.getDimCount(), newdomain.getDimCount() - modelDomain.getDimCount());
+  assert(subdomain <= modelDomain);
+  assert(newdomain <= subscatter_.getDomain());
+  auto subscatter = subscatter_.resetSpace(isl_dim_in);
+
+  auto nModelDims = modelDomain.getDimCount();
+  auto nNewDims = newdomain.getDimCount();
+  auto innermostBody = getBasicBlock();
+  auto innermostRegion = const_cast<Region*>(stmt->getRegion());
+  auto innermostLoop = modelLoopNests[modelLoopNests.size()-1];
+  BasicBlock *newStmtBB = nullptr;
+  assert(modelLoopNests.size() == nModelDims);
+
+  SmallVector<Loop*, 4> nests;
+  nests.reserve(nNewDims);
+
+  for (auto i = 0; i < nModelDims; i+=1) {
+    nests.push_back(modelLoopNests[i]);
+  }
+
+  // the new domain has more dimensions than model's
+  // The caller wants us to insert some additional loops
+  for (auto i = nModelDims; i < nNewDims; i+=1) {
+    Loop *loop = nullptr;
+    Region *region = nullptr;
+    innermostBody = insertLoop(innermostBody, nullptr, ConstantInt::get(intTy, 3), pass, innermostLoop, loop, innermostRegion, region);
+    newStmtBB = innermostBody;
+    innermostRegion = region;
+    innermostLoop = loop;
+
+    nests.push_back(loop);
+  }
+
+  if (!newStmtBB) {
+    newStmtBB = BasicBlock::Create(llvmContext, name, function);
+    DefaultIRBuilder builder(newStmtBB);
+    builder.CreateUnreachable();
+
+    assert(pass);
+    auto RI = pass->getAnalysisIfAvailable<RegionInfo>();
+    if (RI)
+      RI->setRegionFor(newStmtBB, region);
+  }
+
+  auto newStmt = new ScopStmt(scop, newStmtBB, name, region, nests, newdomain.takeCopy(), subscatter.takeCopy());
+  auto newWhere = where.setInTupleId(enwrap(stmt->getDomainId()));
+  stmt->setWhereMap(newWhere.takeCopy());
+  scop->addScopStmt(newStmt);
+  return StmtEditor(newStmt);
+}
+
+
+#if 0
+StmtEditor ScopEditor::createStmtRelative(polly::ScopStmt *model, const isl::Set &subdomain, unsigned atLevel, int relative, const isl::Map &where, const std::string &name) {
+  auto modelDomain = enwrap(model->getDomain());
+  assert(modelDomain >= subdomain);
+
+  auto modelScatter = enwrap(model->getScattering());
+
+
+  auto domain = enwrap(model->getDomain());
+  auto modelScatter = enwrap(model->getScattering()).intersectDomain(domain);
+
+  auto subscatter = relativeScatter(modelScatter, atLevel, relative);
+
+  auto &llvmContext = getLLVMContext();
+  auto function = getParentFunction();
+  auto loopNests = model->getLoopNests();
+
+  auto bb = BasicBlock::Create(llvmContext, name, function);
+  DefaultIRBuilder builder(bb);
+  builder.CreateUnreachable();
+
+  auto stmt = new ScopStmt(scop, bb, name, nullptr, loopNests, domain.take(), newScatter.take());
+  auto newWhere = where.setInTupleId(enwrap(stmt->getDomainId()));
+  stmt->setWhereMap(newWhere.takeCopy());
+  scop->addScopStmt(stmt);
+  return StmtEditor(stmt);
+}
+
+
 static isl::Map computeRelativeScatter(const isl::Map &scatter, const isl::Map subscatter, int relative) {
-    auto scatterSpace = scatter.getSpace();
+  auto scatterSpace = scatter.getSpace();
   auto nScatterDims = scatter.getOutDimCount();
   auto subscatterSpace = subscatter.getRangeSpace();
   auto nSubscatterDims = subscatter.getOutDimCount();
@@ -237,8 +515,8 @@ static isl::Map computeRelativeScatter(const isl::Map &scatter, const isl::Map s
       origin = scatter.lexmaxPwMultiAff();
     else if (relative < 0)
       origin = scatter.lexminPwMultiAff();
-  else
-    return scatter; // Order doesn't seem to matter
+    else
+      return scatter; // Order doesn't seem to matter
 
     auto originMPA = origin.toMultiPwAff();
     auto leastmostPA = originMPA[nSubscatterDims-1];
@@ -250,7 +528,7 @@ static isl::Map computeRelativeScatter(const isl::Map &scatter, const isl::Map s
   } else {
     auto cutscatter = scatter.projectOut(isl_dim_out, nSubscatterDims+1, nScatterDims-nSubscatterDims-1);
     isl::PwMultiAff origin;
-        if (relative > 0)
+    if (relative > 0)
       origin = cutscatter.lexmaxPwMultiAff();
     else if (relative < 0)
       origin = cutscatter.lexminPwMultiAff();
@@ -258,20 +536,21 @@ static isl::Map computeRelativeScatter(const isl::Map &scatter, const isl::Map s
       return scatter; // Execut in parallel/order unimportant
     assert(origin.getDomain() >= cutscatter.getDomain() && "No undefined areas, for instance because of unboundedness");
 
-     auto originMPA = origin.toMultiPwAff();
-     auto leastmostPA = originMPA[originMPA.getOutDimCount()-1];
-     auto relativePA = leastmostPA + relative;
+    auto originMPA = origin.toMultiPwAff();
+    auto leastmostPA = originMPA[originMPA.getOutDimCount()-1];
+    auto relativePA = leastmostPA + relative;
 
-     auto resultMPA = resultSpace.createZeroMultiPwAff();
-     for (auto i = 0; i < nSubscatterDims; i+=1) {
-       resultMPA.setPwAff_inplace(i, originMPA[i]);
-     }
-     resultMPA.setPwAff_inplace(nSubscatterDims, relativePA);
-         auto result = resultMPA.toMap();
-         result.cast_inplace(resultSpace);
-         return result;
+    auto resultMPA = resultSpace.createZeroMultiPwAff();
+    for (auto i = 0; i < nSubscatterDims; i+=1) {
+      resultMPA.setPwAff_inplace(i, originMPA[i]);
+    }
+    resultMPA.setPwAff_inplace(nSubscatterDims, relativePA);
+    auto result = resultMPA.toMap();
+    result.cast_inplace(resultSpace);
+    return result;
   }
 }
+
 
 StmtEditor ScopEditor::createStmtRelative(polly::ScopStmt *model, const isl::Map &subscatter, int relative, const isl::Map &where, const std::string &name) {
   auto domain = enwrap(model->getDomain());
@@ -295,7 +574,7 @@ StmtEditor ScopEditor::createStmtRelative(polly::ScopStmt *model, const isl::Map
 }
 
 
-StmtEditor ScopEditor:: createStmtBefore(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) {
+StmtEditor ScopEditor::createStmtBefore(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) {
   return createStmtRelative(model, subscattering, -1, where, name);
 }
 
@@ -303,7 +582,7 @@ StmtEditor ScopEditor:: createStmtBefore(polly::ScopStmt *model, const isl::Map 
 StmtEditor ScopEditor::createStmtAfter(polly::ScopStmt *model, const isl::Map &subscattering, const isl::Map &where, const std::string &name) {
   return createStmtRelative(model, subscattering, +1, where, name);
 }
-
+#endif
 
 StmtEditor ScopEditor::replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDomainWhere, const std::string &name) {
   auto scop = model->getParent();
@@ -432,6 +711,12 @@ llvm::TerminatorInst *StmtEditor::getTerminator() {
   if (term)
     return term;
   return new UnreachableInst(bb->getContext(), bb);
+}
+
+
+void StmtEditor::remove() {
+  // May also remove from the parent SCoP
+  stmt->setDomain(getDomainSpace().emptySet().take());
 }
 
 

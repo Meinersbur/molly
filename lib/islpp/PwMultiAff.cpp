@@ -93,3 +93,22 @@ bool PwMultiAff::foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &fun
   auto retval = isl_pw_multi_aff_foreach_piece(keep(), &foreachPieceCallback, const_cast<std::function<bool(Set &&,MultiAff &&)>*>(&func));
   return retval!=0;
 }
+
+
+Map PwMultiAff::reverse() const {
+  return toMap().reverse();
+}
+
+
+    PwMultiAff PwMultiAff::neg() const {
+      auto space = getSpace();
+      auto result = space.createEmptyPwMultiAff();
+
+      foreachPiece([&result] (Set &&domain, MultiAff &&maff) -> bool {
+        maff.neg_inplace();
+        result.unionAdd_inplace(maff.restrictDomain(domain));
+      return false;
+      });
+
+      return result;
+    }

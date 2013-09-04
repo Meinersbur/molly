@@ -46,6 +46,10 @@ add_molly_library(Islpp
     AstBuild.cpp
     AstExpr.cpp
     AstNode.cpp
+    AffExpr.cpp
+    
+    # deprecated; use AffExpr instead
+    Expr.cpp 
   HEADER_DIRS
     "${MOLLY_SOURCE_DIR}/include/islpp"
     "${MOLLY_SOURCE_DIR}/lib/islpp"

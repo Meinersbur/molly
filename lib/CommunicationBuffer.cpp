@@ -42,7 +42,7 @@ void CommunicationBuffer::doLayoutMapping() {
   auto aff = space.createZeroPwAff();
   auto count = space.createConstantAff(1).toPwAff();
   isl::PwAff prevLen;
-  for (auto i = 0; i<nDims; i+=1) {
+  for (auto i = nDims-nDims; i<nDims; i+=1) {
     auto min = range.dimMin(i);
     auto max = range.dimMax(i);
     auto len = max - min;

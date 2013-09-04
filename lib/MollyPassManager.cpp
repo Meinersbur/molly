@@ -770,15 +770,12 @@ namespace {
     }
 
 
-
     MollyScopProcessor *getScopContext(Scop *scop) LLVM_OVERRIDE {
       auto &ctx = scops[scop];
       if (!ctx)
         ctx = MollyScopProcessor::create(this, scop);
       return ctx;
     }
-
-
 
 
   private:
@@ -823,7 +820,7 @@ namespace {
         SmallVector<Region*,12> regions;
         collectAllRegions(regionInfo->getTopLevelRegion(), regions);
         for (auto region : regions) {
-          auto scopInfo = new ScopInfo(islctx->keep()); // We need ScopInfo to convince to take out isl_ctx
+          auto scopInfo = new ScopInfo(islctx->keep()); // We need ScopInfo to convince to take our isl_ctx
           runRegionPass(scopInfo, region);
           setAlwaysPreserve(scopInfo);
           auto scop = scopInfo->getScop();

@@ -100,7 +100,7 @@ namespace molly {
       return localLengths;
     }
     int getLocalLength(int d) {
-      assert(d <= 0 && d < getNumDimensions());
+      assert(0 <= d && d < getNumDimensions());
       return localLengths[d];
     }
 

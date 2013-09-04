@@ -125,17 +125,15 @@ Map Map::chainNested(isl_dim_type type, const Map &map) const {
   auto seekNested = map.getDomainSpace(); // { B }
 
   auto dims = space.findSubspace(type, seekNested);
-  if (dims.isNull()) {
-    assert(!"Nested space not found");
-    return Map();
-  }
+  assert(dims.isValid());
 
-  auto expandDomainSpace = Space::createMapFromDomainAndRange(map.getDomainSpace(), getTupleSpace(type)); // { B -> (A, B', C) }
+  auto tupleSpace = getTupleSpace(type);
+  auto expandDomainSpace = Space::createMapFromDomainAndRange(map.getDomainSpace(), tupleSpace); // { B -> (A, B', C) }
   auto expandDomain = expandDomainSpace.equalBasicMap(isl_dim_in, 0, dims.getCount(), isl_dim_out, dims.getBeginPos()); // { B -> (A, B', C) | B=B' }
 
-  auto resultSpace = Space::createMapFromDomainAndRange(getTupleSpace(type), map.getRangeSpace()); // { (A, B, C) -> E }
+  auto resultSpace = Space::createMapFromDomainAndRange(tupleSpace, map.getRangeSpace()).wrap(); // { ((A, B, C) -> E) }
   auto expandRangeSpace = Space::createMapFromDomainAndRange(map.getRangeSpace(), resultSpace); // { E -> ((A, B, C) -> E') }
-  auto expandRange = expandRangeSpace.equalBasicMap(isl_dim_in, 0, map.getOutDimCount(), isl_dim_out, resultSpace.getInDimCount()); // { E -> ((A, B, C) -> E') | E=E' }
+  auto expandRange = expandRangeSpace.equalBasicMap(isl_dim_in, 0, map.getOutDimCount(), isl_dim_out, tupleSpace.getSetDimCount()); // { E -> ((A, B, C) -> E') | E=E' }
 
   auto expandedMap = map.applyDomain(expandDomain).applyRange(expandRange); // { (A, B, C) -> ((A, B, C) -> E)  }
   if (type==isl_dim_in)

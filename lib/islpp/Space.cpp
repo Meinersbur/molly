@@ -14,6 +14,7 @@
 #include "islpp/UnionMap.h"
 #include "islpp/AstBuild.h"
 #include "islpp/DimRange.h"
+#include "islpp/AffExpr.h"
 
 #include <isl/space.h>
 #include <isl/set.h>
@@ -46,6 +47,8 @@ Space Space:: createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim) {
 
 
 Space Space::createMapFromDomainAndRange(Space &&domain, Space &&range) {
+  assert(domain.getCtx() == range.getCtx());
+  compatibilize(domain, range);
   return Space::enwrap(isl_space_map_from_domain_and_range(domain.take(), range.take()));
 }
 
@@ -61,6 +64,7 @@ BasicMap Space::universeBasicMap() const {
 
 
 BasicMap Space::identityBasicMap() const {
+  assert(isMapSpace());
   return BasicMap::enwrap(isl_basic_map_identity(takeCopy()));
 }
 
@@ -87,6 +91,25 @@ BasicMap Space::equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count,
 
   return result;
 }
+
+
+BasicMap Space::equalSubspaceBasicMap(const Space &domainSubpace, const Space &rangeSubspace) const {
+  assert(isMapSpace());
+
+  auto domainDims = findSubspace(isl_dim_in, domainSubpace);
+  assert(domainDims.isValid());
+
+  auto rangeDims = findSubspace(isl_dim_out, rangeSubspace);
+  assert(rangeDims.isValid());
+
+  assert(domainDims.getCount() == rangeDims.getCount());
+  return equalBasicMap(isl_dim_in, domainDims.getBeginPos(), domainDims.getCount(), isl_dim_out, rangeDims.getBeginPos());
+}
+
+
+ BasicMap Space::equalSubspaceBasicMap(const Space &subspace) const { 
+   return equalSubspaceBasicMap(subspace, subspace); 
+ }
 
 
 BasicMap Space::lessAtBasicMap(unsigned pos) const {
@@ -174,7 +197,7 @@ Aff Space::createZeroAff() const {
 
 Aff Space::createConstantAff(const Int &c) const {
   auto zero = createZeroAff();
-  zero.setConstant(c);
+  zero.setConstant_inplace(c);
   return zero;
 }
 
@@ -184,17 +207,39 @@ Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
   return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
 }
 
+
+    Aff Space::createAffOnVar(unsigned pos) const {
+      assert(isSetSpace());
+        return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_set, pos)); 
+    }
+
+
+    Aff Space::createAffOnParam(const Id &dimId) const {
+     auto pos = findDimById(isl_dim_param, dimId);
+     assert(pos >= 0);
+     return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_param, pos)); 
+    }
+
+
+AffExpr Space::createVarAffExpr(isl_dim_type type, unsigned pos) const {
+  return AffExpr::createVar(*this, type, pos);
+}
+
+
 PwAff Space::createEmptyPwAff() const {
+  assert(isSetSpace());
   return PwAff::enwrap(isl_pw_aff_empty(takeCopy()));
 }
 
 
 PwAff Space::createZeroPwAff() const {
+  assert(isSetSpace());
   return PwAff::enwrap(isl_pw_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
 
 
 MultiAff Space::createZeroMultiAff() const {
+  assert(isMapSpace());
   return MultiAff::enwrap(isl_multi_aff_zero(takeCopy()));
 }
 
@@ -338,6 +383,7 @@ void Space::fromDomain(){
   give(isl_space_from_domain(take()));
 }
 
+
 void Space::fromRange() {
   give(isl_space_from_range(take()));
 }
@@ -446,7 +492,6 @@ static bool findNestedTuple_recursive(const Space &space, const Id &tupleToFind,
 }
 
 
-
 static bool findNestedTuple_recursive(const Space &space, unsigned &tuplePos, unsigned &pos, unsigned &n, Id &id) {
   auto dom = space.getNestedDomain();
   if (dom.isValid()) {
@@ -486,16 +531,16 @@ DimRange Space::findNestedTuple(unsigned tuplePos) const {
     if (findNestedTuple_recursive(*this, tuplePos, pos, count, id)) {
       auto nDomainDims = getInDimCount();
       if (pos >= nDomainDims) 
-        return DimRange::enwrap(*this, isl_dim_in, pos, count);
+        return DimRange::enwrap(isl_dim_in, pos, count, *this);
       else
-        return DimRange::enwrap(*this, isl_dim_out, pos-nDomainDims, count); 
+        return DimRange::enwrap(isl_dim_out, pos-nDomainDims, count, *this); 
     }
   } else if (isSetSpace()) {
     auto nested = getNested();
     unsigned pos,count;
     Id id;
     if (findNestedTuple_recursive(nested, tuplePos, pos, count, id)) {
-      return DimRange::enwrap(*this, isl_dim_set, pos, count); 
+      return DimRange::enwrap(isl_dim_set, pos, count, *this); 
     }
   }
 
@@ -509,16 +554,16 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
     if (findNestedTuple_recursive(*this, tupleId, pos, count)) {
       auto nDomainDims = getInDimCount();
       if (pos >= nDomainDims) 
-        return DimRange::enwrap(*this, isl_dim_in, pos, count);
+        return DimRange::enwrap(isl_dim_in, pos, count, *this);
       else
-        return DimRange::enwrap(*this, isl_dim_out, pos-nDomainDims, count); 
+        return DimRange::enwrap(isl_dim_out, pos-nDomainDims, count, *this); 
     }
   } else if (isSetSpace()) {
     auto nested = getNested();
     unsigned pos,count;
     Id id;
     if (findNestedTuple_recursive(nested, tupleId, pos, count)) {
-      return DimRange::enwrap(*this, isl_dim_set, pos, count); 
+      return DimRange::enwrap(isl_dim_set, pos, count, *this); 
     }
   }
 
@@ -526,21 +571,21 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 }
 
 
-static bool findNestedSpace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
+static bool findSubspace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
   assert(spaceToFind.isValid());
 
   for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
     auto dimCount = space.dim(type);
     auto startDimPos = currentDimPos;
 
-    if (spaceToFind == space.getNestedOrDefault(type)) {
+    if (::matchesSpace(spaceToFind, space.getNestedOrDefault(type))) {
       // Found the space
       return true; // Abort the recursion
     }
 
     if (space.isNested(type)) {
       auto nestedSpace = space.getNested(type);
-      if (findNestedSpace_recursive(nestedSpace, spaceToFind, currentDimPos)) {
+      if (findSubspace_recursive(nestedSpace, spaceToFind, currentDimPos)) {
         return true;
       }
     } else {
@@ -554,36 +599,21 @@ static bool findNestedSpace_recursive(const Space &space, const Space &spaceToFi
 }
 
 
-DimRange Space:: findSubspace(isl_dim_type type, const Space &subspace) const {
+DimRange Space::findSubspace(isl_dim_type type, const Space &subspace) const {
   assert((isSetSpace() && type==isl_dim_set) || (isMapSpace() && (type==isl_dim_in || type==isl_dim_out)));
 
+  // trivial case
+  auto nested = getNestedOrDefault(type);
+  auto seek = subspace.normalizeUnwrapped();
+  if (::matchesSpace(nested, seek))
+    return DimRange::enwrap(type, 0, this->dim(type), *this);
+
   unsigned currentDimPos = 0;
-  if (findNestedSpace_recursive(getNestedOrDefault(type), subspace, currentDimPos))
-    return DimRange::enwrap(*this, type, currentDimPos, subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out));
+  if (findSubspace_recursive(nested, seek, currentDimPos))
+    return DimRange::enwrap(type, currentDimPos, subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out), *this);
 
   return DimRange();
 }
-
-
-static Space removeTuple_recursive(const Space &space, unsigned tuplePos, unsigned &first, unsigned &count, Space &remainder) {
-  auto dom = space.getNestedDomain();
-
-  auto range = space.getNestedRange();
-
-}
-
-
-
-
-void Space:: unwrapTuple_inplace(unsigned tuplePos) ISLPP_INPLACE_QUALIFIER {
-  assert(isSetSpace());
-}
-
-
-void Space:: unwrapTuple_inplace(const Id &tupleId) ISLPP_INPLACE_QUALIFIER {
-  assert(isSetSpace());
-}
-
 
 
 static isl_dim_type reverseDimType(isl_dim_type type) {
@@ -1042,7 +1072,7 @@ static bool replaceSubspace_recursive(/*inout*/Space &space, const Space &toBeRe
   assert(space.isValid());
   assert(toBeReplaced.isValid());
 
-  if (space == toBeReplaced) {
+  if (matchesSpace(space, toBeReplaced)) {
     space = replacement;
     return true;
   }
@@ -1057,7 +1087,7 @@ static bool replaceSubspace_recursive(/*inout*/Space &space, const Space &toBeRe
     }
   } else if (space.isMapSpace()) {
     auto nestedDomain = space.getNestedOrDefault(isl_dim_in);
-    if (nestedDomain == toBeReplaced) {
+    if (matchesSpace(nestedDomain, toBeReplaced)) {
       space = combineSpaces(replacement, space.getNestedOrDefault(isl_dim_out));
       return true;
     }
@@ -1067,7 +1097,7 @@ static bool replaceSubspace_recursive(/*inout*/Space &space, const Space &toBeRe
     }
 
     auto nestedRange = space.getNestedOrDefault(isl_dim_out);
-    if (nestedRange == toBeReplaced) {
+    if (matchesSpace(nestedRange, toBeReplaced)) {
       space = combineSpaces(nestedDomain, replacement);
       return true;
     }
@@ -1146,4 +1176,12 @@ Space isl::setTupleId(const Space &space, isl_dim_type type, Id &&id) {
 
 Space isl::setTupleId(const Space &space, isl_dim_type type, const Id &id) {
   return Space::enwrap(isl_space_set_tuple_id(space.takeCopy(), type, id.takeCopy()));
+}
+
+
+void isl::compatibilize(/*inout*/Space &space1, /*inout*/Space &space2) {
+  assert(space1.getCtx() == space2.getCtx());
+  space1.alignParams_inplace(space2); // ensure that space1 contains the params of path spaces
+  space2.alignParams_inplace(space1); // change the order of spaces of space2 to match space1
+  assert(checkBool(isl_space_match(space1.keep(), isl_dim_param, space2.keep(), isl_dim_param)));
 }

@@ -37,5 +37,11 @@ namespace molly {
   class ScopEditor;
   class StmtEditor;
 
+  // #include "FieldLayout.h"
+  class FieldLayout;
+
+  // #include "AffineMapping.h"
+  class AffineMapping;
+
 } // namespace molly
 #endif /* MOLLY_MOLLYFWD_H */

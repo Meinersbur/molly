@@ -61,11 +61,15 @@ namespace isl {
 
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }
     void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER {
-       auto space = getSpace();
-       space.setTupleId_inplace(type, id.move());
-       give(isl_basic_map_cast(take(), space.take()));
+      auto space = getSpace();
+      space.setTupleId_inplace(type, id.move());
+      give(isl_basic_map_cast(take(), space.take()));
     }
-    //void setDimId_internal(isl_dim_type type, unsigned, Id &&id) ISLPP_INPLACE_QUALIFIER { llvm_unreachable("Missing API function"); }
+    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { 
+      auto space = getSpace();
+      space.setDimId_inplace(type, pos, id.move());
+      give(isl_basic_map_cast(take(), space.take()));
+    }
 
     void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_insert_dims(take(), type, pos, count)); }
     void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }      
@@ -212,31 +216,36 @@ namespace isl {
 #endif
 
 
-     bool foreachConstraint(const std::function<bool(Constraint)> &func) const;
+    bool foreachConstraint(const std::function<bool(Constraint)> &func) const;
     std::vector<Constraint> getConstraints() const;
 
-       void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_cast(take(), space.takeCopy())); }
+    void cast_inplace(const Space &space) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_cast(take(), space.takeCopy())); }
     BasicMap cast(const Space &space) const { return BasicMap::enwrap(isl_basic_map_cast(takeCopy(), space.takeCopy())); }
 
     void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_equate(take(), type1, pos1, type2, pos2)); }
     BasicMap equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
     void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
-  BasicMap equate(Dim dim1, Dim dim2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
+    BasicMap equate(Dim dim1, Dim dim2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
 
-  void orderGt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type1, pos1, type2, pos2)); }
-  BasicMap orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type1, pos1, type2, pos2)); }
+    void orderGt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type1, pos1, type2, pos2)); }
+    BasicMap orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type1, pos1, type2, pos2)); }
     void orderGe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type1, pos1, type2, pos2)); }
-  BasicMap orderGe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type1, pos1, type2, pos2)); }
-   void orderLt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type2, pos2, type1, pos1)); }
-  BasicMap orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type2, pos2, type1, pos1)); }
-     void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
-  BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
+    BasicMap orderGe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type1, pos1, type2, pos2)); }
+    void orderLt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_gt(take(), type2, pos2, type1, pos1)); }
+    BasicMap orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type2, pos2, type1, pos1)); }
+    void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
+    BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
 
-  Space getDomainSpace() const { return Space::enwrap( isl_space_domain(  isl_basic_map_get_space(takeCopy())) ); }
-    Space getRangeSpace() const { return Space::enwrap( isl_space_domain(  isl_basic_map_get_space(takeCopy())) ); }
+    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_basic_map_get_space(takeCopy())) ); }
+    Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_basic_map_get_space(takeCopy())) ); }
 
-    Map domainProduct(const Map &that) const ;
-    Map rangeProduct(const Map &that) const ;
+    Map domainProduct(const Map &that) const;
+    Map rangeProduct(const Map &that) const;
+
+    BasicMap applyDomain(const BasicMap &that) const { return BasicMap::enwrap(isl_basic_map_apply_domain(takeCopy(), that.takeCopy())); }
+    Map applyDomain(const Map &that) const;
+    BasicMap applyRange(const BasicMap &that) const { return BasicMap::enwrap(isl_basic_map_apply_range(takeCopy(), that.takeCopy())); }
+    Map applyRange(const Map &that) const;
   }; // class BasicMap
 
 

@@ -93,9 +93,15 @@ namespace {
     }
 
 
+    MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) LLVM_OVERRIDE {
+      assert(insertBefore);
+      return MollyCodeGenerator(this, insertBefore);
+    }
+
+
     StmtEditor getEditor() LLVM_OVERRIDE {
       assert(stmt);
-      return StmtEditor(stmt);
+      return StmtEditor::create(stmt, asPass());
     }
 
 
@@ -197,14 +203,61 @@ namespace {
       return idToValue;
     }
 
+
+    llvm::Value *getDomainValue(unsigned i) LLVM_OVERRIDE {
+      return const_cast<PHINode *>(stmt->getInductionVariableForDimension(i));
+    }
+
+
+    const llvm::SCEV *getDomainSCEV(unsigned i) LLVM_OVERRIDE {
+      auto value = getDomainValue(i);
+      return getParentProcessor()->scevForValue(value);
+    }
+
+
+    isl::Id getDomainId(unsigned i) LLVM_OVERRIDE {
+      auto scev = getDomainSCEV(i);
+      return getParentProcessor()->idForSCEV(scev);
+    }
+
+
+    isl::Aff getDomainAff(unsigned i) LLVM_OVERRIDE {
+      // There are two possibilities on what to return:
+      // 1. An aff that maps from the domain space. The result aff is equal to the i's isl_dim_in
+      // 2. An aff without domain space. The result is the isl::Id that represent the SCEV
+
+      auto domainSpace = enwrap(stmt->getDomainSpace());
+      return domainSpace.createAffOnVar(i);
+
+      auto paramsSpace = getParentProcessor()->getParamsSpace();
+      auto id = getDomainId(i);
+      auto pos = paramsSpace.findDimById(isl_dim_param, id);
+      return paramsSpace.createVarAff(isl_dim_param, pos);
+    }
+
+
     std::vector<llvm::Value *> getDomainValues() LLVM_OVERRIDE {
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
 
       std::vector<llvm::Value *> result;
       for (auto i = nDims-nDims; i < nDims; i+=1) {
-        auto iv = const_cast<PHINode *>(stmt->getInductionVariableForDimension(i));
+        auto iv = getDomainValue(i);
         result.push_back(iv);
+      }
+
+      return result;
+    }
+
+
+    isl::MultiAff getDomainMultiAff() LLVM_OVERRIDE {
+      auto domain = getDomain();
+      auto nDims = domain.getDimCount();
+
+      auto result = domain.getSpace().mapsTo(nDims).createZeroMultiAff();
+      for (auto i = nDims-nDims; i < nDims; i+=1) {
+        auto aff = getDomainAff(i);
+        result.setAff_inplace(i, aff);
       }
 
       return result;
@@ -383,6 +436,55 @@ namespace {
     bool isWriteAccess() const LLVM_OVERRIDE {
       assert(isFieldAccess());
       return fmemacc->isWrite();
+    }
+
+
+    molly::MollyPassManager *getPassManager() LLVM_OVERRIDE {
+      return pm;
+    }
+
+
+    molly::MollyScopProcessor *getScopProcessor() LLVM_OVERRIDE {
+      return getParentProcessor();
+    }
+
+
+    llvm::Instruction *getAccessor() LLVM_OVERRIDE {
+      assert(isFieldAccess());
+      return facc.getAccessor();
+    }
+
+
+    llvm::LoadInst *getLoadAccessor() LLVM_OVERRIDE {
+      assert(isReadAccess());
+      return cast<LoadInst>(getAccessor());
+    }
+
+
+    llvm::StoreInst *getStoreAccessor() LLVM_OVERRIDE {
+      assert(isWriteAccess());
+      return cast<StoreInst>(getAccessor());
+    }
+
+    llvm::Value *getAccessedCoordinate(unsigned i) LLVM_OVERRIDE {
+      assert(isFieldAccess());
+      return facc.getCoordinate(i);
+    }
+
+    /// Compared to getAccessRelation(), this returns just the one location that is accessed
+    /// Hence, it won't work if there is a MAY access
+    isl::MultiPwAff getAccessed() LLVM_OVERRIDE {
+      assert(isFieldAccess());
+
+      auto space = getAccessRelation().getRangeSpace();
+      auto result = space.createZeroMultiPwAff();
+      auto nDims = result.getOutDimCount();
+      for (auto i = nDims-nDims; i < nDims ; i+=1) {
+        auto scev = getParentProcessor()->scevForValue(getAccessedCoordinate(i));
+        auto aff =  enwrap(polly::affinatePwAff(stmt, scev));
+        result.setPwAff_inplace(i, aff);
+      }
+      return result;
     }
 
   }; // class MollyScopStmtProcessorImpl

@@ -34,7 +34,12 @@ namespace molly {
 
     //virtual std::vector<isl::Id> getAllIds();
 
-    virtual llvm::Value *codegenScev( const llvm::SCEV *scev, llvm::Instruction *insertBefore)  = 0;
+   virtual isl::Space getParamsSpace() = 0;
+
+    virtual const llvm::SCEV *scevForValue(llvm::Value *value) = 0;
+    virtual isl::Id idForSCEV(const llvm::SCEV *scev) = 0;
+    virtual llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) = 0;
+    //virtual llvm::Value *codegenAff(const isl::Aff &aff, llvm::Instruction *insertBefore) = 0;
 
   public:
     static MollyScopProcessor *create(MollyPassManager *pm, polly::Scop *scop);

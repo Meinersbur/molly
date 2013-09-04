@@ -33,6 +33,8 @@ namespace molly {
     virtual llvm::BasicBlock *getBasicBlock() = 0;
     virtual polly::ScopStmt *getStmt() = 0;
     virtual llvm::Pass *asPass() = 0;
+    virtual molly::MollyPassManager *getPassManager() = 0;
+    virtual molly::MollyScopProcessor *getScopProcessor() = 0;
 
     // { stmt[domain] }
     virtual isl::Set getDomain() const = 0;
@@ -49,6 +51,13 @@ namespace molly {
     virtual FieldVariable *getFieldVariable() const = 0;
     virtual FieldType *getFieldType() const = 0;
 
+    virtual llvm::Instruction *getAccessor() = 0;
+    virtual llvm::LoadInst *getLoadAccessor() = 0;
+    virtual llvm::StoreInst *getStoreAccessor() = 0;
+
+    virtual llvm::Value *getAccessedCoordinate(unsigned i) = 0;
+    virtual isl::MultiPwAff getAccessed() = 0; // { [domain] -> [indexset] }
+
     // { stmt[domain] -> node[cluster] }
     virtual isl::Map getWhere() const = 0;
 
@@ -57,10 +66,21 @@ namespace molly {
 
     // Related code code generation
     virtual std::map<isl_id *, llvm::Value *> &getIdToValueMap() = 0;
+
+    virtual llvm::Value *getDomainValue(unsigned i) = 0;
+     virtual const llvm::SCEV *getDomainSCEV(unsigned i) = 0;
+    virtual isl::Id getDomainId(unsigned i) = 0;
+    virtual isl::Aff getDomainAff(unsigned i) = 0;
+
     virtual std::vector<llvm::Value *> getDomainValues() = 0;
+    virtual isl::MultiAff getDomainMultiAff() = 0;
+
     virtual MollyCodeGenerator makeCodegen() = 0;
+    virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
     virtual StmtEditor getEditor() = 0;
 
+
+  
     // Process
     virtual void applyWhere() = 0;
 

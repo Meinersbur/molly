@@ -22,7 +22,7 @@ llvm::CallInst *molly::callLocalPtrIntrinsic(FieldVariable *fvar, llvm::ArrayRef
   assert(fty->getNumDimensions() == indices.size());
   auto nDims = indices.size();
   auto gvar = fvar->getVariable();
-auto module = gvar->getParent();
+  auto module = gvar->getParent();
 
   SmallVector<Type*, 8> tys;
   tys.reserve(1+nDims);
@@ -45,7 +45,7 @@ auto module = gvar->getParent();
    }
 
   auto intrinsic = Intrinsic::getDeclaration(module, Intrinsic::molly_ptr_local, tys);
- auto result = CallInst::Create(intrinsic, args, "ptr_local", insertBefore);
+  auto result = CallInst::Create(intrinsic, args, "ptr_local", insertBefore);
   return result;
 }
 

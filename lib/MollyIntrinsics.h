@@ -13,6 +13,9 @@ namespace molly {
 namespace molly {
   llvm::CallInst *callLocalPtrIntrinsic(FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, llvm::Instruction *insertBefore = nullptr);
 
+  //llvm::CallInst *callCombufSend(, llvm::Instruction *insertBefore = nullptr)
+
+
   llvm::Value *codegenReadLocal(DefaultIRBuilder &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices);
   void codegenWriteLocal(DefaultIRBuilder &builder, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, llvm::Value *val);
 

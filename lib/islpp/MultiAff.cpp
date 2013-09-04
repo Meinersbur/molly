@@ -8,35 +8,18 @@
 using namespace isl;
 
 
-#if 0
-isl_multi_aff *Multi<Aff>::takeCopy() const {
-  assert(this->maff);
-  return isl_multi_aff_copy(this->maff);
-}
-
-
-void Multi<Aff>::give(isl_multi_aff *maff) {
-  if (this->maff)
-    isl_multi_aff_free(this->maff);
-  this->maff = maff;
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
-
-
-Multi<Aff>::~Multi() {
-  if (this->maff)
-    isl_multi_aff_free(this->maff);
-#ifndef NDEBUG
-  //TODO: Ifndef NVALGRIND mark as uninitialized
-  this->maff = nullptr;
-#endif
-}
-#endif
-
 PwMultiAff Multi<Aff>::toPwMultiAff() const {
   return PwMultiAff::enwrap(isl_pw_multi_aff_from_multi_aff(takeCopy()));
+}
+
+
+MultiPwAff Multi<Aff>::toMultiPwAff() const {
+  auto result = getSpace().createZeroMultiPwAff();
+  auto nDims = getOutDimCount();
+  for (auto i = nDims-nDims; i < nDims; i+=1) {
+    result.setPwAff_inplace(i, getAff(i));
+  }
+  return result;
 }
 
 
@@ -96,7 +79,7 @@ static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff
   isl_map *map = isl_map_universe(isl_space_from_domain(space));
 
   unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
-  for (int i = 0; i < n; ++i) {
+  for (unsigned i = 0; i < n; ++i) {
     isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
     isl_map *map_i = isl_map_from_pw_aff(pwaff);
     map = isl_map_flat_range_product(map, map_i);
@@ -121,6 +104,22 @@ PwMultiAff Multi<Aff>::restrictDomain(Set &&set) const {
   return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
 }
 
+
 PwMultiAff Multi<Aff>::restrictDomain(const Set &set) const {
   return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), takeCopy()));
+}
+
+
+void Multi<Aff>::neg_inplace() ISLPP_INPLACE_QUALIFIER {
+  auto size = getOutDimCount();
+  for (auto i = size-size; i < size; i+=1) {
+    setAff_inplace(i, getAff(i).neg());
+  }
+}
+
+
+void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER {
+  auto nOutDims = getOutDimCount();
+  removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);
+  removeDims_inplace(isl_dim_out, 0, first);
 }

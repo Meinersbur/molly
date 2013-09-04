@@ -104,9 +104,6 @@ namespace isl {
     static PwAff createIndicatorFunction(Set &&set);
 
     static PwAff readFromStr(Ctx *ctx, const char *str);
-
-    //PwAff copy() const { return PwAff::enwrap(takeCopy()); }
-    //PwAff &&move() { return std::move(*this); }
 #pragma endregion
 
 
@@ -152,8 +149,10 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-    void pullback(MultiAff &&ma);
-    void pullback(PwMultiAff &&pma);
+    PwAff pullback(const MultiAff &maff) const;
+    void pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER;
+    PwAff pullback(const PwMultiAff &pmaff) const;
+    void pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER;
 
     int nPiece() const;
     bool foreachPiece(std::function<bool(Set,Aff)> fn) const;

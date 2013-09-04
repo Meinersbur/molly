@@ -17,6 +17,7 @@
 #include "islpp/Point.h"
 #include "islpp/PwQPolynomialFold.h"
 #include "islpp/Dim.h"
+#include "islpp/DimRange.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -651,7 +652,25 @@ Map Set::chainNested(const Map &map) const {
   assert(space.extractNestedTupleSpace(isl_dim_set, domainTuple).matchesSetSpace(map.getDomainSpace()));
 
   auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, firstTupleDim, tupleDimCount, isl_dim_out, 0); 
-  return chain(equator).applyDomain(map);
+  return chain(equator).applyRange(map);
+}
+
+
+Map Set::chainSubspace(const Map &map) const {
+  return copy().chainSubspace_consume(map);
+}
+
+
+Map Set::chainSubspace_consume(const Map &map) {
+  auto myspace = this->getSpace();
+  assert(myspace.isSetSpace());
+  auto subspace = map.getDomainSpace();
+
+  auto range = myspace.findSubspace(isl_dim_set, subspace);
+  assert(range.isValid());
+
+  auto equator = Space::createMapFromDomainAndRange(myspace.move(), subspace.move()).equalBasicMap(isl_dim_in, range.getBeginPos(), range.getCount(), isl_dim_out, 0);
+  return chain(equator.move()).applyRange(map);
 }
 
 
@@ -838,6 +857,16 @@ Set isl::projectOut(Set &&set, isl_dim_type type, unsigned first, unsigned n) {
 
 Set Set::params() const {
   return Set::enwrap(isl_set_params(takeCopy()));
+}
+
+
+Map Set::subspaceMap(const Space &subspace) const {
+  auto myspace = getSpace();
+  auto range = myspace.findSubspace(isl_dim_set, subspace);
+  assert(range.isValid());
+
+  auto equator = Space::createMapFromDomainAndRange(myspace, subspace).equalBasicMap(isl_dim_in, range.getBeginPos(), range.getCount(), isl_dim_out, 0);
+  return chain(equator.move()).applyRange(equator.move());
 }
 
 

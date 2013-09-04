@@ -125,12 +125,10 @@ void PwAff::gistParams(Set &&context) {
   give(isl_pw_aff_gist_params(take(), context.take()));
 }
 
-void PwAff::pullback(MultiAff &&ma) {
-  give(isl_pw_aff_pullback_multi_aff(take(), ma.take()));
-}
-void PwAff::pullback(PwMultiAff &&pma) {
-  give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.take()));
-}
+PwAff PwAff::pullback(const MultiAff &maff) const { return PwAff::enwrap(isl_pw_aff_pullback_multi_aff(takeCopy(), maff.takeCopy())); }
+    void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy())); }
+    PwAff PwAff::pullback(const PwMultiAff &pmaff) const { return PwAff::enwrap(isl_pw_aff_pullback_pw_multi_aff(takeCopy(), pmaff.takeCopy())); }
+    void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy())); }
 
 int PwAff::nPiece() const {
   return isl_pw_aff_n_piece(keep());

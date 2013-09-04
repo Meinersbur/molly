@@ -49,20 +49,8 @@ void Aff::print(llvm::raw_ostream &out) const{
   printer.print(*this);
   out << printer.getString();
 }
-#if 0
-std::string Aff::toString() const {
-  std::string buf;
-  if (aff) {
-    llvm::raw_string_ostream out(buf);
-    print(out);
-    out.flush();
-  }
-  return buf;
-}
-void Aff::dump() const{
-  print(llvm::errs());
-}
-#endif
+
+
 void Aff::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);
@@ -71,57 +59,34 @@ void Aff::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   }
 }
 
-#if 0
-Ctx *Aff::getCtx() const {
-  return Ctx::wrap(isl_aff_get_ctx(keep()));
-}
 
-int Aff::dim(isl_dim_type type) const{
-  return isl_aff_dim(keep(), type);
-}
-#endif
 bool Aff::involvesDims(isl_dim_type type, unsigned first, unsigned n) const{
   return isl_aff_involves_dims(keep(), type, first, n);
 }
 Space Aff::getDomainSpace() const {
   return Space::enwrap(isl_aff_get_domain_space(keep()));
 }
-#if 0
-Space Aff::getSpace() const {
-  return Space::wrap(isl_aff_get_space(keep()));
-}
-#endif
+
+
 LocalSpace Aff::getDomainLocalSpace() const{
   return LocalSpace::wrap(isl_aff_get_domain_local_space(keep()));
 }
-#if 0
-LocalSpace Aff::getLocalSpace() const {
-  return LocalSpace::wrap(isl_aff_get_local_space(keep()));
-}
-#endif
 
-#if 0
-const char *Aff::getDimName( isl_dim_type type, unsigned pos) const {
-  return isl_aff_get_dim_name(keep(), type, pos);
-}
-#endif
-Int Aff::getConstant() const {
-  Int result;
-  isl_aff_get_constant(keep(), result.change());
-  return result;
-}
+
 Int Aff::getCoefficient(isl_dim_type type, unsigned pos) const {
   Int result;
   isl_aff_get_coefficient(keep(), type, pos, result.change());
   return result;
 }
+
+
 Int Aff::getDenominator() const {
   Int result;
   isl_aff_get_denominator(keep(), result.change());
   return result;
 }
 
-void Aff::setConstant(const Int &v) {
+void Aff::setConstant_inplace(const Int &v)  ISLPP_INPLACE_QUALIFIER {
   give(isl_aff_set_constant(take(), v.keep())); 
 }
 void Aff::setCoefficient(isl_dim_type type, unsigned pos, int v) {
@@ -171,9 +136,7 @@ Aff Aff::getDiv(int pos) const {
   return Aff::enwrap(isl_aff_get_div(keep(), pos));
 }
 
-void Aff::neg() {
-  give(isl_aff_neg(take()));
-}
+
 void Aff::ceil() {
   give(isl_aff_ceil(take()));
 }
