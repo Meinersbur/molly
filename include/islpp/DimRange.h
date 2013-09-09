@@ -1,6 +1,7 @@
 #ifndef ISLPP_DIMRANGE_H
 #define ISLPP_DIMRANGE_H
 
+#include "islpp_common.h"
 #include <isl/space.h> // enum isl_dim_type
 #include "Islfwd.h"
 #include <assert.h>
@@ -24,6 +25,11 @@ namespace isl {
     DimRange() : type(isl_dim_cst/*cst dimension is for internal use only*/) {}
     ~DimRange() { isl_space_free(space); space = NULL; }
 
+    /* implicit */ DimRange(const DimRange &that) : type(that.type), first(that.first), count(that.count), space(isl_space_copy(that.space)) {  }
+    /* implicit */ DimRange(DimRange &&that) : type(that.type), first(that.first), count(that.count), space(that.space) { that.type = isl_dim_cst; that.space = nullptr; }
+    const DimRange &operator=(const DimRange &that) ISLPP_INPLACE_QUALIFIER { this->type = that.type; this->first = that.first; this->count = that.count; this->space = isl_space_copy(that.space); return *this; }
+    const DimRange &operator=(DimRange &&that) ISLPP_INPLACE_QUALIFIER { this->type = that.type; this->first = that.first; this->count = that.count; this->space = that.space; that.type = isl_dim_cst; that.space = nullptr; return *this; }
+
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, __isl_take isl_space *space);
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, Space &&space);
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, const Space &space);
@@ -39,14 +45,14 @@ namespace isl {
 
     // Alternative names
     unsigned getFirst() const { assert(isValid()); return first;} 
-     unsigned getEnd() const { assert(isValid()); return first+count;}
-      unsigned getLast() const { assert(isValid()); assert(count >= 1); return first+count-1;}
+    unsigned getEnd() const { assert(isValid()); return first+count;}
+    unsigned getLast() const { assert(isValid()); assert(count >= 1); return first+count-1;}
 
-      unsigned relativePos(unsigned i) const { 
-        assert(isValid()); 
-        assert(first <= i && i < first+count); 
-        return i - count; 
-      }
+    unsigned relativePos(unsigned i) const { 
+      assert(isValid()); 
+      assert(first <= i && i < first+count); 
+      return i - count; 
+    }
 
     Space getSpace() const;
   }; // class DimRange

@@ -590,9 +590,7 @@ static unsigned countSubspaceMatches_recursive(const Space &space, const Space &
 
     if (space.isNested(type)) {
       auto nestedSpace = space.getNested(type);
-      if (countSubspaceMatches_recursive(nestedSpace, spaceToFind)) {
-        return true;
-      }
+      result += countSubspaceMatches_recursive(nestedSpace, spaceToFind);
     } 
   }
 

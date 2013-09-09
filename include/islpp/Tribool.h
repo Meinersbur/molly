@@ -6,6 +6,15 @@
 
 // TODO: What namespace?
 
+// C++  does not allow declare a friend function with static qualifier -- have to declare it before so friend knows it is static (inline)
+class Tribool;
+static Tribool operator==(Tribool lhs, Tribool rhs);
+static Tribool operator!=(Tribool lhs, Tribool rhs);
+static Tribool operator!(Tribool arg);
+static Tribool operator&&(Tribool lhs, Tribool rhs);
+static inline Tribool operator||(Tribool lhs, Tribool rhs);
+
+
 class Tribool {
 public:
   enum Consts {

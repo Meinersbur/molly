@@ -407,7 +407,7 @@ namespace isl {
     Set deltas() const { return Set::enwrap(isl_map_deltas(takeCopy())); }
     Set deltas_consume() { return Set::enwrap(isl_map_deltas(take())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-     Set deltas() && { return Set::enwrap(isl_map_deltas(take())); }
+    Set deltas() && { return Set::enwrap(isl_map_deltas(take())); }
 #endif
 
     void detectEqualities() { give(isl_map_detect_equalities(take())); }
@@ -464,9 +464,9 @@ namespace isl {
 
     Map makeDisjoint() const { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
     void makeDisjoint_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_make_disjoint(take()));}
-      Map makeDisjoint_consume() { return Map::enwrap(isl_map_make_disjoint(take()));}
+    Map makeDisjoint_consume() { return Map::enwrap(isl_map_make_disjoint(take()));}
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-        Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
+    Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
 #endif
 
     void computeDivs() { give(isl_map_compute_divs(take()));}
@@ -493,7 +493,7 @@ namespace isl {
     Map gistRange(const Set &context) const { return Map::enwrap(isl_map_gist_range(takeCopy(), context.takeCopy())); }
     void gistRange_inplace(Set &&context) ISLPP_INPLACE_QUALIFIER { give(isl_map_gist_range(take(), context.take())); }
 
-     Map gistParams(const Set &context) const { return Map::enwrap(isl_map_gist_params(takeCopy(), context.takeCopy())); }
+    Map gistParams(const Set &context) const { return Map::enwrap(isl_map_gist_params(takeCopy(), context.takeCopy())); }
     void gistParams_inplace(Set &&context) ISLPP_INPLACE_QUALIFIER { give(isl_map_gist_params(take(), context.take())); }
 
     Map coalesce() const { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
@@ -598,7 +598,7 @@ namespace isl {
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy())); } 
     Set wrap_consume() { return Set::enwrap(isl_map_wrap(take())); } 
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-      Set wrap() && { return Set::enwrap(isl_map_wrap(take())); } 
+    Set wrap() && { return Set::enwrap(isl_map_wrap(take())); } 
 #endif
 
     /// Overwrite the space information (tuple ids, dim ids, space nesting); Number of dimensions must be the same, separately for isl_dim_in and isl_dim_out

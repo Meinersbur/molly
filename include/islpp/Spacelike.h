@@ -378,14 +378,14 @@ namespace isl {
 #endif
 
     SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count) const { auto result = getDerived()->copy(); result.removeDims_inplace(type, first, count); return result; }
-    SpaceTy removeDims_consume(isl_dim_type type, unsigned first, unsigned count) const { getDerived()->removeDims_inplace(type, first, count); return result; }
+    SpaceTy removeDims_consume(isl_dim_type type, unsigned first, unsigned count) const { return getDerived()->removeDims_inplace(type, first, count); return std::move(*this); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count) && { getDerived()->removeDims_inplace(type, first, count); return std::move(*this); }
 #endif
 
     SpaceTy removeDims(const DimRange &range) const { return getDerived()->removeDims(range.getType(), range.getFirst(), range.getCount()); }
     SpaceTy removeDims_consume(const DimRange &range) { return getDerived()->removeDims_consume(range.getType(), range.getFirst(), range.getCount()); }
-    void removeDim_inplace(const DimRange &range) ISLPP_INPLACE_QUALIFIER { removeDims_inplace(range.getType(), range.getFirst(), range.getCount()); }
+    void removeDim_inplace(const DimRange &range) ISLPP_INPLACE_QUALIFIER { getDerived()->removeDims_inplace(range.getType(), range.getFirst(), range.getCount()); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
      SpaceTy removeDims(const DimRange &range) && { return getDerived()->removeDims_consume(range.getType(), range.getFirst(), range.getCount()); }
 #endif
