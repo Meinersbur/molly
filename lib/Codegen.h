@@ -9,15 +9,24 @@
 #include <llvm/IR/IRBuilder.h>
 #include "ScopEditor.h"
 #include "Clangfwd.h"
-
+#include "islpp/AstBuild.h"
 
 namespace molly {
 
+  /// Everything needed to generate code into a ScopStmt
   class MollyCodeGenerator {
   private:
+    /// Stmt to generate
     MollyScopStmtProcessor *stmtCtx;
+
+    /// At which position to insert the code
     DefaultIRBuilder irBuilder;
-    //clang::CodeGen::MollyRuntimeMetadata *rtMetadata;
+    
+    /// ISL code generator for affine expressions
+    isl::AstBuild astBuild;
+
+    /// Required by polly::IslExprBuilder to map params and domain dims to variables that contain these values
+    //std::map<isl_id *, llvm::Value *> idToValue;
 
   protected:
     std::map<isl_id *, llvm::Value *> &getIdToValueMap();
@@ -31,6 +40,7 @@ namespace molly {
     llvm::CallInst *callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst);
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
 
+    isl::AstBuild &initAstBuild();
 
   public:
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);

@@ -107,6 +107,7 @@ namespace isl {
 #pragma region Creational
     static Multi<Aff> fromAff(Aff &&aff) { return MultiAff::enwrap(isl_multi_aff_from_aff(aff.take())); }
     static Multi<Aff> createZero(Space &&space) { return MultiAff::enwrap(isl_multi_aff_zero(space.take())); }
+    static Multi<Aff> createIdentity(const Space &space) { return MultiAff::enwrap(isl_multi_aff_identity(space.takeCopy())); }
     static Multi<Aff> createIdentity(Space &&space) { return MultiAff::enwrap(isl_multi_aff_identity(space.take())); }
 
     static Multi<Aff> readFromString(Ctx *ctx, const char *str) { return MultiAff::enwrap(isl_multi_aff_read_from_str(ctx->keep(), str)); } 
@@ -154,7 +155,12 @@ namespace isl {
     /// Return a subset of affs (name analogous to substr, sublist, not subtraction)
     MultiAff subMultiAff(unsigned first, unsigned count) const { auto result = copy(); result.subMultiAff_inplace(first, count); return result; }
     void subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER;
-  }; // class MultiAff
+
+    MultiAff embedAsSubspace(const Space &framespace) const;
+
+     Multi<Aff> pullback(const Multi<Aff> &maff2) const { return Multi<Aff>::enwrap(isl_multi_aff_pullback_multi_aff(takeCopy(), maff2.takeCopy())); }
+     void pullback_inplace(const Multi<Aff> &maff2) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_pullback_multi_aff(take(), maff2.takeCopy())); }
+ }; // class MultiAff
 
 
   static inline MultiAff enwrap(__isl_take isl_multi_aff *obj) { return MultiAff::enwrap(obj); }

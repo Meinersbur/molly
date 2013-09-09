@@ -30,14 +30,16 @@ namespace molly {
 
     // Queries
     virtual llvm::LLVMContext &getLLVMContext() const = 0;
+    virtual isl::Ctx *getIslContext() const = 0;
     virtual llvm::BasicBlock *getBasicBlock() = 0;
     virtual polly::ScopStmt *getStmt() = 0;
     virtual llvm::Pass *asPass() = 0;
     virtual molly::MollyPassManager *getPassManager() = 0;
-    virtual molly::MollyScopProcessor *getScopProcessor() = 0;
+    virtual molly::MollyScopProcessor *getScopProcessor() const = 0;
 
     // { stmt[domain] }
     virtual isl::Set getDomain() const = 0;
+    virtual isl::Set getDomainWithNamedDims() const = 0;
 
     // { stmt[domain] -> scattering[scatter] }
     virtual isl::Map getScattering() const = 0;
@@ -68,13 +70,15 @@ namespace molly {
     virtual std::map<isl_id *, llvm::Value *> &getIdToValueMap() = 0;
 
     virtual llvm::Value *getDomainValue(unsigned i) = 0;
-     virtual const llvm::SCEV *getDomainSCEV(unsigned i) = 0;
+    virtual const llvm::SCEV *getDomainSCEV(unsigned i) = 0;
     virtual isl::Id getDomainId(unsigned i) = 0;
     virtual isl::Aff getDomainAff(unsigned i) = 0;
 
     virtual std::vector<llvm::Value *> getDomainValues() = 0;
     virtual isl::MultiAff getDomainMultiAff() = 0;
+    virtual isl::MultiAff getClusterMultiAff() = 0;
 
+    //virtual void identifyDomainDims() = 0;
     virtual MollyCodeGenerator makeCodegen() = 0;
     virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
     virtual StmtEditor getEditor() = 0;

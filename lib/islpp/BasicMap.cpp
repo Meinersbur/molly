@@ -32,9 +32,19 @@ Map BasicMap:: intersect(Map &&that) const {
 } 
 
 
-Map  BasicMap::intersect(const Map &that) const { 
+Map BasicMap::intersect(const Map &that) const { 
   return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
 } 
+
+
+    Map BasicMap::intersectDomain(const Set &set) const {
+      return Map::enwrap(isl_map_intersect_domain(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
+    }
+
+
+    Map BasicMap::intersectRange(const Set &set) const {
+      return Map::enwrap(isl_map_intersect_range(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
+    }
 
 
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 

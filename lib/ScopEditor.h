@@ -121,7 +121,10 @@ namespace molly {
 
     /// { stmt[domain] -> cluster[coord] }
     isl::Map getWhere(); 
+    isl::Map getInstances();
     void setWhere(isl::Map &&where);
+    /// remove all instances not in keepInsts from domain and wheremap, such that this stmt is less often executed
+    void restrictInstances(const isl::Map &keepInsts);
 
     llvm::TerminatorInst *getTerminator();
 
@@ -139,6 +142,9 @@ namespace molly {
     /// Like ScopEditor::createStmt, but reuse the loops of model instead of createing new one
     /// As a result, the domain must be a subset of model's
     StmtEditor createStmt(const isl::Set &subdomain, const isl::Map &scatter, const isl::Map &where, const std::string &name);
+
+    /// Remove instances from this ScopStmt and create a new ScopStmt that is executed instead
+    StmtEditor replaceStmt(const isl::Map &subwhere, const std::string &name);
 
   }; // class StmtEditor
 

@@ -7,6 +7,7 @@
 #include "islpp/Map.h"
 #include "islpp/MultiPwAff.h"
 #include "islpp/PwAffList.h"
+#include "islpp/DimRange.h"
 
 using namespace isl;
 using namespace llvm;
@@ -83,6 +84,11 @@ void PwMultiAff::printProperties(llvm::raw_ostream &out, int depth, int indent) 
 }
 
 
+Set PwMultiAff::getRange() const { 
+  return toMap().getRange(); 
+}
+
+
 static int foreachPieceCallback(__isl_take isl_set *set, __isl_take isl_multi_aff *maff, void *user) {
   assert(user);
   auto &func = *static_cast<std::function<bool(Set &&,MultiAff &&)>*>(user);
@@ -112,3 +118,27 @@ Map PwMultiAff::reverse() const {
 
       return result;
     }
+
+
+    Set PwMultiAff::wrap() const {
+      return toMap().wrap();
+    }
+
+
+        PwMultiAff PwMultiAff::projectOut(unsigned first, unsigned count) const {
+          return removeDims(isl_dim_out, first, count);
+        }
+
+
+         PwMultiAff PwMultiAff:: projectOut(const DimRange &range) const {
+           assert(range.isValid());
+           assert(range.getType() == isl_dim_out);
+           return projectOut(range.getBeginPos(), range.getCount());
+         }
+
+
+    PwMultiAff PwMultiAff::projectOutSubspace(const Space &subspace) const {
+      auto dimrange = getSpace().findSubspace(isl_dim_out, subspace);
+      return projectOut(dimrange);
+    }
+

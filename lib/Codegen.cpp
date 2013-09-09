@@ -19,12 +19,23 @@
 #include "CommunicationBuffer.h"
 #include "MollyScopProcessor.h"
 #include "AffineMapping.h"
+#include "islpp/AstExpr.h"
 
 using namespace molly;
 using namespace polly;
 using namespace llvm;
 using namespace std;
 using isl::enwrap;
+
+
+isl::AstBuild &MollyCodeGenerator::initAstBuild() {
+  if (astBuild.isNull()) {
+    //auto islctx = stmtCtx->getIslContext();
+    auto domain = stmtCtx->getDomainWithNamedDims();
+    this->astBuild = isl::AstBuild::createFromContext(domain);
+  }
+  return astBuild;
+}
 
 
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()) {
@@ -36,10 +47,13 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::In
     // Insert at end of block instead
     irBuilder.SetInsertPoint(bb);
   }
+
+  //stmtCtx->identifyDomainDims();
 }
 
 
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()) {
+  //stmtCtx->identifyDomainDims();
 }
 
 
@@ -54,7 +68,7 @@ std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
 
 
 llvm::Module *MollyCodeGenerator::getModule() {
- return irBuilder.GetInsertBlock()->getParent()->getParent();
+  return irBuilder.GetInsertBlock()->getParent()->getParent();
 }
 
 
@@ -65,7 +79,6 @@ clang::CodeGen::MollyRuntimeMetadata *MollyCodeGenerator::getRtMetadata() {
 
 // SCEVAffinator::getPwAff
 llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
-  auto &valueMap = getIdToValueMap();
   //TODO: What does polly::buildIslAff do with several pieces?
   assert(aff.nPiece() == 1);
   // If it splits the BB to test for piece inclusion, the additional ScopStmt would not consider them as belonging to them.
@@ -73,7 +86,13 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
   // 1. Use conditional assignment instead of branches
   // 2. Create a ad-hoc function that contains the case distinction; meant to be inlined later by llvm optimization passes
   // 3. Create new ScopStmts for each peace, let Polly generate code to distinguish them
-  auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
+
+
+  auto expr = initAstBuild().exprFromPwAff(aff);
+  auto &valueMap = getIdToValueMap();
+  auto pass = stmtCtx->asPass();
+  auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), valueMap, pass);
+  //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
   return result;
 }
 
@@ -98,21 +117,21 @@ llvm::Value *MollyCodeGenerator::codegenScev(const llvm::SCEV *scev) {
 }
 
 
-  llvm::Value *MollyCodeGenerator::codegenId(const isl::Id &id) {
-    auto user = static_cast<const SCEV*>(id.getUser());
-    return codegenScev(user);
-  }
+llvm::Value *MollyCodeGenerator::codegenId(const isl::Id &id) {
+  auto user = static_cast<const SCEV*>(id.getUser());
+  return codegenScev(user);
+}
 
 
-  llvm::Value *MollyCodeGenerator::codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout) {
-    auto mapping = layout->getMapping();
+llvm::Value *MollyCodeGenerator::codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout) {
+  auto mapping = layout->getMapping();
 
-    // toPwMultiAff() can give exponential number of pieces (in terms of dimensions)
-    // alternatively, execute the two mappings sequentially: Fewer cases, but two levels of them
-    auto coordMapping = mapping.pullback(coord.toPwMultiAff());
-    auto value = codegenAff(coordMapping);
-    //TODO: generate assert() to check the result being in the layout's buffer size
-    return value;
+  // toPwMultiAff() can give exponential number of pieces (in terms of dimensions)
+  // alternatively, execute the two mappings sequentially: Fewer cases, but two levels of them
+  auto coordMapping = mapping.pullback(coord.toPwMultiAff());
+  auto value = codegenAff(coordMapping);
+  //TODO: generate assert() to check the result being in the layout's buffer size
+  return value;
 }
 
 
@@ -123,15 +142,17 @@ llvm::Value *MollyCodeGenerator::codegenPtrLocal(FieldVariable *fvar, llvm::Arra
 
 
 llvm::CallInst *MollyCodeGenerator::callCombufSend( molly::CommunicationBuffer *combuf ) {
-  auto sendFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_send);
   Value *args[] = { combuf->getVariableSend() };
+  Type *tys[] = { args[0]->getType() };
+  auto sendFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_send, tys);
   return this->irBuilder.CreateCall(sendFunc, args);
 }
 
 
 llvm::CallInst *MollyCodeGenerator::callCombufRecv(molly::CommunicationBuffer *combuf) {
-    auto recvFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recv);
   Value *args[] = { combuf->getVariableRecv() };
+  Type *tys[] = { args[0]->getType() };
+  auto recvFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recv, tys);
   return this->irBuilder.CreateCall(recvFunc, args);
 }
 
@@ -143,11 +164,11 @@ llvm::CallInst *MollyCodeGenerator::callCombufSendbufPtr(molly::CommunicationBuf
 }
 
 
-    llvm::CallInst *MollyCodeGenerator::callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src) {
+llvm::CallInst *MollyCodeGenerator::callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src) {
   auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recvbuf_ptr);
   Value *args[] = { combuf->getVariableRecv(), src };
   return this->irBuilder.CreateCall(ptrFunc, args);      
-    }
+}
 
 
 void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation) {
@@ -170,7 +191,7 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
 void MollyCodeGenerator::codegenSend(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst) {
   auto dstCoords = codegenMultiAff(dst);
   //TODO: Use the dstCoords 
-   callCombufSend(combuf);
+  callCombufSend(combuf);
 }
 
 void MollyCodeGenerator::codegenRecv(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src) {
@@ -180,23 +201,23 @@ void MollyCodeGenerator::codegenRecv(molly::CommunicationBuffer *combuf, const i
 }
 
 
-    llvm::Value *MollyCodeGenerator::codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index) {
-     // Get the buffer to the destination
-      auto rank = codegenLinearize(dst, combuf->getDstMapping());
-    auto buf =  callCombufSendbufPtr(combuf, rank); 
+llvm::Value *MollyCodeGenerator::codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index) {
+  // Get the buffer to the destination
+  auto rank = codegenLinearize(dst, combuf->getDstMapping());
+  auto buf =  callCombufSendbufPtr(combuf, rank); 
 
-    // Get the position within that buffer
-      auto idx = codegenLinearize(index, combuf->getMapping());
-      return irBuilder.CreateGEP(buf, idx);
-    }
- 
-    
-    llvm::Value *MollyCodeGenerator::codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index) {
-    // Get the buffer to the destination
-      auto rank = codegenLinearize(src, combuf->getSrcMapping());
-    auto buf = callCombufRecvbufPtr(combuf, rank); 
+  // Get the position within that buffer
+  auto idx = codegenLinearize(index, combuf->getMapping());
+  return irBuilder.CreateGEP(buf, idx);
+}
 
-    // Get the position within that buffer
-      auto idx = codegenLinearize(index, combuf->getMapping());
-      return irBuilder.CreateGEP(buf, idx);
-    }
+
+llvm::Value *MollyCodeGenerator::codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index) {
+  // Get the buffer to the destination
+  auto rank = codegenLinearize(src, combuf->getSrcMapping());
+  auto buf = callCombufRecvbufPtr(combuf, rank); 
+
+  // Get the position within that buffer
+  auto idx = codegenLinearize(index, combuf->getMapping());
+  return irBuilder.CreateGEP(buf, idx);
+}

@@ -6,6 +6,7 @@
 #include "Obj.h" // class Obj (base of Map)
 #include "Id.h" // Id::wrap
 #include "Dim.h"
+#include "DimRange.h"
 
 namespace isl {
   class Space;
@@ -297,8 +298,8 @@ namespace isl {
 
     void setTupleId_inplace(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, std::move(id)); }
     void setTupleId_inplace(isl_dim_type type, const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(type, id.copy()); }
-    SpaceTy setTupleId(isl_dim_type type, Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(type, std::move(id)); return std::move(result); }
-    SpaceTy setTupleId(isl_dim_type type, const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(type, id.copy()); return std::move(result); }
+    SpaceTy setTupleId(isl_dim_type type, Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(type, std::move(id)); return result; }
+    SpaceTy setTupleId(isl_dim_type type, const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(type, id.copy()); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setTupleId(isl_dim_type type, Id &&id) && { getDerived()->setTupleId_internal(type, std::move(id)); return std::move(*this); }
     SpaceTy setTupleId(isl_dim_type type, const Id &id) && { getDerived()->setTupleId_internal(type, id.copy()); return std::move(*this); }
@@ -306,8 +307,8 @@ namespace isl {
 
     void setInTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_in, std::move(id)); }
     void setInTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_in, id.copy()); }
-    SpaceTy setInTupleId(Id &&id)  const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, std::move(id)); return std::move(result); }
-    SpaceTy setInTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, id.copy()); return std::move(result); }
+    SpaceTy setInTupleId(Id &&id)  const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, std::move(id)); return result; }
+    SpaceTy setInTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_in, id.copy()); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setInTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_in, std::move(id)); return std::move(*this); }
     SpaceTy setInTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_in, id.copy()); return std::move(*this); }
@@ -315,8 +316,8 @@ namespace isl {
 
     void setOutTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_out, std::move(id)); }
     void setOutTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_out, id.copy()); }
-    SpaceTy setOutTupleId(Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, std::move(id)); return std::move(result); }
-    SpaceTy setOutTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, id.copy()); return std::move(result); }
+    SpaceTy setOutTupleId(Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, std::move(id)); return result; }
+    SpaceTy setOutTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_out, id.copy()); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setOutTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_out, std::move(id)); return std::move(*this); }
     SpaceTy setOutTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_out, id.copy()); return std::move(*this); }
@@ -324,14 +325,14 @@ namespace isl {
 
     void setSetTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_set, std::move(id)); }
     void setSetTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setTupleId_internal(isl_dim_set, id.copy()); }
-    SpaceTy setSetTupleId(Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, std::move(id)); return std::move(result); }
-    SpaceTy setSetTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, id.copy()); return std::move(result); }
+    SpaceTy setSetTupleId(Id &&id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, std::move(id)); return result; }
+    SpaceTy setSetTupleId(const Id &id) const { auto result = getDerived()->copy(); result.setTupleId_internal(isl_dim_set, id.copy()); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setSetTupleId(Id &&id) && { getDerived()->setTupleId_internal(isl_dim_set, std::move(id)); return std::move(*this); }
     SpaceTy setSetTupleId(const Id &id) && { getDerived()->setTupleId_internal(isl_dim_set, id.copy()); return std::move(*this); }
 #endif
 
-    SpaceTy setTupleName(isl_dim_type type, const char *s) const { auto result = getDerived()->copy(); result.setTupleName_inplace(type, s); return std::move(result); }
+    SpaceTy setTupleName(isl_dim_type type, const char *s) const { auto result = getDerived()->copy(); result.setTupleName_inplace(type, s); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setTupleName(isl_dim_type type, const char *s) && { getDerived()->setTupleName_inplace(type, s); return std::move(*this); }
 #endif
@@ -340,8 +341,8 @@ namespace isl {
 
     void setDimId_inplace(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, pos, std::move(id)); }
     void setDimId_inplace(isl_dim_type type, unsigned pos,const Id &id) ISLPP_INPLACE_QUALIFIER { getDerived()->setDimId_internal(type, pos, id.copy()); }
-    SpaceTy setDimId(isl_dim_type type, unsigned pos,Id &&id) const { auto result = getDerived()->copy(); result.setDimId_internal(type, pos, std::move(id)); return std::move(result); }
-    SpaceTy setDimId(isl_dim_type type, unsigned pos,const Id &id) const { auto result = getDerived()->copy(); result.setDimId_internal(type, pos, id.copy()); return std::move(result); }
+    SpaceTy setDimId(isl_dim_type type, unsigned pos,Id &&id) const { auto result = getDerived()->copy(); result.setDimId_internal(type, pos, std::move(id)); return result; }
+    SpaceTy setDimId(isl_dim_type type, unsigned pos,const Id &id) const { auto result = getDerived()->copy(); result.setDimId_internal(type, pos, id.copy()); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setDimId(isl_dim_type type, Id &&id) && { getDerived()->setDimId_internal(type, std::move(id)); return std::move(*this); }
     SpaceTy setDimId(isl_dim_type type, const Id &id) && { getDerived()->setDimId_internal(type, id.copy()); return std::move(*this); }
@@ -352,7 +353,7 @@ namespace isl {
     SpaceTy setOutDimId(unsigned pos, const Id &id) const { assert(isMap()); return setDimId(isl_dim_out, pos, id); }
     SpaceTy setSetDimId(unsigned pos, const Id &id) const { assert(isSet()); return setDimId(isl_dim_set, pos, id); }
 
-    SpaceTy setDimName(isl_dim_type type,  unsigned pos,const char *s) { auto result = getDerived()->copy(); result.setDimName_inplace(type, pos, s); return std::move(result); }
+    SpaceTy setDimName(isl_dim_type type,  unsigned pos,const char *s) { auto result = getDerived()->copy(); result.setDimName_inplace(type, pos, s); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy setDimName(isl_dim_type type,  unsigned pos,const char *s) && { getDerived()->setDimName_inplace(type, pos, s); return std::move(*this); }
 #endif
@@ -377,8 +378,16 @@ namespace isl {
 #endif
 
     SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count) const { auto result = getDerived()->copy(); result.removeDims_inplace(type, first, count); return result; }
+    SpaceTy removeDims_consume(isl_dim_type type, unsigned first, unsigned count) const { getDerived()->removeDims_inplace(type, first, count); return result; }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
     SpaceTy removeDims(isl_dim_type type, unsigned first, unsigned count) && { getDerived()->removeDims_inplace(type, first, count); return std::move(*this); }
+#endif
+
+    SpaceTy removeDims(const DimRange &range) const { return getDerived()->removeDims(range.getType(), range.getFirst(), range.getCount()); }
+    SpaceTy removeDims_consume(const DimRange &range) { return getDerived()->removeDims_consume(range.getType(), range.getFirst(), range.getCount()); }
+    void removeDim_inplace(const DimRange &range) ISLPP_INPLACE_QUALIFIER { removeDims_inplace(range.getType(), range.getFirst(), range.getCount()); }
+#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+     SpaceTy removeDims(const DimRange &range) && { return getDerived()->removeDims_consume(range.getType(), range.getFirst(), range.getCount()); }
 #endif
 
     Dim addDim_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER {
@@ -393,6 +402,7 @@ namespace isl {
     Dim addSetDim_inplace() ISLPP_INPLACE_QUALIFIER {
       return getDerived()->addDim_inplace(isl_dim_out);
     }
+
 
     Dim findDim(const Id &id) const {
       auto space = getDerived()->getSpace().keep();

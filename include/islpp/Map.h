@@ -274,6 +274,14 @@ namespace isl {
     PwMultiAff lexmaxPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
 #endif
 
+    PwMultiAff lexoptPwMultiAff(bool max) const {
+      if (max)
+        return lexmaxPwMultiAff();
+      else
+        return lexminPwMultiAff();
+    }
+
+
 #if 0
     // This is internal, use unite() instead
     void addBasicMap_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER { give(isl_map_add_basic_map(take(), bmap.take())); }
@@ -608,8 +616,13 @@ namespace isl {
     Map rangeProduct(const Map &that) const { return Map::enwrap(isl_map_range_product(this->takeCopy(), that.takeCopy())); }
 
     Map resetTupleId(isl_dim_type type) const { return Map::enwrap(isl_map_reset_tuple_id(takeCopy(), type)); }
-    Map resetTupleId_consume(isl_dim_type type)  { return Map::enwrap(isl_map_reset_tuple_id(take(), type)); }
+    Map resetTupleId_consume(isl_dim_type type) { return Map::enwrap(isl_map_reset_tuple_id(take(), type)); }
     void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { give(isl_map_reset_tuple_id(take(), type)); }
+
+    Map moveSubspaceAppendToRange(const Space &subspace) const { auto result = copy(); result.moveSubspaceAppendToRange_inplace(subspace); return result; }
+    void moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
+    Map moveSubspacePrependToRange(const Space &subspace) const { auto result = copy(); result.moveSubspacePrependToRange_inplace(subspace); return result; }
+    void moveSubspacePrependToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
   }; // class Map
 
 

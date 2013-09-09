@@ -108,6 +108,8 @@ namespace isl {
 #pragma endregion
 
 
+    Space getParamsSpace() const { return getSpace().getParamsSpace(); }
+
     bool hasTupleId() const { return isl_set_has_tuple_id(keep()); }
     const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }
     Id getTupleId() const { return Id::enwrap(isl_set_get_tuple_id(keep())); }
@@ -120,6 +122,9 @@ namespace isl {
     Set setTupleId(Id &&id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.take())); }
     Set setTupleId(const Id &id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.takeCopy())); }
 #endif
+
+    Set setDimId(unsigned pos, const Id &id) const { return Set::enwrap(isl_set_set_dim_id(takeCopy(), isl_dim_set, pos, id.takeCopy())); }
+    void setDimId_inplace(unsigned pos, const Id &id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_id(take(), isl_dim_set, pos, id.takeCopy())); }
 
     unsigned getDimCount() const { return isl_set_dim(keep(), isl_dim_set); }
     bool hasDimId(unsigned pos) const { return checkBool(isl_set_has_dim_id(keep(), isl_dim_set, pos)); }
@@ -145,21 +150,15 @@ namespace isl {
     static Set createFromPwAff(PwAff &&);
     static Set createFromPwMultiAff(PwMultiAff &&aff);
     static Set createFromPoint(Point &&);
-    static Set createBocFromPoints(Point &&pnt1, Point &&pnt2);
+    static Set createBoxFromPoints(Point &&pnt1, Point &&pnt2);
 
     static Set readFrom(Ctx *, FILE *);
     static Set readFrom(Ctx *, const char *);
-
-    //Set copy() const { return Set::enwrap(takeCopy()); }
-    //Set &&move() { return std::move(*this); }
 #pragma endregion
 
 
 #pragma region Printing
-    //void print(llvm::raw_ostream &out) const;
     void printPovray(llvm::raw_ostream &out) const;
-    //std::string toString() const;
-    //void dump() const;
 #pragma endregion
 
     void addConstraint_inplace(const Constraint &c) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_constraint(take(), c.takeCopy())); }
@@ -179,8 +178,6 @@ namespace isl {
 
     int getBasicSetCount() const;
 
-    //unsigned dim(isl_dim_type) const;
-    //unsigned getSetDimCount() const;
     int getInvolvedDims(isl_dim_type, unsigned first, unsigned n) const;
     bool dimHasAnyLowerBound(isl_dim_type, unsigned pos) const;
     bool dimHasAnyUpperBound(isl_dim_type, unsigned pos) const;
@@ -273,17 +270,23 @@ namespace isl {
     /// examples:
     ///   { ((A -> B) -> C) }.unwrapTuple(1) = { (A -> C) -> B }
     ///   { (A -> (B -> C)) }.unwrapTuple(B) = { (A -> C) -> B }
-    Map unwrapTuple_internal(unsigned TuplePos) ISLPP_INTERNAL_QUALIFIER;
-    Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
+    //Map unwrapTuple_internal(unsigned TuplePos) ISLPP_INTERNAL_QUALIFIER;
+    //Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
+    Map unwrapSubspace(const Space &subspace) const;
 
     Set intersect(const Set &that) const { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
     void intersect_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_intersect(take(), that.takeCopy())); }
 
     /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
     /// { (A, B, C) }.subspspaceMap({ B }) = { (A, B, C) -> B }
-    Map subspaceMap(const Space &space) const;
+    Map subspaceMap(const Space &subspace) const;
+    Map subrangeMap(unsigned first, unsigned count) const;
 
     Set resetTupleId() const { return Set::enwrap(isl_set_reset_tuple_id(takeCopy())); }
+
+    //Map reorganizeTuples(llvm::ArrayRef<unsigned> domainTuplePos, llvm::ArrayRef<unsigned> rangeTuplePos);
+    Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
+    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) const;
   }; // class Set
 
 

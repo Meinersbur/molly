@@ -151,11 +151,13 @@ namespace isl {
     void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
     BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
 
-    Map intersect(Map &&that) const ;
-    Map intersect(const Map &that) const ;
+    Map intersect(Map &&that) const;
+    Map intersect(const Map &that) const;
 
-    void intersectDomain(BasicSet &&bset) { give(isl_basic_map_intersect_domain(take(), bset.take())); }
-    void intersectRange(BasicSet &&bset) { give(isl_basic_map_intersect_range(take(), bset.take())); }
+    BasicMap intersectDomain(const BasicSet &bset) const { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
+    Map intersectDomain(const Set &set) const;
+    BasicMap intersectRange(const BasicSet &bset) const { return BasicMap::enwrap(isl_basic_map_intersect_range(takeCopy(), bset.takeCopy())); }
+    Map intersectRange(const Set &set) const;
 
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
     void reverse() { give(isl_basic_map_reverse(take())); }

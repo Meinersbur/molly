@@ -20,7 +20,17 @@ namespace molly {
     llvm::GlobalVariable *varrecv;
     //uint64_t baseOffset;
     FieldType *fty;
-    isl::Map relation; /* { (src[coord] -> dst[coord]) -> field[indexset] } */
+    isl::Map relation; // { (src[coord] -> dst[coord]) -> field[indexset] }
+
+    // After the given last instances of write, send the given elements
+    // { (writeStmt[domain], node[cluster]) -> field[indexset] }
+    // { writeStmt[domain] -> writeStmt[domain] }
+    //isl::Map writeChunk; 
+
+    // Before the given first instance of read, receive the given elements
+    // { (readStmt[domain], node[cluster]) -> field[indexset] }
+     // { [domain] -> readStmt[domain] }
+    //isl::Map readChunk;
 
     AffineMapping *mapping;
     isl::PwAff countElts;

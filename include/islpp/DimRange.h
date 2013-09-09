@@ -29,13 +29,24 @@ namespace isl {
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, const Space &space);
 
   public:
-    bool isNull() { return type==isl_dim_cst; }
-    bool isValid() { return type!=isl_dim_cst; }
+    bool isNull() const { return type==isl_dim_cst; }
+    bool isValid() const { return type!=isl_dim_cst; }
 
-    isl_dim_type getType() const { return type; }
-    unsigned getBeginPos() const {return first;}
-    unsigned getCount() const { return count; }
-    unsigned getEndPos() const { return first+count; }
+    isl_dim_type getType() const { assert(isValid()); return type; }
+    unsigned getBeginPos() const { assert(isValid()); return first;}
+    unsigned getCount() const { assert(isValid()); return count; }
+    unsigned getEndPos() const { assert(isValid()); return first+count; }
+
+    // Alternative names
+    unsigned getFirst() const { assert(isValid()); return first;} 
+     unsigned getEnd() const { assert(isValid()); return first+count;}
+      unsigned getLast() const { assert(isValid()); assert(count >= 1); return first+count-1;}
+
+      unsigned relativePos(unsigned i) const { 
+        assert(isValid()); 
+        assert(first <= i && i < first+count); 
+        return i - count; 
+      }
 
     Space getSpace() const;
   }; // class DimRange

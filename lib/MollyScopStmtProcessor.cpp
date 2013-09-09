@@ -61,10 +61,62 @@ namespace {
 
   protected:
     Scop *getParent() const { return stmt->getParent(); }
-    MollyScopProcessor *getParentProcessor() { return pm->getScopContext(getParent()); }
+    MollyScopProcessor *getParentProcessor() const { return pm->getScopContext(getParent()); }
+    MollyFunctionProcessor *getFunctionProcessor() const { return pm->getFuncContext(getParentFunction(stmt)); }
+    ClusterConfig *getClusterConfig() const { return pm->getClusterConfig(); }
+    isl::BasicSet getClusterShape() const { return getClusterConfig()->getClusterShape(); }
+
+    void identifyDomainDims() {
+      auto islctx = getIslContext();
+      auto scopCtx = getScopProcessor();
+
+      auto domain = getDomain();
+
+      assert(domain.hasTupleId());
+      auto nDims = domain.getDimCount();
+      bool changed = false;
+      for (auto i = nDims-nDims; i < nDims; i+=1) {
+        if (!domain.hasDimId(i)) {
+          auto loop = stmt->getLoopForDimension(i);
+          auto id = scopCtx->getIdForLoop(loop);
+          domain.setDimId_inplace(i, id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        stmt->setDomain(domain.takeCopy());
+
+        auto scatter = getScattering();
+        auto scatterSpace = isl::Space::createMapFromDomainAndRange(domain.getSpace(), scatter.getRangeSpace());
+        scatter.cast_inplace(scatterSpace);
+        stmt->setScattering(scatter.take());
+
+        auto where = getWhere();
+        if (where.isValid()) {
+          auto whereSpace = isl::Space::createMapFromDomainAndRange(domain.getSpace(), where.getRangeSpace());
+          where.cast_inplace(whereSpace);
+          stmt->setWhereMap(where.take());
+        }
+      }
+    }
+
 
     isl::Set getDomain() const LLVM_OVERRIDE {  
       return enwrap(stmt->getDomain());
+    }
+    isl::Set getDomainWithNamedDims() const LLVM_OVERRIDE {
+      auto scopCtx = getScopProcessor();
+      auto domain = getDomain();
+
+      auto nDims = domain.getDimCount();
+      for (auto i = nDims-nDims; i < nDims; i+=1) {
+        if (!domain.hasDimId(i)) {
+          auto loop = stmt->getLoopForDimension(i);
+          auto id = scopCtx->getIdForLoop(loop);
+          domain.setDimId_inplace(i, id);
+        }
+      }
+      return domain;
     }
     isl::Map getScattering() const LLVM_OVERRIDE {
       return enwrap(stmt->getScattering());
@@ -187,15 +239,15 @@ namespace {
       if (idToValue.size() == expectedIds)
         return idToValue;
 
-      // 1. Valid parameters of this ScopStmt
+      // 1. Valid parameters of this Scop
       for (auto &param : validParams) {
         getValueOf(param);
       }
 
       // 2. The loop induction variables
       for (auto i = nDims-nDims; i < nDims; i+=1) {
-        auto iv = const_cast<PHINode *>(stmt->getInductionVariableForDimension(i));
-        auto id = domain.getDimId(i);
+        auto iv = getDomainValue(i);
+        auto id = getDomainId(i);
         assert(id.isValid());
         idToValue[id.keep()] = iv;
       }
@@ -260,6 +312,19 @@ namespace {
         result.setAff_inplace(i, aff);
       }
 
+      return result;
+    }
+
+
+    isl::MultiAff getClusterMultiAff() LLVM_OVERRIDE {
+      auto clusterShape = getClusterShape();
+      auto nClusterDims = clusterShape.getDimCount();
+
+      auto result = getIslContext()->createMapSpace(0, clusterShape.getSpace()).createZeroMultiAff();
+      for (auto i = nClusterDims-nClusterDims; i < nClusterDims; i+=1) {
+        auto scev = getParentProcessor()->getClusterCoordinate(i);
+
+      }
       return result;
     }
 
@@ -427,6 +492,11 @@ namespace {
     }
 
 
+    isl::Ctx *getIslContext() const LLVM_OVERRIDE {
+      return enwrap(stmt->getIslCtx());
+    }
+
+
     bool isReadAccess() const LLVM_OVERRIDE {
       assert(isFieldAccess());
       return fmemacc->isRead();
@@ -444,7 +514,7 @@ namespace {
     }
 
 
-    molly::MollyScopProcessor *getScopProcessor() LLVM_OVERRIDE {
+    molly::MollyScopProcessor *getScopProcessor() const LLVM_OVERRIDE {
       return getParentProcessor();
     }
 

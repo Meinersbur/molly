@@ -32,15 +32,25 @@ void Multi<PwAff>::printProperties(llvm::raw_ostream &out, int depth, int indent
 }
 
 
-    /* implicit */  Multi<PwAff>:: Multi(const MultiAff &madd) 
-      : Obj(madd.isValid() ? madd.toMultiPwAff().take() : nullptr) { 
-    }
+/* implicit */  Multi<PwAff>:: Multi(const MultiAff &madd) 
+  : Obj(madd.isValid() ? madd.toMultiPwAff().take() : nullptr) { 
+}
 
 
-    MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) { 
-      give(madd.isValid() ? madd.toMultiPwAff().take() : nullptr); 
-return *this;
-    }
+const MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) ISLPP_INPLACE_QUALIFIER { 
+  give(madd.isValid() ? madd.toMultiPwAff().take() : nullptr); 
+  return *this;
+}
+
+
+/* implicit */ Multi<PwAff>::Multi(const PwMultiAff &pma) 
+  : Obj(pma.isValid() ? pma.toMultiPwAff().take() : nullptr) {}
+
+
+const MultiPwAff &Multi<PwAff>::operator=(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER {
+  give(pma.isValid() ? pma.toMultiPwAff().take() : nullptr);
+  return *this;
+}
 
 
 void Multi<PwAff>::push_back(PwAff &&aff) {

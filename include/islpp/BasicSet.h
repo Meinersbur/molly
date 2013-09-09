@@ -75,7 +75,11 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:
-    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { 
+      auto newspace = getSpace().setTupleId(type, std::move(id));
+      give(isl_basic_set_cast(take(), newspace.take()));
+      //give(isl_basic_set_set_tuple_id(take(), type, id.take())); 
+    }
     //void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_id(take(), type, pos, id.take())); }
 
   public:
@@ -106,6 +110,10 @@ namespace isl {
         bool hasDimId(unsigned pos) const { return Spacelike<BasicSet>::hasDimId(isl_dim_set, pos); }
     Id getDimId(unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), isl_dim_set, pos)); }
 
+    isl::Id getTupleId() const { return Spacelike<BasicSet>::getTupleId(isl_dim_set); }
+    bool hasTupleId() const { return Spacelike<BasicSet>::hasTupleId(isl_dim_set); }
+      BasicSet setTupleId(const Id &id) const  { return Spacelike<BasicSet>::setTupleId(isl_dim_set, id); }
+    void setTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { Spacelike<BasicSet>::setTupleId_inplace(isl_dim_set, id); }
 
 #pragma region Creational
     static BasicSet create(const Space &space);

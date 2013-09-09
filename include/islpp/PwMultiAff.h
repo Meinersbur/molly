@@ -64,7 +64,7 @@ namespace isl {
   public:
     //void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_insert_dims(take(), type, pos, count)); }
     //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    //void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_remove_dims(take(), type, first, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_drop_dims(take(), type, first, count)); }
 
 
     // optional, default implementation exist
@@ -129,6 +129,8 @@ namespace isl {
     /// The set of elements for which this affine mapping is defined
     Set domain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
     Set getDomain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
+    Set getRange() const;
+
 
     PwMultiAff scale(Val &&v) const { return enwrap(isl_pw_multi_aff_scale_val(takeCopy(), v.take())); }
     //PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_multi_val(takeCopy(), v.take())); }
@@ -140,8 +142,14 @@ namespace isl {
     PwMultiAff gistParams(Set &&set) const { return enwrap(isl_pw_multi_aff_gist_params(takeCopy(), set.take())); }
     PwMultiAff gist(Set &&set) const { return enwrap(isl_pw_multi_aff_gist(takeCopy(), set.take())); }
 
-    PwMultiAff pullbackMultiAff(MultiAff &&ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
-    PwMultiAff pullbackPwMultiAff(PwMultiAff &&pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
+    /// this(ma(x))
+        PwMultiAff pullback(const MultiAff &ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.takeCopy())); }
+    PwMultiAff pullback(MultiAff &&ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
+    void pullback_inplace(const MultiAff &ma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_multi_aff(take(), ma.takeCopy())); }
+
+     PwMultiAff pullback(const PwMultiAff &pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.takeCopy())); }
+    PwMultiAff pullback(PwMultiAff &&pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
+    void pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.takeCopy())); }
 
     bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
     unsigned nPieces() const { unsigned result=0;  foreachPiece([&result] (Set&& , MultiAff&&)->bool{ result+=1; return true; } ) ; return result; }
@@ -152,6 +160,13 @@ namespace isl {
     PwMultiAff operator-() const { return neg(); }
 
     void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_QUALIFIER  { give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
+
+    // Same isl::Map operations
+    Set wrap() const;
+
+    PwMultiAff projectOut(unsigned first, unsigned count) const;
+     PwMultiAff projectOut(const DimRange &range) const;
+    PwMultiAff projectOutSubspace(const Space &subspace) const;
   }; // class Pw<MultiAff>
 
 

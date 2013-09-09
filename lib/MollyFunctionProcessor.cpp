@@ -393,7 +393,7 @@ namespace {
 
 
 
-    Value* getClusterCoordinate(int i) {
+    Value* getClusterCoordinate(unsigned i) LLVM_OVERRIDE {
       auto &llvmContext = func->getContext();
       auto intTy = Type::getInt32Ty(llvmContext);
 

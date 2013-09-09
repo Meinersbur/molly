@@ -244,6 +244,11 @@ MultiAff Space::createZeroMultiAff() const {
 }
 
 
+MultiAff Space::createIdentityMultiAff() const {
+  return MultiAff::createIdentity(*this);
+}
+
+
 MultiPwAff Space::createZeroMultiPwAff() const {
   assert(this->isMapSpace());
   return MultiPwAff::enwrap(isl_multi_pw_aff_zero(takeCopy()));
@@ -571,6 +576,29 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 }
 
 
+static unsigned countSubspaceMatches_recursive(const Space &space, const Space &spaceToFind) {
+  assert(spaceToFind.isValid());
+  unsigned result = 0;
+  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
+    auto dimCount = space.dim(type);
+
+    if (::matchesSpace(spaceToFind, space.getNestedOrDefault(type))) {
+      // Found the space
+      result+=1;
+      continue; // Do not look into nested spaces
+    }
+
+    if (space.isNested(type)) {
+      auto nestedSpace = space.getNested(type);
+      if (countSubspaceMatches_recursive(nestedSpace, spaceToFind)) {
+        return true;
+      }
+    } 
+  }
+
+  return result;
+}
+
 static bool findSubspace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
   assert(spaceToFind.isValid());
 
@@ -609,8 +637,11 @@ DimRange Space::findSubspace(isl_dim_type type, const Space &subspace) const {
     return DimRange::enwrap(type, 0, this->dim(type), *this);
 
   unsigned currentDimPos = 0;
-  if (findSubspace_recursive(nested, seek, currentDimPos))
-    return DimRange::enwrap(type, currentDimPos, subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out), *this);
+  if (findSubspace_recursive(nested, seek, currentDimPos)) {
+    auto result = DimRange::enwrap(type, currentDimPos, subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out), *this);
+    assert(countSubspaceMatches_recursive(nested, subspace)==1 && "subspace must be unique");
+    return result;
+  }
 
   return DimRange();
 }
@@ -1054,7 +1085,7 @@ std::vector<Space> Space::flattenNestedSpaces() const {
 }
 
 
-static Space combineSpaces(const Space &lhs, const Space &rhs) {
+Space isl::combineSpaces(const Space &lhs, const Space &rhs) {
   if (lhs.isNull() && rhs.isNull())
     return Space();
 

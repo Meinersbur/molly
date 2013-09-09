@@ -54,7 +54,7 @@ Set Set::createFromPoint(Point &&point) {
 }
 
 
-Set Set:: createBocFromPoints(Point &&pnt1, Point &&pnt2) {
+Set Set:: createBoxFromPoints(Point &&pnt1, Point &&pnt2) {
   return Set::enwrap(isl_set_box_from_points(pnt1.take(), pnt2.take()));
 }
 
@@ -860,14 +860,135 @@ Set Set::params() const {
 }
 
 
+Map Set::unwrapSubspace(const Space &subspace) const {
+  auto myspace = getSpace();
+  auto range = myspace.findSubspace(isl_dim_set, subspace);
+  assert(range.isValid());
+
+  auto mapToDomainSpace = Space::createMapFromDomainAndRange(myspace, myspace.removeSubspace(subspace));
+  auto mapToRangeSpace = Space::createMapFromDomainAndRange(myspace, subspace);
+
+  auto mapToDomain = mapToDomainSpace.equalBasicMap(isl_dim_in, 0, range.getBeginPos(), isl_dim_out, 0);
+  mapToDomain.intersect(mapToDomainSpace.equalBasicMap(isl_dim_in, range.getBeginPos() + range.getCount(), mapToDomainSpace.getOutDimCount() - range.getBeginPos(), isl_dim_out, range.getBeginPos()));
+
+  auto mapToRange = mapToRangeSpace.equalBasicMap(isl_dim_in, range.getBeginPos(), range.getCount(), isl_dim_out, 0);
+
+  auto result = chain(mapToRange);
+  result.applyDomain_inplace(mapToDomain);
+  return result;
+}
+
+
 Map Set::subspaceMap(const Space &subspace) const {
   auto myspace = getSpace();
   auto range = myspace.findSubspace(isl_dim_set, subspace);
   assert(range.isValid());
 
   auto equator = Space::createMapFromDomainAndRange(myspace, subspace).equalBasicMap(isl_dim_in, range.getBeginPos(), range.getCount(), isl_dim_out, 0);
-  return chain(equator.move()).applyRange(equator.move());
+  return chain(equator.move());
 }
+
+
+Map Set::subrangeMap(unsigned first, unsigned count) const {
+  auto subspace = getCtx()->createSetSpace(0, count);
+  auto equator = Space::createMapFromDomainAndRange(getSpace(), subspace).equalBasicMap(isl_dim_in, first, count, isl_dim_out, 0);
+  return chain(equator.move());
+}
+
+
+Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::ArrayRef<Space> rangeSubspaces) {
+  auto space = getSpace();
+
+  auto nTotalDomainDims = 0;
+  Space domainSpace;
+  for (auto i = 0; i < domainSubspaces.size(); i+=1) {
+    auto subspace = domainSubspaces[i];
+    domainSpace = combineSpaces(domainSpace, subspace);
+    nTotalDomainDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
+  }
+  if (domainSpace.isNull())
+    domainSpace = getParamsSpace().createSetSpace(0);
+
+  auto nTotalRangeDims = 0;
+  Space rangeSpace;
+  for (auto i = 0; i < rangeSubspaces.size(); i+=1) {
+    auto subspace = rangeSubspaces[i];
+     rangeSpace = combineSpaces(rangeSpace, subspace);
+    nTotalRangeDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
+  }
+  if (rangeSpace.isNull())
+    rangeSpace = getParamsSpace().createSetSpace(0);
+
+  auto resultSpace = Space::createMapFromDomainAndRange(domainSpace, rangeSpace);
+  auto result = resultSpace.createUniverseMap();
+
+
+  auto domainMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getDomainSpace());
+  auto domainMap = domainMapSpace.universeBasicMap();
+  unsigned pos = 0;
+  for (auto i = 0; i < domainSubspaces.size(); i+=1) {
+    auto subspace = domainSubspaces[i];
+    auto dimrange = space.findSubspace(isl_dim_set, subspace);
+    assert(dimrange.isValid());
+    domainMap.intersect(domainMapSpace.equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, pos));
+    pos += dimrange.getCount();
+  }
+
+  auto rangeMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getRangeSpace());
+  auto rangeMap = domainMapSpace.universeBasicMap();
+  pos = 0;
+  for (auto i = 0; i < rangeSubspaces.size(); i+=1) {
+    auto subspace = rangeSubspaces[i];
+    auto dimrange = space.findSubspace(isl_dim_set, subspace);
+    assert(dimrange.isValid());
+    rangeMap.intersect(domainMapSpace.equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, pos));
+    pos += dimrange.getCount();
+  }
+
+ return rangeMap.intersectDomain(*this).applyDomain(domainMap);
+}
+
+
+static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &map, const Space &subspace, unsigned &offset) {
+  if (subspace.isSetSpace() && subspace.hasTupleId(isl_dim_set)) {
+  auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
+  if (dimrange.isValid()) {
+    map.intersect(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
+    offset += subspace.getSetDimCount();
+    return;
+  } 
+  }
+
+  if (subspace.isWrapping()) {
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.unwrap(), offset);
+  } else if (subspace.isMapSpace()) {
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.getDomainSpace(), offset);
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.getRangeSpace(), offset);
+  } else {
+  // Recursion leaf
+    //auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
+    //assert(dimrange.isValid());
+    //map.intersect(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
+    //offset += subspace.getSetDimCount();
+  }
+}
+
+
+   Map Set::reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) const {
+     auto space = getSpace();
+
+      auto domainMapSpace = Space::createMapFromDomainAndRange(space, domainSpace);
+      auto domainMap = domainMapSpace.universeBasicMap();
+      unsigned domainPos = 0;
+       reorganizeSubspaces_recursive(space, domainMap, domainSpace, domainPos);
+
+        auto rangeMapSpace = Space::createMapFromDomainAndRange(space, rangeSpace);
+       auto rangeMap = domainMapSpace.universeBasicMap();
+        unsigned rangePos = 0;
+       reorganizeSubspaces_recursive(space, rangeMap, rangeSpace, rangePos);
+
+        return rangeMap.intersectDomain(*this).applyDomain(domainMap);
+   }
 
 
 Set isl::params(Set &&set){

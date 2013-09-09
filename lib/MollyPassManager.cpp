@@ -961,9 +961,9 @@ namespace {
       auto sendDstRank = clusterConf->codegenComputeRank(sendBuilder,domainVars);
       std::map<isl_id *, llvm::Value *> sendParams;
       editor.getParamsMap( sendParams, sendStmt);
-      auto sendSize = buildIslAff(sendBuilder.GetInsertPoint(), eltCount.takeCopy(), sendParams, this);
-      Value* sendArgs[] = { sendDstRank, sendSize };
-      sendBuilder.CreateCall(runtimeMetadata.funcCreateSendCombuf, sendArgs);
+      //auto sendSize = buildIslAff(sendBuilder.GetInsertPoint(), eltCount.takeCopy(), sendParams, this);
+      //Value* sendArgs[] = { sendDstRank, sendSize };
+      //sendBuilder.CreateCall(runtimeMetadata.funcCreateSendCombuf, sendArgs);
 
       // Receive buffers
       auto recvWhere = sendWhere.reverse(); /* { src[coord] -> dst[coord] } */ // We are on dst node, recv from src
@@ -979,9 +979,9 @@ namespace {
       std::map<isl_id *, llvm::Value *> recvParams;
       editor.getParamsMap(recvParams, recvStmt);
       //auto recvSize = buildIslAff(recvBuilder, eltCount, recvParams);
-      auto recvSize =  buildIslAff(recvBuilder.GetInsertPoint(), eltCount.takeCopy(), recvParams, this);
-      Value* recvArgs[] = { recvSrcRank, recvSize };
-      sendBuilder.CreateCall(runtimeMetadata.funcCreateRecvCombuf, sendArgs);
+      //auto recvSize =  buildIslAff(recvBuilder.GetInsertPoint(), eltCount.takeCopy(), recvParams, this);
+      //Value* recvArgs[] = { recvSrcRank, recvSize };
+      //sendBuilder.CreateCall(runtimeMetadata.funcCreateRecvCombuf, sendArgs);
 
       return func;
     }

@@ -203,6 +203,36 @@ Map Map::projectOutSubspace(isl_dim_type type, const Space &subspace) const {
 }
 
 
+    void Map::moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+      auto myspace = getSpace();
+      auto dimrange = myspace.findSubspace(isl_dim_in, subspace);
+      assert(dimrange.isValid());
+
+        auto newDomainSpace = getDomainSpace().removeSubspace(subspace);
+        auto newRangeSpace = Space::createMapFromDomainAndRange(getRangeSpace(), subspace).wrap();
+      auto newSpace = Space::createMapFromDomainAndRange(newDomainSpace, newRangeSpace);
+
+      moveDims_inplace(isl_dim_out, getOutDimCount(), isl_dim_in, dimrange.getBeginPos(), dimrange.getCount());
+      cast_inplace(newSpace);
+    }
+
+
+   void Map::moveSubspacePrependToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+       auto myspace = getSpace();
+      auto dimrange = myspace.findSubspace(isl_dim_in, subspace);
+      assert(dimrange.isValid());
+
+        auto newDomainSpace = getDomainSpace().removeSubspace(subspace);
+        auto newRangeSpace = Space::createMapFromDomainAndRange(subspace, getRangeSpace()).wrap();
+      auto newSpace = Space::createMapFromDomainAndRange(newDomainSpace, newRangeSpace);
+
+      moveDims_inplace(isl_dim_out, 0, isl_dim_in, dimrange.getBeginPos(), dimrange.getCount());
+      cast_inplace(newSpace);
+   }
+
+
+
+
 Map isl::join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate) {
   auto cartesian = product(domain, range).unwrap();
   cartesian.intersect(cartesian.getSpace().equalBasicMap(isl_dim_in, firstDomainDim, countEquate, isl_dim_out, firstRangeDim));

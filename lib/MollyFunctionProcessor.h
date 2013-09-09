@@ -17,7 +17,7 @@ namespace molly {
     virtual llvm::FunctionPass *asPass() = 0;
     //virtual llvm::AnalysisResolver *asResolver() = 0;
 
-    virtual llvm::Value *getClusterCoordinate( int i ) = 0;
+    virtual llvm::Value *getClusterCoordinate(unsigned i) = 0;
 
   public:
    virtual void isolateFieldAccesses() = 0;

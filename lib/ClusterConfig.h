@@ -38,7 +38,7 @@ namespace molly {
     }
 
     /// TupleId for node coordinates in this cluster 
-    const isl::Id &getClusterTuple() const {return nodecoord;}
+    const isl::Id &getClusterTuple() const { return nodecoord; }
     isl::Space getClusterSpace() const;
     
     void setClusterLengths(llvm::ArrayRef<unsigned> lengths) {
@@ -46,6 +46,7 @@ namespace molly {
       clusterLengths.append(lengths.begin(), lengths.end());
 
       clusterShape = islctx->createRectangularSet(clusterLengths);
+      clusterShape.setTupleId_inplace(getClusterTuple());
     }
 
     llvm::ArrayRef<unsigned> getClusterLengths() const { return clusterLengths; }

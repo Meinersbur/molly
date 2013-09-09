@@ -21,6 +21,7 @@ namespace molly {
     virtual void dump() const = 0;
     virtual void validate() const = 0;
 
+    virtual const llvm::SCEV *getClusterCoordinate(unsigned i) = 0;
     virtual std::vector<const llvm::SCEV *> getClusterCoordinates() = 0;
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;
@@ -34,8 +35,9 @@ namespace molly {
 
     //virtual std::vector<isl::Id> getAllIds();
 
-   virtual isl::Space getParamsSpace() = 0;
+    virtual isl::Space getParamsSpace() = 0;
 
+    virtual isl::Id getIdForLoop(const llvm::Loop *loop) = 0;
     virtual const llvm::SCEV *scevForValue(llvm::Value *value) = 0;
     virtual isl::Id idForSCEV(const llvm::SCEV *scev) = 0;
     virtual llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) = 0;

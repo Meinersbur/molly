@@ -194,7 +194,7 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
     auto exitNode = DT->getNode(exitBB);
     if (exitNode) {
       // exitBB is now below headerBB
-      if (DT->findNearestCommonDominator(exitBB, entryBB) == entryBB)
+      if (exitNode->getIDom() == entryNode)
         DT->changeImmediateDominator(exitBB, headerBB);
     } else {
       exitNode = DT->addNewBlock(exitBB, headerBB);
@@ -470,6 +470,14 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
 }
 
 
+StmtEditor StmtEditor::replaceStmt(const isl::Map &sub, const std::string &name) {
+  auto allInstances = getInstances();
+   assert(sub <= allInstances);
+   restrictInstances(allInstances.subtract(sub));
+  return createStmt(sub.getDomain(), enwrap(stmt->getScattering()), sub, name);
+}
+
+
 #if 0
 StmtEditor ScopEditor::createStmtRelative(polly::ScopStmt *model, const isl::Set &subdomain, unsigned atLevel, int relative, const isl::Map &where, const std::string &name) {
   auto modelDomain = enwrap(model->getDomain());
@@ -696,11 +704,31 @@ isl::Map StmtEditor::getWhere() {
 }
 
 
+ isl::Map StmtEditor:: getInstances() {
+   return getWhere().intersectDomain(getIterationDomain());
+ }
+
+
 void StmtEditor::setWhere(isl::Map &&where) {
   assert(where.getDomainSpace().matchesSetSpace(getDomainSpace()));
   assert(where.hasOutTupleId());
   assert(where.getDomain().isSupersetOf(getIterationDomain()));
   stmt->setWhereMap(where.take());
+}
+
+
+void StmtEditor::restrictInstances(const isl::Map &where) {
+  assert(where.matchesMapSpace(getWhere().getSpace()));
+  assert(where.hasOutTupleId());
+  
+  assert(getInstances() >= where);
+
+  stmt->setDomain(where.getDomain().take());
+  stmt->setWhereMap(where.takeCopy());
+
+  if (where.isEmpty()) {
+    // Could totally remove the ScopStmt
+  }
 }
 
 

@@ -187,6 +187,7 @@ namespace isl {
     PwAff createEmptyPwAff() const;
     PwAff createZeroPwAff() const;
     MultiAff createZeroMultiAff() const;
+    MultiAff createIdentityMultiAff() const;
     MultiPwAff createZeroMultiPwAff() const;
     PwMultiAff createEmptyPwMultiAff() const;
 
@@ -469,6 +470,13 @@ namespace isl {
 
   /// Ensure both spaces have the same param dimensions in the same order
   void compatibilize(/*inout*/Space &space1, /*inout*/Space &space2);
+
+  /// Create spacenesting from valid subspaces
+  Space combineSpaces(const Space &lhs, const Space &rhs);
+
+  static inline Space operator>>(const Space &domainSpace, const Space &rangeSpace) {
+    return isl::Space::createMapFromDomainAndRange(domainSpace.normalizeWrapped(), rangeSpace.normalizeWrapped());
+  }
 
 } // namespace isl
 #endif /* ISLPP_SPACE_H */

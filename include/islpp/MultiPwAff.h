@@ -87,7 +87,10 @@ namespace isl {
 
 #pragma region Conversion
     /* implicit */ Multi(const MultiAff &madd); 
-    MultiPwAff &operator=(const MultiAff &madd);
+    const MultiPwAff &operator=(const MultiAff &madd) ISLPP_INPLACE_QUALIFIER;
+
+    /* implicit */ Multi(const PwMultiAff &pma);
+    const MultiPwAff &operator=(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER;
 
     Map toMap() const;
     //operator Map() const { return toMap(); }

@@ -99,6 +99,8 @@ namespace llvm {
   // #include <llvm/Analysis/ScalarEvolution.h>
   class SCEV;
 
+  // #include <llvm/Analysis/LoopInfo.h>
+  class Loop;
 } // namespace llvm
 
 

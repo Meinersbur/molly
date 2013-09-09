@@ -4,6 +4,7 @@
 #include <isl/map.h>
 #include "islpp/BasicMap.h"
 #include "islpp/Map.h"
+#include "islpp/DimRange.h"
 
 using namespace isl;
 
@@ -29,21 +30,6 @@ void Multi<Aff>::print(llvm::raw_ostream &out) const{
   out << printer.getString();
 }
 
-#if 0
-std::string Multi<Aff>::toString() const {
-  if (!maff)
-    return std::string();
-  std::string buf;
-  llvm::raw_string_ostream out(buf);
-  print(out);
-  return out.str();
-}
-
-
-void Multi<Aff>::dump() const { 
-  isl_multi_aff_dump(keep()); 
-}
-#endif
 
 void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
@@ -122,4 +108,17 @@ void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLA
   auto nOutDims = getOutDimCount();
   removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);
   removeDims_inplace(isl_dim_out, 0, first);
+}
+
+
+MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
+  auto subspace = getDomainSpace();
+  auto myspace = getSpace();
+  auto range = myspace.findSubspace(isl_dim_in, subspace);
+
+  auto result = framespace.createIdentityMultiAff();
+  for (auto i = 0; i < range.getCount(); i+=1) {
+    result.setAff_inplace(range.relativePos(i), getAff(i));
+  }
+  return result;
 }
