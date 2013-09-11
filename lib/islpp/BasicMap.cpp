@@ -16,6 +16,10 @@ void BasicMap::print(llvm::raw_ostream &out) const {
 }
 
 
+void BasicMap::dump() const {
+  isl_basic_map_dump(keep());
+}
+
 
 BasicMap BasicMap::createEmptyLikeMap(Map &&model) { 
   return BasicMap::enwrap(isl_basic_map_empty_like_map(model.take())); 
@@ -27,24 +31,24 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
 }
 
 
-Map BasicMap:: intersect(Map &&that) const {
+ISLPP_WARN_UNUSED_RESULT_PREFIX Map BasicMap:: intersect(Map &&that) const {
   return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.take())); 
 } 
 
 
-Map BasicMap::intersect(const Map &that) const { 
+ISLPP_WARN_UNUSED_RESULT_PREFIX Map BasicMap::intersect(const Map &that) const { 
   return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
 } 
 
 
-    Map BasicMap::intersectDomain(const Set &set) const {
-      return Map::enwrap(isl_map_intersect_domain(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
-    }
+Map BasicMap::intersectDomain(const Set &set) const {
+  return Map::enwrap(isl_map_intersect_domain(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
+}
 
 
-    Map BasicMap::intersectRange(const Set &set) const {
-      return Map::enwrap(isl_map_intersect_range(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
-    }
+Map BasicMap::intersectRange(const Set &set) const {
+  return Map::enwrap(isl_map_intersect_range(isl_map_from_basic_map(takeCopy()), set.takeCopy()));
+}
 
 
 Map isl::partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) { 

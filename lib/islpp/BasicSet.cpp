@@ -110,20 +110,10 @@ void BasicSet::print(llvm::raw_ostream &out) const {
   out << tmp.readAsStringAndClose();
 }
 
-#if 0
-std::string BasicSet::toString() const { 
-  if (!keep())
-    return std::string();
-  std::string buf;
-  llvm::raw_string_ostream stream(buf);
-  return stream.str();
-}
 
 void BasicSet::dump() const { 
-  print(llvm::errs());
+  isl_basic_set_dump(keep());
 }
-#endif
-
 
 
 void BasicSet::dropContraint(Constraint &&constraint) {

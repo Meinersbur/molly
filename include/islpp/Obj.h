@@ -81,6 +81,7 @@ namespace isl {
 
     StructTy *takeCopyOrNull() const {
       auto result = getDerived()->addref();
+      assert(!result == !obj);
 #ifndef NDEBUG
       this->_lastWasCopy = true;
 #endif
@@ -103,15 +104,15 @@ namespace isl {
     }
 
     StructTy **change() LLVM_LVALUE_FUNCTION { 
-       if (!this)
-         return nullptr;
+      if (!this)
+        return nullptr;
 #ifndef NDEBUG
-       this->_printed = "<outdated>";
-       this->_lastWasCopy = false;
-       //TODO: need to run code after the obj has been updated, possibly by returning a proxy object that destructs after the expression
+      this->_printed = "<outdated>";
+      this->_lastWasCopy = false;
+      //TODO: need to run code after the obj has been updated, possibly by returning a proxy object that destructs after the expression
 #endif
-       return &obj; 
-     }
+      return &obj; 
+    }
 
 
     void clear() LLVM_LVALUE_FUNCTION {

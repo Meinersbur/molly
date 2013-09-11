@@ -76,6 +76,11 @@ void Set::print(llvm::raw_ostream &out) const {
 }
 
 
+void Set::dump() const { 
+  isl_set_dump(keep());
+}
+
+
 static const char *povray_prologue = 
   "// Generated from an Integer Set Library set\n"
   "#include \"colors.inc\"\n"
@@ -639,7 +644,7 @@ Map Set::chain(const Map &map) const{
   return map.intersectDomain(*this);
 }
 
-
+#if 0
 Map Set::chainNested(const Map &map) const {
   auto domainTuple = map.getInTupleId();
   auto space = getSpace();
@@ -654,7 +659,7 @@ Map Set::chainNested(const Map &map) const {
   auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, firstTupleDim, tupleDimCount, isl_dim_out, 0); 
   return chain(equator).applyRange(map);
 }
-
+#endif
 
 Map Set::chainSubspace(const Map &map) const {
   return copy().chainSubspace_consume(map);
@@ -913,7 +918,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   Space rangeSpace;
   for (auto i = 0; i < rangeSubspaces.size(); i+=1) {
     auto subspace = rangeSubspaces[i];
-     rangeSpace = combineSpaces(rangeSpace, subspace);
+    rangeSpace = combineSpaces(rangeSpace, subspace);
     nTotalRangeDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
   }
   if (rangeSpace.isNull())
@@ -945,18 +950,18 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
     pos += dimrange.getCount();
   }
 
- return rangeMap.intersectDomain(*this).applyDomain(domainMap);
+  return rangeMap.intersectDomain(*this).applyDomain(domainMap);
 }
 
 
 static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &map, const Space &subspace, unsigned &offset) {
   if (subspace.isSetSpace() && subspace.hasTupleId(isl_dim_set)) {
-  auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
-  if (dimrange.isValid()) {
-    map.intersect(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
-    offset += subspace.getSetDimCount();
-    return;
-  } 
+    auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
+    if (dimrange.isValid()) {
+      map.intersect_inplace(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
+      offset += dimrange.getCount();
+      return;
+    } 
   }
 
   if (subspace.isWrapping()) {
@@ -965,30 +970,52 @@ static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &ma
     reorganizeSubspaces_recursive(parentSpace, map, subspace.getDomainSpace(), offset);
     reorganizeSubspaces_recursive(parentSpace, map, subspace.getRangeSpace(), offset);
   } else {
-  // Recursion leaf
+    // Recursion leaf
+    // If we get there this means that some subspace has no source in parentSpace. Hence, the BasicMap map will not contain any restrictions for this subspace
+
     //auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
     //assert(dimrange.isValid());
     //map.intersect(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
     //offset += subspace.getSetDimCount();
+    //llvm_unreachable("subspace to put next not found in set's space");
+    offset += subspace.getSetDimCount();
   }
 }
 
 
-   Map Set::reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) const {
-     auto space = getSpace();
+Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_) const {
+  auto space = getSpace();
+  auto domainSpace = domainSpace_.normalizeWrapped();
+  auto rangeSpace = rangeSpace_.normalizeWrapped();
 
-      auto domainMapSpace = Space::createMapFromDomainAndRange(space, domainSpace);
-      auto domainMap = domainMapSpace.universeBasicMap();
-      unsigned domainPos = 0;
-       reorganizeSubspaces_recursive(space, domainMap, domainSpace, domainPos);
+  auto domainMapSpace = Space::createMapFromDomainAndRange(space, domainSpace);
+  auto domainMap = domainMapSpace.universeBasicMap();
+  unsigned domainPos = 0;
+  reorganizeSubspaces_recursive(space, domainMap, domainSpace, domainPos);
+  assert(domainPos == domainSpace.getSetDimCount());
 
-        auto rangeMapSpace = Space::createMapFromDomainAndRange(space, rangeSpace);
-       auto rangeMap = domainMapSpace.universeBasicMap();
-        unsigned rangePos = 0;
-       reorganizeSubspaces_recursive(space, rangeMap, rangeSpace, rangePos);
+  auto rangeMapSpace = Space::createMapFromDomainAndRange(space, rangeSpace);
+  auto rangeMap = rangeMapSpace.universeBasicMap();
+  unsigned rangePos = 0;
+  reorganizeSubspaces_recursive(space, rangeMap, rangeSpace, rangePos);
+  assert(rangePos == rangeSpace.getSetDimCount());
 
-        return rangeMap.intersectDomain(*this).applyDomain(domainMap);
-   }
+  return rangeMap.intersectDomain(*this).applyDomain(domainMap);
+}
+
+
+Set Set::reorganizeSubspaces(const Space &space) ISLPP_EXSITU_QUALIFIER {
+  auto myspace = getSpace();
+  auto targetspace = space.normalizeWrapped();
+
+  auto mapSpace = Space::createMapFromDomainAndRange(myspace, targetspace);
+  auto map = mapSpace.universeBasicMap();
+  unsigned pos = 0;
+  reorganizeSubspaces_recursive(myspace, map, targetspace, pos);
+  assert(pos == targetspace.getSetDimCount());
+
+  return apply(map);
+}
 
 
 Set isl::params(Set &&set){

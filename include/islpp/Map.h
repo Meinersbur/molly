@@ -83,7 +83,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_map_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_map_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -426,9 +426,11 @@ namespace isl {
 
     void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_QUALIFIER { give(isl_map_equate(take(), type1, pos1, type2, pos2)); }
     Map equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return Map::enwrap(isl_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
-    Map oppose(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_oppose(take(), type1, pos1, type2, pos2)); }
-    Map orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_order_lt(take(), type1, pos1, type2, pos2)); }
-    Map orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) { return Map::enwrap(isl_map_order_gt(take(), type1, pos1, type2, pos2)); }
+    Map oppose(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return Map::enwrap(isl_map_oppose(takeCopy(), type1, pos1, type2, pos2)); }
+    Map orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return Map::enwrap(isl_map_order_lt(takeCopy(), type1, pos1, type2, pos2)); }
+    Map orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return Map::enwrap(isl_map_order_gt(takeCopy(), type1, pos1, type2, pos2)); }
+
+    Map fix(isl_dim_type type, int pos, const Int &val) ISLPP_EXSITU_QUALIFIER { return Map::enwrap(isl_map_fix(takeCopy(), type, pos, val.keep())); }
 
     void flatten_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_flatten(take()));} 
     Map flatten() const { return Map::enwrap(isl_map_flatten(takeCopy()));} 
@@ -585,7 +587,7 @@ namespace isl {
     }
 
 
-    Map chainNested(const Map &map) const;
+    //Map chainNested(const Map &map) const;
     Map chainNested(const Map &map, unsigned tuplePos) const;
 
     /// { (A, B, C) -> D }.chainNested(isl_dim_in, { B -> E }) = { (A, B, C, D) ->E }
@@ -623,6 +625,12 @@ namespace isl {
     void moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
     Map moveSubspacePrependToRange(const Space &subspace) const { auto result = copy(); result.moveSubspacePrependToRange_inplace(subspace); return result; }
     void moveSubspacePrependToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
+
+
+    /// Function composition pullback(f1, f2) -> f1(f2(x))
+    /// Just isl_map_apply_range with switched arguments
+    Map pullback(const Map &that) ISLPP_EXSITU_QUALIFIER { return Map::enwrap( isl_map_apply_range(that.takeCopy(), this->takeCopy()) ); }
+    void pullback_inplace(const Map &that) ISLPP_INPLACE_QUALIFIER { give(isl_map_apply_range(that.takeCopy(), this->take())); }
   }; // class Map
 
 

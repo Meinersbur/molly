@@ -155,11 +155,16 @@ namespace isl {
     /// Return a subset of affs (name analogous to substr, sublist, not subtraction)
     MultiAff subMultiAff(unsigned first, unsigned count) const { auto result = copy(); result.subMultiAff_inplace(first, count); return result; }
     void subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER;
+    MultiAff sublist(const Space &subspace) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.sublist_inplace(subspace); return result; }
+    void sublist_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
 
     MultiAff embedAsSubspace(const Space &framespace) const;
 
-     Multi<Aff> pullback(const Multi<Aff> &maff2) const { return Multi<Aff>::enwrap(isl_multi_aff_pullback_multi_aff(takeCopy(), maff2.takeCopy())); }
+    /// Function composition
+     Multi<Aff> pullback(const Multi<Aff> &maff2) ISLPP_EXSITU_QUALIFIER { return Multi<Aff>::enwrap(isl_multi_aff_pullback_multi_aff(takeCopy(), maff2.takeCopy())); }
      void pullback_inplace(const Multi<Aff> &maff2) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_pullback_multi_aff(take(), maff2.takeCopy())); }
+
+     PwMultiAff applyRange(const PwMultiAff &pam) ISLPP_EXSITU_QUALIFIER;
  }; // class MultiAff
 
 

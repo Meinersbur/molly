@@ -62,6 +62,7 @@ namespace molly {
 
     // { stmt[domain] -> node[cluster] }
     virtual isl::Map getWhere() const = 0;
+    virtual isl::Map getInstances() const = 0; // Like getWhere(), but domain is exact
 
     // { stmt[domain] -> field[index] }
     virtual isl::Map getAccessRelation() const = 0;

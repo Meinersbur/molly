@@ -190,7 +190,7 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
     auto headerNode = DT->addNewBlock(headerBB, entryBB);
     DT->addNewBlock(bodyBB, headerBB);
     DT->addNewBlock(footerBB, bodyBB);
-    
+
     auto exitNode = DT->getNode(exitBB);
     if (exitNode) {
       // exitBB is now below headerBB
@@ -204,7 +204,7 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
     for (auto I = OldChildren.begin(), E = OldChildren.end(); I != E; ++I) { 
       auto oldChild = *I; 
       //if (oldChild != exitNode)
-        DT->changeImmediateDominator(oldChild, headerNode);
+      DT->changeImmediateDominator(oldChild, headerNode);
     }
 
     DT->verifyAnalysis();
@@ -464,16 +464,14 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
 
   auto newStmt = new ScopStmt(scop, newStmtBB, name, region, nests, newdomain.takeCopy(), subscatter.takeCopy());
   auto newWhere = where.setInTupleId(enwrap(stmt->getDomainId()));
-  stmt->setWhereMap(newWhere.takeCopy());
+  newStmt->setWhereMap(newWhere.takeCopy());
   scop->addScopStmt(newStmt);
   return StmtEditor(newStmt);
 }
 
 
 StmtEditor StmtEditor::replaceStmt(const isl::Map &sub, const std::string &name) {
-  auto allInstances = getInstances();
-   assert(sub <= allInstances);
-   restrictInstances(allInstances.subtract(sub));
+  restrictInstances(sub);
   return createStmt(sub.getDomain(), enwrap(stmt->getScattering()), sub, name);
 }
 
@@ -697,6 +695,12 @@ void StmtEditor::setScattering(isl::Map &&scatter) {
 }
 
 
+isl::MultiAff StmtEditor::getCurrentIteration()  {
+  auto domainSpace = getDomainSpace();
+  return domainSpace.mapsToItself().createIdentityMultiAff();
+}
+
+
 isl::Map StmtEditor::getWhere() {
   auto result = enwrap(stmt->getWhereMap());
   //result.intersectDomain(getIterationDomain()); // TODO: Remove for efficiency
@@ -704,9 +708,9 @@ isl::Map StmtEditor::getWhere() {
 }
 
 
- isl::Map StmtEditor:: getInstances() {
-   return getWhere().intersectDomain(getIterationDomain());
- }
+isl::Map StmtEditor:: getInstances() {
+  return getWhere().intersectDomain(getIterationDomain());
+}
 
 
 void StmtEditor::setWhere(isl::Map &&where) {
@@ -720,7 +724,7 @@ void StmtEditor::setWhere(isl::Map &&where) {
 void StmtEditor::restrictInstances(const isl::Map &where) {
   assert(where.matchesMapSpace(getWhere().getSpace()));
   assert(where.hasOutTupleId());
-  
+
   assert(getInstances() >= where);
 
   stmt->setDomain(where.getDomain().take());
@@ -729,6 +733,13 @@ void StmtEditor::restrictInstances(const isl::Map &where) {
   if (where.isEmpty()) {
     // Could totally remove the ScopStmt
   }
+}
+
+
+void StmtEditor::removeInstances(const isl::Map &disableInsts) {
+  auto allInstances = getInstances();
+  assert(disableInsts <= allInstances);
+  restrictInstances(allInstances.subtract(disableInsts));
 }
 
 

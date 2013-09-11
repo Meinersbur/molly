@@ -126,6 +126,9 @@ namespace {
     }
     isl::Map getWhere() const LLVM_OVERRIDE {
       return enwrap(stmt->getWhereMap());
+    } 
+    isl::Map getInstances() const LLVM_OVERRIDE {
+      return enwrap(stmt->getWhereMap()).intersectDomain(getDomain());
     }
     BasicBlock *getBasicBlock() LLVM_OVERRIDE {
       return stmt->getBasicBlock();
@@ -546,12 +549,12 @@ namespace {
     isl::MultiPwAff getAccessed() LLVM_OVERRIDE {
       assert(isFieldAccess());
 
-      auto space = getAccessRelation().getRangeSpace();
+      auto space = getAccessRelation().getSpace();
       auto result = space.createZeroMultiPwAff();
       auto nDims = result.getOutDimCount();
       for (auto i = nDims-nDims; i < nDims ; i+=1) {
         auto scev = getParentProcessor()->scevForValue(getAccessedCoordinate(i));
-        auto aff =  enwrap(polly::affinatePwAff(stmt, scev));
+        auto aff = enwrap(polly::affinatePwAff(stmt, scev)).setInTupleId(space.getInTupleId());
         result.setPwAff_inplace(i, aff);
       }
       return result;

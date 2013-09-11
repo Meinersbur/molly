@@ -119,12 +119,18 @@ namespace molly {
     isl::Map getScattering();
     void setScattering(isl::Map &&scatter);
 
+    /// { stmt[domain] -> stmt[domain] }
+    /// Trivial mapping to the vector of induction variables
+    /// To be used in code generation
+    isl::MultiAff getCurrentIteration();
+
     /// { stmt[domain] -> cluster[coord] }
     isl::Map getWhere(); 
     isl::Map getInstances();
     void setWhere(isl::Map &&where);
     /// remove all instances not in keepInsts from domain and wheremap, such that this stmt is less often executed
     void restrictInstances(const isl::Map &keepInsts);
+    void removeInstances(const isl::Map &disableInsts);
 
     llvm::TerminatorInst *getTerminator();
 

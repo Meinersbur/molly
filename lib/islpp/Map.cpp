@@ -69,6 +69,11 @@ void Map::print(llvm::raw_ostream &out) const {
 }
 
 
+void Map::dump() const { 
+  isl_map_dump(keep()); 
+}
+
+
 Map Map::createFromUnionMap(UnionMap &&umap) {
   return Map::enwrap(isl_map_from_union_map(umap.take()));
 }
@@ -104,11 +109,11 @@ Map BasicMap::toMap() const {
   return Map::enwrap(isl_map_from_basic_map(takeCopy()));
 }
 
-
-Map Map:: chainNested(const Map &map) const {
+#if 0
+Map Map::chainNested(const Map &map) const {
   return this->wrap().chainNested(map);
 }
-
+#endif
 
 Map Map::chainNested(const Map &map, unsigned tuplePos) const {
   return this->wrap().chainNested(map, tuplePos);
@@ -136,6 +141,7 @@ Map Map::chainNested(isl_dim_type type, const Map &map) const {
   auto expandRange = expandRangeSpace.equalBasicMap(isl_dim_in, 0, map.getOutDimCount(), isl_dim_out, tupleSpace.getSetDimCount()); // { E -> ((A, B, C) -> E') | E=E' }
 
   auto expandedMap = map.applyDomain(expandDomain).applyRange(expandRange); // { (A, B, C) -> ((A, B, C) -> E)  }
+  expandedMap.intersect_inplace(expandedMap.getSpace().equalBasicMap(tupleSpace.getSetDimCount()));
   if (type==isl_dim_in)
     return applyDomain(expandedMap);
   else if (type==isl_dim_out)

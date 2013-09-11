@@ -32,24 +32,24 @@ Map PwMultiAff::toMap() const {
 
 
 MultiPwAff PwMultiAff::toMultiPwAff() const { 
-  auto space = getDomainSpace();
   auto nPieces = this->nPieces();
-  auto result = space.createZeroMultiPwAff();
+  auto result = getSpace().createZeroMultiPwAff();
   auto nOut = result.getOutDimCount();
   auto list = PwAffList::alloc(getCtx(), nOut);
 
   for (auto i=nOut-nOut; i < nOut; i+=1) {
-    auto resultPwAff = space.createEmptyPwAff();
+    auto resultPwAff = getSpace().createEmptyPwAff();
 
     foreachPiece([&](Set &&set, MultiAff &&maff) -> bool {
       auto aff = maff.getAff(i);  
       auto paff = PwAff::create(set, aff);
-      assert(isDisjoint( resultPwAff.domain(), set)  );
-      resultPwAff.unionMin_inplace(paff);
+      assert(isDisjoint(resultPwAff.domain(), set));
+      resultPwAff.unionMin_inplace(paff); // No add_piece or disjount_union publicly available, poeces are disjount
       return true;
     });
 
-    list.setPwAff_inplace(i, resultPwAff);
+    list.add_inplace(resultPwAff);
+    result.setPwAff_inplace(i, resultPwAff);
   }
   return result;
 }

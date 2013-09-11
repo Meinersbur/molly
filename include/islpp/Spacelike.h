@@ -177,7 +177,7 @@ namespace isl {
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER;
     //void setDimId_internal(isl_dim_type type, unsigned, Id &&id) ISLPP_INPLACE_QUALIFIER;
 
-    // optional, usually it doesn't make sense to call this of an isl::(Basic)Map or isl::(Basic)Set; used for assertions
+    // optional, usually it doesn't make sense to call this of an isl::(Basic)Map or isl::(Basic)Set; used for assertions; shouold be overriden if the spacelike is always a map or set to return a constant
     bool isSet() const { return getDerived()->getSpace().isSetSpace(); }
     bool isMap() const { return getDerived()->getSpace().isMapSpace(); }
 

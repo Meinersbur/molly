@@ -111,14 +111,15 @@ namespace isl {
 
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
     static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { return createMapFromDomainAndRange(domain.move(), range.copy()); }
-    static Space createMapFromDomainAndRange(const Space &domain,  Space &&range) { return createMapFromDomainAndRange(domain.copy(), range.move()); }
+    static Space createMapFromDomainAndRange(const Space &domain, Space &&range) { return createMapFromDomainAndRange(domain.copy(), range.move()); }
     static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { return createMapFromDomainAndRange(domain.copy(), range.copy()); }
 #pragma endregion
 
 
 #pragma region Create other spaces
-    Space mapsTo(const Space &range) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
-    Space mapsTo(unsigned nOut) const { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut) )); }
+    Space mapsTo(const Space &range) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
+    Space mapsTo(unsigned nOut) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut) )); }
+    Space mapsToItself() ISLPP_EXSITU_QUALIFIER { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
     // If this is a param space
     Space createSetSpace(unsigned nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
@@ -338,7 +339,7 @@ namespace isl {
 
     Space getParamsSpace() const { return Space::enwrap(isl_space_params(takeCopy())); }
     Space getDomainSpace() const { return Space::enwrap(isl_space_domain(takeCopy())); }
-      Space getRangeSpace() const { return Space::enwrap(isl_space_range(takeCopy())); }
+    Space getRangeSpace() const { return Space::enwrap(isl_space_range(takeCopy())); }
 
     void fromDomain();
 
@@ -436,14 +437,22 @@ namespace isl {
         return unwrap();
       return copy();
     }
+    void normalizeUnwrapped_inplace() ISLPP_INPLACE_QUALIFIER {
+      if (isWrapping())
+        unwrap_inplace();
+    }
 
     /// Guaranteed to return a set space
-     Space normalizeWrapped() const {
+    Space normalizeWrapped() const {
       if (isMapSpace())
         return wrap();
       return copy();
     }
-
+    void normalizeWrapped_inplace() ISLPP_INPLACE_QUALIFIER {
+      if (isMapSpace())
+        wrap_inplace();
+      assert(!isMapSpace());
+    }
   }; // class Space
 
 

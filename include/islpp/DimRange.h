@@ -22,8 +22,8 @@ namespace isl {
     }
 
   public:
-    DimRange() : type(isl_dim_cst/*cst dimension is for internal use only*/) {}
-    ~DimRange() { isl_space_free(space); space = NULL; }
+    DimRange() : type(isl_dim_cst/*cst dimension is for internal use only*/), space(nullptr) {}
+    ~DimRange() { isl_space_free(space); space = nullptr; }
 
     /* implicit */ DimRange(const DimRange &that) : type(that.type), first(that.first), count(that.count), space(isl_space_copy(that.space)) {  }
     /* implicit */ DimRange(DimRange &&that) : type(that.type), first(that.first), count(that.count), space(that.space) { that.type = isl_dim_cst; that.space = nullptr; }

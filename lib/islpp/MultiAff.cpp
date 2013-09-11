@@ -111,6 +111,16 @@ void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLA
 }
 
 
+void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+  auto range = getSpace().findSubspace(isl_dim_out, subspace);
+  assert(range.isValid());
+  subMultiAff_inplace(range.getFirst(), range.getCount());
+
+  // FIXME: There is no isl_multi_aff_cast(take(), Space::createMapFromDomainAndRange(getDomainSpace(), subspace))
+  setOutTupleId_inplace(subspace.getSetTupleId());
+}
+
+
 MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
   auto subspace = getDomainSpace();
   auto myspace = getSpace();
@@ -121,4 +131,9 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
     result.setAff_inplace(range.relativePos(i), getAff(i));
   }
   return result;
+}
+
+
+PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
+  return pma.pullback(*this);
 }

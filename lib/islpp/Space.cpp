@@ -86,7 +86,7 @@ BasicMap Space::equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count,
 
   // TODO: There might be something more efficient
   for (auto i = count-count; i < count; i+=1) {
-    result.equate_inplace(type1, pos1, type2, pos2);
+    result.equate_inplace(type1, pos1+i, type2, pos2+i);
   }
 
   return result;
@@ -107,9 +107,9 @@ BasicMap Space::equalSubspaceBasicMap(const Space &domainSubpace, const Space &r
 }
 
 
- BasicMap Space::equalSubspaceBasicMap(const Space &subspace) const { 
-   return equalSubspaceBasicMap(subspace, subspace); 
- }
+BasicMap Space::equalSubspaceBasicMap(const Space &subspace) const { 
+  return equalSubspaceBasicMap(subspace, subspace); 
+}
 
 
 BasicMap Space::lessAtBasicMap(unsigned pos) const {
@@ -208,17 +208,17 @@ Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
 }
 
 
-    Aff Space::createAffOnVar(unsigned pos) const {
-      assert(isSetSpace());
-        return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_set, pos)); 
-    }
+Aff Space::createAffOnVar(unsigned pos) const {
+  assert(isSetSpace());
+  return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_set, pos)); 
+}
 
 
-    Aff Space::createAffOnParam(const Id &dimId) const {
-     auto pos = findDimById(isl_dim_param, dimId);
-     assert(pos >= 0);
-     return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_param, pos)); 
-    }
+Aff Space::createAffOnParam(const Id &dimId) const {
+  auto pos = findDimById(isl_dim_param, dimId);
+  assert(pos >= 0);
+  return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_param, pos)); 
+}
 
 
 AffExpr Space::createVarAffExpr(isl_dim_type type, unsigned pos) const {
@@ -227,13 +227,15 @@ AffExpr Space::createVarAffExpr(isl_dim_type type, unsigned pos) const {
 
 
 PwAff Space::createEmptyPwAff() const {
-  assert(isSetSpace());
+  assert(isMapSpace());
+  assert(getOutDimCount() == 1);
   return PwAff::enwrap(isl_pw_aff_empty(takeCopy()));
 }
 
 
 PwAff Space::createZeroPwAff() const {
-  assert(isSetSpace());
+  assert(isMapSpace());
+  assert(getOutDimCount() == 1);
   return PwAff::enwrap(isl_pw_aff_zero_on_domain(isl_local_space_from_space(takeCopy())));
 }
 

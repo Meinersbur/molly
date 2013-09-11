@@ -16,12 +16,6 @@ namespace llvm {
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #endif
 
-#ifdef __GNUC__
-    #define WARN_IF_UNUSED __attribute__((warn_unused_result))
-#else
-    #define WARN_IF_UNUSED
-#endif
-
 #ifndef __has_feature
 #define __has_feature(x) 0
 #endif
@@ -47,6 +41,21 @@ namespace llvm {
 #define ISLPP_INLINE_DECLARATION inline
 #define ISLPP_INLINE_DEFINITION extern inline
 #endif
+
+#define ISLPP_WARN_UNUSED_RESULT LLVM_ATTRIBUTE_UNUSED_RESULT
+#if defined(__clang__) || defined(__GNUC__)
+#define ISLPP_WARN_UNUSED_RESULT_PREFIX
+#elif defined(_MSC_VER) && _MSC_VER>=1500 /*VS2008 or later*/
+#define ISLPP_WARN_UNUSED_RESULT_PREFIX _Check_return_ /* Source Annotation Language (SAL) attribute syntax -- MS PREfast */
+#elif defined(_MSC_VER)
+#define ISLPP_WARN_UNUSED_RESULT_PREFIX __checkReturn /* Source Annotation Language (SAL) declspec syntax -- MS PREfast */
+#else
+#define ISLPP_WARN_UNUSED_RESULT_PREFIX
+#endif
+
+#define ISLPP_EXSITU_QUALIFIER const ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_CONSUME_QUALIFIER ISLPP_WARN_UNUSED_RESULT
+
 
 #include <utility> // std::move, std::forward
 namespace isl {

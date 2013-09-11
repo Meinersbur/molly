@@ -18,7 +18,7 @@ void Id::release() {
 
 
 Id::StructTy *Id::addref() const { 
-  return isl_id_copy(keep()); 
+  return isl_id_copy(keepOrNull()); 
 }
 
 

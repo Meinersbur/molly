@@ -67,7 +67,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_set_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_set_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -251,13 +251,13 @@ namespace isl {
     Map unwrap() const;
 
     // { A } and { A' -> B } to { A*A' -> B } (where * means intersection)
-    Map chain(const Map &map) const;
+    Map chain(const Map &map) ISLPP_EXSITU_QUALIFIER;
 
     // { (A -> B -> C ) } and { B' -> D } to { (A -> B*B' -> C) -> D }
-    Map chainNested(const Map &map) const; // deprecated; use chainSubspace
-    Map chainSubspace(const Map &map) const;
-    Map chainSubspace_consume(const Map &map);
-    Map chainNested(const Map &map, unsigned tuplePos) const;
+    //Map chainNested(const Map &map) const; // deprecated; use chainSubspace
+    Map chainSubspace(const Map &map) ISLPP_EXSITU_QUALIFIER;
+    Map chainSubspace_consume(const Map &map) ISLPP_CONSUME_QUALIFIER;
+    Map chainNested(const Map &map, unsigned tuplePos) const; // deprecared?
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
@@ -274,7 +274,7 @@ namespace isl {
     //Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
     Map unwrapSubspace(const Space &subspace) const;
 
-    Set intersect(const Set &that) const { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
+    Set intersect(const Set &that) ISLPP_EXSITU_QUALIFIER { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
     void intersect_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_intersect(take(), that.takeCopy())); }
 
     /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
@@ -286,7 +286,8 @@ namespace isl {
 
     //Map reorganizeTuples(llvm::ArrayRef<unsigned> domainTuplePos, llvm::ArrayRef<unsigned> rangeTuplePos);
     Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
-    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) const;
+    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
+    Set reorganizeSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER;
   }; // class Set
 
 

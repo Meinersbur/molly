@@ -49,7 +49,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_basic_map_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_basic_map_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -142,7 +142,7 @@ namespace isl {
 #pragma endregion
 
 
-    void finalize() { give(isl_basic_map_finalize(take())); }
+    void finalize_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_finalize(take())); }
     void extend(unsigned nparam, unsigned n_in, unsigned n_out, unsigned extra, unsigned n_eq, unsigned n_ineq) { give(isl_basic_map_extend(take(), nparam, n_in, n_out, extra, n_eq, n_ineq)); }
     void extendConstraints(unsigned n_eq, unsigned n_ineq) { give(isl_basic_map_extend_constraints(take(), n_eq, n_ineq)); }
 
@@ -151,25 +151,25 @@ namespace isl {
     void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
     BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
 
-    Map intersect(Map &&that) const;
-    Map intersect(const Map &that) const;
+    ISLPP_WARN_UNUSED_RESULT_PREFIX Map intersect(Map &&that) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_WARN_UNUSED_RESULT_PREFIX Map intersect(const Map &that) ISLPP_EXSITU_QUALIFIER;
 
-    BasicMap intersectDomain(const BasicSet &bset) const { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
-    Map intersectDomain(const Set &set) const;
-    BasicMap intersectRange(const BasicSet &bset) const { return BasicMap::enwrap(isl_basic_map_intersect_range(takeCopy(), bset.takeCopy())); }
-    Map intersectRange(const Set &set) const;
+    BasicMap intersectDomain(const BasicSet &bset) ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
+    Map intersectDomain(const Set &set) ISLPP_EXSITU_QUALIFIER;
+    BasicMap intersectRange(const BasicSet &bset) ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_intersect_range(takeCopy(), bset.takeCopy())); }
+    Map intersectRange(const Set &set) ISLPP_EXSITU_QUALIFIER;
 
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
     void reverse() { give(isl_basic_map_reverse(take())); }
 
-    BasicSet domain() const { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    BasicSet range() const { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    BasicSet domain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    BasicSet range() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
 
     void removeDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_remove_dims(take(), type, first, n));  }
     void eliminate(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_eliminate(take(), type, first, n)); }
 
-    BasicMap simplify() const WARN_IF_UNUSED { return BasicMap::enwrap(isl_basic_map_simplify(takeCopy())); }
-    BasicMap detectEqualities() const WARN_IF_UNUSED { return BasicMap::enwrap(isl_basic_map_detect_equalities(takeCopy())); }
+    BasicMap simplify() ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_simplify(takeCopy())); }
+    BasicMap detectEqualities() ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_detect_equalities(takeCopy())); }
 
     //    void dump() const;
     void print(FILE *out, int indent, const char *prefix, const char *suffix, unsigned output_format) const { isl_basic_map_print(keep(), out, indent, prefix, suffix, output_format); }
