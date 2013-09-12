@@ -139,7 +139,7 @@ namespace isl {
     LocalSpace lift(LocalSpace &context) { 
       isl_local_space *ls = nullptr;
       give(isl_multi_aff_lift(take(), &ls));
-      return LocalSpace::wrap(ls);
+      return LocalSpace::enwrap(ls);
     }
 
 

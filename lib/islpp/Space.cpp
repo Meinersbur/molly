@@ -442,7 +442,7 @@ UnionMap Space::createEmptyUnionMap() const {
 
 
 LocalSpace Space::asLocalSpace() const {
-  return LocalSpace::wrap(isl_local_space_from_space(takeCopy()));
+  return LocalSpace::enwrap(isl_local_space_from_space(takeCopy()));
 }
 
 
@@ -1172,7 +1172,7 @@ static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, un
       return true;
      if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, pos, first))
        return true;
-  } if (space.isWrapping()) {
+  } else if (space.isWrapping()) {
    if (findNthSubspace_recursive(space.unwrap(), resultSpace, pos, first))
      return true;
   } else {

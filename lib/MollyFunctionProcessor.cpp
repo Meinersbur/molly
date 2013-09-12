@@ -416,7 +416,7 @@ namespace {
       auto nClusterDims = clusterConf->getClusterDims();
       result.reserve(nClusterDims);
 
-      for (auto i = 0; i < nClusterDims;i+=1) {
+      for (auto i = nClusterDims-nClusterDims; i < nClusterDims;i+=1) {
         result.push_back(getClusterCoordinate(i));
       } 
 

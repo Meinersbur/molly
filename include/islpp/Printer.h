@@ -115,6 +115,7 @@ namespace isl {
     void print(const Val &v);
     void print(const Vec &v);
     void print(const Space &space);
+    void print(const LocalSpace &space);
     void print(const MultiVal &);
     void print(const BasicMap &);
     void print(const Point &point);

@@ -213,6 +213,11 @@ void Printer::print(const Space &space) {
 }
 
 
+void Printer::print(const LocalSpace &space) {
+  give(isl_printer_print_local_space(take(), space.keep()));
+}
+
+
 void Printer::print(const MultiVal &mval) {
   //give(isl_printer_print_multi_val(take(), mval.keep()));
 }

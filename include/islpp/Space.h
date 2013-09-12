@@ -87,7 +87,7 @@ namespace isl {
 
 
     // optional, default implementation exist
-    unsigned dim(isl_dim_type type) const { return isl_space_dim(keep(), type); }
+    count_t dim(isl_dim_type type) const { return isl_space_dim(keep(), type); }
     int findDimById(isl_dim_type type, const Id &id) const { return isl_space_find_dim_by_id(keep(), type, id.keep()); }
 
     bool hasTupleId(isl_dim_type type) const { return isl_space_has_tuple_id(keep(), type); }
@@ -460,7 +460,8 @@ namespace isl {
   }; // class Space
 
 
-  static inline Space enwrap(isl_space *obj) { return Space::enwrap(obj); }
+  static inline Space enwrap(__isl_take isl_space *obj) { return Space::enwrap(obj); }
+  static inline Space enwrapCopy(__isl_take isl_space *obj) { return Space::enwrapCopy(obj); }
 
   bool isEqual(const Space &space1, const Space &space2);
   /// checks whether the first argument is equal to the domain of the second argument. This requires in particular that the first argument is a set space and that the second argument is a map space.

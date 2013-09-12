@@ -9,8 +9,11 @@ namespace llvm {
 
 
 namespace molly {
+
+  /// Baseclass for all mapping techniques (RectangularMapping, ZCurveMapping, ...)
   class LayoutMapping {
   public:
+    virtual ~LayoutMapping();
 
     virtual LayoutMapping *getInnerMapping() = 0;
     virtual llvm::Function *getMappingFunction() = 0;
@@ -18,6 +21,6 @@ namespace molly {
     virtual unsigned getOffset(llvm::ArrayRef<int> coords) = 0;
 
   }; // class LayoutMapping
-} // namespace molly
 
+} // namespace molly
 #endif /* MOLLY_LAYOUTMAPPING_H */

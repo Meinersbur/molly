@@ -127,7 +127,8 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
   auto range = myspace.findSubspace(isl_dim_in, subspace);
 
   auto result = framespace.createIdentityMultiAff();
-  for (auto i = 0; i < range.getCount(); i+=1) {
+  auto count = range.getCount();
+  for (auto i = count-count; i < count; i+=1) {
     result.setAff_inplace(range.relativePos(i), getAff(i));
   }
   return result;

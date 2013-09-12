@@ -249,7 +249,7 @@ namespace {
       auto nClusterDims = pm->getClusterConfig()->getClusterDims();
       std::vector<const SCEV *> result;
       result.reserve(nClusterDims);
-      for (auto i = 0; i < nClusterDims; i+=1) {
+      for (auto i = nClusterDims-nClusterDims; i < nClusterDims; i+=1) {
         result.push_back(getClusterCoordinate(i));
       }
       return result;
@@ -417,10 +417,10 @@ namespace {
         auto mapSpace = isl::Space::createMapFromDomainAndRange(space.range(), scatterSpace);
         auto map = mapSpace.universeBasicMap();
 
-        for (auto i = 1; i < nOut; i+=2) {
+        for (auto i = 1u; i < nOut; i+=2) {
           map.equate_inplace(isl_dim_in, i, isl_dim_out, i);
         }
-        for (auto i = 0; i < nOut; i+=2) {
+        for (auto i = nOut-nOut; i < nOut; i+=2) {
           auto c = mapSpace.createEqualityConstraint();
           c.setCoefficient_inplace(isl_dim_in, i, -multiplier);
           c.setCoefficient_inplace(isl_dim_out, i, 1);
@@ -547,7 +547,7 @@ namespace {
       max.setInTupleId_inplace(scatterId);
       isl::Set epilogueDomain = epilogueDomainSpace.universeSet();
       auto epilogieMapToZero = epilogueScatterSpace.createUniverseBasicMap();
-      for (auto d = 1; d < nScatterRangeDims; d+=1) {
+      for (auto d = 1u; d < nScatterRangeDims; d+=1) {
         epilogieMapToZero.addConstraint_inplace(epilogueScatterSpace.createVarExpr(isl_dim_out, d) == 0);
       }
 
@@ -697,7 +697,7 @@ namespace {
       auto c = wherePairsAccesses.chain(homeRel.reverse()); /* { ((stmtRead[domain] -> cluster[node]) -> field[indexset]) -> cluster[node] } */ // Oh my goodness
       // condition: node on which read is executed==node the read value is home
       auto homePairAccesses = c;
-      for (auto i = 0; i < nClusterDims; i+=1) {
+      for (auto i = nClusterDims-nClusterDims; i < nClusterDims; i+=1) {
         homePairAccesses.equate_inplace(isl_dim_in, domainRead.getDimCount() + i, isl_dim_out, i);
       }
       auto alreadyHomeAccesses = homePairAccesses.getDomain().unwrap(); /* { (stmtRead[domain] -> cluster[node]) -> field[indexset] } */

@@ -45,7 +45,7 @@ __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaf
   isl_map *map = isl_map_universe(isl_space_from_domain(space));
 
   unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
-  for (int i = 0; i < n; ++i) {
+  for (int i = n-n; i < n; ++i) {
     isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
     isl_map *map_i = isl_map_from_pw_aff(pwaff);
     map = isl_map_flat_range_product(map, map_i);

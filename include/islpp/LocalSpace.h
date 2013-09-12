@@ -2,40 +2,42 @@
 #define ISLPP_LOCALSPACE_H
 
 #include "islpp_common.h"
-#include "Dim.h"
-#include <cassert>
-#include <iterator>
-#include "Spacelike.h"
-#include "Space.h"
-
+#include "Spacelike.h" // baseclass of LocalSpace
+#include "Obj.h" // baseclass of LocalSpace
 #include <isl/space.h>
+#include "Islfwd.h"
+#include "Ctx.h"
+#include "Space.h"
 
 struct isl_local_space;
 
 
 namespace isl {
-  class Ctx;
-  class Space;
-  class Id;
-  class Aff;
-  class BasicMap;
-  class Dim;
-} // namespace isl
-
-
-namespace isl {
-  class LocalSpace;
-
-
-  
-
-
-
 
   /// A local space is essentially a space with zero or more existentially quantified variables.
-  class LocalSpace : public Spacelike<LocalSpace> {
-    friend class Spacelike<LocalSpace>;
+  class LocalSpace : public Obj<LocalSpace, isl_local_space>, public Spacelike<LocalSpace> {
 
+#pragma region isl::Obj
+    friend class isl::Obj<ObjTy, StructTy>;
+  protected:
+    void release() { isl_local_space_free(takeOrNull()); }
+    StructTy *addref() const { return isl_local_space_copy(keepOrNull()); }
+
+  public:
+    LocalSpace() { }
+
+    /* implicit */ LocalSpace(ObjTy &&that) : Obj(std::move(that)) { }
+    /* implicit */ LocalSpace(const ObjTy &that) : Obj(that) { }
+    const ObjTy &operator=(ObjTy &&that) { obj_reset(std::move(that)); return *this; }
+    const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
+
+    Ctx *getCtx() const { return Ctx::enwrap(isl_local_space_get_ctx(keep())); }
+    void print(llvm::raw_ostream &out) const;
+    void dump() const;
+#pragma endregion
+
+
+#if 0
 #pragma region Low-Level
   private:
     isl_local_space *space;
@@ -53,8 +55,9 @@ namespace isl {
 
     static LocalSpace wrap(isl_local_space *space) { return LocalSpace(space); }
 #pragma endregion
+#endif
 
-
+#if 0
   public:
     LocalSpace() : space(nullptr) {}
     /* implicit */ LocalSpace(LocalSpace &&that) : space(that.take()) { }
@@ -63,6 +66,7 @@ namespace isl {
 
     const LocalSpace &operator=(LocalSpace &&that) { assert(!this->space); this->space = that.take(); return *this; }
     const LocalSpace &operator=(const LocalSpace &that) { give(that.takeCopy()); return *this; }
+#endif
 
 #pragma region Conversion from isl::Space
     /* implicit */ LocalSpace(Space &&);
@@ -74,13 +78,13 @@ namespace isl {
 
 
 #pragma region Creational
-    LocalSpace copy() const { return LocalSpace::wrap(takeCopy()); }
-    LocalSpace &&move() { return std::move(*this); }
+    //LocalSpace copy() const { return LocalSpace::wrap(takeCopy()); }
+    //LocalSpace &&move() { return std::move(*this); }
 #pragma endregion
 
 
 #pragma region Build something basic from this space
-        BasicSet emptyBasicSet() const;
+    BasicSet emptyBasicSet() const;
     BasicSet universeBasicSet() const;
 
     BasicMap emptyBasicMap() const;
@@ -95,14 +99,14 @@ namespace isl {
 
 
 #pragma region Spacelike
-    bool hasTupleId(isl_dim_type type) const { return getSpace().hasTupleId(type); }
-    Id getTupleId(isl_dim_type type) const { return getSpace().getTupleId(type); }
+    bool hasTupleId(isl_dim_type type) const { return getSpace().hasTupleId(type); /* isl_local_space_has_tuple_id missing */ }
+    Id getTupleId(isl_dim_type type) const { return getSpace().getTupleId(type); /* isl_local_space_get_tuple_id missing */ }
 #pragma endregion
 
 
-    Ctx *getCtx() const;
+    //Ctx *getCtx() const;
     bool isSet() const;
-    int dim(isl_dim_type type) const;
+    count_t dim(isl_dim_type type) const { return to_count_t(isl_local_space_dim(keep(), type)); }
     bool hasDimId(isl_dim_type type, unsigned pos) const;
     Id getDimId(isl_dim_type type, unsigned pos) const;
     bool hasDimName(isl_dim_type type, unsigned pos) const;
@@ -135,7 +139,8 @@ namespace isl {
   }; // class LocalSpace
 
   
-  inline LocalSpace enwrap(__isl_take isl_local_space *ls) { return LocalSpace::wrap(ls); }
+ static inline LocalSpace enwrap(__isl_take isl_local_space *ls) { return LocalSpace::enwrap(ls); }
+  static inline LocalSpace enwrapCopy(__isl_take isl_local_space *ls) { return LocalSpace::enwrapCopy(ls); }
 
 
   BasicMap lifting(LocalSpace &&ls);

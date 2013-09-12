@@ -66,12 +66,12 @@ namespace isl {
     Ctx *getCtx() const { return space.getCtx(); }
     LocalSpace getLocalSpace() const { return space; } 
 
-    Int getCoefficient(isl_dim_type type, unsigned pos) const {
+    Int getCoefficient(isl_dim_type type, pos_t pos) const {
       auto offset = dimToIdx(type, pos);
       return coeffs[offset];
     }
 
-    unsigned dimToIdx(isl_dim_type type, unsigned pos) const {
+    unsigned dimToIdx(isl_dim_type type, pos_t pos) const {
       if (type==isl_dim_cst) {
         assert(pos==0);
         return 0;

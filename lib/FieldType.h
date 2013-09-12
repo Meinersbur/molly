@@ -68,7 +68,7 @@ namespace molly {
     isl::Ctx *getIslContext() const;
     void dump();
 
-    unsigned getNumDimensions() const {
+    size_t getNumDimensions() const {
       return metadata.dimLengths.size();
     }
 
@@ -99,7 +99,7 @@ namespace molly {
         return getLengths();
       return localLengths;
     }
-    int getLocalLength(int d) {
+    int getLocalLength(unsigned d) {
       assert(0 <= d && d < getNumDimensions());
       return localLengths[d];
     }
@@ -156,7 +156,7 @@ namespace molly {
     //TODO: Element length in bytes
 
     isl::Set getGlobalIndexset();
-    int getGlobalLength(int d);
+    int getGlobalLength(unsigned d);
 
     isl::Map getLocalIndexset(const isl::BasicSet &clusterSet); // { clusterCoordinate -> Indexset }
 

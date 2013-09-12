@@ -85,7 +85,7 @@ namespace isl {
     friend class isl::Spacelike<ObjTy>;
   public:
     Space getSpace() const { return Space::enwrap(isl_aff_get_space(keep())); }
-    LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_aff_get_local_space(keep())); }
+    LocalSpace getLocalSpace() const { return LocalSpace::enwrap(isl_aff_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:

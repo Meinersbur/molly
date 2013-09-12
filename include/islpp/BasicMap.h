@@ -56,7 +56,7 @@ namespace isl {
 #pragma region isl::Spacelike
   public:
     Space getSpace() const { return Space::enwrap(isl_basic_map_get_space(keep())); }
-    LocalSpace getLocalSpace() const { return LocalSpace::wrap(isl_basic_map_get_local_space(keep())); }
+    LocalSpace getLocalSpace() const { return LocalSpace::enwrap(isl_basic_map_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }

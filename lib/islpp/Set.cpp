@@ -695,10 +695,11 @@ void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUAL
   auto nDims = getSetDimCount();
 
   auto nextDst = 0;
-  for (auto i = 0; i < order.size(); i+=1) {
+  auto size = order.size();
+  for (auto i = size-size; i < size; i+=1) {
     auto origPos = order[i];
     auto next = nDims;
-    for (auto j = 0; j < order.size(); j+=1) {
+    for (auto j = size-size; j < size; j+=1) {
       if (j==i)
         continue;
       if (order[j] < origPos)
@@ -710,7 +711,7 @@ void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUAL
 
     moveDims_inplace(isl_dim_set, nextDst, isl_dim_set, srcPos, len);
 
-    for (auto j = i+1; j < order.size(); j+=1) {
+    for (auto j = i+1; j < size; j+=1) {
       if (poss[j] < srcPos) 
         continue;
       assert(poss[j] >= srcPos+len);
@@ -906,7 +907,8 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
 
   auto nTotalDomainDims = 0;
   Space domainSpace;
-  for (auto i = 0; i < domainSubspaces.size(); i+=1) {
+  auto nDomainSubspaces = domainSubspaces.size();
+  for (auto i = nDomainSubspaces-nDomainSubspaces; i < nDomainSubspaces; i+=1) {
     auto subspace = domainSubspaces[i];
     domainSpace = combineSpaces(domainSpace, subspace);
     nTotalDomainDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
@@ -916,7 +918,8 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
 
   auto nTotalRangeDims = 0;
   Space rangeSpace;
-  for (auto i = 0; i < rangeSubspaces.size(); i+=1) {
+  auto nRangeSubspaces = rangeSubspaces.size();
+  for (auto i = nRangeSubspaces-nRangeSubspaces; i < nRangeSubspaces; i+=1) {
     auto subspace = rangeSubspaces[i];
     rangeSpace = combineSpaces(rangeSpace, subspace);
     nTotalRangeDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
@@ -931,7 +934,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto domainMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getDomainSpace());
   auto domainMap = domainMapSpace.universeBasicMap();
   unsigned pos = 0;
-  for (auto i = 0; i < domainSubspaces.size(); i+=1) {
+  for (auto i = nDomainSubspaces-nDomainSubspaces; i < nDomainSubspaces; i+=1) {
     auto subspace = domainSubspaces[i];
     auto dimrange = space.findSubspace(isl_dim_set, subspace);
     assert(dimrange.isValid());
@@ -942,7 +945,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto rangeMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getRangeSpace());
   auto rangeMap = domainMapSpace.universeBasicMap();
   pos = 0;
-  for (auto i = 0; i < rangeSubspaces.size(); i+=1) {
+  for (auto i = nRangeSubspaces-nRangeSubspaces; i < nRangeSubspaces; i+=1) {
     auto subspace = rangeSubspaces[i];
     auto dimrange = space.findSubspace(isl_dim_set, subspace);
     assert(dimrange.isValid());

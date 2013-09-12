@@ -130,7 +130,7 @@ isl::MultiAff FieldType::getDistributionAff() {
   auto lengths = getLengths();
   auto dims = lengths.size();
   auto result = indexspace.mapsTo(islctx->createSetSpace(0, dims)).createZeroMultiAff();
-  for (auto d = 0; d < dims; d+=1){
+  for (auto d = dims-dims; d < dims; d+=1){
     auto len = lengths[d];
     // gcoord = nodecoord*len + lcoord
     // => nodecoord = (gcoord - lcoord)/len
@@ -185,7 +185,7 @@ isl::Set FieldType::getGlobalIndexset() {
 }
 
 
-int FieldType::getGlobalLength(int d) {
+int FieldType::getGlobalLength(unsigned d) {
   assert(0 <= d && d < getNumDimensions());
   return metadata.dimLengths[d];
 }

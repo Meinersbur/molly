@@ -178,7 +178,7 @@ namespace {
       assert(coordValues.size() == nCoords);
 
       auto coordMatches = coordSpace.createUniverseBasicSet();
-      for (auto i = 0; i < nCoords; i+=1) {
+      for (auto i = nCoords-nCoords; i < nCoords; i+=1) {
         // auto coordValue = coordValues[i];
         auto scev = coordValues[i];
         auto id = enwrap(scop->getIdForParam(scev));

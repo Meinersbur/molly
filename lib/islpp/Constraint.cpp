@@ -220,7 +220,7 @@ Ctx *Constraint::getCtx() const {
 #endif
 
 LocalSpace Constraint::getLocalSpace() const {
-  return LocalSpace::wrap(isl_constraint_get_local_space(keep()));
+  return LocalSpace::enwrap(isl_constraint_get_local_space(keep()));
 }
 
 void  Constraint::setConstant_inplace(const Int &v) ISLPP_INPLACE_QUALIFIER {

@@ -69,7 +69,7 @@ Space Aff::getDomainSpace() const {
 
 
 LocalSpace Aff::getDomainLocalSpace() const{
-  return LocalSpace::wrap(isl_aff_get_domain_local_space(keep()));
+  return LocalSpace::enwrap(isl_aff_get_domain_local_space(keep()));
 }
 
 

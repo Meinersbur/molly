@@ -291,7 +291,7 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
   SmallVector<Loop *,4> loopNests;
   SmallVector<BasicBlock *,4> footerBBs;
   SmallVector<BasicBlock *,4> exitBBs;
-  for (auto i = 0; i < nLoopNests; i+=1) {
+  for (auto i = nLoopNests-nLoopNests; i < nLoopNests; i+=1) {
     auto loop = new Loop();
     if (!loopNests.empty()) {
       auto parenLoop =  loopNests.back();
@@ -327,7 +327,7 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
   auto stmtBB = BasicBlock::Create(llvmContext, name, function);
 
 
-  for (auto i = 0; i < nLoopNests; i+=1) {
+  for (auto i = nLoopNests-nLoopNests; i < nLoopNests; i+=1) {
     auto parent = i > 0 ? loopNests[i-1] : nullptr;
 
     auto childHeaderBB = i == nDomainDims-1 ? stmtBB : loopNests[i+1]->getHeader();
@@ -396,7 +396,7 @@ static isl::Map relativeScatter(const isl::Map &modelScatter,  unsigned atLevel,
   auto mapSpace = isl::Space::createMapFromDomainAndRange(scatterSpace, scatterSpace);
   auto map = mapSpace.createZeroMultiAff();
 
-  for (auto i = 0; i < nPrefixDims; i+=1) {
+  for (auto i = nPrefixDims-nPrefixDims; i < nPrefixDims; i+=1) {
     map.setAff_inplace(i, scatterSpace.createVarAff(isl_dim_in, i));
   }
   map.setAff_inplace(nPrefixDims, scatterSpace.createVarAff(isl_dim_in, nPrefixDims) + relative);
@@ -434,7 +434,7 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   SmallVector<Loop*, 4> nests;
   nests.reserve(nNewDims);
 
-  for (auto i = 0; i < nModelDims; i+=1) {
+  for (auto i = nModelDims-nModelDims; i < nModelDims; i+=1) {
     nests.push_back(modelLoopNests[i]);
   }
 

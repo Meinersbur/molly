@@ -65,14 +65,24 @@ namespace llvm {
 namespace isl {
   using std::move;
   
+  // ISL uses mostly unsigned int for anything that cannot be negative, although not consistently
+  // This poses problems when sometimes negative values are returned, e.g. in case of an error or just because of inconsistency. 
+  // Some compilers warn (rightfully) about mixing signed and unsigned types
+  // Therefore keep in mind that only value range 0..MAX_INT work reliable, you won't use more dimensions anyways
+  // For number of dimensions (count_t), size_t would probably have made more sense
+  typedef unsigned int pos_t;
+  typedef unsigned int count_t;
+
+
   template<typename T>
   T copy(const T &obj) { return obj.copy(); }
 
-  // union always means piecewise union
+  /// union always means piecewise union
+  /// here, called unite because union is a C++ keyword
   template<typename T, typename U, typename V>
-  T union_(T &&t, U &&u, V &&v) {
-    auto imm = isl::union_(std::forward<T>(t), std::forward<U>(u));
-    return isl::union_(std::move(imm), std::forward<V>(v));
+  T unite(T &&t, U &&u, V &&v) {
+    auto imm = isl::unite(std::forward<T>(t), std::forward<U>(u));
+    return isl::unite(std::move(imm), std::forward<V>(v));
   }
 
 
@@ -84,6 +94,13 @@ namespace isl {
     assert(val == 0 || val == 1);
     return val;
   }
+
+
+  /// Some isl functions do not use unsigned int, this is a check to not miss anything
+  static inline count_t to_count_t(int n) { assert(n>=0); return n; } 
+  static inline count_t to_count_t(count_t n) { return n; }
+ 
+  
 
 } // namespace isl
 #endif /* ISLPP_ISLPP_COMMON_H */

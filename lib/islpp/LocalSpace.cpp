@@ -8,6 +8,7 @@
 #include "islpp/BasicMap.h"
 #include "islpp/Dim.h"
 #include "islpp/Aff.h"
+#include "islpp/Printer.h"
 
 #include <isl/local_space.h>
 
@@ -15,7 +16,7 @@ using namespace isl;
 
 extern inline LocalSpace isl::enwrap(__isl_take isl_local_space *ls);
 
-
+#if 0
 isl_local_space *LocalSpace::takeCopy() const {
   return isl_local_space_copy(space);
 }
@@ -32,46 +33,56 @@ LocalSpace::~LocalSpace() {
   if (space)
     isl_local_space_free(space);
 }
+#endif
 
 
 const LocalSpace &LocalSpace::operator=(const Space &that) {
-  assert(!this->space);
-  this->space = isl_local_space_from_space(isl_space_copy(that.keep()));
-  return *this; 
+  give(isl_local_space_from_space(that.takeCopy())); 
+  return *this;
 }
 
 
-
-LocalSpace::LocalSpace(Space &&that) {
-  this->space = isl_local_space_from_space(that.take());
+LocalSpace::LocalSpace(Space &&that) : Obj(isl_local_space_from_space(that.take())) {
 }
 
 
 const LocalSpace &LocalSpace::operator=(Space &&that) {
-  isl_local_space_free(this->space);
-  this->space = isl_local_space_from_space(that.take());
+  give(isl_local_space_from_space(that.take()));
   return *this;
 }
 
-BasicSet  LocalSpace::emptyBasicSet() const {
+
+void LocalSpace::print(llvm::raw_ostream &out) const {
+  Printer printer = Printer::createToStr(getCtx());
+  printer.print(*this);
+  printer.print(out);
+}
+
+
+void LocalSpace::dump() const {
+  isl_local_space_dump(keep());
+}
+
+
+BasicSet LocalSpace::emptyBasicSet() const {
   return BasicSet::enwrap(isl_basic_set_empty(isl_local_space_get_space( takeCopy())));
 }
 
-BasicSet  LocalSpace::universeBasicSet() const {
+BasicSet LocalSpace::universeBasicSet() const {
   return BasicSet::enwrap(isl_basic_set_universe(isl_local_space_get_space( takeCopy())));
 }
 
-BasicMap  LocalSpace::emptyBasicMap() const {
+BasicMap LocalSpace::emptyBasicMap() const {
   return BasicMap::enwrap(isl_basic_map_empty(isl_local_space_get_space( takeCopy())));
 }
 
-BasicMap  LocalSpace::universeBasicMap() const {
+BasicMap LocalSpace::universeBasicMap() const {
   return BasicMap::enwrap(isl_basic_map_universe(isl_local_space_get_space( takeCopy())));
 }
 
 
 Aff LocalSpace::createZeroAff() const {
-  return enwrap(isl_aff_zero_on_domain(takeCopy()));
+  return Aff::enwrap(isl_aff_zero_on_domain(takeCopy()));
 }
 
 
@@ -90,17 +101,17 @@ Constraint LocalSpace::createInequalityConstraint() const {
   return Constraint::enwrap(isl_inequality_alloc(takeCopy()));
 }
 
+#if 0
 Ctx *LocalSpace::getCtx() const {
   return Ctx::enwrap(isl_local_space_get_ctx(keep()));
 }
-
+#endif
 
 bool LocalSpace::isSet() const {
   return isl_local_space_is_set(keep());
 }
-int LocalSpace::dim(isl_dim_type type) const{
-  return isl_local_space_dim(keep(), type);
-}
+
+
 bool LocalSpace::hasDimId(isl_dim_type type, unsigned pos) const {
   return isl_local_space_has_dim_id(keep(), type, pos);
 }
@@ -158,5 +169,5 @@ bool isl::isEqual(const LocalSpace &ls1, const LocalSpace &ls2) {
 
 
 LocalSpace isl:: intersect( LocalSpace &&ls1,  LocalSpace &&ls2) {
-  return LocalSpace::wrap(isl_local_space_intersect(ls1.take(), ls2.take()));
+  return LocalSpace::enwrap(isl_local_space_intersect(ls1.take(), ls2.take()));
 }

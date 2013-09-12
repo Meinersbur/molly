@@ -9,8 +9,8 @@ namespace isl {
 } // namespace isl
 
 namespace molly {
-class FieldType;
-class LayoutMapping;
+  class FieldType;
+  class LayoutMapping;
 } // namespace molly
 #pragma endregion
 
@@ -26,6 +26,7 @@ namespace molly {
     //TODO: There could be mappings that cannot be represented by affine expression; Need to chain them
 
   public:
+    ~FieldLayout();
 
 #pragma region Distribution
     // Single index can be map to multiple ranks to allow redundancy
