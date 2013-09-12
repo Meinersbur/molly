@@ -453,6 +453,10 @@ namespace isl {
         wrap_inplace();
       assert(!isMapSpace());
     }
+
+    /// Return the pos' (0=first element) encountered leaf space in a depth-first traversal
+    Space findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange) const;
+    Space findNthSubspace(isl_dim_type type, unsigned pos) const { DimRange dummy; return findNthSubspace(type, pos, dummy); }
   }; // class Space
 
 

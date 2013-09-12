@@ -34,13 +34,14 @@ namespace molly {
     llvm::Module *getModule();
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
 
+    isl::AstBuild &initAstBuild();
+
+  public:
     llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf);
     llvm::CallInst *callCombufRecv(molly::CommunicationBuffer *combuf);
 
     llvm::CallInst *callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst);
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
-
-    isl::AstBuild &initAstBuild();
 
   public:
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
@@ -58,7 +59,8 @@ namespace molly {
     llvm::Value *codegenScev(const llvm::SCEV *scev);
     llvm::Value *codegenId(const isl::Id &id);
 
-    llvm::Value *codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout);
+    //llvm::Value *codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout);
+    llvm::Type *getIntTy();
 
 
     llvm::Value *codegenPtrLocal(FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices);
@@ -69,8 +71,8 @@ namespace molly {
     void codegenSend(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst);
     void codegenRecv(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src);
   
-    llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
-    llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);
+  //  llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
+  //  llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);
   }; // class MollyCodeGenerator
 
 } // namespace molly

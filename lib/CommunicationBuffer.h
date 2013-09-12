@@ -4,8 +4,11 @@
 #include "LLVMfwd.h"
 #include "islpp/Islfwd.h"
 #include "islpp/Map.h"
-#include "RectangularMapping.h"
-#include "AffineMapping.h"
+#include "molly/Mollyfwd.h"
+//#include "RectangularMapping.h"
+//#include "AffineMapping.h"
+#include <map>
+#include "Codegen.h"
 
 namespace molly {
   class FieldType;
@@ -16,34 +19,33 @@ namespace molly {
 
   class CommunicationBuffer {
   private:
+    FieldType *fty;
+
+    /* { chunk[domain] -> (src[cluster], dst[cluster], field[indexset]) } */
+    isl::Map relation; 
+
+    /// Buffer data layout
+    RectangularMapping *mapping;
+    RectangularMapping *sendbufMapping;
+    RectangularMapping *recvbufMapping;
+
     llvm::GlobalVariable *varsend;
     llvm::GlobalVariable *varrecv;
-    //uint64_t baseOffset;
-    FieldType *fty;
-    isl::Map relation; // { (src[coord] -> dst[coord]) -> field[indexset] }
 
-    // After the given last instances of write, send the given elements
-    // { (writeStmt[domain], node[cluster]) -> field[indexset] }
-    // { writeStmt[domain] -> writeStmt[domain] }
-    //isl::Map writeChunk; 
+    
+    //isl::PwAff countElts;
 
-    // Before the given first instance of read, receive the given elements
-    // { (readStmt[domain], node[cluster]) -> field[indexset] }
-     // { [domain] -> readStmt[domain] }
-    //isl::Map readChunk;
+    //AffineMapping *dstMapping;
+    //AffineMapping *srcMapping;
 
-    AffineMapping *mapping;
-    isl::PwAff countElts;
-
-    AffineMapping *dstMapping;
-    AffineMapping *srcMapping;
-
-    llvm::Value *getSendBufferBase(DefaultIRBuilder &builder);
-    llvm::Value *getRecvBufferBase(DefaultIRBuilder &builder);
 
   protected:
-    CommunicationBuffer() : fty(nullptr), mapping(nullptr) { }
-    ~CommunicationBuffer() { delete mapping; }
+    CommunicationBuffer() : fty(nullptr), mapping(nullptr), sendbufMapping(nullptr), recvbufMapping(nullptr) { }
+    ~CommunicationBuffer();
+
+  private:
+    llvm::Value *getSendBufferBase(DefaultIRBuilder &builder);
+    llvm::Value *getRecvBufferBase(DefaultIRBuilder &builder);
 
   public:
     static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv,  FieldType *fty, isl::Map &&relation) {
@@ -72,16 +74,21 @@ namespace molly {
       return relation;
     }
 
+    isl::Space getDstNodeSpace();
+    isl::Space getSrcNodeSpace();
+
     void doLayoutMapping();
-     const AffineMapping *getMapping() { return mapping; }
-     isl::PwAff getEltCount() { return countElts; }
+    const RectangularMapping *getMapping() { return mapping; }
 
      /// Mapping from sets of cluster nodes to a linearized rank
-     const AffineMapping *getDstMapping() { return dstMapping; }
-     const AffineMapping *getSrcMapping() { return srcMapping; }
+     //const AffineMapping *getDstMapping() { return dstMapping; }
+     //const AffineMapping *getSrcMapping() { return srcMapping; }
 
-    llvm::Value *codegenReadFromBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value *> indices);
-    void codegenWriteToBuffer(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::Value *value, llvm::ArrayRef<llvm::Value *> indices);
+    //llvm::Value *codegenReadFromBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
+    //void codegenWriteToBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
+
+    llvm::Value *codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
+    llvm::Value *codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &index);
 
   }; // class CommunicationBuffer
 } // namespace molly

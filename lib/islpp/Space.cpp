@@ -1165,6 +1165,44 @@ Space Space::replaceSubspace(const Space &subspaceToReplace, const Space &replac
 }
 
 
+
+static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, unsigned &pos, unsigned &first) {
+  if (space.isMapSpace()) {
+    if (findNthSubspace_recursive(space.getDomainSpace(), resultSpace, pos, first))
+      return true;
+     if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, pos, first))
+       return true;
+  } if (space.isWrapping()) {
+   if (findNthSubspace_recursive(space.unwrap(), resultSpace, pos, first))
+     return true;
+  } else {
+    // Leaf space
+    if (pos==0) {
+    // Found
+      resultSpace = space;
+      return true;
+    }
+
+    pos += 1;
+    first += space.getSetDimCount();
+  }
+
+  return false;
+}
+
+
+Space Space::findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange) const {
+  Space result;
+  unsigned first = 0;
+  auto myspace = extractTuple(type);
+  auto found = findNthSubspace_recursive(myspace, result, pos, first);
+  assert(found);
+
+  dimrange = DimRange::enwrap(type, first, result.dim(isl_dim_in)+result.dim(isl_dim_out), myspace);
+  return result;
+}
+
+
 bool isl::isEqual(const Space &space1, const Space &space2){
   return isl_space_is_equal(space1.keep(), space2.keep());
 }

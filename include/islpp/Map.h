@@ -203,13 +203,13 @@ namespace isl {
 
     //Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
     //Space getSpacelike() const { return getSpace(); }
-    Space getParamSpace() const { return Space::enwrap(isl_space_params(isl_map_get_space(keep()))); }
+    Space getParamsSpace() const { return Space::enwrap(isl_space_params(isl_map_get_space(keep()))); }
     Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_map_get_space(keep()))); }
     Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_map_get_space(keep()))); }
     Space getTupleSpace(isl_dim_type type ) const {
       switch (type) {
       case isl_dim_param:
-        return getParamSpace();
+        return getParamsSpace();
       case isl_dim_in:
         return getDomainSpace();
       case isl_dim_out:

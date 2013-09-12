@@ -122,7 +122,7 @@ llvm::Value *MollyCodeGenerator::codegenId(const isl::Id &id) {
   return codegenScev(user);
 }
 
-
+#if 0
 llvm::Value *MollyCodeGenerator::codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout) {
   auto mapping = layout->getMapping();
 
@@ -132,6 +132,12 @@ llvm::Value *MollyCodeGenerator::codegenLinearize(const isl::MultiPwAff &coord, 
   auto value = codegenAff(coordMapping);
   //TODO: generate assert() to check the result being in the layout's buffer size
   return value;
+}
+#endif
+
+llvm::Type *MollyCodeGenerator::getIntTy() {
+  auto &llvmContext = irBuilder.getContext();
+  return Type::getInt32Ty(llvmContext);
 }
 
 
@@ -201,6 +207,7 @@ void MollyCodeGenerator::codegenRecv(molly::CommunicationBuffer *combuf, const i
 }
 
 
+#if 0
 llvm::Value *MollyCodeGenerator::codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index) {
   // Get the buffer to the destination
   auto rank = codegenLinearize(dst, combuf->getDstMapping());
@@ -221,3 +228,4 @@ llvm::Value *MollyCodeGenerator::codegenGetPtrRecvBuf(molly::CommunicationBuffer
   auto idx = codegenLinearize(index, combuf->getMapping());
   return irBuilder.CreateGEP(buf, idx);
 }
+#endif

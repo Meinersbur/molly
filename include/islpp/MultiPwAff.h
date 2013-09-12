@@ -2,15 +2,13 @@
 #define ISLPP_MULTIPWAFF_H
 
 #include "islpp_common.h"
-#include "Spacelike.h"
+#include "Spacelike.h" // baseclass of Multi<PwAff>
 #include "Multi.h"
-
 #include "PwAff.h"
 #include "Space.h"
 #include "Ctx.h"
 #include <isl/aff.h>
 #include <isl/multi.h>
-#include <cassert>
 #include <llvm/Support/ErrorHandling.h>
 #include "Obj.h"
 
@@ -157,5 +155,4 @@ namespace isl {
   static inline Multi<PwAff> enwrap(isl_multi_pw_aff *obj) { return Multi<PwAff>::enwrap(obj); }
 
 } // namespace isl
-
 #endif /* ISLPP_MULTIPWAFF_H */

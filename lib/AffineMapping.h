@@ -14,16 +14,17 @@ namespace molly {
   class AffineMapping {
   private:
     isl::PwAff mapping;
+    isl::PwAff countElts;
 
   public:
-    AffineMapping(isl::PwAff &&mapping) : mapping(std::move(mapping)) { }
+    AffineMapping(isl::PwAff &&mapping, isl::PwAff &&countElts) : mapping(std::move(mapping)), countElts(std::move(countElts)) { }
 
     /// { [indexset] -> size_t }
-   const isl::PwAff &getMapping() const { return mapping; }
+    const isl::PwAff &getMapping() const { return mapping; }
 
-   isl::Set getIndexset() const;
+    isl::Set getIndexset() const;
 
-     llvm::Value *codegen(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords);
+    llvm::Value *codegen(DefaultIRBuilder &builder, std::map<isl_id *, llvm::Value *> &params, llvm::ArrayRef<llvm::Value*> coords);
   }; // class AffineMapping
 
 } // namespace molly

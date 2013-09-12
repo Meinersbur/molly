@@ -43,5 +43,8 @@ namespace molly {
   // #include "AffineMapping.h"
   class AffineMapping;
 
+  // #include "RectangularMapping.h"
+  class RectangularMapping;
+
 } // namespace molly
 #endif /* MOLLY_MOLLYFWD_H */

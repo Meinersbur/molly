@@ -943,7 +943,7 @@ namespace {
 
       auto rel = combuf->getRelation(); /* { (src[coord] -> dst[coord]) -> field[indexset] } */
       auto mapping = combuf->getMapping();
-      auto eltCount = combuf->getEltCount();
+      //auto eltCount = combuf->getEltCount();
 
       auto scatterTupleId = isl::Space::enwrap( scop->getScatteringSpace() ).getSetTupleId();
       auto singletonSet = islctx->createSetSpace(0,1).setSetTupleId(scatterTupleId).createUniverseBasicSet().fix(isl_dim_set, 0, 0);

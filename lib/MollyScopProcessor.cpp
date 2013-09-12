@@ -755,7 +755,7 @@ namespace {
         //auto memmovStmt = createScopStmt(scop, memmovBB, stmtRead->getRegion(), "memmove_nonhome", stmtRead->getLoopNests()/*not accurate*/, );
         std::map<isl_id *, llvm::Value *> scalarMap;
         editor.getParamsMap(scalarMap, memmovStmt);
-        combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/ );
+        //combuf->codegenWriteToBuffer(memmovBuilder, scalarMap, copyValue, facc.getCoordinates()/*correct?*/);
         memmovBuilder.CreateUnreachable(); // Terminator, removed by Scop code generator
 
         // Execute send
@@ -780,9 +780,9 @@ namespace {
         auto useWhere = notHomeAccesses.getRange().unwrap(); /* { readStmt[domain] -> cluster[coord] } */
         auto useEditor = editor.replaceStmt(stmtRead,useWhere.copy() , "use_nonhome");
         IRBuilder<> useBuilder(useEditor.getTerminator());
-        auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
+        //auto useValue = combuf->codegenReadFromBuffer(useBuilder, scalarMap, facc.getCoordinates());
         auto useLoad = facc.getLoadUse();
-        useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
+        //useBuilder.CreateStore(useValue, useLoad->getPointerOperand());
 
         //TODO: Create polly::MemoryAccess
       }
@@ -867,7 +867,7 @@ namespace {
 
       //scatter; // { [domain] -> (dep[scatter], indep[scatter]) }
 
-      auto mapSpace = scatter.getParamSpace().createMapSpace(levelOfDep + levelOfIndep, levelOfDep); // { scattering[scatter] -> dep[scatter] }
+      auto mapSpace = scatter.getParamsSpace().createMapSpace(levelOfDep + levelOfIndep, levelOfDep); // { scattering[scatter] -> dep[scatter] }
       auto map = mapSpace.equalBasicMap(isl_dim_in, 0, levelOfDep, isl_dim_out, 0);
 
 
@@ -971,6 +971,7 @@ namespace {
 
       auto sendDomain = writePartitioning.getRange();
       auto recvDomain = readChunks.getDomain();
+      auto chunkSpace = recvDomain.getSpace();
 
       //auto sendScatter = relativeScatter(writePartitioning.reverse(), writeScatter, +1);
       auto recvScatter = relativeScatter(readChunks, readScatter, -1); // { (recv[domain] -> node[cluster]) -> scattering[scatter] }
@@ -1099,6 +1100,7 @@ namespace {
       //communicationSet.uncurry_inplace();
       // { (writeNode[cluster], readNode[cluster]) -> field[index] }
       auto communicationSet = sourceOfRead.wrap().reorganizeSubspaces(writeNodeShape.getSpace() >> readNodeShape.getSpace(), indexsetSpace);
+      auto comRealation = chunks.reorganizeSubspaces( chunkSpace,  (writeNodeShape.getSpace() >> readNodeShape.getSpace()) >> indexsetSpace);
 
       // We may need to send to/recv from any node in the cluster
       auto sendDstDomain = depInst.getDomain().unwrap().setInTupleId(sendDomain.getTupleId()).intersectDomain(sendDomain).wrap(); // { (writeStmt[domain], nodeDst[cluster]) }
@@ -1114,7 +1116,7 @@ namespace {
 
       // Codegen
       //TODO: CommunicationBuffer needs information of chunks
-      auto combuf = pm->newCommunicationBuffer(fty, communicationSet); 
+      auto combuf = pm->newCommunicationBuffer(fty, comRealation); 
       combuf->doLayoutMapping();
 
       ScopEditor editor(scop);
@@ -1172,10 +1174,11 @@ namespace {
       auto writeAccessed = writeStmt->getAccessed().toPwMultiAff(); // { writeStmt[domain] -> field[indexset] }
 
       auto currentIteration = writeFlowEditor.getCurrentIteration();
-      auto currentDst = currentIteration.sublist( writeInstDomainSpaceUnwrapped.getRangeSpace() );
-      auto currentDomain = currentIteration.sublist(writeInstDomainSpaceUnwrapped.getDomainSpace() );
+      auto currentDst = currentIteration.sublist(writeInstDomainSpaceUnwrapped.getRangeSpace());
+      auto currentDomain = currentIteration.sublist(writeInstDomainSpaceUnwrapped.getDomainSpace());
       auto currentWriteAccessed = currentDomain.applyRange(writeAccessed);
-      auto writeFlowBufPtr = writeFlowCodegen.codegenGetPtrSendBuf(combuf, currentDst, currentWriteAccessed);
+      auto writeFlowBufPtr = combuf->codegenPtrToSendBuf(writeFlowCodegen, currentDst, currentWriteAccessed);
+      //writeFlowCodegen.codegenGetPtrSendBuf(combuf, currentDst, currentWriteAccessed);
       writeFlowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeFlowBufPtr);
 
 
@@ -1192,7 +1195,7 @@ namespace {
       auto readFlowClusterAff = readFlowStmt->getClusterMultiAff();
       auto readFlowGetFrom = sourceOfRead.removeDims(sourceOfRead.getSpace().findSubspace(isl_dim_in, indexsetSpace)); // { readStmt[domain] -> nodeSrc[cluster] }
       readFlowGetFrom.pullback_inplace(readFlowClusterAff.embedAsSubspace(readFlowGetFrom.getSpace()));
-      readFlowCodegen.codegenGetPtrRecvBuf(combuf, readFlowGetFrom, readAccessed);
+      //readFlowCodegen.codegenGetPtrRecvBuf(combuf, readFlowGetFrom, readAccessed);
 
       //readLoad->replaceAllUsesWith( );
     }
