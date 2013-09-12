@@ -40,21 +40,21 @@ Id Id::create(Ctx *ctx, const char *name, void *user) {
 }
 
 
-const char *Id::getName() const { 
+const char *Id::getName() ISLPP_EXSITU_QUALIFIER { 
   return isl_id_get_name(keepOrNull()); 
 }
-void *Id::getUser() const { 
+void *Id::getUser() ISLPP_EXSITU_QUALIFIER { 
   return isl_id_get_user(keep()); 
 }
 
 
-Id Id::setFreeUser(void (*freefunc)(void *)) { 
-  return Id::enwrap(isl_id_set_free_user(keep(), freefunc)); 
+Id Id::setFreeUser(void (*freefunc)(void *)) ISLPP_EXSITU_QUALIFIER { 
+  return Id::enwrap(isl_id_set_free_user(takeCopy(), freefunc)); 
 }
-void Id::setFreeUser_inline(void (*freefunc)(void *)) {
-  give(isl_id_set_free_user(keep(), freefunc)); 
+void Id::setFreeUser_inplace(void (*freefunc)(void *)) ISLPP_INPLACE_QUALIFIER {
+  give(isl_id_set_free_user(take(), freefunc)); 
 }
-Id Id::setFreeUser_consume(void (*freefunc)(void *)) { 
+Id Id::setFreeUser_consume(void (*freefunc)(void *)) ISLPP_CONSUME_QUALIFIER { 
   return Id::enwrap(isl_id_set_free_user(take(), freefunc));
 }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIER
@@ -63,8 +63,8 @@ Id Id::setFreeUser(void (*freefunc)(void *)) && {
 }
 #endif
 
-Id isl::setFreeUser(const Id &id, void (*freefunc)(void *)) {
-  return Id::enwrap(isl_id_set_free_user(id.keep(), freefunc)); 
+Id isl::setFreeUser(Id id, void (*freefunc)(void *)) {
+  return Id::enwrap(isl_id_set_free_user(id.take(), freefunc)); 
 }
 Id isl::setFreeUser(Id &&id, void (*freefunc)(void *)) {
   return Id::enwrap(isl_id_set_free_user(id.take(), freefunc)); 
@@ -83,6 +83,5 @@ llvm::DenseMapInfo<isl::Id>::KeyInitializer::~KeyInitializer() {
 }
 
 llvm::DenseMapInfo<isl::Id>::KeyInitializer llvm::DenseMapInfo<isl::Id> ::keys;
-
 
 //} // namespace isl

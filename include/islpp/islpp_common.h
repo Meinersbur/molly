@@ -25,13 +25,15 @@ namespace llvm {
 
 #if __has_extension(cxx_reference_qualified_functions) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 8) || (_GNUC__ == 4 && __GNUC_MINOR__ == 8 && __GNUC_PATCHLEVEL__ >= 1)
 // Supported since GCC 8.4.1 (http://gcc.gnu.org/projects/cxx0x.html)
+#define ISLPP_LVALUE_THIS_QUALIFIER &
+#define ISLPP_RVALUE_THIS_QUALIFIER &&
+#define ISLPP_HAS_LVALUE_THIS_QUALIFIER 1
 #define ISLPP_HAS_RVALUE_THIS_QUALIFIER 1
-#define ISLPP_INPLACE_QUALIFIER &
-#define ISLPP_INTERNAL_QUALIFIER &&
 #else
+#define ISLPP_LVALUE_THIS_QUALIFIER 
+#define ISLPP_RVALUE_THIS_QUALIFIER 
+#define ISLPP_HAS_LVALUE_THIS_QUALIFIER 0
 #define ISLPP_HAS_RVALUE_THIS_QUALIFIER 0
-#define ISLPP_INPLACE_QUALIFIER 
-#define ISLPP_INTERNAL_QUALIFIER
 #endif
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__)
@@ -53,7 +55,9 @@ namespace llvm {
 #define ISLPP_WARN_UNUSED_RESULT_PREFIX
 #endif
 
+
 #define ISLPP_EXSITU_QUALIFIER const ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_INPLACE_QUALIFIER ISLPP_LVALUE_THIS_QUALIFIER
 #define ISLPP_CONSUME_QUALIFIER ISLPP_WARN_UNUSED_RESULT
 
 
