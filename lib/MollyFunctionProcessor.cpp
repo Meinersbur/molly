@@ -392,6 +392,8 @@ namespace {
 #pragma endregion
 
 
+    //private:
+      //SmallVector<Value*, 4> currentClusterCoord;
 
     Value* getClusterCoordinate(unsigned i) LLVM_OVERRIDE {
       auto &llvmContext = func->getContext();
@@ -402,8 +404,10 @@ namespace {
       auto funcLocalCoord = metadata->funcLocalCoord;
       DefaultIRBuilder builder(func->getEntryBlock().getFirstNonPHI());
 
+      //llvm::Intrinsic::getDeclaration();
+
       //auto coordsArray = builder.CreateConstGEP1_32(varSelfCoords, 0, "coords_array");
-      // auto coordPtr = builder.CreateConstGEP1_32(coordsArray, i, "coord");
+      //auto coordPtr = builder.CreateConstGEP1_32(coordsArray, i, "coord");
       //return builder.CreateLoad(coordPtr, false, "local coord");
       return builder.CreateCall(funcLocalCoord, ConstantInt::get(intTy, i));
     }

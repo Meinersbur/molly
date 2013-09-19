@@ -20,9 +20,9 @@ CommunicationBuffer::~CommunicationBuffer() {
 
 llvm::Value *CommunicationBuffer::getSendBufferBase(DefaultIRBuilder &builder) {
   auto &llvmContext = builder.getContext();
-  auto intTy = Type::getInt32Ty(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
 
-  auto ptr = builder.CreateConstGEP1_32(varsend,0, "combufsend_base");
+  auto ptr = builder.CreateConstGEP1_64(varsend,0, "combufsend_base");
   auto bufbase = builder.CreateLoad(ptr);
   return bufbase;
 }
@@ -30,9 +30,9 @@ llvm::Value *CommunicationBuffer::getSendBufferBase(DefaultIRBuilder &builder) {
 
 llvm::Value *CommunicationBuffer::getRecvBufferBase(DefaultIRBuilder &builder) {
   auto &llvmContext = builder.getContext();
-  auto intTy = Type::getInt32Ty(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
 
-  auto ptr = builder.CreateConstGEP1_32(varrecv,0, "combufrecv_base");
+  auto ptr = builder.CreateConstGEP1_64(varrecv,0, "combufrecv_base");
   auto bufbase = builder.CreateLoad(ptr);
   return bufbase;
 }   
@@ -44,7 +44,7 @@ isl::Space CommunicationBuffer::getDstNodeSpace() {
 
 
 isl::Space CommunicationBuffer::getSrcNodeSpace() {
-  return relation.getSpace().findNthSubspace(isl_dim_out, 2);
+  return relation.getSpace().findNthSubspace(isl_dim_out, 0);
 }
 
 
@@ -99,51 +99,47 @@ void CommunicationBuffer::doLayoutMapping() {
 }
 
 
-    llvm::Value *CommunicationBuffer::codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index) {
-      auto &irBuilder = codegen.getIRBuilder();
+/// dstCoord: { (chunk[domain], dstNode[cluster]) -> [] }
+/// index: { (chunk[domain], srcNode[cluster], dstNode[cluster]) -> [] }
+llvm::Value *CommunicationBuffer::codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index) {
+  auto &irBuilder = codegen.getIRBuilder();
 
-        auto sendbufIdx = sendbufMapping->codegenIndex(codegen, dstCoord);
-     auto sendbufPtr = codegen.callCombufSendbufPtr(this, sendbufIdx);
+  auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
+  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  auto sendbufPtr = codegen.callCombufSendbufPtr(this, sendbufIdx);
 
-       auto indexIdx = mapping->codegenIndex(codegen, index);
-    return irBuilder.CreateGEP(sendbufPtr, indexIdx, "sendbufelt");
-    }
-
-
-    llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &index) {
-      auto &irBuilder = codegen.getIRBuilder();
-
-        auto recvbufIdx = recvbufMapping->codegenIndex(codegen, srcCoord);
-     auto recvbufPtr = codegen.callCombufRecvbufPtr(this, recvbufIdx);
-
-       auto indexIdx = mapping->codegenIndex(codegen, index);
-    return irBuilder.CreateGEP(recvbufPtr, indexIdx, "recvbufelt");
-    }
-
-
-#if 0
-llvm::Value *CommunicationBuffer::codegenReadFromBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices) {
-  auto intTy = codegen->getIntTy();
-  auto &builder = codegen->getIRBuilder();
-
-  auto linear = mapping->codegenIndex(codegen, indices);
-    //mapping->codegen(builder, params, indices);
-  auto base = getRecvBufferBase(builder);
-  auto ptr = builder.CreateGEP(base, linear, "local_ptr");
-
-  return builder.CreateLoad(ptr, "field_val");
+  auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
+  auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
+  return irBuilder.CreateGEP(sendbufPtr, indexIdx, "sendbufelt");
 }
 
 
-void CommunicationBuffer::codegenWriteToBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices) {
-  auto intTy = codegen->getIntTy();
-  auto &builder = codegen->getIRBuilder();
+llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index) {
+  auto &irBuilder = codegen.getIRBuilder();
 
-  auto linear = mapping->codegenIndex(codegen, indices);
-    //mapping->codegen(builder, params, indices);
-  auto base = getSendBufferBase(builder);
-  auto ptr = builder.CreateGEP(base, linear, "local_ptr");
+  auto buftranslator = isl::rangeProduct(chunk, dstCoord).toPwMultiAff();
+  auto recvbufIdx = recvbufMapping->codegenIndex(codegen, buftranslator, srcCoord);
+  auto recvbufPtr = codegen.callCombufRecvbufPtr(this, recvbufIdx);
 
-  builder.CreateStore(value, ptr);
+  auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
+  auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
+  return irBuilder.CreateGEP(recvbufPtr, indexIdx, "recvbufelt");
 }
-#endif
+
+
+void CommunicationBuffer::codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
+  auto &irBuilder = codegen.getIRBuilder();
+
+  auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
+  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  codegen.callCombufSend(this, sendbufIdx);
+}
+
+
+void CommunicationBuffer::codegenRecv(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
+  auto &irBuilder = codegen.getIRBuilder();
+
+  auto buftranslator = isl::rangeProduct(chunk, dstCoord).toPwMultiAff();
+  auto sendbufIdx = recvbufMapping->codegenIndex(codegen, buftranslator, srcCoord);
+  codegen.callCombufRecv(this, sendbufIdx);
+}

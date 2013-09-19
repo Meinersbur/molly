@@ -151,8 +151,8 @@ namespace isl {
     void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
     BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
 
-    ISLPP_WARN_UNUSED_RESULT_PREFIX Map intersect(Map &&that) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_WARN_UNUSED_RESULT_PREFIX Map intersect(const Map &that) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX Map intersect(Map &&that) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX Map intersect(const Map &that) ISLPP_EXSITU_QUALIFIER;
 
     BasicMap intersectDomain(const BasicSet &bset) ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
     Map intersectDomain(const Set &set) ISLPP_EXSITU_QUALIFIER;

@@ -62,8 +62,44 @@ StmtEditor MollyCodeGenerator::getStmtEditor() {
 }
 
 
+llvm::Value *MollyCodeGenerator::getValueOf(const SCEV *scev) {
+  auto scopCtx = stmtCtx->getScopProcessor();
+  auto result = scopCtx->codegenScev(scev, irBuilder.GetInsertPoint());
+  return result;
+}
+
+
+
+
 std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
-  return stmtCtx->getIdToValueMap();
+  auto &result = stmtCtx->getIdToValueMap();
+
+  auto scopCtx = stmtCtx->getScopProcessor();
+  auto &params = scopCtx->getParamSCEVs();
+
+  auto nDomainDims = stmtCtx->getDomain().getDimCount();
+
+  auto nExpected = params.size()+nDomainDims;
+  assert(result.size() <= nExpected);
+  if (result.size() == nExpected)
+    return result;
+
+  // 1. Context parameters
+  for (auto paramScev : params) {
+    auto id = scopCtx->idForSCEV(paramScev);
+    auto value = getValueOf(paramScev);
+    result[id.keep()] = value;
+  }
+
+  // 2. The loop induction variables
+  for (auto i = nDomainDims-nDomainDims; i < nDomainDims; i+=1) {
+    auto iv = stmtCtx->getDomainValue(i);
+    auto id = stmtCtx->getDomainId(i);
+    assert(id.isValid());
+    result[id.keep()] = iv;
+  }
+
+  return result;
 }
 
 
@@ -147,33 +183,35 @@ llvm::Value *MollyCodeGenerator::codegenPtrLocal(FieldVariable *fvar, llvm::Arra
 }
 
 
-llvm::CallInst *MollyCodeGenerator::callCombufSend( molly::CommunicationBuffer *combuf ) {
-  Value *args[] = { combuf->getVariableSend() };
+llvm::CallInst *MollyCodeGenerator::callCombufSend(molly::CommunicationBuffer *combuf, Value *dstRank) {
+  Value *args[] = { combuf->getVariableSend(), dstRank };
   Type *tys[] = { args[0]->getType() };
   auto sendFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_send, tys);
-  return this->irBuilder.CreateCall(sendFunc, args);
+  return irBuilder.CreateCall(sendFunc, args);
 }
 
 
-llvm::CallInst *MollyCodeGenerator::callCombufRecv(molly::CommunicationBuffer *combuf) {
-  Value *args[] = { combuf->getVariableRecv() };
+llvm::CallInst *MollyCodeGenerator::callCombufRecv(molly::CommunicationBuffer *combuf, Value *srcRank) {
+  Value *args[] = { combuf->getVariableRecv(), srcRank };
   Type *tys[] = { args[0]->getType() };
   auto recvFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recv, tys);
-  return this->irBuilder.CreateCall(recvFunc, args);
+  return irBuilder.CreateCall(recvFunc, args);
 }
 
 
 llvm::CallInst *MollyCodeGenerator::callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst) {
-  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_sendbuf_ptr);
   Value *args[] = { combuf->getVariableSend(), dst };
-  return this->irBuilder.CreateCall(ptrFunc, args);
+  Type *tys[] = { combuf->getFieldType()->getEltPtrType(), args[0]->getType() };
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_sendbuf_ptr, tys);
+  return irBuilder.CreateCall(ptrFunc, args);
 }
 
 
 llvm::CallInst *MollyCodeGenerator::callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src) {
-  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recvbuf_ptr);
   Value *args[] = { combuf->getVariableRecv(), src };
-  return this->irBuilder.CreateCall(ptrFunc, args);      
+  Type *tys[] = { combuf->getFieldType()->getEltPtrType(), args[0]->getType() };
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recvbuf_ptr, tys);
+  return irBuilder.CreateCall(ptrFunc, args);      
 }
 
 
@@ -194,17 +232,7 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
 }
 
 
-void MollyCodeGenerator::codegenSend(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst) {
-  auto dstCoords = codegenMultiAff(dst);
-  //TODO: Use the dstCoords 
-  callCombufSend(combuf);
-}
 
-void MollyCodeGenerator::codegenRecv(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src) {
-  auto srcCoords = codegenMultiAff(src);
-  //TODO: Use srcCoords
-  callCombufRecv(combuf);
-}
 
 
 #if 0

@@ -202,7 +202,12 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-    void pullbackMultiAff(Multi<Aff> &&);
+Aff pullback(const MultiAff &maff) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.pullback_inplace(maff); return result; }
+void pullback_inplace(const MultiAff &) ISLPP_INPLACE_QUALIFIER;
+PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
+
+/// Would be ineffective
+//PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
   }; // class Aff
 

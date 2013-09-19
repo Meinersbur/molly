@@ -68,7 +68,7 @@ namespace isl {
 
 
     // optional, default implementation exist
-    unsigned dim(isl_dim_type type) const { return isl_pw_multi_aff_dim(keep(), type); }
+    count_t dim(isl_dim_type type) const { return isl_pw_multi_aff_dim(keep(), type); }
     //int findDimById(isl_dim_type type, const Id &id) const { return isl_pw_multi_aff_find_dim_by_id(keep(), type, id.keep()); }
 
     bool hasTupleId(isl_dim_type type) const { return isl_pw_multi_aff_has_tuple_id(keep(), type); }
@@ -86,6 +86,7 @@ namespace isl {
 
 
 #pragma region Creational 
+    static PwMultiAff create(const Set &set, const MultiAff &maff) { return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), maff.takeCopy())); }
     static PwMultiAff create(Set &&set, MultiAff &&maff);
     static PwMultiAff createIdentity(Space &&space);
     static PwMultiAff createFromMultiAff(MultiAff &&maff);
@@ -110,9 +111,6 @@ namespace isl {
 
 
 #pragma region Printing
-    //void print(llvm::raw_ostream &out) const;
-    //std::string toString() const;
-    //void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth, int indent) const;
 #pragma endregion
 
@@ -131,42 +129,56 @@ namespace isl {
     Set getDomain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
     Set getRange() const;
 
+    Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { return getSpace().getRangeSpace(); }
+
 
     PwMultiAff scale(Val &&v) const { return enwrap(isl_pw_multi_aff_scale_val(takeCopy(), v.take())); }
     //PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_multi_val(takeCopy(), v.take())); }
 
     PwMultiAff projectDomainOnParams() const { return enwrap(isl_pw_multi_aff_project_domain_on_params(takeCopy())); }
-    PwMultiAff alignParams(Space &&model) const { return enwrap(isl_pw_multi_aff_align_params(takeCopy(), model.take())); }
+    PwMultiAff alignParams(Space model) ISLPP_EXSITU_QUALIFIER { return enwrap(isl_pw_multi_aff_align_params(takeCopy(), model.take())); }
+    void alignParams_inplace(Space model) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_align_params(take(), model.take())); }
 
     PwMultiAff coalesce() const { return enwrap(isl_pw_multi_aff_coalesce(takeCopy())); }
     PwMultiAff gistParams(Set &&set) const { return enwrap(isl_pw_multi_aff_gist_params(takeCopy(), set.take())); }
     PwMultiAff gist(Set &&set) const { return enwrap(isl_pw_multi_aff_gist(takeCopy(), set.take())); }
 
     /// this(ma(x))
-        PwMultiAff pullback(const MultiAff &ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.takeCopy())); }
-    PwMultiAff pullback(MultiAff &&ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
-    void pullback_inplace(const MultiAff &ma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_multi_aff(take(), ma.takeCopy())); }
+    PwMultiAff pullback(MultiAff ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
+    void pullback_inplace(MultiAff ma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_multi_aff(take(), ma.take())); }
 
-     PwMultiAff pullback(const PwMultiAff &pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.takeCopy())); }
-    PwMultiAff pullback(PwMultiAff &&pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
-    void pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.takeCopy())); }
+    PwMultiAff pullback(PwMultiAff pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
+    void pullback_inplace(PwMultiAff pma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
+
+    //PwMultiAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
+    PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER { return pma.pullback(*this); }
 
     bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
-    unsigned nPieces() const { unsigned result=0;  foreachPiece([&result] (Set&& , MultiAff&&)->bool{ result+=1; return true; } ) ; return result; }
+    //bool foreachPiece(const std::function<void(Set ,MultiAff , bool &stop)> &) const;
+    unsigned nPieces() const { unsigned result=0;  foreachPiece([&result] (Set&& , MultiAff&&)->bool { result+=1; return true; } ) ; return result; }
 
     Map reverse() const;
     PwMultiAff neg() const;
 
     PwMultiAff operator-() const { return neg(); }
 
-    void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_QUALIFIER  { give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
+    PwMultiAff unionAdd(const PwMultiAff &pma2) ISLPP_EXSITU_QUALIFIER { return PwMultiAff::enwrap(isl_pw_multi_aff_union_add(takeCopy(), pma2.takeCopy())); }
+    void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
 
     // Same isl::Map operations
     Set wrap() const;
 
     PwMultiAff projectOut(unsigned first, unsigned count) const;
-     PwMultiAff projectOut(const DimRange &range) const;
+    PwMultiAff projectOut(const DimRange &range) const;
     PwMultiAff projectOutSubspace(const Space &subspace) const;
+
+    ISLPP_EXSITU_PREFIX PwMultiAff sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX PwMultiAff sublist(Space subspace) ISLPP_EXSITU_QUALIFIER;
+
+    PwMultiAff cast(Space space) ISLPP_EXSITU_QUALIFIER;
+    void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { give(cast(space).take()); }
+
+    //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
   }; // class Pw<MultiAff>
 
 
@@ -182,7 +194,7 @@ namespace isl {
   static inline PwMultiAff unionLexmin(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_union_lexmin(pma1.take(), pma2.take())); }
   static inline PwMultiAff unionLexmax(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_union_lexmax(pma1.take(), pma2.take())); }
 
-  static inline PwMultiAff rangeProduct(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_range_product(pma1.take(), pma2.take())); }
+  static inline PwMultiAff rangeProduct(PwMultiAff pma1, PwMultiAff pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_range_product(pma1.take(), pma2.take())); }
   static inline PwMultiAff flatRangeProduct(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_flat_range_product(pma1.take(), pma2.take())); }
   static inline PwMultiAff product(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_product(pma1.take(), pma2.take())); }
 

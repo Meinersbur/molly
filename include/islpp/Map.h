@@ -148,7 +148,7 @@ namespace isl {
     PwMultiAff toPwMultiAff() const { return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(takeCopy())); } 
 
     // to MultiPwAff
-    MultiPwAff toMultiPwAff() const;
+    //MultiPwAff toMultiPwAff() const;
 
     // to UnionMap
     UnionMap toUnionMap() const;
@@ -192,7 +192,7 @@ namespace isl {
     static Map fromAff(Aff &&aff) { return Map::enwrap(isl_map_from_aff(aff.take())); }
     static Map fromMultiAff(MultiAff &&maff) { return Map::enwrap(isl_map_from_multi_aff(maff.take())); }
     static Map fromPwMultiAff(PwMultiAff &&pwmaff) { return Map::enwrap(isl_map_from_pw_multi_aff(pwmaff.take())); }
-    static Map fromMultiPwAff(MultiPwAff &&mpaff);
+    //static Map fromMultiPwAff(MultiPwAff &&mpaff);
 
     static Map readFrom(Ctx *ctx, const char *str);
     static Map readFrom(Ctx *ctx, FILE *input) { return Map::enwrap(isl_map_read_from_file(ctx->keep(), input) ); }
@@ -660,8 +660,7 @@ namespace isl {
   static inline Map applyDomain(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_domain(map1.take(), map2.take())); }
   static inline Map applyRange(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_range(map1.take(), map2.take())); }
   static inline Map domainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_domain_product(map1.take(), map2.take())); }
-  static inline Map rangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_range_product(map1.take(), map2.take())); }
-  static inline Map rangeProduct(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_range_product(map1.takeCopy(), map2.takeCopy())); }
+  static inline Map rangeProduct(Map map1, Map map2) { return Map::enwrap(isl_map_range_product(map1.take(), map2.take())); }
   static inline Map flatProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_product(map1.take(), map2.take())); }
   static inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
   static inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_range_product(map1.take(), map2.take())); }

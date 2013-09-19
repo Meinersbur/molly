@@ -14,10 +14,13 @@ using namespace llvm;
 using namespace std;
 
 
+
+
+#if 0
 MultiPwAff Map::toMultiPwAff() const {
   return toPwMultiAff().toMultiPwAff();
 }
-
+#endif
 
 UnionMap Map::toUnionMap() const {
   return UnionMap::enwrap(isl_union_map_from_map(takeCopy()));
@@ -32,34 +35,14 @@ UnionMap Map::toUnionMap() && {
 
 
 Map Map::readFrom(Ctx *ctx, const char *str) {
-  return Map::enwrap(isl_map_read_from_str(ctx->keep() , str));
+  return Map::enwrap(isl_map_read_from_str(ctx->keep(), str));
 }
 
-
-// Missing in isl
-__isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
-  if (!mpwaff)
-    return NULL;
-
-  isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
-  isl_map *map = isl_map_universe(isl_space_from_domain(space));
-
-  unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
-  for (int i = n-n; i < n; ++i) {
-    isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
-    isl_map *map_i = isl_map_from_pw_aff(pwaff);
-    map = isl_map_flat_range_product(map, map_i);
-  }
-
-  isl_multi_pw_aff_free(mpwaff);
-  return map;
-}
-
-
+#if 0
 Map Map::fromMultiPwAff(MultiPwAff &&mpaff) {
-  return Map::enwrap(isl_map_from_multi_pw_aff(mpaff.take()));
+  return Map::enwrap(isl_map_from_pw_multi_aff(mpaff.toPwMultiAff().take()));
 }
-
+#endif
 
 void Map::print(llvm::raw_ostream &out) const {
   // isl_map_print requires to print to FILE*

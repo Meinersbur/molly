@@ -12,10 +12,12 @@
 using namespace isl;
 using namespace llvm;
 
-#if 0
-void PwMultiAff::release() { isl_pw_multi_aff_free(takeOrNull()); }
-#endif
-PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) { return enwrap(isl_pw_multi_aff_alloc(set.take(), maff.take())); }
+
+PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) { 
+  return enwrap(isl_pw_multi_aff_alloc(set.take(), maff.take()));
+}
+
+
 PwMultiAff PwMultiAff::createIdentity(Space &&space) { return enwrap(isl_pw_multi_aff_identity(space.take())); }
 PwMultiAff PwMultiAff::createFromMultiAff(MultiAff &&maff) { return enwrap(isl_pw_multi_aff_from_multi_aff(maff.take())); }
 
@@ -38,14 +40,14 @@ MultiPwAff PwMultiAff::toMultiPwAff() const {
   auto list = PwAffList::alloc(getCtx(), nOut);
 
   for (auto i=nOut-nOut; i < nOut; i+=1) {
-    auto resultPwAff = getSpace().createEmptyPwAff();
+    auto resultPwAff = getDomainSpace().mapsTo(1).createEmptyPwAff();
 
-    foreachPiece([&](Set &&set, MultiAff &&maff) -> bool {
-      auto aff = maff.getAff(i);  
+    foreachPiece([&resultPwAff,i](Set &&set, MultiAff &&maff) -> bool {
+      auto aff = maff.getAff(i);
       auto paff = PwAff::create(set, aff);
       assert(isDisjoint(resultPwAff.domain(), set));
-      resultPwAff.unionMin_inplace(paff); // No add_piece or disjount_union publicly available, poeces are disjount
-      return true;
+      resultPwAff.unionMin_inplace(paff); // No add_piece or disjount_union publicly available, pieces are disjount
+      return false;
     });
 
     list.add_inplace(resultPwAff);
@@ -88,6 +90,20 @@ Set PwMultiAff::getRange() const {
   return toMap().getRange(); 
 }
 
+#if 0
+PwMultiAff PwMultiAff::pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER {
+  auto resultSpace = Space::createMapFromDomainAndRange(mpa.getDomainSpace(), this->getRangeSpace());
+  auto result = resultSpace.createEmptyPwMultiAff();
+
+  foreachPiece([&result,&mpa] (const Set &set, const MultiAff &ma) -> bool {
+    auto pullbacked = ma.pullback(mpa);
+    result.unionAdd_inplace(pullbacked);
+    return false;
+  });
+
+  return result;
+}
+#endif
 
 static int foreachPieceCallback(__isl_take isl_set *set, __isl_take isl_multi_aff *maff, void *user) {
   assert(user);
@@ -142,3 +158,45 @@ PwMultiAff PwMultiAff::projectOutSubspace(const Space &subspace) const {
   return projectOut(dimrange);
 }
 
+
+PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIER {
+  auto domainSpace = getDomainSpace();
+  auto resultSpace = domainSpace.mapsTo(count);
+  auto result = resultSpace.createEmptyPwMultiAff();
+
+  foreachPiece([first,count,&result](Set &&set, MultiAff &&aff) -> bool {
+    auto subaff = aff.subMultiAff(first, count);
+    auto subpwaff = PwMultiAff::create(set, subaff);
+    result.unionAdd_inplace(subpwaff); //FIXME: disjointAdd
+    return false;
+  });
+
+  return result;
+}
+
+
+ISLPP_EXSITU_PREFIX PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_QUALIFIER {
+  auto range = getSpace().findSubspace(isl_dim_out, subspace);
+  assert(range.isValid());
+
+  auto result = sublist(range.getFirst(), range.getCount());
+  result.cast_inplace(getDomainSpace().mapsTo(subspace));
+  return result;
+}
+
+
+PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+  assert(getOutDimCount() == space.getOutDimCount());
+  assert(getInDimCount() == space.getInDimCount());
+
+  space.alignParams_inplace(this->getSpace());
+  auto meAligned = this->alignParams(space);
+
+  auto result = space.move().createEmptyPwMultiAff();
+  meAligned.foreachPiece([&result,&space](Set&&set,MultiAff&&maff) -> bool {
+    result.unionAdd_inplace(PwMultiAff::create(set.cast(space.getDomainSpace()), maff.cast(space))); // TODO: disjointUnion/addPiece 
+    return false;
+  });
+
+  return result;
+}

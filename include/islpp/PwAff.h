@@ -117,6 +117,10 @@ namespace isl {
     Map toMap() const;
 
     //Expr toExpr() const;
+
+    MultiPwAff toMultiPwAff() ISLPP_EXSITU_QUALIFIER;
+
+    PwMultiAff toPwMultiAff() ISLPP_EXSITU_QUALIFIER;
 #pragma endregion
 
 
@@ -149,10 +153,14 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
+    //PwAff addPiece(const Set &set, const Aff &aff) ISLPP_EXSITU_QUALIFIER { return PwAff::enwrap(isl_pw_aff_add_piece(takeCopy(), set.takeCopy(), aff.takeCopy())); }
+
     PwAff pullback(const MultiAff &maff) const;
     void pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER;
     PwAff pullback(const PwMultiAff &pmaff) const;
     void pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER;
+    //PwAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
+    //void pullback_inplace(const MultiPwAff &mpa) ISLPP_INPLACE_QUALIFIER;
 
     int nPiece() const;
     bool foreachPiece(std::function<bool(Set,Aff)> fn) const;
@@ -173,7 +181,7 @@ namespace isl {
     Set domain() const { return Set::enwrap(isl_pw_aff_domain(takeCopy())); }
     Set getDomain() const { return Set::enwrap(isl_pw_aff_domain(takeCopy())); }
 
-    void mul_inplace (const PwAff &multiplier) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_mul(take(), multiplier.takeCopy())); }
+    void mul_inplace(const PwAff &multiplier) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_mul(take(), multiplier.takeCopy())); }
     PwAff mul(const PwAff &multiplier) const { return PwAff::enwrap(isl_pw_aff_mul(takeCopy(), multiplier.takeCopy())); }
   }; // class PwAff
 

@@ -10,6 +10,7 @@
 #include "islpp/MultiAff.h"
 #include "islpp/BasicSet.h"
 #include "islpp/PwAff.h"
+#include "islpp/PwMultiAff.h"
 
 #include <isl/aff.h>
 #include <llvm/Support/raw_ostream.h>
@@ -181,12 +182,35 @@ void Aff::gistParams(Set &&context) {
   give(isl_aff_gist_params(take(), context.take()));
 }
 
-void Aff::pullbackMultiAff(MultiAff &&ma) {
-  give(isl_aff_pullback_multi_aff(take(), ma.take()));
+
+void Aff::pullback_inplace(const Multi<Aff> &ma) ISLPP_INPLACE_QUALIFIER {
+  give(isl_aff_pullback_multi_aff(take(), ma.takeCopy()));
+}
+
+PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
+  auto resultSpace = pma.getDomainSpace().mapsTo(1);
+  auto result = resultSpace.createEmptyPwAff();
+
+  pma.foreachPiece([&result,this](Set &&set, MultiAff &&maff) -> bool {
+    auto backpulled = this->pullback(maff);
+    result.unionMin_inplace(PwAff::create(set, backpulled));
+  return false;
+  });
+
+  return result;
 }
 
 
-BasicSet isl::zeroBasicSet(Aff &&aff) { return BasicSet::wrap(isl_aff_zero_basic_set(aff.take())); }
-BasicSet isl::negBasicSet(Aff &&aff){ return BasicSet::wrap(isl_aff_neg_basic_set(aff.take())); }
-BasicSet isl::leBasicSet(Aff &aff1, Aff &aff2){ return BasicSet::wrap(isl_aff_le_basic_set (aff1.take(),aff2.take())); }
-BasicSet isl::geBasicSet(Aff &aff1, Aff &aff2){ return BasicSet::wrap(isl_aff_ge_basic_set(aff1.take(),aff2.take())); }
+BasicSet isl::zeroBasicSet(Aff &&aff) {
+  return BasicSet::wrap(isl_aff_zero_basic_set(aff.take()));
+}
+BasicSet isl::negBasicSet(Aff &&aff) {
+  return BasicSet::wrap(isl_aff_neg_basic_set(aff.take()));
+}
+BasicSet isl::leBasicSet(Aff &aff1, Aff &aff2) { 
+  return BasicSet::wrap(isl_aff_le_basic_set (aff1.take(),aff2.take())); 
+}
+BasicSet isl::geBasicSet(Aff &aff1, Aff &aff2) { 
+  return BasicSet::wrap(isl_aff_ge_basic_set(aff1.take(),aff2.take()));
+}
+

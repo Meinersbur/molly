@@ -1021,6 +1021,16 @@ Set Set::reorganizeSubspaces(const Space &space) ISLPP_EXSITU_QUALIFIER {
 }
 
 
+Set Set::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+  assert(space.getSetDimCount() == this->getDimCount());
+
+  // No inbuilt cast is ISL
+  auto translateSpace = getSpace().mapsTo(space);
+  auto translate = translateSpace.equalBasicMap(getDimCount());
+  return apply(translate);
+}
+
+
 Set isl::params(Set &&set){
   return Set::enwrap(isl_set_params(set.take()));
 }

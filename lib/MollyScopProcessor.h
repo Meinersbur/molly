@@ -8,6 +8,7 @@
 #include "islpp/Islfwd.h"
 #include <vector>
 #include <map>
+#include <llvm/ADT/SmallVector.h>
 
 
 namespace molly {
@@ -23,6 +24,8 @@ namespace molly {
 
     virtual const llvm::SCEV *getClusterCoordinate(unsigned i) = 0;
     virtual std::vector<const llvm::SCEV *> getClusterCoordinates() = 0;
+    virtual isl::MultiAff getCurrentNodeCoordinate() = 0;
+
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;
 
@@ -36,12 +39,15 @@ namespace molly {
     //virtual std::vector<isl::Id> getAllIds();
 
     virtual isl::Space getParamsSpace() = 0;
+    virtual const llvm::SmallVector<const llvm::SCEV *, 8> &getParamSCEVs() = 0;
 
-    virtual isl::Id getIdForLoop(const llvm::Loop *loop) = 0;
+    // Lowering: isl::Id -> llvm::SCEV* -> llvm::Value*
+    virtual llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) = 0;
+    
+    // Raising: llvm::Value* -> llvm::SCEV* -> isl::Id
     virtual const llvm::SCEV *scevForValue(llvm::Value *value) = 0;
     virtual isl::Id idForSCEV(const llvm::SCEV *scev) = 0;
-    virtual llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) = 0;
-    //virtual llvm::Value *codegenAff(const isl::Aff &aff, llvm::Instruction *insertBefore) = 0;
+    virtual isl::Id getIdForLoop(const llvm::Loop *loop) = 0;
 
   public:
     static MollyScopProcessor *create(MollyPassManager *pm, polly::Scop *scop);

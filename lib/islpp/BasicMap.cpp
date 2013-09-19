@@ -31,12 +31,12 @@ BasicMap BasicMap::createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&i
 }
 
 
-ISLPP_WARN_UNUSED_RESULT_PREFIX Map BasicMap:: intersect(Map &&that) const {
+Map BasicMap::intersect(Map &&that) const {
   return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.take())); 
 } 
 
 
-ISLPP_WARN_UNUSED_RESULT_PREFIX Map BasicMap::intersect(const Map &that) const { 
+Map BasicMap::intersect(const Map &that) const { 
   return Map::enwrap(isl_map_intersect(isl_map_from_basic_map(takeCopy()), that.takeCopy())); 
 } 
 

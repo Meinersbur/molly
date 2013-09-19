@@ -20,6 +20,7 @@ typedef struct { long double x, y; } __float128;
 #include <cstdlib>
 #include <tuple>
 #include <limits>
+#include <cstdint>
 //#include <bits/nested_exception.h>
 #ifdef __clang__
 // Hack to compile without exceptions and libstdc++ 4.7 (nested_exception.h)
@@ -49,6 +50,21 @@ typedef struct { long double x, y; } __float128;
 #define CXX11ATTRIBUTE(...)
 #endif
  
+
+
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
+/// LLVM_OVERRIDE - Expands to 'override' if the compiler supports it.
+/// Use to mark virtual methods as overriding a base class method.
+#if __has_feature(cxx_override_control) \
+    || (defined(_MSC_VER) && _MSC_VER >= 1700)
+#define LLVM_OVERRIDE override
+#else
+#define LLVM_OVERRIDE
+#endif
+
 
 #pragma region Debugging
 extern int _debugindention;
@@ -329,24 +345,24 @@ class Mesh4D {
 
 namespace molly {
 
-  template<typename T, int... L> class array;
+  template<typename T, uint64_t... L> class array;
 
-  template <int>
+  template <uint64_t>
   class _inttype {
   public:
-    typedef int type;
+    typedef uint64_t type;
   };
 
-  template <int...>
+  template <uint64_t...>
   class _dimlengths; // Never instantiate, used to store a sequence of integers, namely the size of several dimensions
 
 
-  template <int First, int...Rest>
+  template <uint64_t First, uint64_t...Rest>
   class _unqueue {
   public:
     typedef _dimlengths<Rest...> rest;
     typedef _dimlengths<First> first;
-    static const int value = First;
+    static const uint64_t value = First;
   };
 
 
@@ -439,7 +455,7 @@ namespace molly {
   }; // class _array_partial_subscript
 
 
-  template<typename T, int Togo, int... Stored> 
+  template<typename T, int Togo, uint64_t... Stored> 
   class _array_partial_subscript<T, _dimlengths<Stored...>, _dimlengths<Togo>> {
     static const int nStored = sizeof...(Stored);
     static const int nTogo = 1;
@@ -485,8 +501,8 @@ namespace molly {
  template<> 
  struct out_parampack_impl<> {
  public:
-   out_parampack_impl(const char *sep) {}
-   void print(std::ostream &os) const {}
+   out_parampack_impl(const char *sep) { }
+   void print(std::ostream &os) const { }
  };
 
    template<typename Arg> 
@@ -624,20 +640,60 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
   extern int dummyint;
 
-  template<typename T, int Dims>
+  template<typename T, uint64_t Dims>
   class CXX11ATTRIBUTE(molly::field, molly::dimensions(Dims)) field {
   public:
   }; // class field
+
+
+  class LocalStore {
+  public:
+    virtual void init(uint64_t countElts) = 0;
+    virtual void release() = 0;
+
+    virtual void *getDataPtr() const = 0; //TODO: Unvirtualize for speed
+    virtual size_t getElementSize() const = 0;
+    virtual uint64_t getCountElements() const = 0;
+  }; // class LocalStore
 
 
   /// A multi-dimensional array; the dimensions must be given at compile-time
   /// T = underlaying type (must be POD)
   /// L = sizes of dimensions (each >= 1)
   // TODO: Support sizeof...(L)==0
-  template<typename T, int... L>
-  class CXX11ATTRIBUTE(molly::field) array: public field<T, sizeof...(L)> {
+  template<typename T, uint64_t... L>
+  class CXX11ATTRIBUTE(molly::field) array: public LocalStore, public field<T, sizeof...(L)> {
+
+
+#pragma region LocalStore
+  private:
     size_t localelts;
     T *localdata;
+
+    void init(uint64_t countElts) LLVM_OVERRIDE {
+      assert(!localdata && "No double-initialization");
+      localdata = new T[countElts];
+      localelts = countElts;
+    }
+
+    void release() LLVM_OVERRIDE {
+      delete localdata;
+      localdata = nullptr;
+    }
+
+    void *getDataPtr() const LLVM_OVERRIDE {
+      return localdata;
+    }
+
+    size_t getElementSize() const LLVM_OVERRIDE {
+      return sizeof(T);
+    }
+
+    uint64_t getCountElements() const LLVM_OVERRIDE {
+      return localelts;
+    }
+#pragma endregion
+
 
 #ifndef NDEBUG
 // Allow access to assert, etc.
@@ -653,7 +709,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       size_t localelts = 1;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
-        auto locallen = __builtin_molly_locallength(this, d);
+        auto locallen = __builtin_molly_locallength(this, (uint64_t)d);
         auto coord = _select(d, coords...);
         auto clustercoord = cart_self_coord(d);
         auto localcoord = coord - clustercoord*locallen;
@@ -677,7 +733,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       rank_t rank = 0;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
-        auto locallen = __builtin_molly_locallength(this, d);
+        auto locallen = __builtin_molly_locallength(this, (uint64_t)d);
         auto coord = _select(d, coords...);
         auto clustercoord = coord / locallen;
         auto clusterlen = (len / locallen) + 1;
@@ -692,7 +748,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       auto expRank = coords2rank(coords...);
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
-        auto locallen = __builtin_molly_locallength(this, d);
+        auto locallen = __builtin_molly_locallength(this, (uint64_t)d);
         auto coord = _select(d, coords...);
         auto clustercoord = cart_self_coord(d); //TODO: Make sure this is inlined
         //MOLLY_DEBUG("d="<<d << " len="<<len << " locallen="<<locallen << " coord="<<coord << " clustercoord="<<clustercoord);
@@ -727,7 +783,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
-      auto locallen = __builtin_molly_locallength(this, d);
+      auto locallen = __builtin_molly_locallength(this, (uint64_t)d);
         MOLLY_DEBUG("__builtin_molly_locallength(this, "<<d<<")=" << locallen);
         localelts *= locallen;
       }
@@ -843,8 +899,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     }
 
     private:
-      int localoffset(int d) { return __builtin_molly_localoffset(this, d); }
-      int locallength(int d) { return __builtin_molly_locallength(this, d); }
+      uint64_t localoffset(uint64_t d) { return __builtin_molly_localoffset(this, d); }
+      uint64_t locallength(uint64_t d) { return __builtin_molly_locallength(this, d); }
   } MOLLYATTR(lengths(L))/* NOTE: clang doesn't parse the whatever in [[molly::length(whatever)]] at all*/; // class array
 
   /// A multi-dimensional array, but its dimensions are not known ar compile-time

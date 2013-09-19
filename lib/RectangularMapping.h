@@ -36,8 +36,8 @@ namespace molly {
     //int map(llvm::ArrayRef<unsigned> coords) const;
     //llvm::Value *codegen(DefaultIRBuilder &builder, llvm::ArrayRef<llvm::Value*> coords);
 
-    llvm::Value *codegenIndex(MollyCodeGenerator &codegen, const isl::MultiPwAff &coords);
-    llvm::Value *codegenSize(MollyCodeGenerator &codegen);
+    llvm::Value *codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator, const isl::MultiPwAff &coords);
+    llvm::Value *codegenSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator);
 
   }; // class RectangularMapping
 

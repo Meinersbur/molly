@@ -43,7 +43,7 @@ namespace molly {
 
     // { stmt[domain] -> scattering[scatter] }
     virtual isl::Map getScattering() const = 0;
-
+    virtual isl::PwMultiAff getScatteringAff() const = 0;
 
     // is this ScopStmt an access to a field?
     virtual bool isFieldAccess() const = 0;

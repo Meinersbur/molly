@@ -288,6 +288,9 @@ namespace isl {
     Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
     Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
     Set reorganizeSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER;
+
+    Set cast(Space space) ISLPP_EXSITU_QUALIFIER;
+    void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space).move()); }
   }; // class Set
 
 

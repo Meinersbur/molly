@@ -270,6 +270,7 @@ namespace isl {
     dim_iterator dim_begin() const { return dim_iterator(*getDerived(), DimTypeFlags::All); }
     dim_iterator dim_end() const { return dim_iterator(*getDerived(), DimTypeFlags::All, isl_dim_all, 0); }
 
+    // These would need a dependency on Space.h; Space.h #includes Spacelike.h, so we'd have a circular dependency
     //Space getParamsSpace() const { return getDerived()->getSpace().getParamsSpace(); }
     //Space getDomainSpace() const { return getDerived()->getSpace().getDomainSpace(); }
     //Space getRangeSpace() const { return getDerived()->getSpace().getRangeSpace(); }

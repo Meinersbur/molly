@@ -26,8 +26,11 @@ int main2() { Foo<int, float> f; Bar(f); }
 //std::vector<int> vec;
 
 //#pragma layout interchange(0,1)
+
+//#pragma molly transform("{ [i] -> [node, j] : node = [i/32], i = node*32 + j }", 1)
 molly::array<int, 128> FieldSrc;
 molly::array<int, 128> FieldDst;
+
 //molly::array<int, 44> MySecondField;
 
 

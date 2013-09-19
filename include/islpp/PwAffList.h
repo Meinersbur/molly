@@ -40,8 +40,8 @@ namespace isl {
     void add_inplace(const PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_add(take(), paff.takeCopy())); }
     PwAffList add(const PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_add(takeCopy(), paff.takeCopy())); }
 
-    void insert_inplace(unsigned pos, const PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_insert(take(), pos, paff.takeCopy())); }
-    PwAffList insert(unsigned pos,const PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_insert(takeCopy(), pos, paff.takeCopy())); }
+    void insert_inplace(pos_t pos, const PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_insert(take(), pos, paff.takeCopy())); }
+    PwAffList insert(pos_t pos, const PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_insert(takeCopy(), pos, paff.takeCopy())); }
 
     void drop_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_drop(take(), first, count)); }
     PwAffList drop(unsigned first, unsigned count) const { return PwAffList::enwrap(isl_pw_aff_list_drop(takeCopy(), first, count)); }
@@ -49,10 +49,10 @@ namespace isl {
     void concat_inplace(const PwAffList &rhs) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_concat(take(), rhs.takeCopy())); }
     PwAffList concat(const PwAffList &rhs) const { return PwAffList::enwrap(isl_pw_aff_list_concat(takeCopy(), rhs.takeCopy())); }
 
-    PwAff getPwAff(int index) const { return PwAff::enwrap(isl_pw_aff_list_get_pw_aff(keep(), index)); }
+    PwAff getPwAff(pos_t index) const { return PwAff::enwrap(isl_pw_aff_list_get_pw_aff(keep(), index)); }
 
-    void setPwAff_inplace(int index, PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_set_pw_aff(take(), index, paff.takeCopy())); }
-    PwAffList setPwAff(int index, PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_set_pw_aff(takeCopy(), index, paff.takeCopy())); }
+    void setPwAff_inplace(pos_t index, PwAff &paff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_list_set_pw_aff(take(), index, paff.takeCopy())); }
+    PwAffList setPwAff(pos_t index, PwAff &paff) const { return PwAffList::enwrap(isl_pw_aff_list_set_pw_aff(takeCopy(), index, paff.takeCopy())); }
 
     bool foreachPwAff(std::function<bool(PwAff)> func) const;
     std::vector<PwAff> getPwAffs() const;

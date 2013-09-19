@@ -56,9 +56,9 @@ namespace isl {
 
 
 #pragma region Properties
-    const char *getName() ISLPP_EXSITU_QUALIFIER;
-    void *getUser() ISLPP_EXSITU_QUALIFIER;
-    template<typename T> T getUser() ISLPP_EXSITU_QUALIFIER { return static_cast<T>(getUser()); }
+    ISLPP_EXSITU_PREFIX const char *getName() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX void *getUser() ISLPP_EXSITU_QUALIFIER;
+    template<typename T> ISLPP_EXSITU_PREFIX T getUser() ISLPP_EXSITU_QUALIFIER { return static_cast<T>(getUser()); }
 
     /// Set the function to be executued when the last user frees this Id
     /// NOTE: Id's are interned and the freefunc does not change the Id's identity, therefore the freefunc applies to all id's with this identity (name + user)

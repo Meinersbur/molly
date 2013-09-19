@@ -135,6 +135,42 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
 }
 
 
+PwMultiAff MultiAff::pullback(const PwMultiAff &mpa) ISLPP_EXSITU_QUALIFIER {
+  auto resultSpace = Space::createMapFromDomainAndRange(mpa.getDomainSpace(), getRangeSpace());
+  auto result = resultSpace.createEmptyPwMultiAff();
+
+  mpa.foreachPiece([this,&result](Set &&set, MultiAff &&maff) {
+    auto backpulled = this->pullback(maff);
+    result.unionAdd_inplace(PwMultiAff::create(set, backpulled));
+    return false;
+  });
+
+  return result;
+}
+
+
 PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
   return pma.pullback(*this);
 }
+
+
+ MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+   assert(space.getInDimCount() == this->getInDimCount());
+   assert(space.getOutDimCount() == this->getOutDimCount());
+
+   auto domainSpace = space.getDomainSpace();
+   auto rangeSpace = space.getRangeSpace();
+   auto resultSpace = domainSpace.mapsTo(rangeSpace);
+   auto translateSpace = domainSpace.mapsTo(getDomainSpace());
+   auto translate = translateSpace.createIdentityMultiAff();
+   auto result = resultSpace.createZeroMultiAff();
+
+   auto nOutDims = getOutDimCount();
+   for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
+     auto aff = getAff(i);
+     auto backpulled = aff.pullback(translate);
+     result.setAff_inplace(i, backpulled);
+   }
+
+   return result;
+ }

@@ -113,12 +113,14 @@ namespace isl {
     static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { return createMapFromDomainAndRange(domain.move(), range.copy()); }
     static Space createMapFromDomainAndRange(const Space &domain, Space &&range) { return createMapFromDomainAndRange(domain.copy(), range.move()); }
     static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { return createMapFromDomainAndRange(domain.copy(), range.copy()); }
+    static Space createMapFromDomainAndRange(count_t domainDims, Space rangeSpace) { auto islctx = rangeSpace.getCtx(); return Space::enwrap(isl_space_map_from_domain_and_range(isl_space_set_alloc(islctx->keep(), 0, domainDims), rangeSpace.take())); }
+    static Space createMapFromDomainAndRange(Space domainSpace, count_t rangeDims) { auto islctx = domainSpace.getCtx(); return Space::enwrap(isl_space_map_from_domain_and_range(domainSpace.take(), isl_space_set_alloc(islctx->keep(), 0, rangeDims))); }
 #pragma endregion
 
 
 #pragma region Create other spaces
     Space mapsTo(const Space &range) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
-    Space mapsTo(unsigned nOut) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut) )); }
+    ISLPP_EXSITU_PREFIX Space mapsTo(count_t nOut) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range( takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()) )); }
     Space mapsToItself() ISLPP_EXSITU_QUALIFIER { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
     // If this is a param space
@@ -341,9 +343,9 @@ namespace isl {
     Space getDomainSpace() const { return Space::enwrap(isl_space_domain(takeCopy())); }
     Space getRangeSpace() const { return Space::enwrap(isl_space_range(takeCopy())); }
 
-    void fromDomain();
+    Space fromDomain() ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_from_domain(takeCopy())); }
+    Space fromRange() ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_from_range(takeCopy())); }
 
-    void fromRange();
     void setFromParams();
     void reverse();
     //void insertDims(isl_dim_type type, unsigned pos, unsigned n);

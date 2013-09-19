@@ -21,7 +21,7 @@ namespace molly {
 
     /// At which position to insert the code
     DefaultIRBuilder irBuilder;
-    
+
     /// ISL code generator for affine expressions
     isl::AstBuild astBuild;
 
@@ -29,6 +29,9 @@ namespace molly {
     //std::map<isl_id *, llvm::Value *> idToValue;
 
   protected:
+
+    llvm::Value *getValueOf(const llvm::SCEV *scev);
+    llvm::Value *getValueOf(Value *val) { return val; }
     std::map<isl_id *, llvm::Value *> &getIdToValueMap();
 
     llvm::Module *getModule();
@@ -37,8 +40,8 @@ namespace molly {
     isl::AstBuild &initAstBuild();
 
   public:
-    llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf);
-    llvm::CallInst *callCombufRecv(molly::CommunicationBuffer *combuf);
+    llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
+    llvm::CallInst *callCombufRecv(molly::CommunicationBuffer *combuf, llvm::Value *srcRank);
 
     llvm::CallInst *callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst);
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
@@ -68,11 +71,9 @@ namespace molly {
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::MultiPwAff index);
 
-    void codegenSend(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst);
-    void codegenRecv(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src);
-  
-  //  llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
-  //  llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);
+
+    //  llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
+    //  llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);
   }; // class MollyCodeGenerator
 
 } // namespace molly

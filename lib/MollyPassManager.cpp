@@ -668,7 +668,7 @@ namespace {
       auto &context = module->getContext();
       auto llvmTy = fty->getType();
       auto nDims = fty->getNumDimensions();
-      auto intTy = Type::getInt32Ty(context);
+      auto intTy = Type::getInt64Ty(context);
       auto lengths = fty->getLengths();
       //auto molly = &getAnalysis<MollyContextPass>();
 

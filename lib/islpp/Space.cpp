@@ -385,7 +385,7 @@ bool Space::isWrapping() const{
   return isl_space_is_wrapping(keep());
 }
 
-
+#if 0
 void Space::fromDomain(){
   give(isl_space_from_domain(take()));
 }
@@ -394,7 +394,7 @@ void Space::fromDomain(){
 void Space::fromRange() {
   give(isl_space_from_range(take()));
 }
-
+#endif
 
 void Space::setFromParams(){
   give(isl_space_set_from_params(take()));
@@ -1166,24 +1166,24 @@ Space Space::replaceSubspace(const Space &subspaceToReplace, const Space &replac
 
 
 
-static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, unsigned &pos, unsigned &first) {
+static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, unsigned &posToGo, unsigned &first) {
   if (space.isMapSpace()) {
-    if (findNthSubspace_recursive(space.getDomainSpace(), resultSpace, pos, first))
+    if (findNthSubspace_recursive(space.getDomainSpace(), resultSpace, posToGo, first))
       return true;
-     if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, pos, first))
+     if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, posToGo, first))
        return true;
   } else if (space.isWrapping()) {
-   if (findNthSubspace_recursive(space.unwrap(), resultSpace, pos, first))
+   if (findNthSubspace_recursive(space.unwrap(), resultSpace, posToGo, first))
      return true;
   } else {
     // Leaf space
-    if (pos==0) {
+    if (posToGo==0) {
     // Found
       resultSpace = space;
       return true;
     }
 
-    pos += 1;
+    posToGo -= 1;
     first += space.getSetDimCount();
   }
 
@@ -1196,7 +1196,7 @@ Space Space::findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange
   unsigned first = 0;
   auto myspace = extractTuple(type);
   auto found = findNthSubspace_recursive(myspace, result, pos, first);
-  assert(found);
+  assert(found); assert(pos==0);
 
   dimrange = DimRange::enwrap(type, first, result.dim(isl_dim_in)+result.dim(isl_dim_out), myspace);
   return result;

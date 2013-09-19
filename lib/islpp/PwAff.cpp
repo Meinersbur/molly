@@ -44,8 +44,20 @@ PwAff PwAff::readFromStr(Ctx *ctx, const char *str) {
 }
 
 
- Map PwAff::toMap() const { 
-   return Map::enwrap(isl_map_from_pw_aff(takeCopy())) ;
+Map PwAff::toMap() const { 
+  return Map::enwrap(isl_map_from_pw_aff(takeCopy())) ;
+}
+
+
+MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_QUALIFIER {
+  return MultiPwAff::enwrap(isl_multi_pw_aff_from_pw_aff(takeCopy()));
+}
+
+
+ PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_QUALIFIER {
+   //auto result = getSpace().createEmptyPwMultiAff();
+   //result.setPwAff_inplace(0, this->copy());
+   return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(isl_map_from_pw_aff(takeCopy())));
  }
 
 
@@ -125,10 +137,35 @@ void PwAff::gistParams(Set &&context) {
   give(isl_pw_aff_gist_params(take(), context.take()));
 }
 
-PwAff PwAff::pullback(const MultiAff &maff) const { return PwAff::enwrap(isl_pw_aff_pullback_multi_aff(takeCopy(), maff.takeCopy())); }
-    void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy())); }
-    PwAff PwAff::pullback(const PwMultiAff &pmaff) const { return PwAff::enwrap(isl_pw_aff_pullback_pw_multi_aff(takeCopy(), pmaff.takeCopy())); }
-    void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy())); }
+
+PwAff PwAff::pullback(const MultiAff &maff) const {
+  return PwAff::enwrap(isl_pw_aff_pullback_multi_aff(takeCopy(), maff.takeCopy()));
+}
+
+
+void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER { 
+  give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy())); 
+}
+
+
+PwAff PwAff::pullback(const PwMultiAff &pmaff) const {
+  return PwAff::enwrap(isl_pw_aff_pullback_pw_multi_aff(takeCopy(), pmaff.takeCopy())); 
+}
+
+
+void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER {
+  give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy()));
+}
+
+#if 0
+PwAff PwAff::pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER {
+  return pullbac
+}
+
+
+void PwAff::pullback_inplace(const MultiPwAff &mpa) ISLPP_INPLACE_QUALIFIER {
+}
+#endif
 
 int PwAff::nPiece() const {
   return isl_pw_aff_n_piece(keep());

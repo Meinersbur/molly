@@ -44,21 +44,24 @@ namespace llvm {
 #define ISLPP_INLINE_DEFINITION extern inline
 #endif
 
-#define ISLPP_WARN_UNUSED_RESULT LLVM_ATTRIBUTE_UNUSED_RESULT
-#if defined(__clang__) || defined(__GNUC__)
-#define ISLPP_WARN_UNUSED_RESULT_PREFIX
-#elif defined(_MSC_VER) && _MSC_VER>=1500 /*VS2008 or later*/
-#define ISLPP_WARN_UNUSED_RESULT_PREFIX _Check_return_ /* Source Annotation Language (SAL) attribute syntax -- MS PREfast */
+
+#if defined(_MSC_VER) && _MSC_VER>=1500 /*VS2008 or later*/
+#define ISLPP_WARN_UNUSED_RESULT _Check_return_ /* Source Annotation Language (SAL) attribute syntax -- MS PREfast */
 #elif defined(_MSC_VER)
-#define ISLPP_WARN_UNUSED_RESULT_PREFIX __checkReturn /* Source Annotation Language (SAL) declspec syntax -- MS PREfast */
+#define ISLPP_WARN_UNUSED_RESULT __checkReturn /* Source Annotation Language (SAL) declspec syntax -- MS PREfast */
 #else
-#define ISLPP_WARN_UNUSED_RESULT_PREFIX
+#define ISLPP_WARN_UNUSED_RESULT LLVM_ATTRIBUTE_UNUSED_RESULT
 #endif
 
 
-#define ISLPP_EXSITU_QUALIFIER const ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_EXSITU_PREFIX ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_EXSITU_QUALIFIER const
+
+#define ISLPP_INPLACE_PREFIX
 #define ISLPP_INPLACE_QUALIFIER ISLPP_LVALUE_THIS_QUALIFIER
-#define ISLPP_CONSUME_QUALIFIER ISLPP_WARN_UNUSED_RESULT
+
+#define ISLPP_CONSUME_PREFIX ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_CONSUME_QUALIFIER 
 
 
 #include <utility> // std::move, std::forward

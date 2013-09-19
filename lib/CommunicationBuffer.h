@@ -25,9 +25,9 @@ namespace molly {
     isl::Map relation; 
 
     /// Buffer data layout
-    RectangularMapping *mapping;
-    RectangularMapping *sendbufMapping;
-    RectangularMapping *recvbufMapping;
+    RectangularMapping *mapping; // Maps from { (chunk[domain], src[cluster], dst[cluster]) }
+    RectangularMapping *sendbufMapping; // Maps from { (chunk[domain], dst[cluster]) }
+    RectangularMapping *recvbufMapping; // Maps from { (chunk[domain], src[cluster]) }
 
     llvm::GlobalVariable *varsend;
     llvm::GlobalVariable *varrecv;
@@ -87,8 +87,11 @@ namespace molly {
     //llvm::Value *codegenReadFromBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
     //void codegenWriteToBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
 
-    llvm::Value *codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
-    llvm::Value *codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &index);
+    llvm::Value *codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
+    llvm::Value *codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
+
+    void codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);
+    void codegenRecv(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);
 
   }; // class CommunicationBuffer
 } // namespace molly

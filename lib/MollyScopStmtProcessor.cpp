@@ -121,6 +121,9 @@ namespace {
     isl::Map getScattering() const LLVM_OVERRIDE {
       return enwrap(stmt->getScattering());
     }
+    isl::PwMultiAff getScatteringAff() const LLVM_OVERRIDE {
+      return getScattering().toPwMultiAff();
+    }
     bool hasWhere() const {
       return enwrap(stmt->getWhereMap()).isValid();
     }
@@ -231,23 +234,34 @@ namespace {
 
 
     std::map<isl_id *, Value *> &getIdToValueMap() LLVM_OVERRIDE {
+      return idToValue;
+
       auto scop = getParent();
       auto SE = findOrRunAnalysis<ScalarEvolution>();
 
       auto &validParams = stmt->getValidParams();
+      auto &paramsList = scop->getParams();
+      auto paramsSpace = enwrap(scop->getParamSpace());
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
-      auto expectedIds = nDims + validParams.size(); 
+      auto expectedIds = nDims + validParams.size() + paramsSpace.getParamDimCount(); 
       assert(idToValue.size() <= expectedIds);
       if (idToValue.size() == expectedIds)
         return idToValue;
 
       // 1. Valid parameters of this Scop
+      // TODO: obsolete
       for (auto &param : validParams) {
         getValueOf(param);
       }
 
-      // 2. The loop induction variables
+      // 2. Params
+      auto nParamDims = paramsSpace.getParamDimCount();
+      for (auto i = nParamDims-nParamDims; i<nParamDims; i+=1) {
+        auto id = paramsSpace.getParamDimId(i);
+      }
+
+      // 3. The loop induction variables
       for (auto i = nDims-nDims; i < nDims; i+=1) {
         auto iv = getDomainValue(i);
         auto id = getDomainId(i);
@@ -271,8 +285,8 @@ namespace {
 
 
     isl::Id getDomainId(unsigned i) LLVM_OVERRIDE {
-      auto scev = getDomainSCEV(i);
-      return getParentProcessor()->idForSCEV(scev);
+      auto loop = stmt->getLoopForDimension(i);
+      return getParentProcessor()->getIdForLoop(loop);
     }
 
 
@@ -309,7 +323,7 @@ namespace {
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
 
-      auto result = domain.getSpace().mapsTo(nDims).createZeroMultiAff();
+      auto result = domain.getSpace().mapsTo(domain.getSpace()).createZeroMultiAff();
       for (auto i = nDims-nDims; i < nDims; i+=1) {
         auto aff = getDomainAff(i);
         result.setAff_inplace(i, aff);
@@ -319,15 +333,23 @@ namespace {
     }
 
 
+    isl::Space getDomainSpace() {
+      return this->getDomain().getSpace();
+    }
+
+
     isl::MultiAff getClusterMultiAff() LLVM_OVERRIDE {
       auto clusterShape = getClusterShape();
       auto nClusterDims = clusterShape.getDimCount();
+      auto domainSpace = getDomainSpace();
 
-      auto result = getIslContext()->createMapSpace(0, clusterShape.getSpace()).createZeroMultiAff();
-      for (auto i = nClusterDims-nClusterDims; i < nClusterDims; i+=1) {
-        auto scev = getParentProcessor()->getClusterCoordinate(i);
+      auto scopCtx = getScopProcessor();
+      auto aff = scopCtx->getCurrentNodeCoordinate();
 
-      }
+      auto resultSpace = isl::Space::createMapFromDomainAndRange(domainSpace, aff.getRangeSpace());
+      auto translateSpace = isl::Space::createMapFromDomainAndRange(domainSpace, aff.getDomainSpace());
+
+      auto result = aff.pullback(translateSpace.createZeroMultiAff());
       return result;
     }
 

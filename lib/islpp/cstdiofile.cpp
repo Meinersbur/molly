@@ -1,5 +1,14 @@
 #include "cstdiofile.h"
 
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Action.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/Options.h"
+#include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Option/ArgList.h"
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <vector>
 #include <cassert>
@@ -8,6 +17,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <string>
+
 
 
 using namespace molly;

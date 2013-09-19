@@ -187,7 +187,7 @@ namespace isl {
       modifying();
 
       auto dims = coeffs.size();
-      for (auto i = 0; i < dims; i+=1) {
+      for (auto i = dims-dims; i < dims; i+=1) {
         this->coeffs[i] += that->coeffs[i];
       }
     }
@@ -198,7 +198,7 @@ namespace isl {
       modifying();
 
       auto dims = coeffs.size();
-      for (auto i = 0; i < dims; i+=1) {
+      for (auto i = dims-dims; i < dims; i+=1) {
         this->coeffs[i] -= that->coeffs[i];
       }
     }
