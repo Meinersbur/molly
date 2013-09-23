@@ -6,7 +6,7 @@
 #  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /SAFESEH:NO")
 #ENDIF(MSVC_IDE)
 
-set( LLVM_LINK_COMPONENTS
+set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   asmparser
   bitreader
@@ -65,17 +65,17 @@ add_molly_executable(mollycc
   TARGET_DEPENDS 
     clang-headers 
     intrinsics_gen
-  LINK_COMPONENTS 
-    ${LLVM_TARGETS_TO_BUILD}
-    asmparser
-    bitreader
-    bitwriter
-    irreader
-    codegen
-    instrumentation
-    ipo
-    linker
-    selectiondag
+#  LINK_COMPONENTS 
+#    ${LLVM_TARGETS_TO_BUILD}
+#    asmparser
+#    bitreader
+#    bitwriter
+#    irreader
+#    codegen
+#    instrumentation
+#    ipo
+#    linker
+#    selectiondag
   LINK_LIBS 
     LLVMMolly
     PollyAnalysis # PollyAnalysis references symbols from LLVMPolly

@@ -162,8 +162,10 @@ namespace isl {
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
     void reverse() { give(isl_basic_map_reverse(take())); }
 
-    BasicSet domain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    BasicSet range() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_PREFIX BasicSet domain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_PREFIX BasicSet getDomain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_PREFIX BasicSet range() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_PREFIX BasicSet getRange() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
 
     void removeDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_remove_dims(take(), type, first, n));  }
     void eliminate(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_eliminate(take(), type, first, n)); }
@@ -248,6 +250,9 @@ namespace isl {
     Map applyDomain(const Map &that) const;
     BasicMap applyRange(const BasicMap &that) const { return BasicMap::enwrap(isl_basic_map_apply_range(takeCopy(), that.takeCopy())); }
     Map applyRange(const Map &that) const;
+
+    ISLPP_EXSITU_PREFIX Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
   }; // class BasicMap
 
 

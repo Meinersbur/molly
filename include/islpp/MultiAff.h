@@ -122,7 +122,7 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::enwrap(isl_multi_aff_get_aff(keep(), pos)); }
-    MultiAff setAff(int pos, Aff &&el) { return MultiAff::enwrap(isl_multi_aff_set_aff(take(), pos, el.take())); }
+    ISLPP_EXSITU_PREFIX MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
     void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
     void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
     void push_back(Aff &&aff);
@@ -182,6 +182,9 @@ namespace isl {
 
     MultiAff cast(Space space) ISLPP_EXSITU_QUALIFIER;
     void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space)); }
+
+    ISLPP_EXSITU_PREFIX BasicSet getDomain() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX BasicSet getRange() ISLPP_EXSITU_QUALIFIER;
   }; // class MultiAff
 
 

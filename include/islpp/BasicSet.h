@@ -242,6 +242,10 @@ namespace isl {
     void alignParams_inplace(const Space &model) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_align_params(take(), model.takeCopy())); }
     BasicSet alignParams(Space &&model) const { return BasicSet::enwrap(isl_basic_set_align_params(takeCopy(), model.take())); }
     BasicSet alignParams(const Space &model) const { return BasicSet::enwrap(isl_basic_set_align_params(takeCopy(), model.takeCopy())); }
+
+    /// Returns a somewhat strange aff without a domain (i.e. getSpace() returns a set space)
+    ISLPP_EXSITU_PREFIX Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
   }; // class BasicSet
 
 

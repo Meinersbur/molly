@@ -223,6 +223,7 @@ namespace isl {
     /// Lift the input set to a space with extra dimensions corresponding to the existentially quantified variables in the input. In particular, the result lives in a wrapped map where the domain is the original space and the range corresponds to the original existentially quantified variables.
     void lift();
 
+    /// Returns a somewhat strange aff without a domain (i.e. Aff::getSpace() returns a set space)
     PwAff dimMin(int pos) const;
     PwAff dimMin(const Dim &dim) const;
     PwAff dimMax(int pos) const;
@@ -286,8 +287,11 @@ namespace isl {
 
     //Map reorganizeTuples(llvm::ArrayRef<unsigned> domainTuplePos, llvm::ArrayRef<unsigned> rangeTuplePos);
     Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
-    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
-    Set reorganizeSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER;
+    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
+    Set reorganizeSubspaces(const Space &setSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
+
+    ISLPP_EXSITU_PREFIX Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER { return reorganizeSubspaces(std::move(setSpace), true); }
 
     Set cast(Space space) ISLPP_EXSITU_QUALIFIER;
     void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space).move()); }
@@ -303,14 +307,13 @@ namespace isl {
 
   /// These functions compute a single basic set or relation that contains the whole input set or relation. In particular, the output is described by translates of the constraints describing the basic sets or relations in the input. In case of isl_set_unshifted_simple_hull, only the original constraints are used, without any translation.
   BasicSet unshiftedSimpleHull(Set&&);
-  BasicSet simpleHull(Set&&);
+ static inline BasicSet simpleHull(Set set) { return BasicSet::enwrap(isl_set_simple_hull(set.take())); }
 
   /// @brief Affine hull
-  /// In case of union sets and relations, the affine hull is computed per space.
-  BasicSet affineHull(Set &&);
+  static inline  BasicSet affineHull(Set set) { return BasicSet::enwrap(isl_set_affine_hull(set.take())); }
 
   /// These functions compute a single basic set or relation not involving any existentially quantified variables that contains the whole input set or relation. In case of union sets and relations, the polyhedral hull is computed per space.
-  BasicSet polyhedralHull(Set &&);
+   static inline BasicSet polyhedralHull(Set set) { return BasicSet::enwrap(isl_set_polyhedral_hull(set.take())); }
 
   /// If the input (basic) set or relation is non-empty, then return a singleton subset of the input. Otherwise, return an empty set.
   BasicSet sample(Set &&);
@@ -360,11 +363,11 @@ namespace isl {
 
   /// @brief Cartesian product
   /// The above functions compute the cross product of the given sets or relations. The domains and ranges of the results are wrapped maps between domains and ranges of the inputs.
-  Set product(Set &&set1, Set &&set2);
-  static inline Set product(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_product(set1.takeCopy(), set2.takeCopy())); }
+  static inline Set product(Set set1, Set set2) { return Set::enwrap(isl_set_product(set1.take(), set2.take())); }
 
-  Set flatProduct(Set &&set1,Set &&set2);
-  static inline Set flatProduct(const Set &set1,const Set &set2) { return Set::enwrap(isl_set_flat_product(set1.takeCopy(), set2.takeCopy())); }
+  static inline Set flatProduct(Set set1, Set set2) { return Set::enwrap(isl_set_flat_product(set1.take(), set2.take())); }
+
+  Map alltoall(Set domainSet, Set rangeSet);
 
   Set gist(Set &&set, Set &&context);
   Set gistParams(Set &&set, Set &&context);
@@ -414,6 +417,8 @@ namespace isl {
   static inline bool operator<(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map1.keep(), map2.keep())); }
   static inline bool operator>=(const Set &map1, const Set &map2) { return checkBool(isl_set_is_subset(map2.keep(), map1.keep())); }
   static inline bool operator>(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map2.keep(), map1.keep())); }
+
+  static inline Set operator-(Set lhs, Set rhs) { return Set::enwrap(isl_set_subtract(lhs.take(), rhs.take())); }
 
 } // namespace isl
 #endif /* ISLPP_SET_H */

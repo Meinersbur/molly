@@ -37,7 +37,8 @@ static int enumSetCallback(__isl_take isl_set *set, void *user) {
   return 0;
 }
 std::vector<Set> UnionSet::getSets() const {
-  std::vector<Set> result(isl_union_set_n_set(keep()));
+  std::vector<Set> result;
+  result.reserve(isl_union_set_n_set(keep()));
   auto retval = isl_union_set_foreach_set(keep(), enumSetCallback, &result);
   assert(retval==0);
   return result;

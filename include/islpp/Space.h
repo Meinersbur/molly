@@ -148,6 +148,9 @@ namespace isl {
     BasicMap equalSubspaceBasicMap(const Space &domainSubpace, const Space &rangeSubspace) const;
     BasicMap equalSubspaceBasicMap(const Space &subspace) const;
 
+    ISLPP_EXSITU_PREFIX BasicSet equalBasicSet(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_PREFIX BasicSet equalBasicSet(Space subspace1, Space subspace2);
+
     /// Create a relation the maps a value to everything that is lexically smaller at dimension pos
     BasicMap lessAtBasicMap(unsigned pos) const;
 

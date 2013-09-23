@@ -1165,7 +1165,6 @@ Space Space::replaceSubspace(const Space &subspaceToReplace, const Space &replac
 }
 
 
-
 static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, unsigned &posToGo, unsigned &first) {
   if (space.isMapSpace()) {
     if (findNthSubspace_recursive(space.getDomainSpace(), resultSpace, posToGo, first))
@@ -1200,6 +1199,28 @@ Space Space::findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange
 
   dimrange = DimRange::enwrap(type, first, result.dim(isl_dim_in)+result.dim(isl_dim_out), myspace);
   return result;
+}
+
+
+ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2 ) ISLPP_EXSITU_QUALIFIER
+{
+  auto result = universeBasicSet();
+  for (auto i = count-count; i < count; i+=1) {
+    result.equate_inplace(type1, pos1+i, type2, pos2+i);
+  }
+  return result;
+}
+
+
+ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( Space subspace1, Space subspace2 )
+{
+  assert(isSetSpace());
+  auto range1 = this->findSubspace(isl_dim_set, subspace1);
+  assert(range1.isValid());
+  auto range2 = this->findSubspace(isl_dim_set, subspace2);
+  assert(range2.isValid());
+  assert(range1.getCount() == range2.getCount());
+  return equalBasicSet(isl_dim_set, range1.getFirst(), range1.getCount(), isl_dim_set, range2.getFirst());
 }
 
 

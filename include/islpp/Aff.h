@@ -56,9 +56,9 @@ namespace isl {
 
   public:
     Int getConstant() const {  
-        Int result;
-        isl_aff_get_constant(getDerived().keep(), result.change());
-        return result;
+      Int result;
+      isl_aff_get_constant(getDerived().keep(), result.change());
+      return result;
     }
   }; // AffCommon
 
@@ -90,6 +90,10 @@ namespace isl {
 
   protected:
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_tuple_id(take(), type, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER {
+      assert(type==isl_dim_in);
+      cast_inplace(getSpace().setTupleId(type, std::move(id)));
+    }
     void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
 
   public:
@@ -97,6 +101,8 @@ namespace isl {
     //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
     void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_drop_dims(take(), type, first, count)); }
 
+    bool isMap() const { return true; }
+    bool isSet() const { return false; }
 
     // optional, default implementation exist
     unsigned dim(isl_dim_type type) const { return isl_aff_dim(keep(), type); }
@@ -118,6 +124,12 @@ namespace isl {
 
 #pragma region Conversion
     PwAff toPwAff() const;
+
+    ISLPP_EXSITU_PREFIX MultiAff toMultiAff() ISLPP_EXSITU_QUALIFIER;
+
+    ISLPP_EXSITU_PREFIX PwMultiAff toPwMultiAff() ISLPP_EXSITU_QUALIFIER;
+
+    ISLPP_EXSITU_PREFIX Map toMap() ISLPP_EXSITU_QUALIFIER;
 #pragma endregion
 
 
@@ -130,9 +142,6 @@ namespace isl {
 
 
 #pragma region Printing
-    //void print(llvm::raw_ostream &out) const;
-    //std::string toString() const;
-    //void dump() const;
     void printProperties(llvm::raw_ostream &out, int depth = 1, int indent = 0) const;
 #pragma endregion
 
@@ -144,6 +153,12 @@ namespace isl {
     //Space getSpace() const;
     LocalSpace getDomainLocalSpace() const;
     //LocalSpace getLocalSpace() const;
+    ISLPP_EXSITU_PREFIX Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { 
+      auto space = getSpace();
+      if (space.isMapSpace()) 
+        return space.getRangeSpace();
+      return space;
+    }
 
     //const char *getDimName( isl_dim_type type, unsigned pos) const;
 
@@ -202,13 +217,15 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-Aff pullback(const MultiAff &maff) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.pullback_inplace(maff); return result; }
-void pullback_inplace(const MultiAff &) ISLPP_INPLACE_QUALIFIER;
-PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
+    Aff pullback(const MultiAff &maff) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.pullback_inplace(maff); return result; }
+    void pullback_inplace(const MultiAff &) ISLPP_INPLACE_QUALIFIER;
+    PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
 
-/// Would be ineffective
-//PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
+    /// Would be ineffective
+    //PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
+    ISLPP_EXSITU_PREFIX Aff cast(Space space) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_INPLACE_PREFIX void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(this->cast(space)); }
   }; // class Aff
 
 
@@ -220,7 +237,8 @@ PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
   static inline Aff mul(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_mul(aff1.take(), aff2.take())); }
   static inline Aff div(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
   static inline Aff div(Aff &&aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
-  static inline Aff add(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
+  static inline Aff add(Aff aff1, Aff aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
+  static inline Aff sub(Aff aff1, Aff aff2) { return enwrap(isl_aff_sub(aff1.take(), aff2.take())); }
 
   static inline Aff floor(Aff &&aff) { return Aff::enwrap(isl_aff_floor(aff.take())); }
   static inline Aff floor(const Aff &aff) { return Aff::enwrap(isl_aff_floor(aff.takeCopy())); }
@@ -230,7 +248,8 @@ PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
   BasicSet leBasicSet(Aff &aff1, Aff &aff2);
   BasicSet geBasicSet(Aff &aff1, Aff &aff2);
 
-  static inline Aff operator+(const Aff &aff, int v) { return add(aff.copy(), aff.getLocalSpace().createConstantAff(v)); }
+  static inline Aff operator+(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return add(aff.move(), ls.createConstantAff(v)); }
+  static inline Aff operator-(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return sub(aff.move(), ls.createConstantAff(v)); }
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

@@ -148,3 +148,15 @@ Map BasicMap::applyDomain(const Map &that) const {
 Map BasicMap::applyRange(const Map &that) const { 
   return Map::enwrap(isl_map_apply_domain(isl_map_from_basic_map(takeCopy()), that.takeCopy()));
 }
+
+
+ISLPP_EXSITU_PREFIX Aff BasicMap::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+  auto pwmin = toMap().dimMin(pos);
+  return pwmin.singletonAff();
+}
+
+
+ISLPP_EXSITU_PREFIX Aff BasicMap::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+  auto pwmax = toMap().dimMax(pos);
+  return pwmax.singletonAff();
+}

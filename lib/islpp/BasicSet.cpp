@@ -281,6 +281,18 @@ Vertices BasicSet::computeVertices() const {
   return Vertices::wrap(isl_basic_set_compute_vertices(keep()));
 }
 
+
+ISLPP_EXSITU_PREFIX Aff BasicSet::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+  auto pwmin = toSet().dimMin(pos);
+  return pwmin.singletonAff();
+}
+
+ISLPP_EXSITU_PREFIX Aff BasicSet::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+  auto pwmax = toSet().dimMax(pos);
+  return pwmax.singletonAff();
+}
+
+
 BasicSet isl::params(BasicSet &&params) {
   return BasicSet::wrap(isl_basic_set_params(params.take()));
 }

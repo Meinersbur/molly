@@ -43,6 +43,9 @@ namespace molly {
     llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
     llvm::CallInst *callCombufRecv(molly::CommunicationBuffer *combuf, llvm::Value *srcRank);
 
+    llvm::CallInst *callCombufSendWait(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
+    llvm::CallInst *callCombufRecvWait(molly::CommunicationBuffer *combuf, llvm::Value *srcRank);
+
     llvm::CallInst *callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst);
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
 

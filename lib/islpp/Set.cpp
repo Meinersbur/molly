@@ -540,6 +540,8 @@ BasicSet isl::convexHull(Set&&set) {
 BasicSet isl::unshiftedSimpleHull(Set&&set){
   return  BasicSet::wrap(isl_set_unshifted_simple_hull(set.take()));
 }
+
+#if 0
 BasicSet isl::simpleHull(Set&&set){
   return BasicSet::wrap(isl_set_simple_hull(set.take()));
 }
@@ -552,7 +554,7 @@ BasicSet isl::affineHull(Set &&set) {
 BasicSet isl::polyhedralHull(Set &&set) {
   return BasicSet::wrap(isl_set_polyhedral_hull(set.take()));
 }
-
+#endif
 
 void Set::dropContraintsInvolvingDims(isl_dim_type type, unsigned first, unsigned n) {
   give(isl_set_drop_constraints_involving_dims(take(), type, first, n));
@@ -804,12 +806,15 @@ Set isl::preimage(Set &&set, PwMultiAff &&ma){
   return Set::enwrap(isl_set_preimage_pw_multi_aff(set.take(), ma.take()));
 }
 
+#if 0
 Set isl::product(Set &&set1, Set &&set2){
   return Set::enwrap(isl_set_product(set1.take(), set2.take()));
 }
 Set isl::flatProduct(Set &&set1,Set &&set2){
   return Set::enwrap(isl_set_flat_product(set1.take(), set2.take()));
 }
+#endif
+
 Set isl::gist(Set &&set, Set &&context){
   return Set::enwrap(isl_set_gist(set.take(), context.take()));
 }
@@ -957,7 +962,9 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
 }
 
 
-static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &map, const Space &subspace, unsigned &offset) {
+static void reorganizeSubspaces_recursive(const Space &parentSpace, /*out*/BasicMap &map, const Space &subspace, /*out*/unsigned &offset, bool mustExist) {
+  assert(map.isValid());
+
   if (subspace.isSetSpace() && subspace.hasTupleId(isl_dim_set)) {
     auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
     if (dimrange.isValid()) {
@@ -968,13 +975,24 @@ static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &ma
   }
 
   if (subspace.isWrapping()) {
-    reorganizeSubspaces_recursive(parentSpace, map, subspace.unwrap(), offset);
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.unwrap(), offset, mustExist);
   } else if (subspace.isMapSpace()) {
-    reorganizeSubspaces_recursive(parentSpace, map, subspace.getDomainSpace(), offset);
-    reorganizeSubspaces_recursive(parentSpace, map, subspace.getRangeSpace(), offset);
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.getDomainSpace(), offset, mustExist);
+    if (map.isNull()) {
+    assert(mustExist);
+    return;
+    }
+    reorganizeSubspaces_recursive(parentSpace, map, subspace.getRangeSpace(), offset, mustExist);
   } else {
     // Recursion leaf
     // If we get there this means that some subspace has no source in parentSpace. Hence, the BasicMap map will not contain any restrictions for this subspace
+
+    if (mustExist) {
+      // Error out
+      llvm_unreachable("Must exist flag set and subspace not found");
+      map.reset();
+      return;
+    }
 
     //auto dimrange = parentSpace.findSubspace(isl_dim_set, subspace);
     //assert(dimrange.isValid());
@@ -986,7 +1004,7 @@ static void reorganizeSubspaces_recursive(const Space &parentSpace, BasicMap &ma
 }
 
 
-Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_) const {
+Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_, bool mustExist) const {
   auto space = getSpace();
   auto domainSpace = domainSpace_.normalizeWrapped();
   auto rangeSpace = rangeSpace_.normalizeWrapped();
@@ -994,27 +1012,31 @@ Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_
   auto domainMapSpace = Space::createMapFromDomainAndRange(space, domainSpace);
   auto domainMap = domainMapSpace.universeBasicMap();
   unsigned domainPos = 0;
-  reorganizeSubspaces_recursive(space, domainMap, domainSpace, domainPos);
+  reorganizeSubspaces_recursive(space, domainMap, domainSpace, domainPos, mustExist);
+  if (domainMap.isNull())
+    return Map();
   assert(domainPos == domainSpace.getSetDimCount());
 
   auto rangeMapSpace = Space::createMapFromDomainAndRange(space, rangeSpace);
   auto rangeMap = rangeMapSpace.universeBasicMap();
   unsigned rangePos = 0;
-  reorganizeSubspaces_recursive(space, rangeMap, rangeSpace, rangePos);
+  reorganizeSubspaces_recursive(space, rangeMap, rangeSpace, rangePos, mustExist);
+  if (rangeMap.isNull())
+    return Map();
   assert(rangePos == rangeSpace.getSetDimCount());
 
   return rangeMap.intersectDomain(*this).applyDomain(domainMap);
 }
 
 
-Set Set::reorganizeSubspaces(const Space &space) ISLPP_EXSITU_QUALIFIER {
+Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_QUALIFIER {
   auto myspace = getSpace();
   auto targetspace = space.normalizeWrapped();
 
   auto mapSpace = Space::createMapFromDomainAndRange(myspace, targetspace);
   auto map = mapSpace.universeBasicMap();
   unsigned pos = 0;
-  reorganizeSubspaces_recursive(myspace, map, targetspace, pos);
+  reorganizeSubspaces_recursive(myspace, map, targetspace, pos, mustExist);
   assert(pos == targetspace.getSetDimCount());
 
   return apply(map);
@@ -1029,6 +1051,13 @@ Set Set::cast(Space space) ISLPP_EXSITU_QUALIFIER {
   auto translate = translateSpace.equalBasicMap(getDimCount());
   return apply(translate);
 }
+
+
+ISLPP_EXSITU_PREFIX Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_QUALIFIER
+{
+  return reorganizeSubspaces(std::move(domainSpace), std::move(rangeSpace), true);
+}
+
 
 
 Set isl::params(Set &&set){
@@ -1098,4 +1127,9 @@ bool isl::isStrictSubset(const Set &lhs, const Set &rhs) {
 
 int isl::plainCmp(const Set &lhs, const Set &rhs) {
   return isl_set_plain_cmp(lhs.keep(), rhs.keep());
+}
+
+isl::Map isl::alltoall( Set domainSet, Set rangeSet )
+{
+  return product(domainSet, rangeSet).unwrap();
 }

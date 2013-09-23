@@ -45,12 +45,80 @@ namespace {
   bool isLoopLevel(unsigned i) { return i%2==1; }
 
 
+  /// Like relativeScatter, but reversed mustBeRelativeTo, such that it matches the order of a potential MultiAff
+  /// Returns: { subdomain[domain] -> scattering[scatter] }
+  isl::Map relativeScatter2(const isl::Map &mustBeRelativeTo/* { model[domain] -> subdomain[domain] } */, const isl::Map &modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
+    if (relative == 0)
+      return modelScatter;
+
+    auto nScatterDims = modelScatter.getOutDimCount();
+    auto subdomain = mustBeRelativeTo.getRange();
+    auto mustBeRelativeToScatter = mustBeRelativeTo.applyDomain(modelScatter).reverse(); // { subdomain[domain] -> model[scatter] }
+    auto scatterSpace = modelScatter.getRangeSpace();
+    auto universeDomain = mustBeRelativeTo.getDomain(); // { [domain] }
+    auto reverseModelScatter = modelScatter.reverse().intersectRange(universeDomain); // { scattering[scatter] -> [domain] }
+
+    auto isBefore = scatterSpace.lexLtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
+    auto isAfter = scatterSpace.lexGtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
+    auto naturallyBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain <_scatter model }
+    auto naturallyAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain >_scatter model }
+
+
+    isl::PwMultiAff extreme; // { subdomain[domain] -> model[scatter]  }
+    isl::Map order; // { subdomain[scatter] -> model[scatter] }
+    if (relative < 0) {
+      extreme = mustBeRelativeToScatter.lexminPwMultiAff(); // { subdomain[domain] -> model[scatter] }
+      order = scatterSpace.lexLtMap(); // { A[scatter] -> B[scatter] | A <_lex B  }
+    } else {
+      extreme = mustBeRelativeToScatter.lexmaxPwMultiAff(); // { subdomain[domain] -> model[scatter] }
+      order = scatterSpace.lexGtMap(); // { A[scatter] -> B[scatter] | A >_lex B  }
+    }
+
+    auto lastDim = nScatterDims-1;
+    auto referenceScatter = extreme.setPwAff(lastDim, extreme.getPwAff(lastDim) + relative); // { subdomain[domain] -> model[scatter] }
+    auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+
+#if 0
+    // Try to find another scatter that has the same ordering as referenceScatter
+    // This is to simplify output, should not change any semantic
+    // This does not consider other dependencies, just self-dependencies
+    for (auto i = nScatterDims-nScatterDims; i < nScatterDims-1; i+=2) {
+      assert(isStmtLevel(i) && "We only spread stmt levels, not loop levels");
+
+      auto relativeScatter = extreme.setPwAff(i, extreme.getPwAff(i) + relative); // { subdomain[domain] -> model[scatter] }
+      auto relativeBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(relativeScatter.reverse());
+      auto relativeAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(relativeScatter.reverse());
+
+      if (relative < 0) {
+        if (relativeBefore == referenceBefore)
+          return relativeScatter;
+      } else {
+        if (relativeAfter == referenceAfter)
+          return relativeScatter;
+      }
+    }
+#endif
+
+    // Not found, return the reference schedule
+    return referenceScatter;
+  }
+
+
+  isl::MultiAff constantScatter(isl::MultiAff translate/* { result[domain] -> model[domain] } */, isl::MultiAff modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
+    auto result = modelScatter.pullback(translate);
+    auto nScatterDims = result.getOutDimCount();
+    result.setAff(nScatterDims-1, result.getAff(nScatterDims-1)+relative);
+    return result;
+  }
+
+
   /// Compute a scatter that is relative (before/after) all instances of a group
   /// mustBeRelativeTo
   ///   Defines the group; the domain identifies all elements for which we have to find a scatter, the representative element. It maps to the set of instances that must be scheduled before/after the group's representative element
   /// modelScatter
   ///   Scatter function for model elements
-  /// relative
+  /// relative 
   ///   +1 for schedule after the group; -1 to schedule before
   isl::Map relativeScatter(const isl::Map &mustBeRelativeTo/* { subdomain[domain] -> model[domain] } */, const isl::Map &modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
     if (relative == 0)
@@ -84,8 +152,9 @@ namespace {
     auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
     auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
 
+#if 0
     // Try to find another scatter that has the same ordering as referenceScatter
-    // This is to simplify output, should not change any semanatic
+    // This is to simplify output, should not change any semantic
     // This does not consider other dependencies, just self-dependencies
     for (auto i = nScatterDims-nScatterDims; i < nScatterDims-1; i+=2) {
       assert(isStmtLevel(i) && "We only spread stmt levels, not loop levels");
@@ -102,80 +171,10 @@ namespace {
           return relativeScatter;
       }
     }
+#endif
 
     // Not found, return the reference schedule
     return referenceScatter;
-
-    return referenceScatter;
-
-    auto extremeBefore = scatterSpace.lexLtMap().applyDomain(extreme.reverse()).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] }
-    auto extremeBeforeDelta = sum(naturallyBefore.applyRange(modelScatter), -extreme);
-    auto extremeAfterDelta = sum(naturallyAfter.applyRange(modelScatter), -extreme);
-
-    for (auto i = nScatterDims-nScatterDims; i < nScatterDims-1; i+=1) {
-
-
-    }
-
-    // Not found, return the reference schedule
-    return referenceScatter;
-
-    mustBeRelativeTo; // { subdomain[domain] -> model[domain] }
-
-
-    auto reverseReferenceScatter = referenceScatter.reverse();
-    auto before = scatterSpace.lexLtMap().applyRange(reverseModelScatter);
-    auto after = scatterSpace.lexGtMap().applyRange(reverseModelScatter);
-
-    //auto referenceBefore = before.applyDomain(reverseReferenceScatter).intersect(mustBeRelativeTo); // { subdomain[domain] -> model[domain] } 
-    //auto referenceAfter = after.applyDomain(reverseReferenceScatter).intersect(mustBeRelativeTo); // { subdomain[domain] -> model[domain] } 
-
-    auto referenceRelation = mustBeRelativeToScatter.applyDomain(referenceScatter); // { subdomain[scatter] -> model[scatter] }
-    //auto referenceBefore = referenceRelation.intersect(scatterSpace.lexLtMap());
-    //auto referenceAfter = referenceRelation.intersect(scatterSpace.lexGtMap());
-
-    // Try to find another scatter that has the same ordering as referenceScatter
-    // This is to simplify output, should not change any semanatic
-    for (auto i = nScatterDims-nScatterDims; i < nScatterDims-1; i+=1) {
-      auto relativeScatter = extreme.setPwAff(i, extreme.getPwAff(i) + relative); // { subdomain[domain] -> model[scatter] }
-      auto reverseRelativeScatter = relativeScatter.reverse();
-      auto relativeBefore = before.applyDomain(reverseRelativeScatter).intersect(mustBeRelativeTo); // { subdomain[domain] -> model[domain] } 
-      auto relativeAfter = after.applyDomain(reverseRelativeScatter).intersect(mustBeRelativeTo); // { subdomain[domain] -> model[domain] } 
-
-      // check for same ordering
-      //assert( (referenceBefore==relativeBefore) == (referenceAfter==relativeAfter));
-      //if ((referenceBefore==relativeBefore) && (referenceAfter==relativeAfter)) {
-      // Semantically equivalent, return this one
-      return relativeScatter;
-      //}
-    }
-
-    // Not found, return the reference schedule
-    return referenceScatter;
-
-
-    // Search for the innermost scatter dim that does vary
-    for (auto i = nScatterDims-nScatterDims; i < nScatterDims; i+=1) {
-      // Compute a the scatter relative to modelScatter
-      auto relativeScatter = extreme;
-      relativeScatter.setPwAff_inplace(i, relativeScatter.getPwAff(i) + relative);
-
-      // Check if order requirement for all subdomain instances are fullfilled
-      if (i == nScatterDims-1) {
-        assert(isStmtLevel(i));
-        return relativeScatter; // Always fullfilled at last dimension
-      }
-
-      // For every element in domain, its scatter must be lexicographically before/after all those of mustBeRelativeToScatter
-      //rtyu
-
-      auto scatterToScatter = mustBeRelativeToScatter.applyDomain(relativeScatter);  // { subdomain[scatter] -> model[scatter] }
-      if (scatterToScatter <= order) {
-        // requirement fullfilled
-        assert(isStmtLevel(i));
-        return relativeScatter;
-      }
-    }
   }
 
 
@@ -444,9 +443,9 @@ namespace {
 
   private:
     DenseMap<const isl_id*, ScopStmt*> tupleToStmt;
-    isl::Id epilogueId;
-    isl::Set beforeScopScatterRange;
-    isl::Set afterBeforeScatterRange;
+    isl::Id epilogueId;  // deprecated
+    isl::Set beforeScopScatterRange; // deprecated; use beforeScopScatter
+    isl::Set afterBeforeScatterRange;  // deprecated
 
   public:
     void genCommunication() {
@@ -544,14 +543,22 @@ namespace {
       auto nScatterRangeDims = scatterRangeSpace.getSetDimCount();
       auto epilogueScatterSpace = isl::Space::createMapFromDomainAndRange(epilogueDomainSpace, scatterRangeSpace);
 
+      auto prologueId = islctx->createId("prologue");
+      auto prologueDomainSpace = islctx->createSetSpace(0,0).setSetTupleId(prologueId);
+      auto prologueScatterSpace = isl::Space::createMapFromDomainAndRange(prologueDomainSpace, scatterRangeSpace);
+
       auto allScatters = range(schedule);
       //assert(allScatters.nSet()==1);
       auto scatterRange = allScatters.extractSet(scatterRangeSpace); 
       assert(scatterRange.isValid());
       auto nScatterDims = scatterRange.getDimCount();
 
-      auto max = scatterRange.dimMax(0) + 1;
-      max.setInTupleId_inplace(scatterId);
+      assert(!scatterRange.isEmpty());
+      auto max = affineHull(alltoall(epilogueDomainSpace.universeBasicSet(), scatterRange)).dimMax(0) + 1;
+      //max.setInTupleId_inplace(epilogueId);
+      this->afterScopScatter = epilogueScatterSpace.createZeroMultiAff();
+      this->afterScopScatter.setAff_inplace(0, max);
+
       isl::Set epilogueDomain = epilogueDomainSpace.universeSet();
       auto epilogieMapToZero = epilogueScatterSpace.createUniverseBasicMap();
       for (auto d = 1u; d < nScatterRangeDims; d+=1) {
@@ -559,14 +566,18 @@ namespace {
       }
 
       assert(!scatterRange.isEmpty());
-      auto min = scatterRange.dimMin(0) - 1; /* { [1] } */
-      min.addDims_inplace(isl_dim_in, nScatterDims);
-      min.setInTupleId_inplace(scatterId); /* { scattering[nScatterDims] -> [1] } */
-      auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
-      beforeScopScatter.setPwAff_inplace(0, min);
+      auto min = affineHull(alltoall(prologueDomainSpace.universeBasicSet(), scatterRange)).dimMin(0) - 1; /* { [1] } */
+      // min.setInTupleId_inplace(prologueId); /* { scattering[nScatterDims] -> [1] } */
+      this->beforeScopScatter = prologueScatterSpace.createZeroMultiAff();
+      this->beforeScopScatter.setAff_inplace(0, min);
+
+      //min.addDims_inplace(isl_dim_in, nScatterDims);
+      //auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
+      //beforeScopScatter.setPwAff_inplace(0, min);
       beforeScopScatterRange = beforeScopScatter.toMap().getRange();
 
-      auto afterBeforeScatter = beforeScopScatter.setPwAff(1, scatterRangeSpace.createConstantAff(1));
+
+      auto afterBeforeScatter = beforeScopScatter.setAff(1, beforeScopScatter.getDomainSpace().createConstantAff(1));
       afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
 
       // Insert fake read access after scop
@@ -610,14 +621,14 @@ namespace {
       assert(mustNosrc == mustNosrc2);
 #endif
 
-      auto inputFlow = paramSpace.emptyUnionSet();
+      auto inputFlow = paramSpace.emptyUnionMap();
       auto dataFlow = paramSpace.emptyUnionMap();
       auto outputFlow = paramSpace.emptyUnionSet();
 
-      for (auto inpMap : mustNosrc.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
-        auto inp = inpMap.getDomain();
-        inputFlow.addSet_inplace(inp);
-      }
+      inputFlow = mustNosrc;
+      //for (auto inpMap : mustNosrc.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
+      //  inputFlow.addMap_inplace(inpMap);
+      //}
 
       for (auto dep : mustFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
         auto readTuple = dep.getOutTupleId();
@@ -630,7 +641,7 @@ namespace {
       }
 
 
-      for (auto inp : inputFlow.getSets()) { 
+      for (auto inp : inputFlow.getMaps()) { 
         // Value source is outside this scop 
         // Value must be read from home location
         genInputCommunication(inp);
@@ -654,7 +665,63 @@ namespace {
 
 
   private:
-    void genInputCommunication(const isl::Set &instances) {
+
+
+    isl::Space getStmtNodeSpace(MollyScopStmtProcessor *stmtCtx) {
+      auto domainSpace = stmtCtx->getDomainSpace();
+      auto domainTupleId = domainSpace.getSetTupleId();
+
+      auto clusterSpace = getClusterConfig()->getClusterSpace();
+      auto clusterTupleId = clusterSpace.getSetTupleId();
+
+      auto nodeId = islctx->createId(domainTupleId.getName() + Twine("_") + clusterTupleId.getName(), domainTupleId.getUser());
+      return clusterSpace.setSetTupleId(nodeId);
+    }
+
+
+
+#if 0
+    void genFlowRead(MollyScopStmtProcessor *readStmtCtx, isl::Set chunks) {
+      // chunks: { (recv[domain], readStmt[domain], dstNode[cluster], field[index], writeStmt[domain], srcNode[cluster]) }
+
+      auto readDomain = readStmtCtx->getDomain();
+      auto readDomainSpace = readStmtCtx->getDomainSpace();
+      auto readNodeSpace = getStmtNodeSpace(readStmtCtx);
+
+      auto readFlowWhere = chunks.reorganizeSubspaces(readDomainSpace, readNodeSpace);
+      auto readFlowDomain = readFlowWhere.getDomain();
+      auto readFlowScatter = readWhere;
+
+      auto readEditor = readStmtCtx->getEditor();
+      auto readFlowEditor = readEditor.createStmt(readFlowWhere.getDomain(), readFlowScatter, readFlowWhere, "readFlow");
+    }
+#endif
+
+  private:
+    isl::MultiAff beforeScopScatter; // { prologue[] -> scattering[scatter] }
+    isl::MultiAff afterScopScatter; // { epilogue[] -> scattering[scatter] }
+
+
+    void genInputCommunication(isl::Map inp/* { readStmt[domain] -> field[indexset] } */) {
+#if 0
+      auto prologueDomain = beforeScopScatter.getDomain();
+
+      auto combuf = pm->newCommunicationBuffer(fty, comRelation); 
+      ScopEditor editor(scop, asPass());
+
+      // { [] }: send_wait
+      auto sendWaitScatter = beforeScopScatter; // { [] -> scattering[scatter] }
+      auto sendWaitWhere = 
+        editor.createStmt(sendWaitWhere.getDomain(), sendWaitScatter.copy(), sendWaitWhere.copy(), "sendwait");
+
+      // { field[indexset] }: write
+      // { [] }: send
+      // { [] }: recv_wait
+      // { readStmt[] }: readFlow
+      // { [] }: recv
+#endif
+
+      auto instances = inp.getDomain(); /* { readStmt[domain] } */
       auto clusterConf = pm->getClusterConfig();
       auto clusterTuple = clusterConf->getClusterTuple();
       auto nClusterDims = clusterConf->getClusterDims();
@@ -927,7 +994,6 @@ namespace {
       auto clusterShape = getClusterConfig()->getClusterShape();
       auto clusterTupleId = clusterShape.getTupleId();
 
-      //ScopEditor editor(scop, asPass());
 
       auto readStmt = getScopStmtContext(dep.getOutTupleId());
       assert(readStmt->isReadAccess());
@@ -999,26 +1065,6 @@ namespace {
       auto recvDomain = readChunks.getDomain();
       auto chunkSpace = recvDomain.getSpace();
 
-      //auto sendScatter = relativeScatter(writePartitioning.reverse(), writeScatter, +1);
-      //auto recvScatter = relativeScatter(readChunks, readScatter, -1); // { (recv[domain] -> node[cluster]) -> scattering[scatter] }
-
-      // We are going to insert the send and recv operations at the given level of independence
-      // The dependent dims do not matter, we treat them as parameters
-      // As parameters, we also have to give them identifiers
-      //auto subMap = scatterDep.getSpace().identityBasicMap(); // { scattering[scatter] -> subscattering[scatter] }
-      //subMap.moveDims_inplace(isl_dim_param, 0, isl_dim_out, 0, levelOfDep);  // TODO: Is projecting them out enough?
-      //for (auto i = 0; i < levelOfDep; i+=1) {
-      //  subMap.setDimName_inplace(isl_dim_param, i, getScatterDimId(i).getName());
-      //}
-      //subMap.setOutTupleId_inplace(islctx->createId("subscattering"));
-      //auto subscatterSpace = subMap.getRangeSpace();
-
-      //auto readSubScatter = readScatter.applyRange(subMap); // { readStmt[domain] -> subscattering[scatter] }
-      //auto readSubDomain = readSubScatter.getDomain(); // { readStmt[domain] }
-      //auto writeSubScatter = writeScatter.applyRange(subMap); // { writeStmt[domain] -> subscattering[scatter] }
-      //auto writeSubDomain = writeSubScatter.getDomain(); // { writeStmt[domain] }
-      //auto depSub = dep.intersectDomain(writeSubDomain).intersectRange(readSubDomain); // { writeStmt[domain] -> readStmt[domain] } 
-
       // Stmts might be executed multiple times on different nodes, hence we need to add the information on which node to the instance
       auto readNodeId = islctx->createId(readTupleId.getName() + Twine("_") + clusterTupleId.getName(), readTupleId.getUser());
       auto readNodeShape = clusterShape.setTupleId(readNodeId);
@@ -1045,22 +1091,6 @@ namespace {
       auto depInst = dep.applyDomain(writeInstMap).applyRange(readInstMap);       // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
       //auto depSubInst = depSub.applyDomain(writeInstMap).applyRange(readInstMap); // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
 
-      // Get the relation of what is accessed
-      //auto depInstIdx = depInst.chainNested(isl_dim_in, writeInstAccess).chainNested(isl_dim_out, readInstAccess);  // { (writeStmt[domain], where[cluster], field[index]) -> (readStmt[domain], where[cluster], field[index]) }
-      //auto depSubInstIdx = depSubInst.chainNested(isl_dim_in, writeInstAccess).chainNested(isl_dim_out, readInstAccess);  // { (writeStmt[domain], where[cluster], field[index]) -> (readStmt[domain], where[cluster], field[index]) }
-      // The two fields should be equal since it is about reading/writing the same element
-
-      // No need to transfer values that are written and used on the same node (ie. same where[cluster])
-      //auto depSubInstLocal = depSubInst.intersect(depSubInst.getSpace().equalBasicMap(isl_dim_in, writeDomain.getDimCount(), clusterShape.getDimCount(), isl_dim_out, readDomain.getDimCount()));
-
-      // The instances of which we know can get their value locally
-      //auto localReads = depSubInstLocal.getRange(); // { (readStmt[domain], node[cluster]) }
-      //auto localWrites = depSubInstLocal.getDomain(); // { (writeStmt[domain], node[cluster]) }
-      // The instances from this must be written to a local buffer; will do this later as a special case of between-node communication
-
-      // The remaining instances need to get their value from some remote node
-      //auto remoteReads = readInstSubDomain.subtract(localReads); // { (readStmt[domain], node[cluster]) }
-
 
       //auto depSubInstLoc = depSubInst.chainNested(isl_dim_out, readInstAccess); // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster], field[index]) }
       auto depInstLoc = depInst.chainNested(isl_dim_in, writeAccRel).chainNested(isl_dim_out, readAccRel); // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster], field[index]) }
@@ -1070,18 +1100,6 @@ namespace {
       depInstLoc.projectOutSubspace_inplace(isl_dim_in, indexsetSpace);
 
       auto depInstLocChunks = depInstLoc.reverse().wrap().chainSubspace(readChunkAff).reverse(); // { recv[domain] -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
-
-
-      auto x = islctx->createMapSpace(0, 2, 2).universeMap();
-      auto x1 = x.orderGt(isl_dim_in, 0, isl_dim_out, 0);
-      auto x2 = x1.orderLt(isl_dim_in, 0, isl_dim_out, 1);
-      auto x3 = x2.fix(isl_dim_out, 0, 5);
-      auto x4 = x3.fix(isl_dim_out, 1, 9);
-      auto x5 = x4.equate(isl_dim_in, 0, isl_dim_out, 1);
-      auto y = x4.getDomain();
-      auto m = islctx->createMapSpace(0, 2, 1).universeMap();
-      auto m1 = m.equate(isl_dim_in, 1, isl_dim_out, 0);
-      auto z = y.apply(m1);
 
       // For every read, we need to select one write instance. It will decide from which node we will receive the data
       // TODO: This selection is arbitrary; preferable select data from local node and nodes we have to send data from anyways
@@ -1121,9 +1139,9 @@ namespace {
       auto writeFlowDomain = writeFlowWhere.getDomain(); // { (writeStmt[domain], dstNode[cluster], recv[domain]) }
       auto writeFlowScatter = writeFlowDomain.chainSubspace(writeScatter);
 
-      auto readFlowWhere = chunks.reorganizeSubspaces(readDomain.getSpace(), readNodeShape.getSpace());
+      auto readFlowWhere = chunks.reorganizeSubspaces(readDomain.getSpace(), readNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { readStmt[domain] -> node[cluster] }
       auto readFlowDomain = readFlowWhere.getDomain();
-      auto readFlowScatter = readWhere;
+      //auto readFlowScatter = readWhere;
 
       //auto communicationSet = depInstLoc;
       //communicationSet.projectOutSubspace_inplace(isl_dim_in, writeDomain.getSpace()); /* { (nodeSrc[cluster], nodeDst[cluster]) -> field[indexset] } */
@@ -1133,7 +1151,7 @@ namespace {
       //communicationSet.uncurry_inplace();
       // { (writeNode[cluster], readNode[cluster]) -> field[index] }
       auto communicationSet = sourceOfRead.wrap().reorganizeSubspaces(writeNodeShape.getSpace() >> readNodeShape.getSpace(), indexsetSpace);
-      auto comRelation = chunks.reorganizeSubspaces(chunkSpace, (writeNodeShape.getSpace() >> readNodeShape.getSpace()) >> indexsetSpace);
+      auto comRelation = chunks.reorganizeSubspaces(chunkSpace, (writeNodeShape.getSpace() >> readNodeShape.getSpace()) >> indexsetSpace); // { recv[] -> (writeNode[cluster], readNode[cluster], field[indexset]) }
 
       // We may need to send to/recv from any node in the cluster
       auto sendDstDomain = depInst.getDomain().unwrap().setInTupleId(sendDomain.getTupleId()).intersectDomain(sendDomain).wrap(); // { (writeStmt[domain], nodeDst[cluster]) }
@@ -1154,30 +1172,9 @@ namespace {
 
       ScopEditor editor(scop, asPass());
 
-#if 0
-      // send
-      auto sendEditor = writeEditor.createStmt(sendDstDomain, sendDstScatter, sendDstWhere, "send");
-      auto sendStmtCtx = getScopStmtContext(sendEditor.getStmt());
-      //sendStmtCtx->identifyDomainDims();
-      DefaultIRBuilder sendBuilder(sendEditor.getBasicBlock());
-      auto sendCodegen = sendStmtCtx->makeCodegen();
-      auto dstCoords = sendStmtCtx->getDomainMultiAff().removeDims(isl_dim_out, 0, writeDomain.getDimCount());
-      sendCodegen.codegenSend(combuf, dstCoords);
-
-
-      // recv
-      auto recvEditor = writeEditor.createStmt(recvSrcDomain, recvSrcScatter, recvSrcWhere, "send");
-      auto recvStmtCtx = getScopStmtContext(recvEditor.getStmt());
-      //recvStmtCtx->identifyDomainDims();
-      DefaultIRBuilder recvBuilder(recvEditor.getBasicBlock());
-      auto recvCodegen = recvStmtCtx->makeCodegen();
-      auto srcCoords = sendStmtCtx->getDomainMultiAff().removeDims(isl_dim_out, 0, writeDomain.getDimCount());
-      recvCodegen.codegenRecv(combuf, srcCoords);
-#endif
-
 
       // write
-      auto writeFlowEditor = writeEditor.createStmt(writeFlowDomain /* { (writeStmt[domain], dstNode[cluster], recv[domain]) } */, writeFlowScatter, writeFlowWhere /* { (writeStmt[domain], dstNode[cluster], recv[domain]) -> srcNode[cluster] } */, "writeFlow");
+      auto writeFlowEditor = writeEditor.createStmt(writeFlowDomain /* { (writeStmt[domain], dstNode[cluster], recv[domain]) } */, writeFlowScatter, writeFlowWhere.setOutTupleId(clusterTupleId) /* { (writeStmt[domain], dstNode[cluster], recv[domain]) -> srcNode[cluster] } */, "writeFlow");
       writeEditor.removeInstances(writeFlowWhere.wrap().reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId));
       auto writeFlowStmt = getScopStmtContext(writeFlowEditor.getStmt());
       auto writeFlowCodegen = writeFlowStmt->makeCodegen();
@@ -1197,7 +1194,7 @@ namespace {
 
 
       // send
-      auto sendWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> readNodeShape.getSpace(), writeNodeShape.getSpace()); // { (recv[domain], dstNode[cluster]) -> srcNode[cluster] }
+      auto sendWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> readNodeShape.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { (recv[domain], dstNode[cluster]) -> srcNode[cluster] }
       auto sendScatter = relativeScatter(chunks.reorganizeSubspaces(sendWhere.getDomainSpace(), writeDomain.getSpace()), writeScatter, +1); // { (recv[domain], dstNode[cluster]) -> scatter[scattering] }
 
       auto sendEditor = editor.createStmt(sendWhere.getDomain() /* { recv[domain], dstNode[cluster] } */, sendScatter.copy(), sendWhere.copy(), "send");
@@ -1212,7 +1209,7 @@ namespace {
 
 
       // recv
-      auto recvWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> writeNodeShape.getSpace(), readNodeShape.getSpace()); // { (readStmt[domain], srcNode[cluster]) -> dstNode[cluster] } 
+      auto recvWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> writeNodeShape.getSpace(), readNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { (readStmt[domain], srcNode[cluster]) -> dstNode[cluster] } 
       auto recvScatter = relativeScatter(chunks.reorganizeSubspaces(recvWhere.getDomainSpace(), readDomain.getSpace()), readScatter, -1);
       auto recvEditor = editor.createStmt(recvWhere.getDomain(), recvScatter.copy(), recvWhere.copy(), "recv");
       auto recvStmt = getScopStmtContext(recvEditor.getStmt());
@@ -1227,7 +1224,8 @@ namespace {
 
       // read
       // Modify read such that it reads from the combuf instead
-      auto readFlowEditor = readEditor.createStmt(readFlowDomain, readFlowScatter, readFlowWhere, "readFlow");
+      auto readflowScatter = readScatter;
+      auto readFlowEditor = readEditor.createStmt(readFlowDomain, readflowScatter, readFlowWhere, "readFlow");
       readEditor.removeInstances(readFlowWhere.setOutTupleId(clusterTupleId));
       auto readFlowStmt = getScopStmtContext(readFlowEditor.getStmt());
       auto readFlowCodegen = readFlowStmt->makeCodegen();
@@ -1249,7 +1247,185 @@ namespace {
     }
 
 
-    void genOutputCommunication(const isl::Set &instances) {
+    void genOutputCommunication(const isl::Set &outSet/* { writeStmt[domain] } */) {
+      auto writeDomainTuple = outSet.getTupleId();
+      auto writeStmt = tupleToStmt[writeDomainTuple.keep()];
+      auto writeStmtCtx = getScopStmtContext(writeStmt);
+      auto writeEditor = writeStmtCtx->getEditor();
+      auto srcNodeId = islctx->createId("srcNode");
+      auto dstNodeId = islctx->createId("dstNode");
+      auto fvar = writeStmtCtx->getFieldVariable();
+      auto fvarId = fvar->getTupleId();
+      auto clusterSpace = getClusterConfig()->getClusterSpace();
+      auto clusterNodeId = clusterSpace.getSetTupleId();
+      auto dstNodeSpace = clusterSpace.setSetTupleId(dstNodeId);
+
+      auto writeAccessed = writeStmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
+      auto out = writeAccessed.intersectDomain(outSet); // { writeStmt[domain] -> field[indexset] }
+      auto fty = writeStmtCtx->getFieldType();
+      auto fieldHome = fty->getHomeAff(); // { field[indexset] -> node[cluster] }
+      auto readHome = fieldHome.setOutTupleId(dstNodeId).setInTupleId(fvarId);
+      auto writeHome = fieldHome.setOutTupleId(srcNodeId).setInTupleId(fvarId);
+      auto indexsetSpace = writeAccessed.getRangeSpace();
+      auto indexsetTupleId = indexsetSpace.getSetTupleId();
+
+      auto writeWhere = writeStmtCtx->getWhere().setOutTupleId(srcNodeId);
+      auto srcNodeSpace = writeWhere.getRangeSpace();
+      auto writeOutInstances = writeWhere.wrap().chainSubspace(out); // { (writeStmt[domain], writeNode[cluster]) -> field[indexset] }
+
+      // For each index, select one write instance that will be stored into the array
+      auto selectedWrite = writeOutInstances.reverse().lexminPwMultiAff(); // { field[indexset] -> (writeStmt[domain], writeNode[cluster]) }
+
+      auto writeInstDomain = selectedWrite.getRange(); // { (writeStmt[domain], writeNode[cluster]) }
+      auto writeInstDomainSpace = writeInstDomain.getSpace();
+      auto writeDomain = writeInstDomain.unwrap().getDomain(); // { writeStmt[domain] }
+      auto writeDomainSpace = writeDomain.getSpace();
+      auto writeScatter = writeStmtCtx->getScattering().intersectDomain(writeDomain); // { writeStmt[domain] -> scattering[scatter] }
+      auto epilogueDomain = afterScopScatter.getDomain(); // { epilogue[] }
+      auto epilogueDomainSpace = epilogueDomain.getSpace();
+
+      auto transfer = selectedWrite.wrap().chainSubspace(readHome).wrap(); // { (field[indexset], writeStmt[domain], srcNode[cluster], dstNode[cluster]) }
+      auto local = transfer.intersect(transfer.getSpace().equalBasicSet(dstNodeSpace, srcNodeSpace));
+      auto remoteTransfers = transfer-local;
+      auto localTransfers = local.reorderSubspaces(indexsetSpace >> (writeDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (writeDomainSpace >> clusterSpace)).normalizeWrapped()); // { (field[indexset], writeStmt[domain], node[cluster]) } 
+
+      auto comrel = alltoall(epilogueDomain, remoteTransfers.reorderSubspaces((srcNodeSpace >> dstNodeSpace) >> indexsetSpace)); // { recv[] -> (writeNode[cluster], readNode[cluster], field[indexset]) }
+
+
+      ScopEditor editor(scop, asPass());
+
+
+      // { writeStmt[domain] }: writeback (local)
+      if (!localTransfers.isEmpty()) {
+        auto writelocalWhere = localTransfers.reorderSubspaces(writeDomainSpace, clusterSpace);
+        auto writelocalScatter = writeScatter;
+        auto writelocalEditor = writeEditor.createStmt(writeStmtCtx->getDomain(), writeStmtCtx->getScattering(), writeStmtCtx->getWhere(), "writeback_local");
+        writeEditor.removeInstances(writelocalWhere);
+        auto writelocalStmt = writelocalEditor.getStmt();
+        auto writelocalStmtCtx = getScopStmtContext(writelocalStmt);
+        auto writelocalCodegen = writelocalStmtCtx->makeCodegen();
+
+        auto writeStore = writeStmtCtx->getStoreAccessor();
+        //auto writeAccessValues = writelocalStmtCtx->getAccessedCoordinate();
+        auto writeAccessRel = writeStmtCtx->getAccessRelation();
+
+        auto writelocalCurrent = writelocalEditor.getCurrentIteration().setOutTupleId(writeDomainTuple);
+        auto writelocalCurrentNode = writelocalStmtCtx->getClusterMultiAff(); // { field[indexset] -> node[cluster] }
+
+        //auto writelocalCurrentIndex = writelocalCurrent.setOutTupleId(indexsetTupleId);
+        SmallVector<Value*,4> writelocalCurrentIndex;
+        auto nDims = fty->getNumDimensions();
+        writelocalCurrentIndex.reserve(nDims);
+        for (auto i=nDims-nDims; i<nDims; i+=1) {
+          auto v = writeStmtCtx->getAccessedCoordinate(i);
+          writelocalCurrentIndex.push_back(v);
+        } 
+
+        writelocalCodegen.codegenStoreLocal(writeStore->getValueOperand(), fvar, writelocalCurrentIndex, writeAccessRel);
+      }
+
+
+      if (!remoteTransfers.isEmpty()) {
+        auto combuf = pm->newCommunicationBuffer(fty, comrel);
+        combuf->doLayoutMapping();
+
+        // { readNode[cluster] }: send_wait
+        auto sendwaitWhere = remoteTransfers.reorderSubspaces(dstNodeSpace, srcNodeSpace); // { readNode[cluster] -> writeNode[cluster] }
+        auto sendwaitScatter = relativeScatter2(remoteTransfers.reorderSubspaces(writeDomainSpace, dstNodeSpace) /* { writeStmt[domain] -> readNode[cluster] } */, writeScatter, -1); // { readNode[cluster] -> scattering[scatter] }
+        auto sendwaitEditor = editor.createStmt(sendwaitWhere.getDomain(), sendwaitScatter.copy(), sendwaitWhere.copy(), "sendwait");
+        auto sendwaitStmt = sendwaitEditor.getStmt();
+        auto sendwaitStmtCtx = getScopStmtContext(sendwaitStmt);
+        auto sendwaitCodegen = sendwaitStmtCtx->makeCodegen();
+
+        auto sendwaitCurrentChunk = dstNodeSpace.mapsTo(epilogueDomainSpace).createZeroMultiAff(); // { readNode[cluster] -> epilogue[] }
+        auto sendwaitCurrentNode = sendwaitStmtCtx->getClusterMultiAff().setOutTupleId(srcNodeId);
+        auto sendwaitCurrentDst = sendwaitEditor.getCurrentIteration().setOutTupleId(dstNodeId);
+        combuf->codegenSend(sendwaitCodegen, sendwaitCurrentDst, sendwaitCurrentNode, sendwaitCurrentNode);
+
+
+        // { writeStmt[domain] }: writeflow
+        auto writeflowWhere = remoteTransfers.reorderSubspaces(writeDomainSpace, srcNodeSpace);
+        auto writeflowScatter = writeScatter;
+        auto writeflowEditor = writeEditor.createStmt(writeflowWhere.getDomain(), writeflowScatter.copy(), writeflowWhere, "writeflow");
+        writeEditor.removeInstances(writeflowWhere);
+        auto writeflowStmt = writeflowEditor.getStmt();
+        auto writeflowStmtCtx = getScopStmtContext(writeflowStmt);
+        auto writeflowCodegen = writeflowStmtCtx->makeCodegen();
+
+        auto writeStore = writeStmtCtx->getStoreAccessor();
+        auto writeAccessedAff = writeStmtCtx->getAccessed(); // { writeStmt[domain] -> field[indexset] }
+
+        auto writeflowCurrent = writeflowEditor.getCurrentIteration();
+        auto writeflowCurrentDomain = writeflowCurrent.setOutTupleId(writeDomainTuple);
+        auto writeflowCurrentNode = writeflowStmtCtx->getClusterMultiAff().setOutTupleId(srcNodeId);
+        auto writeflowCurrentIndex = writeAccessedAff.pullback(writeflowCurrentDomain).toPwMultiAff();
+        auto writeflowCurrentDst = fieldHome.pullback(writeflowCurrentIndex);
+        auto writeflowCurrentChunk = writeDomainSpace.mapsTo(epilogueDomainSpace).createZeroMultiAff() ; // {  writeStmt[domain] -> prologue[] }
+        auto writeflowPtr = combuf->codegenPtrToSendBuf(writeflowCodegen, writeflowCurrentChunk, writeflowCurrentNode, writeflowCurrentDst, writeflowCurrentIndex);
+        auto writeflowStore = writeflowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeflowPtr);
+
+
+        // { dstNode[cluster] }: send
+        auto sendWhere = remoteTransfers.reorderSubspaces(dstNodeSpace, srcNodeSpace); // { dstNode[cluster] -> srcNode[cluster] }
+        auto sendScatter = relativeScatter2(remoteTransfers.reorderSubspaces(writeDomainSpace, dstNodeSpace), writeScatter, +1);
+        auto sendEditor = editor.createStmt(sendWhere.getDomain(), sendScatter.copy(), sendWhere.copy(), "send");
+        auto sendStmt = sendEditor.getStmt();
+        auto sendStmtCtx = getScopStmtContext(sendStmt);
+        auto sendCodegen = sendStmtCtx->makeCodegen();
+
+        auto sendCurrent = sendEditor.getCurrentIteration();
+        auto sendCurrentDst = sendCurrent.setOutTupleId(dstNodeId);
+        auto sendCurrentNode = sendStmtCtx->getClusterMultiAff().setOutTupleId(srcNodeId);
+        combuf->codegenSend(sendCodegen, sendCurrentNode, sendCurrentNode, sendCurrentDst);
+
+
+        // { srcNode[cluster] }: recv_wait
+        auto recvwaitWhere = remoteTransfers.reorderSubspaces(srcNodeSpace, dstNodeSpace);
+        auto recvwaitScatter = constantScatter(srcNodeSpace.mapsTo(afterScopScatter.getDomainSpace()).createZeroMultiAff(), afterScopScatter, 0); // { srcNode[cluster] -> scattering[scatter] }
+        auto recvwaitEditor = editor.createStmt(recvwaitWhere.getDomain(), recvwaitScatter.copy(), recvwaitWhere.copy(), "recvwait");
+        auto recvwaitStmt = recvwaitEditor.getStmt();
+        auto recvwaitStmtCtx = getScopStmtContext(recvwaitStmt);
+        auto recvwaitCodegen = recvwaitStmtCtx->makeCodegen();
+
+        auto recvwaitCurrent = recvwaitEditor.getCurrentIteration(); // { srcNode[cluster] -> [...] }
+        auto recvwaitCurrentSrc = recvwaitCurrent.setOutTupleId(srcNodeId);
+        auto recvwaitCurrentNode = recvwaitStmtCtx->getClusterMultiAff().setOutTupleId(dstNodeId);
+        combuf->codegenRecvWait(recvwaitCodegen, recvwaitCurrentSrc, recvwaitCurrentSrc, recvwaitCurrentNode);
+
+
+        // { field[indexset] }: writeback/read
+        auto writebackWhere = remoteTransfers.reorderSubspaces(indexsetSpace, dstNodeSpace); // { field[indexset] -> dstNode[cluster] }
+        auto writebackDomain = writebackWhere.getDomain(); // { field[indexset] }
+        auto writebackScatter = constantScatter(indexsetSpace.mapsTo(afterScopScatter.getDomainSpace()).createZeroMultiAff(), afterScopScatter, +1); // { field[indexset] -> scattering[scatter] }
+        auto writebackEditor = editor.createStmt(writebackDomain.copy(), writebackScatter.copy(), writebackWhere.copy(), "writeback");
+        auto writebackStmt = writebackEditor.getStmt();
+        auto writebackStmtCtx = getScopStmtContext(writebackStmt);
+        auto writebackCodegen = writebackStmtCtx->makeCodegen();
+
+        auto writebackCurrentIndex = writebackEditor.getCurrentIteration().setOutTupleId(indexsetTupleId);
+        auto writebackCurrentChunk = indexsetSpace.mapsTo(epilogueDomainSpace).createZeroMultiAff(); // { field[indexset] -> epilogue[] }
+        auto writebackCurrentNode = writebackStmtCtx->getClusterMultiAff().setOutTupleId(dstNodeId); // { field[indexset] -> dstNode[cluster] }
+        auto writebackCurrentSrc = selectedWrite.sublist(srcNodeSpace); // { field[indexset] -> srcNode[cluster] }
+        auto writebackLocalPtr = combuf->codegenPtrToRecvBuf(writebackCodegen, sendwaitCurrentChunk, sendwaitCurrentNode, writebackCurrentSrc, writebackCurrentIndex);
+        auto writebackVal = writebackCodegen.getIRBuilder().CreateLoad(writebackLocalPtr, "loadfromcombuf");
+        writebackCodegen.codegenStoreLocal(writebackVal, fvar, writebackCurrentIndex);
+
+
+        // { srcNode[cluster] }: recv
+        auto recvWhere = recvwaitWhere;
+        auto recvScatter = constantScatter(srcNodeSpace.mapsTo(afterScopScatter.getDomainSpace()).createZeroMultiAff(), afterScopScatter, +2);
+        auto recvEditor = editor.createStmt(recvWhere.getDomain(), recvScatter.copy(), recvWhere.copy(), "recv");
+        auto recvStmt = recvEditor.getStmt();
+        auto recvStmtCtx = getScopStmtContext(recvStmt);
+
+        auto recvCurrent = recvEditor.getCurrentIteration(); // { srcNode[cluster] -> [...] }
+        auto recvCurrentSrc = recvCurrent.setOutTupleId(srcNodeId);
+        auto recvCurrentNode = recvStmtCtx->getClusterMultiAff().setOutTupleId(dstNodeId);
+        combuf->codegenRecv(writebackCodegen, recvCurrentSrc, recvCurrentSrc, recvCurrentNode);
+      }
+
+#if 0
+      auto instances = out.getDomain();
       auto itDomainWrite = instances; //dep.getDomain(); /* write_acc[domain] */
       auto stmtWrite = tupleToStmt[itDomainWrite.getTupleId().keep()];
       assert(stmtWrite);
@@ -1342,6 +1518,7 @@ namespace {
 
       writebackLocalStmtEditor.getTerminator();
 #pragma endregion
+#endif
     }
 
 

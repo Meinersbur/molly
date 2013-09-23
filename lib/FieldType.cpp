@@ -150,7 +150,7 @@ llvm::Type *FieldType::getEltType() const {
 }
 
 
-llvm::PointerType *FieldType::getEltPtrType() {
+llvm::PointerType *FieldType::getEltPtrType() const {
   auto eltType = getEltType();
   return PointerType::getUnqual(eltType);
 }

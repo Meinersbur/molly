@@ -127,19 +127,39 @@ llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codege
 }
 
 
-void CommunicationBuffer::codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
-  auto &irBuilder = codegen.getIRBuilder();
+llvm::Value *CommunicationBuffer::codegenSendWait(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
+  auto buftranslator = rangeProduct(chunk, srcCoord).toPwMultiAff();
+  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  return codegen.callCombufSendWait(this, sendbufIdx);
+}
 
+
+void CommunicationBuffer::codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
   auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
   auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
   codegen.callCombufSend(this, sendbufIdx);
 }
 
 
-void CommunicationBuffer::codegenRecv(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
-  auto &irBuilder = codegen.getIRBuilder();
+llvm::Value *CommunicationBuffer::codegenRecvWait(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
+  auto buftranslator = rangeProduct(chunk, dstCoord).toPwMultiAff();
+  auto sendbufIdx = recvbufMapping->codegenIndex(codegen, buftranslator, srcCoord);
+  return codegen.callCombufRecvWait(this, sendbufIdx);
+}
 
+
+void CommunicationBuffer::codegenRecv(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
   auto buftranslator = isl::rangeProduct(chunk, dstCoord).toPwMultiAff();
   auto sendbufIdx = recvbufMapping->codegenIndex(codegen, buftranslator, srcCoord);
   codegen.callCombufRecv(this, sendbufIdx);
+}
+
+llvm::Type * molly::CommunicationBuffer::getEltType() const
+{
+  return getFieldType()->getEltType();
+}
+
+llvm::PointerType * molly::CommunicationBuffer::getEltPtrType() const
+{
+  return getFieldType()->getEltPtrType();
 }

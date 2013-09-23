@@ -104,6 +104,11 @@ namespace {
     isl::Set getDomain() const LLVM_OVERRIDE {  
       return enwrap(stmt->getDomain());
     }
+
+    isl::Space getDomainSpace() const LLVM_OVERRIDE {
+    return getDomain().getSpace();
+    }
+
     isl::Set getDomainWithNamedDims() const LLVM_OVERRIDE {
       auto scopCtx = getScopProcessor();
       auto domain = getDomain();

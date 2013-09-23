@@ -151,7 +151,7 @@ namespace molly {
     //void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
     llvm::Type *getEltType() const;
-    llvm::PointerType *getEltPtrType();
+    llvm::PointerType *getEltPtrType() const;
 
     //TODO: Element length in bytes
 

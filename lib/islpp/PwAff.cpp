@@ -157,6 +157,8 @@ void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER {
   give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy()));
 }
 
+
+
 #if 0
 PwAff PwAff::pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER {
   return pullbac
@@ -195,9 +197,19 @@ std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
 }
 
 
-bool isl:: plainIsEqual(PwAff pwaff1, PwAff pwaff2){
-  return isl_pw_aff_plain_is_equal(pwaff1.take(), pwaff2.take());
-}
+  ISLPP_EXSITU_PREFIX Aff PwAff::singletonAff() ISLPP_EXSITU_QUALIFIER {
+    Aff result;
+  foreachPiece([&result] (Set set, Aff aff) -> bool {
+      if (result.isValid()) {
+        result.reset();
+        return true; // break with error; no singleton pw
+      }
+      result = aff;
+      return false; // continue to see if there are multiple
+    });
+  assert(result.isValid());
+    return result;
+  }
 
 PwAff isl::unionMin(PwAff &&pwaff1, PwAff &&pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_min(pwaff1.take(), pwaff2.take()));

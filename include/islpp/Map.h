@@ -631,6 +631,8 @@ namespace isl {
     /// Just isl_map_apply_range with switched arguments
     Map pullback(const Map &that) ISLPP_EXSITU_QUALIFIER { return Map::enwrap( isl_map_apply_range(that.takeCopy(), this->takeCopy()) ); }
     void pullback_inplace(const Map &that) ISLPP_INPLACE_QUALIFIER { give(isl_map_apply_range(that.takeCopy(), this->take())); }
+
+    ISLPP_EXSITU_PREFIX BasicMap simpleHull() ISLPP_EXSITU_QUALIFIER { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
   }; // class Map
 
 
@@ -643,7 +645,7 @@ namespace isl {
   static inline Map intersectDomain(Map &&map, Set &&set) { return enwrap(isl_map_intersect_domain(map.take(), set.take())); }
   static inline Map intersectRange(Map &&map, Set &&set) { return enwrap(isl_map_intersect_range(map.take(), set.take())); }
 
-  static inline BasicMap simpleHull(Map &&map) { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
+  static inline BasicMap simpleHull(Map map) { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
   static inline BasicMap unshiftedSimpleHull(Map &&map) { return BasicMap::enwrap(isl_map_unshifted_simple_hull(map.take())); }
   static inline Map sum(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_sum(map1.takeCopy(), map2.takeCopy())); }
   static inline Map sum(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_sum(map1.take(), map2.take())); }

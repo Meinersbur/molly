@@ -183,6 +183,8 @@ namespace isl {
 
     void mul_inplace(const PwAff &multiplier) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_mul(take(), multiplier.takeCopy())); }
     PwAff mul(const PwAff &multiplier) const { return PwAff::enwrap(isl_pw_aff_mul(takeCopy(), multiplier.takeCopy())); }
+
+   ISLPP_EXSITU_PREFIX Aff singletonAff() ISLPP_EXSITU_QUALIFIER;
   }; // class PwAff
 
 
@@ -190,7 +192,7 @@ namespace isl {
   static inline PwAff enwrapCopy(__isl_keep isl_pw_aff *obj) { return PwAff::enwrapCopy(obj); }
 
 
-  bool plainIsEqual(PwAff pwaff1, PwAff pwaff2);
+  static inline bool plainIsEqual(const PwAff &pwaff1, const PwAff &pwaff2) { return checkBool(isl_pw_aff_plain_is_equal(pwaff1.keep(), pwaff2.keep())); }
 
   PwAff unionMin(PwAff &&pwaff1, PwAff &&pwaff2);
   PwAff unionMax(PwAff &&pwaff1, PwAff &&pwaff2);

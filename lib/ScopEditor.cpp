@@ -420,8 +420,9 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   auto modelDomain = getIterationDomain().resetSpace(isl_dim_set);
   auto subdomain = newdomain.projectOut(isl_dim_set, modelDomain.getDimCount(), newdomain.getDimCount() - modelDomain.getDimCount());
   assert(subdomain <= modelDomain);
-  assert(newdomain <= subscatter_.getDomain());
-  auto subscatter = subscatter_.resetSpace(isl_dim_in);
+   //auto subscatter = subscatter_.resetSpace(isl_dim_in);
+  //assert(newdomain <= subscatter_.getDomain());
+  auto subscatter = subscatter_.cast(newdomain.getSpace() >> subscatter_.getRangeSpace());
 
   auto nModelDims = modelDomain.getDimCount();
   auto nNewDims = newdomain.getDimCount();
@@ -463,7 +464,7 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   }
 
   auto newStmt = new ScopStmt(scop, newStmtBB, name, region, nests, newdomain.takeCopy(), subscatter.takeCopy());
-  auto newWhere = where.setInTupleId(enwrap(stmt->getDomainId()));
+  auto newWhere = where.setInTupleId(enwrap(newStmt->getDomainId()));
   newStmt->setWhereMap(newWhere.takeCopy());
   scop->addScopStmt(newStmt);
   return StmtEditor(newStmt);
@@ -760,6 +761,6 @@ void StmtEditor::remove() {
 
 
 void StmtEditor::addWriteAccess(llvm::StoreInst *instr, FieldVariable *fvar, isl::Map &&accessRelation) {
-  assert(accessRelation.matchesMapSpace(getDomainSpace(), fvar->getFieldType()->getIndexsetSpace()));
+  assert(accessRelation.matchesMapSpace(getDomainSpace(), fvar->getAccessSpace()));
   stmt->addAccess(MemoryAccess::MUST_WRITE, fvar->getVariable(), accessRelation.take(), instr);
 }

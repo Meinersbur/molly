@@ -39,6 +39,7 @@ namespace molly {
 
     // { stmt[domain] }
     virtual isl::Set getDomain() const = 0;
+    virtual isl::Space getDomainSpace() const = 0;
     virtual isl::Set getDomainWithNamedDims() const = 0;
 
     // { stmt[domain] -> scattering[scatter] }
@@ -84,8 +85,6 @@ namespace molly {
     virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
     virtual StmtEditor getEditor() = 0;
 
-
-  
     // Process
     virtual void applyWhere() = 0;
 

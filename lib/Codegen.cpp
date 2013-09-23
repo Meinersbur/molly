@@ -199,6 +199,22 @@ llvm::CallInst *MollyCodeGenerator::callCombufRecv(molly::CommunicationBuffer *c
 }
 
 
+llvm::CallInst *MollyCodeGenerator::callCombufSendWait(molly::CommunicationBuffer *combuf, llvm::Value *dstRank) {
+  Value *args[] = { combuf->getVariableSend(), dstRank };
+  Type *tys[] = { combuf->getEltPtrType(), args[0]->getType() };
+  auto sendWaitFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_send_wait, tys);
+  return irBuilder.CreateCall(sendWaitFunc, args);
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callCombufRecvWait(molly::CommunicationBuffer *combuf, llvm::Value *srcRank) {
+  Value *args[] = { combuf->getVariableRecv(), srcRank };
+  Type *tys[] = { combuf->getEltPtrType(), args[0]->getType() };
+  auto recvWaitFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recv_wait, tys);
+  return irBuilder.CreateCall(recvWaitFunc, args);
+}
+
+
 llvm::CallInst *MollyCodeGenerator::callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst) {
   Value *args[] = { combuf->getVariableSend(), dst };
   Type *tys[] = { combuf->getFieldType()->getEltPtrType(), args[0]->getType() };

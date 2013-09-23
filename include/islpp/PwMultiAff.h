@@ -102,6 +102,12 @@ namespace isl {
 
 
 #pragma region Conversion
+    /* implicit */ Pw(Aff aff) : Obj(aff.isValid() ? aff.toPwMultiAff() : PwMultiAff()) {}
+    const PwMultiAff &operator=(Aff aff) { obj_give(aff.isValid() ? aff.toPwMultiAff() : PwMultiAff()); }
+
+    /* implicit */ Pw(MultiAff maff) : Obj(maff.isValid() ? maff.toPwMultiAff() : PwMultiAff()) {}
+    const PwMultiAff &operator=(MultiAff maff) { obj_give(maff.isValid() ? maff.toPwMultiAff() : PwMultiAff()); }
+
     Map toMap() const;
     //operator Map() const { return toMap(); }
 
