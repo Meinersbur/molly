@@ -16,8 +16,9 @@ namespace molly {
   /// Everything needed to generate code into a ScopStmt
   class MollyCodeGenerator {
   private:
+
     /// Stmt to generate
-    MollyScopStmtProcessor *stmtCtx;
+    MollyScopStmtProcessor *stmtCtx;//TODO: Remove, should not be directly dependentent on this
 
     /// At which position to insert the code
     DefaultIRBuilder irBuilder;
@@ -26,13 +27,13 @@ namespace molly {
     isl::AstBuild astBuild;
 
     /// Required by polly::IslExprBuilder to map params and domain dims to variables that contain these values
-    //std::map<isl_id *, llvm::Value *> idToValue;
+    const std::map<isl_id *, llvm::Value *> *idtovalue;
 
   protected:
 
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
-    std::map<isl_id *, llvm::Value *> &getIdToValueMap();
+   const std::map<isl_id *, llvm::Value *> &getIdToValueMap();
 
     llvm::Module *getModule();
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
@@ -52,6 +53,8 @@ namespace molly {
   public:
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
+
+      MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, const std::map<isl_id *, llvm::Value *> &idtovalue);
 
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }
     StmtEditor getStmtEditor();

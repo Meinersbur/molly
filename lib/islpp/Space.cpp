@@ -1224,6 +1224,19 @@ ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( Space subspace1, Space s
 }
 
 
+bool isl::Space::match( isl_dim_type thisType, const Space &that, isl_dim_type thatType ) const
+{
+  if (thisType!=isl_dim_param && thatType!=isl_dim_param && this->isNested(thisType) && that.isNested(thatType)) {
+    // Bug workaround: If the spaces are nested, isl_space_match will also compare the param dims
+    auto tmp1 = *this;
+    auto tmp2 = that;
+    compatibilize(tmp1, tmp2);
+    return checkBool(isl_space_match(tmp1.keep(), thisType, tmp2.keep(), thatType)); 
+  } 
+  return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType));
+}
+
+
 bool isl::isEqual(const Space &space1, const Space &space2){
   return isl_space_is_equal(space1.keep(), space2.keep());
 }

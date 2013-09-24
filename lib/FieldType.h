@@ -4,10 +4,13 @@
 //#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
 #include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType)
 #include <llvm/ADT/ArrayRef.h>
-#include "islpp/Space.h"
-#include "islpp/MultiAff.h"
-#include "islpp/Islfwd.h"
+//#include "islpp/Space.h"
+//#include "islpp/MultiAff.h"
+//#include "islpp/Islfwd.h"
 #include "LLVMfwd.h"
+#include "molly/Mollyfwd.h"
+#include "islpp/Islfwd.h"
+#include "islpp/Id.h"
 
 namespace isl {
   class Ctx;
@@ -50,6 +53,8 @@ namespace molly {
 
     //llvm::Function *reffunc;
     //llvm::Function *islocalfunc;
+
+    FieldLayout *layout;
 
   protected:
     FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata);
@@ -169,6 +174,8 @@ namespace molly {
     //uint64_t getEltSize() const;
 
     //llvm::CallInst *callLocalPtrIntrinsic(llvm::Value *fieldvar, llvm::ArrayRef<llvm::Value> indices, llvm::Instruction *insertBefore = nullptr);
+
+    FieldLayout *getLayout() { return layout; }
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

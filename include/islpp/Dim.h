@@ -101,25 +101,30 @@ namespace isl {
     unsigned pos;
     isl_space *space;
 
-    Dim(isl_dim_type type, unsigned pos, isl_space *space) : type(type), pos(pos), space(space) {
+    Dim(isl_dim_type type, unsigned pos, __isl_take isl_space *space) : type(type), pos(pos), space(space) {
       assert(pos < isl_space_dim(space, type));
     }
 
   public:
-    Dim(): type(isl_dim_cst/*Constant dim not valid*/) {}
+    Dim(): type(isl_dim_cst/*Constant dim not valid*/), space(nullptr) {}
+    /* implicit */ Dim(const Dim &that) : type(that.type), pos(that.pos), space(isl_space_copy(that.space)) { }
+    /* implicit */ Dim(Dim &&that) : type(that.type), pos(that.pos), space(that.space) { that.space = nullptr; }
     ~Dim() { isl_space_free(space); space = NULL; }
 
-    static Dim enwrap(isl_dim_type type, unsigned pos, const Space &space);
+    const Dim &operator=(const Dim &that) { this->type = that.type; this->pos = that.pos; auto old = this->space; this->space = isl_space_copy(that.space); isl_space_free(old); return *this; }
+    const Dim &operator=(Dim &&that) { this->type = that.type; this->pos = that.pos; std::swap(this->space, that.space); return *this; }
+
+    static Dim enwrap(isl_dim_type type, unsigned pos, Space space);
     static Dim enwrap(isl_dim_type type, unsigned pos, isl_space *space);
 
   public:
     bool isNull() const { return type==isl_dim_cst; }
     bool isValid() const { return type!=isl_dim_cst; }
 
-    bool hasId() const {  return isl_space_has_dim_id(space, type, pos); }
-    Id getId() const {  return Id::enwrap(isl_space_get_dim_id(space, type, pos)); }
+    bool hasId() const { return isl_space_has_dim_id(space, type, pos); }
+    Id getId() const { return Id::enwrap(isl_space_get_dim_id(space, type, pos)); }
     const char *getName() const { return isl_space_get_dim_name(space, type, pos);  } 
-    unsigned getTupleDims() const {   return isl_space_dim(space, type); }
+    unsigned getTupleDims() const { return isl_space_dim(space, type); }
 
     isl_dim_type getType() const { return type; }
     unsigned getPos() const { return pos; }

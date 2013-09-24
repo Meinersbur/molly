@@ -2,6 +2,7 @@
 #define MOLLY_FIELDVARIABLE_H
 
 #include "islpp/Islfwd.h"
+#include "Molly/Mollyfwd.h"
 
 namespace llvm {
   class Module;
@@ -37,6 +38,7 @@ namespace molly {
 
     llvm::GlobalVariable *getVariable() { return variable; }
     FieldType *getFieldType() { return fieldTy; }
+    FieldLayout *getLayout();
 
     isl::Id getTupleId();
     isl::Space getAccessSpace();

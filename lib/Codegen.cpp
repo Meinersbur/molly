@@ -38,7 +38,8 @@ isl::AstBuild &MollyCodeGenerator::initAstBuild() {
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()) {
+MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) 
+  : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), idtovalue(nullptr) {
   auto bb = stmtCtx->getBasicBlock();
   if (insertBefore) {
     assert(insertBefore->getParent() == bb);
@@ -52,10 +53,16 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::In
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()) {
+MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()), idtovalue(nullptr) {
   //stmtCtx->identifyDomainDims();
 }
 
+
+MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, const std::map<isl_id *, llvm::Value *> &idtovalue) 
+  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), idtovalue(&idtovalue)
+{
+
+}
 
 StmtEditor MollyCodeGenerator::getStmtEditor() { 
   return StmtEditor(stmtCtx->getStmt());
@@ -71,7 +78,10 @@ llvm::Value *MollyCodeGenerator::getValueOf(const SCEV *scev) {
 
 
 
-std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
+const std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
+  if (idtovalue)
+    return *idtovalue;
+
   auto &result = stmtCtx->getIdToValueMap();
 
   auto scopCtx = stmtCtx->getScopProcessor();

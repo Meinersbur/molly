@@ -929,6 +929,10 @@ namespace {
       return result;
     }
 
+    ArrayRef<CommunicationBuffer *> getCommunicationBuffers() LLVM_OVERRIDE {
+    return combufs;
+    }
+
   private:
     llvm::Function* emitCombufInit(CommunicationBuffer *combuf) {
       auto &llvmContext = module->getContext();
@@ -1007,7 +1011,10 @@ namespace {
       auto initFunc = emitAllCombufInit();
       IRBuilder<> builder(callToMain);
       builder.CreateCall(initFunc);
-    } 
+    }
+
+
+
 #pragma endregion
 
 
@@ -1092,7 +1099,7 @@ namespace {
       }
 
       // Create some SCoPs that init the combufs
-      addCallToCombufInit();
+      //addCallToCombufInit();
 
       for (auto &it : scops) {
         auto scop = it.first;
@@ -1115,6 +1122,8 @@ namespace {
       // Replace all remaining accesses by some generated intrinsic
       for (auto &func : *module) {
         auto funcCtx = getFuncContext(&func);
+
+        funcCtx->replaceIntrinsics();
         funcCtx->replaceRemainaingIntrinsics();
       }
 

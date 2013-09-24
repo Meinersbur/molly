@@ -576,6 +576,12 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   rank_t __builtin_molly_rankof(F, Args...) { MOLLY_DEBUG_FUNCTION_SCOPE
     return 0;
   }
+
+  void __builtin_molly_global_init() { MOLLY_DEBUG_FUNCTION_SCOPE
+  }
+
+  void __builtin_molly_global_free() { MOLLY_DEBUG_FUNCTION_SCOPE
+  }
 #endif
 #pragma endregion
 
@@ -774,12 +780,15 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 
     ~array() { MOLLY_DEBUG_FUNCTION_SCOPE
+      __builtin_molly_field_free(this);
       free(localdata);
     }
 
 
     array() { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
+
+    __builtin_molly_field_init(this);
 
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {

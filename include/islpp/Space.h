@@ -224,7 +224,7 @@ namespace isl {
     bool isNontrivialSetSpace() const { return isSetSpace() && !isParamsSpace(); }
     bool isMapSpace() const;
 
-    bool match(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const { return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType)); }
+    bool match(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const;
 
 
 #pragma region Matching spaces

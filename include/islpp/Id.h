@@ -73,7 +73,7 @@ namespace isl {
 
 
   static inline Id enwrap(__isl_take isl_id *id) { return Id::enwrap(id); }
-  static inline Id enwrapCopy(__isl_take isl_id *id) { return Id::enwrap(id); }
+  static inline Id enwrapCopy(__isl_take isl_id *id) { return Id::enwrapCopy(id); }
 
   Id setFreeUser(Id id, void (*freefunc)(void *));
   Id setFreeUser(Id &&id, void (*freefunc)(void *));

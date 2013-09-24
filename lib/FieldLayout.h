@@ -1,8 +1,9 @@
 #ifndef MOLLY_FIELDLAYOUT_H
 #define MOLLY_FIELDLAYOUT_H
 
-#include "islpp/PwMultiAff.h"
 #include "islpp/Islfwd.h"
+#include "molly/Mollyfwd.h"
+#include "LLVMfwd.h"
 
 #pragma region Forward declarations
 namespace isl {
@@ -17,26 +18,29 @@ namespace molly {
 
 namespace molly {
 
+  // FieldLocalLayout ?
   class FieldLayout {
-    FieldType *fieldTy;
+    FieldType *fty;
 
-    LayoutMapping *mapping;
+    // Later we'll chain arbitrary mappings and combine them when possible
+    AffineMapping *affine;
+    RectangularMapping *linearizer;
 
-    isl::PwMultiAff affineMapping; // { logical indexset from type -> (rank|physical location) }
-    //TODO: There could be mappings that cannot be represented by affine expression; Need to chain them
+  protected:
+    FieldLayout(FieldType *fty) : fty(fty), affine(nullptr), linearizer(nullptr) {
+    }
+
+  public:
+    static FieldLayout *create(FieldType *fty){ 
+    return new FieldLayout(fty);
+    }
 
   public:
     ~FieldLayout();
 
-#pragma region Distribution
-    // Single index can be map to multiple ranks to allow redundancy
-    isl::Map getRankMapping(); /* { [indexset] -> [rank] } */ 
-
-    isl::Map getLocalIndices(); /* { [indexset] -> set[] }*/ 
-#pragma endregion
+    llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
 
   }; // class FieldLayout
 
 } // namespace molly
-
 #endif /* MOLLY_FIELDLAYOUT_H */

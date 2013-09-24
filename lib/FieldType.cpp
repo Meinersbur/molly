@@ -28,7 +28,7 @@ using std::move;
 
 
 
-FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) {
+FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) : layout(nullptr) {
   //assert(mollyContext);
   assert(islctx);
   assert(module);

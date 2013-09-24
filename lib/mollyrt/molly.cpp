@@ -387,8 +387,12 @@ extern "C" int __molly_main(int argc, char *argv[]) {
 
   //TODO: We could change the communicator dynamically using argc,argv or getenv()
   Communicator::init(argc, argv);
+  __builtin_molly_global_init();
+
   //FIXME: Exception-handling, but currently we do not support exceptions
   auto retval = __molly_orig_main(argc, argv);
+
+  __builtin_molly_global_free();
   Communicator::finalize();
   return retval;
 }

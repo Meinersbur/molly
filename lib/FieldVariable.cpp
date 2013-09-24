@@ -7,6 +7,7 @@
 #include "islpp/Id.h"
 #include "FieldType.h"
 #include <llvm/ADT/SmallString.h>
+#include "islpp/Space.h"
 
 using namespace llvm;
 using namespace molly;
@@ -41,11 +42,19 @@ isl::Id FieldVariable::getTupleId() {
     }
     os << variable;
 #endif
-    //TODO: Check for invalid caracters
+    //TODO: Check for invalid characters
     return getIslContext()->createId(Twine("fvar_") + variable->getName(), variable);
 }
 
 
  isl::Space FieldVariable::getAccessSpace() {
    return getFieldType()->getIndexsetSpace().setSetTupleId(getTupleId());
+ }
+
+
+ FieldLayout * molly::FieldVariable::getLayout()
+ {
+   // Currently there is a layout per type
+   // Future version may have a layout per variable or even dynamic at runtime with automatic conversion between them
+   return fieldTy->getLayout();
  }

@@ -22,7 +22,7 @@ namespace molly {
     //llvm::SmallVector<unsigned,4> offsets;
 
   public:
-    RectangularMapping(isl::MultiPwAff &&lengths, isl::MultiPwAff &&offsets) : lengths(std::move(lengths)), offsets(std::move(offsets)) {}
+    RectangularMapping(isl::MultiPwAff lengths, isl::MultiPwAff offsets) : lengths(std::move(lengths)), offsets(std::move(offsets)) {}
 
     static RectangularMapping *createRectangualarHullMapping(const isl::Map &map);
 

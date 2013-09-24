@@ -17,6 +17,9 @@
 #include "polly/LinkAllPasses.h"
 #include "ClusterConfig.h"
 #include "clang/CodeGen/MollyRuntimeMetadata.h"
+#include "Codegen.h"
+#include "llvm/IR/Module.h"
+#include "FieldLayout.h"
 
 using namespace molly;
 using namespace polly;
@@ -184,18 +187,195 @@ namespace {
       modifiedIR();
     }
 
+
     void emitIslocalCall(CallInst *callInstr) {
       auto &context = callInstr->getContext();
       auto selfArg = callInstr->getArgOperand(0);
       auto fty = pm->getFieldType(selfArg);
 
-      // This is just a redirection to the implentation
+      // This is just a redirection to the implementation
       callInstr->setCalledFunction(fty->getIslocalFunc());
 
       modifiedIR();
     }
 
+
+    private:
+      isl::MultiAff currentNodeCoord; /* { -> node[cluster] } */
+      std::map<isl_id *, llvm::Value *> idtovalue;
+
+      isl::MultiAff getCurrentNodeCoordinate() {
+        if (currentNodeCoord.isValid())
+          return currentNodeCoord;
+
+        auto islctx = pm->getIslContext();
+        auto clusterSpace = pm->getClusterConfig()->getClusterSpace();
+         auto nDims = clusterSpace.getSetDimCount();
+        auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(nDims, clusterSpace);
+        
+
+        for (auto i = nDims-nDims; i<nDims; i+=1) {
+          auto value = getClusterCoordinate(i);
+          auto id = islctx->createId("clusterdim" + Twine(i), value);
+          currentNodeCoordSpace.setDimId_inplace(isl_dim_param, i, id);
+          idtovalue[id.keep()] = value;
+        }
+
+        currentNodeCoord = currentNodeCoordSpace.createZeroMultiAff();
+        for (auto i = nDims-nDims; i<nDims; i+=1) {
+          currentNodeCoord.setAff_inplace(i, currentNodeCoord.getDomainSpace().createAffOnVar(i));
+        }
+        return currentNodeCoord;
+      }
+
+      Function *getRuntimeFunc(StringRef name, Type *retTy, ArrayRef<Type*> tys) {
+         auto module = func->getParent();
+         auto &llvmContext = func->getContext();
+
+        auto initFunc = module->getFunction(name);
+        if (!initFunc) {
+          auto intTy = Type::getInt64Ty(llvmContext);
+          auto initFuncTy = FunctionType::get(retTy, tys, false);
+          initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
+        }
+
+        // Check if the function matches
+        assert(initFunc->getReturnType() == retTy);
+        assert(initFunc->getFunctionType()->getNumParams() == tys.size());
+        auto nParams = tys.size();
+        for (auto i = nParams-nParams; i<nParams; i+=1) {
+          assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
+        }
+        return initFunc;
+      }
+
+         void replaceGlobalInit(CallInst *call, Function *called) {
+           auto combufs = pm->getCommunicationBuffers();
+
+           for (auto combuf : combufs) {
+
+             assert(!"TODO");
+
+           }
+
+           call->eraseFromParent();
+         }
+
+         void replaceGlobalFree(CallInst *call, Function *called) {
+
+           call->eraseFromParent();
+         }
+
+    void replaceFieldInit(CallInst *call, Function *called) {
+      auto &llvmContext = func->getContext();
+      auto module = func->getParent();
+      auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+      
+      MollyCodeGenerator codegen(call->getParent(), call, idtovalue);
+      auto &builder = codegen.getIRBuilder();
+
+      auto fval = call->getArgOperand(0);
+     auto fvar = pm->getFieldVariable(fval);
+     assert(fvar && "Field variable not registered?!?");
+     auto fty = fvar->getFieldType();
+
+      auto initFunc = module->getFunction("__molly_local_init");
+      if (!initFunc) {
+        auto voidTy = Type::getVoidTy(llvmContext);
+        
+        auto intTy = Type::getInt64Ty(llvmContext);
+        Type *tys[] = { voidPtrTy, intTy };
+        auto initFuncTy = FunctionType::get(voidTy, tys, false);
+        initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, "__molly_local_init", module);
+      }
+
+      auto layout = fvar->getLayout(); //TODO: implement FieldLayout
+     auto sizeVal = layout->codegenLocalSize(codegen, getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
+
+      auto fvalptr = builder.CreatePointerCast(fval, voidPtrTy);
+      
+      Value *args[] = { fvalptr, sizeVal };
+      builder.CreateCall(initFunc, args);
+
+      call->eraseFromParent();
+    }
+
+
+    void replaceFieldFree(CallInst *call, Function *called) {
+      auto &llvmContext = func->getContext();
+      auto module = func->getParent();
+      auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+
+      auto fval = call->getArgOperand(0);
+      auto fvar = pm->getFieldVariable(fval);
+
+      DefaultIRBuilder builder(call);
+
+      auto freeFunc = module->getFunction("__molly_local_free");
+      if (!freeFunc) {
+        auto voidTy = Type::getVoidTy(llvmContext);
+
+        auto intTy = Type::getInt64Ty(llvmContext);
+        Type *tys[] = { voidPtrTy };
+        auto freeFuncTy = FunctionType::get(voidTy, tys, false);
+        freeFunc = Function::Create(freeFuncTy, GlobalValue::ExternalLinkage, "__molly_local_free", module);
+      }
+
+      auto fvalptr = builder.CreatePointerCast(fval, voidPtrTy);
+      Value *args[] = { fvalptr };
+      builder.CreateCall(freeFunc, args);
+
+      call->eraseFromParent();
+    }
+
   public:
+    void replaceIntrinsics() LLVM_OVERRIDE {
+
+      // Make copy of all potentially to-be-replaced instructions
+      SmallVector<CallInst*, 16> instrs;
+      for (auto it = func->begin(), end = func->end(); it!=end; ++it) {
+        auto bb = &*it;
+        for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
+          auto instr = &*itInstr;
+         if (!isa<CallInst>(instr))
+           continue;
+         auto callInstr = cast<CallInst>(instr);
+        auto func = callInstr->getCalledFunction();
+        if (!func)
+          continue;
+        if(!func->isIntrinsic())
+          continue;
+        instrs.push_back(callInstr);
+        }
+      }
+
+
+      for (auto instr : instrs) {
+        auto called = instr->getCalledFunction();
+        if (!called)
+          continue;
+
+        auto intID = called->getIntrinsicID();
+        switch(intID) {
+        case Intrinsic::molly_global_init:
+          replaceFieldInit(instr, called);
+          break;
+        case Intrinsic::molly_global_free:
+          replaceFieldFree(instr, called);
+          break;
+        case Intrinsic::molly_field_init:
+          replaceFieldInit(instr, called);
+          break;
+        case Intrinsic::molly_field_free:
+          replaceFieldFree(instr, called);
+          break;
+     
+        default:
+          continue;
+        }
+      }
+    }
+
     void replaceRemainaingIntrinsics() {
       if (func->getName() == "test") {
         int a = 0;

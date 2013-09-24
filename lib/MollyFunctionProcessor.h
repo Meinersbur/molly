@@ -21,7 +21,9 @@ namespace molly {
 
   public:
    virtual void isolateFieldAccesses() = 0;
-   virtual void replaceRemainaingIntrinsics() = 0;
+
+   virtual void replaceIntrinsics() = 0;
+   virtual void replaceRemainaingIntrinsics() = 0; // TODO: Remove functionality into replaceIntrinsics()
 
   public:
     static MollyFunctionProcessor *create(MollyPassManager *pm, llvm::Function *func);

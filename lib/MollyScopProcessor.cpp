@@ -1660,6 +1660,7 @@ namespace {
     isl::MultiAff currentNodeCoord;
 
     void prepareCurrentNodeCoordinate() {
+      //TODO: Use the one in MollyFunctionProcessor
       if (currentNodeCoord.isValid())
         return;
 

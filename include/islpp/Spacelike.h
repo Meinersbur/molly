@@ -406,14 +406,14 @@ namespace isl {
 
 
     Dim findDim(const Id &id) const {
-      auto space = getDerived()->getSpace().keep();
-      auto resultParam = isl_space_find_dim_by_id(space, isl_dim_param, id.keep());
+      auto space = getDerived()->getSpace();
+      auto resultParam = isl_space_find_dim_by_id(space.keep(), isl_dim_param, id.keep());
       if (resultParam != -1)
         return Dim::enwrap(isl_dim_param, resultParam, space);
-      auto resultDomain = isl_space_find_dim_by_id(space, isl_dim_out, id.keep());
+      auto resultDomain = isl_space_find_dim_by_id(space.keep(), isl_dim_out, id.keep());
       if (resultDomain != -1)
         return Dim::enwrap(isl_dim_out, resultDomain, space);
-      auto resultRange = isl_space_find_dim_by_id(space, isl_dim_in, id.keep());
+      auto resultRange = isl_space_find_dim_by_id(space.keep(), isl_dim_in, id.keep());
       if (resultRange != -1)
         return Dim::enwrap(isl_dim_in, resultRange, space);
       return Dim();

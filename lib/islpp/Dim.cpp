@@ -25,13 +25,13 @@ using namespace isl;
   
 
 #else
-Dim Dim::enwrap( isl_dim_type type, unsigned pos, const Space &space) {
-  return Dim( type, pos, space.takeCopy());
+Dim Dim::enwrap( isl_dim_type type, unsigned pos,  Space space) {
+  return Dim( type, pos, space.take());
 }
 
 
 Dim Dim::enwrap( isl_dim_type type, unsigned pos, isl_space *space) {
-  return Dim(type, pos, space);
+  return Dim(type, pos, isl_space_copy(space));
 }
 
 #endif
