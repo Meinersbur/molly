@@ -548,6 +548,10 @@ namespace {
       return getParentProcessor();
     }
 
+   const llvm::Region *getRegion() LLVM_OVERRIDE {
+      return  stmt->getRegion();
+    }
+
 
     llvm::Instruction *getAccessor() LLVM_OVERRIDE {
       assert(isFieldAccess());
@@ -585,6 +589,11 @@ namespace {
         result.setPwAff_inplace(i, aff);
       }
       return result;
+    }
+
+
+    void addMemoryAccess(polly::MemoryAccess::AccessType type, const llvm::Value *base, isl::Map accessRelation, llvm::Instruction *accInstr) LLVM_OVERRIDE {
+      stmt->addAccess(type, base, accessRelation.take(), accInstr);
     }
 
   }; // class MollyScopStmtProcessorImpl

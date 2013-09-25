@@ -20,6 +20,9 @@
 #include "MollyScopProcessor.h"
 #include "AffineMapping.h"
 #include "islpp/AstExpr.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "polly/CodeGen/BlockGenerators.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 using namespace molly;
 using namespace polly;
@@ -38,18 +41,32 @@ isl::AstBuild &MollyCodeGenerator::initAstBuild() {
 }
 
 
+llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty) {
+  auto scopCtx  = stmtCtx->getScopProcessor();
+  auto func = scopCtx->getParentFunction();
+  auto bb = &func->getEntryBlock();
+
+  auto region = scopCtx->getRegion();
+  //auto bb = region->getEntry();
+  assert(!region->contains(bb));
+
+  auto result = new AllocaInst(ty, Twine(), bb->getFirstInsertionPt());
+  return result;
+}
+
+
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) 
   : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), idtovalue(nullptr) {
-  auto bb = stmtCtx->getBasicBlock();
-  if (insertBefore) {
-    assert(insertBefore->getParent() == bb);
-    irBuilder.SetInsertPoint(insertBefore);
-  } else {
-    // Insert at end of block instead
-    irBuilder.SetInsertPoint(bb);
-  }
+    auto bb = stmtCtx->getBasicBlock();
+    if (insertBefore) {
+      assert(insertBefore->getParent() == bb);
+      irBuilder.SetInsertPoint(insertBefore);
+    } else {
+      // Insert at end of block instead
+      irBuilder.SetInsertPoint(bb);
+    }
 
-  //stmtCtx->identifyDomainDims();
+    //stmtCtx->identifyDomainDims();
 }
 
 
@@ -258,28 +275,109 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
 }
 
 
-
-
-
-#if 0
-llvm::Value *MollyCodeGenerator::codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index) {
-  // Get the buffer to the destination
-  auto rank = codegenLinearize(dst, combuf->getDstMapping());
-  auto buf =  callCombufSendbufPtr(combuf, rank); 
-
-  // Get the position within that buffer
-  auto idx = codegenLinearize(index, combuf->getMapping());
-  return irBuilder.CreateGEP(buf, idx);
+void molly::MollyCodeGenerator::addStoreAccess( llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
+{
+  stmtCtx->addMemoryAccess(polly::MemoryAccess::MUST_WRITE,base, accessRelation, instr);
 }
 
 
-llvm::Value *MollyCodeGenerator::codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index) {
-  // Get the buffer to the destination
-  auto rank = codegenLinearize(src, combuf->getSrcMapping());
-  auto buf = callCombufRecvbufPtr(combuf, rank); 
-
-  // Get the position within that buffer
-  auto idx = codegenLinearize(index, combuf->getMapping());
-  return irBuilder.CreateGEP(buf, idx);
+void molly::MollyCodeGenerator::addLoadAccess( llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
+{
+  stmtCtx->addMemoryAccess(polly::MemoryAccess::READ,base, accessRelation, instr);
 }
-#endif
+
+
+bool MollyCodeGenerator::isDependent(llvm::Value *val) {
+  // Not in SCoP-scope, therefore never dependent
+  if (!stmtCtx)
+    return false;
+
+  // Something that does not relate to scopes (Constants, GlobalVariables)
+  auto instr = dyn_cast<Instruction>(val);
+  if (!instr)
+    return false;
+
+  // Something within this statement is also non-dependent of the SCoP around
+  //auto bb = stmtCtx->getBasicBlock();
+  //if (instr->getParent() == bb)
+  //  return false;
+
+  // Something outside the SCoP, but inside the function is also not dependent
+  auto scopCtx = stmtCtx->getScopProcessor();
+  auto scopRegion = stmtCtx->getRegion();
+  if (!scopRegion->contains(instr))
+    return false;
+
+  // As special exception, something that dominates all ScopStmts also is not concerned by shuffling the ScopStmts' order
+  // This is meant for AllocaInsts we put there
+  if (instr->getParent() == scopRegion->getEntry())
+    return false;
+
+  return true;
+}
+
+
+llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
+  if (!isDependent(val))
+    return val; // Use val directly; no materialization needed
+  auto instr = cast<Instruction>(val);
+
+  auto scopCtx = stmtCtx->getScopProcessor();
+  auto scopRegion = stmtCtx->getRegion();
+  auto pass = stmtCtx->asPass();
+  auto SE = &pass->getAnalysis<ScalarEvolution>();
+  auto LI = &pass->getAnalysis<LoopInfo>();
+
+  // If possible, let ScalarEvolution handle this
+  if (polly::canSynthesize(instr, LI, SE, scopRegion)) { // FIXME: Still works when SCEVCodegen is enabled?
+    auto scev = SE->getSCEV(val);
+    return scopCtx->codegenScev(scev, irBuilder.GetInsertPoint());
+  }
+
+  // Do it manually 
+  // If it is a loaded value from stack, reload it; Typically, this has been done by IndependentBlocks
+  Value *target=nullptr;
+  if (auto load = dyn_cast<LoadInst>(val)) {
+    auto ptr = load->getPointerOperand();
+    if (!isDependent(ptr))
+      target = ptr;
+  }
+
+  // If the value is stored somewhere, load it from the same location
+  if (!target) {
+    for (auto itUse = val->use_begin(), endUse= val->use_end(); itUse!=endUse;++itUse ) {
+      auto useInstr = *itUse;
+      if (!isa<StoreInst>(useInstr))
+        continue;
+      if (itUse.getOperandNo() == StoreInst::getPointerOperandIndex())
+        continue; // Must be the value operand, not the target ptr
+
+      auto store = cast<StoreInst>(useInstr);
+      auto ptr = store->getPointerOperand();
+      if (isDependent(ptr))
+        continue; // Write to some array at an index that might depend on the IVs
+
+      target = ptr;
+      break;
+    }
+  }
+
+  // Otherwise, insert a store ourselves
+  auto accessFirstElement = stmtCtx->getDomainSpace().mapsTo(0/*1*/).createZeroMultiAff();
+  if (!target) {
+    target = allocStackSpace(val->getType());
+    auto store = new StoreInst(val, target, instr->getNextNode());
+    addStoreAccess(target, accessFirstElement, store);
+  }
+
+  // Load the value from memory in the right BB
+  auto reload = irBuilder.CreateLoad(target);
+  addLoadAccess(target, accessFirstElement, reload);
+  return reload;
+}
+
+
+isl::Ctx *molly::MollyCodeGenerator::getIslContext()
+{
+  return stmtCtx->getIslContext();
+}

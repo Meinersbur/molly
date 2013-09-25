@@ -127,22 +127,21 @@ namespace isl {
 
 #pragma region Conversion
     // from BasicMap
-    Map(BasicMap &&bmap) : Obj(isl_map_from_basic_map(bmap.take())) {}
-    Map(const BasicMap &bmap) : Obj(isl_map_from_basic_map(bmap.takeCopy())) {}
-    const Map &operator=(const BasicMap &bmap) LLVM_LVALUE_FUNCTION { give(isl_map_from_basic_map(bmap.takeCopy())); return *this; }
-    const Map &operator=(BasicMap &&bmap) LLVM_LVALUE_FUNCTION { give(isl_map_from_basic_map(bmap.take())); return *this; }
+    Map(BasicMap bmap) : Obj(isl_map_from_basic_map(bmap.take())) {}
+    const Map &operator=(BasicMap bmap) LLVM_LVALUE_FUNCTION { give(isl_map_from_basic_map(bmap.take())); return *this; }
 
     // from MultiAff
-    Map(const MultiAff &maff) : Obj(isl_map_from_multi_aff(maff.takeCopy())) {}
-    Map(MultiAff &&maff) : Obj(isl_map_from_multi_aff(maff.take())) {}
-    const Map &operator=(const MultiAff &maff) LLVM_LVALUE_FUNCTION { give(isl_map_from_multi_aff(maff.takeCopy())); return *this; }
-    const Map &operator=(MultiAff &&maff) LLVM_LVALUE_FUNCTION { give(isl_map_from_multi_aff(maff.take())); return *this; }
+    Map(MultiAff maff) : Obj(isl_map_from_multi_aff(maff.take())) {}
+    const Map &operator=(MultiAff maff) LLVM_LVALUE_FUNCTION { give(isl_map_from_multi_aff(maff.take())); return *this; }
 
     // from PwMultiAff
-    Map(PwMultiAff &&pmaff) : Obj(isl_map_from_pw_multi_aff(pmaff.take())) {}
-    Map(const PwMultiAff &pmaff) : Obj(isl_map_from_pw_multi_aff(pmaff.takeCopy())) {}
-    const Map &operator=(PwMultiAff &&pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.take())); return *this; }
-    const Map &operator=(const PwMultiAff &pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.takeCopy())); return *this; }
+    Map(PwMultiAff pmaff) : Obj(isl_map_from_pw_multi_aff(pmaff.take())) {}
+    const Map &operator=(PwMultiAff pmaff) LLVM_LVALUE_FUNCTION { give(isl_map_from_pw_multi_aff(pmaff.take())); return *this; }
+
+    // from MultiPwAff
+    Map(MultiPwAff mpaff) : Obj(mpaff.isValid() ? mpaff.toMap() : Map()) {}
+    const Map &operator=(MultiPwAff mpaff) LLVM_LVALUE_FUNCTION { obj_reset(mpaff.isValid() ? mpaff.toMap() : Map()); return *this; }
+
 
     // to PwMultiAff
     PwMultiAff toPwMultiAff() const { return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(takeCopy())); } 

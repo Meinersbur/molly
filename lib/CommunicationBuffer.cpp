@@ -114,6 +114,26 @@ llvm::Value *CommunicationBuffer::codegenPtrToSendBuf(MollyCodeGenerator &codege
 }
 
 
+void CommunicationBuffer::codegenStoreInSendbuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index, llvm::Value *val) {
+  auto &irBuilder = codegen.getIRBuilder();
+
+  auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
+  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  auto sendbufPtr = codegen.callCombufSendbufPtr(this, sendbufIdx);
+
+  auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
+  auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
+  auto ptr = irBuilder.CreateGEP(sendbufPtr, indexIdx, "sendbufelt");
+
+  auto myval = codegen.materialize(val);
+  auto store = irBuilder.CreateStore(myval, ptr);
+
+  // We symbolically write to the buffer object at the given coordinate
+  codegen.addStoreAccess(this->getVariableSend(), rangeProduct(dstCoord, index), store);
+}
+
+
+
 llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index) {
   auto &irBuilder = codegen.getIRBuilder();
 

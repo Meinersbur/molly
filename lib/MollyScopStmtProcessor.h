@@ -7,6 +7,7 @@
 #include "islpp/Islfwd.h"
 #include <map>
 #include <vector>
+#include "polly/ScopInfo.h"
 
 namespace {
   class MollyScopStmtProcessorImpl;
@@ -36,6 +37,7 @@ namespace molly {
     virtual llvm::Pass *asPass() = 0;
     virtual molly::MollyPassManager *getPassManager() = 0;
     virtual molly::MollyScopProcessor *getScopProcessor() const = 0;
+    virtual const llvm::Region *getRegion() = 0;
 
     // { stmt[domain] }
     virtual isl::Set getDomain() const = 0;
@@ -84,6 +86,7 @@ namespace molly {
     virtual MollyCodeGenerator makeCodegen() = 0;
     virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
     virtual StmtEditor getEditor() = 0;
+    virtual void addMemoryAccess(polly::MemoryAccess::AccessType type, const llvm::Value *base, isl::Map accessRelation, llvm::Instruction *accInstr) = 0;
 
     // Process
     virtual void applyWhere() = 0;

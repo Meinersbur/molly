@@ -30,6 +30,7 @@ namespace molly {
     const std::map<isl_id *, llvm::Value *> *idtovalue;
 
   protected:
+    isl::Ctx *getIslContext();
 
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
@@ -39,6 +40,8 @@ namespace molly {
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
 
     isl::AstBuild &initAstBuild();
+
+    llvm::Value *allocStackSpace(llvm::Type *ty);
 
   public:
     llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
@@ -68,6 +71,13 @@ namespace molly {
     llvm::Value *codegenScev(const llvm::SCEV *scev);
     llvm::Value *codegenId(const isl::Id &id);
 
+    bool isDependent(llvm::Value *val);
+    llvm::Value *materialize(llvm::Value *val);
+
+
+    void addStoreAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
+    void addLoadAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
+
     //llvm::Value *codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout);
     llvm::Type *getIntTy();
 
@@ -77,6 +87,7 @@ namespace molly {
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::MultiPwAff index);
 
+    //void codegenStore(llvm::Value *val, llvm::Value *ptr);
 
     //  llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
     //  llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);

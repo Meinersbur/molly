@@ -26,6 +26,9 @@ namespace molly {
     virtual std::vector<const llvm::SCEV *> getClusterCoordinates() = 0;
     virtual isl::MultiAff getCurrentNodeCoordinate() = 0;
 
+    virtual llvm::Region *getRegion() = 0;
+    virtual llvm::Function *getParentFunction() = 0;
+
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;
 
@@ -43,7 +46,8 @@ namespace molly {
 
     // Lowering: isl::Id -> llvm::SCEV* -> llvm::Value*
     virtual llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) = 0;
-    
+    //virtual llvm::Value *allocStackSpace(llvm::Type *ty);
+
     // Raising: llvm::Value* -> llvm::SCEV* -> isl::Id
     virtual const llvm::SCEV *scevForValue(llvm::Value *value) = 0;
     virtual isl::Id idForSCEV(const llvm::SCEV *scev) = 0;

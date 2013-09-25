@@ -368,6 +368,7 @@ namespace isl {
   static inline Set flatProduct(Set set1, Set set2) { return Set::enwrap(isl_set_flat_product(set1.take(), set2.take())); }
 
   Map alltoall(Set domainSet, Set rangeSet);
+  Map alltoall(Space domainUniverse, Set rangeSet);
 
   Set gist(Set &&set, Set &&context);
   Set gistParams(Set &&set, Set &&context);

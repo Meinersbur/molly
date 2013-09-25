@@ -268,8 +268,12 @@ namespace {
       return pm->findOrRunAnalysis<Analysis>(func, &scop->getRegion());
     }
 
-    Region *getRegion() {
+    Region *getRegion() LLVM_OVERRIDE {
       return &scop->getRegion();
+    }
+
+    llvm::Function *getParentFunction() LLVM_OVERRIDE {
+      return ::getParentFunction(scop);
     }
 
   private:
@@ -864,7 +868,7 @@ namespace {
 
 
     MollyScopStmtProcessor *getScopStmtContext(const isl::Id &id) {
-      auto stmt = tupleToStmt[id.keep()];
+      auto stmt = tupleToStmt[id.keep()]; //TODO: id.getUser() contains this
       assert(stmt);
       return getScopStmtContext(stmt);
     }
@@ -1181,6 +1185,8 @@ namespace {
 
       auto writeStore = writeStmt->getStoreAccessor();
       auto writeAccessed = writeStmt->getAccessed().toPwMultiAff(); // { writeStmt[domain] -> field[indexset] }
+      auto writeVal = writeStore->getValueOperand();
+      auto writeflowVal = writeFlowCodegen.materialize(writeVal);
 
       auto writeFlowCurrentIteration = writeFlowEditor.getCurrentIteration();
       auto writeFlowCurrentDst = writeFlowCurrentIteration.sublist(readNodeShape.getSpace());
@@ -1188,9 +1194,12 @@ namespace {
       auto writeFlowCurrentDomain = writeFlowCurrentIteration.sublist(writeDomain.getSpace());
       auto writeFlowCurrentWriteAccessed = writeFlowCurrentDomain.applyRange(writeAccessed);
       auto writeFlowCurrentNode = writeFlowStmt->getClusterMultiAff().setOutTupleId(writeNodeId);
-      auto writeFlowBufPtr = combuf->codegenPtrToSendBuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed);
-      writeFlowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeFlowBufPtr);
-      //TODO: MemoryAccess
+      //auto writeFlowBufPtr = combuf->codegenPtrToSendBuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed);
+      combuf->codegenStoreInSendbuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed, writeVal);
+      //writeFlowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeFlowBufPtr);
+      //writeFlowStmt->addMemoryAccess(MemoryAccess::MUST_WRITE, );
+
+      
 
 
       // send
@@ -1596,6 +1605,12 @@ namespace {
     llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) LLVM_OVERRIDE {
       return scevCodegen.expandCodeFor(scev, nullptr, insertBefore);
     }
+
+
+     //llvm::Value *allocStackSpace(llvm::Type *ty) LLVM_OVERRIDE {
+
+   // }
+
 
     /// ScalarEvolution remembers its SCEVs
     const llvm::SCEV *scevForValue(llvm::Value *value) LLVM_OVERRIDE {
