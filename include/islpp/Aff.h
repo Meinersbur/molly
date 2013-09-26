@@ -250,6 +250,8 @@ namespace isl {
 
   static inline Aff operator+(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return add(aff.move(), ls.createConstantAff(v)); }
   static inline Aff operator-(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return sub(aff.move(), ls.createConstantAff(v)); }
+  static inline Aff operator*(Aff lhs, Aff rhs) {  return Aff::enwrap(isl_aff_mul(lhs.take(), rhs.take())); }
+
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

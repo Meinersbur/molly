@@ -176,6 +176,7 @@ namespace molly {
     //llvm::CallInst *callLocalPtrIntrinsic(llvm::Value *fieldvar, llvm::ArrayRef<llvm::Value> indices, llvm::Instruction *insertBefore = nullptr);
 
     FieldLayout *getLayout() { return layout; }
+    void setLayout(FieldLayout *layout) { this->layout = layout; }
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

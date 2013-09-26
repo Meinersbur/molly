@@ -27,17 +27,24 @@ namespace molly {
     RectangularMapping *linearizer;
 
   protected:
-    FieldLayout(FieldType *fty) : fty(fty), affine(nullptr), linearizer(nullptr) {
-    }
+    explicit FieldLayout(FieldType *fty) : fty(fty), affine(nullptr), linearizer(nullptr) {    }
+
+    FieldLayout(FieldType *fty,AffineMapping *affine,  RectangularMapping *linearizer) : fty(fty), affine(affine), linearizer(linearizer) {}
 
   public:
     static FieldLayout *create(FieldType *fty){ 
     return new FieldLayout(fty);
     }
 
+    static FieldLayout *create(FieldType *fty, AffineMapping *affine,  RectangularMapping *linearizer){ 
+      return new FieldLayout(fty, affine, linearizer);
+    }
+
+
   public:
     ~FieldLayout();
 
+    llvm::Value *codegenLocalIndex(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator, isl::MultiPwAff coords);
     llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
 
   }; // class FieldLayout

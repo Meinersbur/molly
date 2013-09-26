@@ -24,6 +24,8 @@ namespace molly {
   public:
     RectangularMapping(isl::MultiPwAff lengths, isl::MultiPwAff offsets) : lengths(std::move(lengths)), offsets(std::move(offsets)) {}
 
+    static RectangularMapping *create(isl::MultiPwAff lengths, isl::MultiPwAff offsets);
+   // static RectangularMapping *create(llvm::ArrayRef<int> lengths, llvm::ArrayRef<int> offsets, isl::Ctx *islctx);
     static RectangularMapping *createRectangualarHullMapping(const isl::Map &map);
 
     //RectangularMapping(llvm::ArrayRef<unsigned> lengths) : lengths(lengths.begin(), lengths.end()), offsets( lengths.size(), 0) { }

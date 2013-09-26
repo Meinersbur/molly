@@ -146,12 +146,24 @@ namespace isl {
       return *this;
     }
 
-
-    void print(llvm::raw_ostream &out, int base = 10) const {
-      char *s = mpz_get_str(0, base, keep());
-      out << s;
-      isl_int_free_str(s);
+    /*implicit*/ Int(unsigned int v) {
+      isl_int_init(this->val);
+      isl_int_set_ui(this->val, v);
+#ifndef NDEBUG
+      llvm::raw_string_ostream os(_printed);
+      print(os);
+#endif
     }
+    const Int &operator=(unsigned int v) {
+      isl_int_set_ui(this->val, v);
+#ifndef NDEBUG
+      llvm::raw_string_ostream os(_printed);
+      print(os);
+#endif
+      return *this;
+    }
+
+    void print(llvm::raw_ostream &out, int base = 10) const;
     void print(std::ostream &out, int base = 10) const {
       llvm::raw_os_ostream raw(out);
       print(raw);

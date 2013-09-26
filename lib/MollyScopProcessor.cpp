@@ -1194,18 +1194,12 @@ namespace {
       auto writeFlowCurrentDomain = writeFlowCurrentIteration.sublist(writeDomain.getSpace());
       auto writeFlowCurrentWriteAccessed = writeFlowCurrentDomain.applyRange(writeAccessed);
       auto writeFlowCurrentNode = writeFlowStmt->getClusterMultiAff().setOutTupleId(writeNodeId);
-      //auto writeFlowBufPtr = combuf->codegenPtrToSendBuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed);
       combuf->codegenStoreInSendbuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed, writeVal);
-      //writeFlowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeFlowBufPtr);
-      //writeFlowStmt->addMemoryAccess(MemoryAccess::MUST_WRITE, );
-
-      
 
 
       // send
       auto sendWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> readNodeShape.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { (recv[domain], dstNode[cluster]) -> srcNode[cluster] }
       auto sendScatter = relativeScatter(chunks.reorganizeSubspaces(sendWhere.getDomainSpace(), writeDomain.getSpace()), writeScatter, +1); // { (recv[domain], dstNode[cluster]) -> scatter[scattering] }
-
       auto sendEditor = editor.createStmt(sendWhere.getDomain() /* { recv[domain], dstNode[cluster] } */, sendScatter.copy(), sendWhere.copy(), "send");
       auto sendStmt = getScopStmtContext(sendEditor.getStmt());
       auto sendCodegen = sendStmt->makeCodegen();
@@ -1224,10 +1218,10 @@ namespace {
       auto recvStmt = getScopStmtContext(recvEditor.getStmt());
       auto recvCodegen = recvStmt->makeCodegen();
 
-      auto recvCurrentIteration = sendEditor.getCurrentIteration(); // { [] -> (recv[domain], srcNode[cluster]) }
+      auto recvCurrentIteration = recvEditor.getCurrentIteration(); // { [] -> (recv[domain], srcNode[cluster]) }
       auto recvCurrentChunk = recvCurrentIteration.sublist(readChunkAff.getRangeSpace()); // { [] -> recv[domain] }
-      auto recvCurrentSrc = recvCurrentIteration.sublist(readNodeShape.getSpace()); // { [] -> srcNode[cluster] }
-      auto recvCurrentNode = sendStmt->getClusterMultiAff().setOutTupleId(readNodeId); // { [] -> dstNode[cluster] }
+      auto recvCurrentSrc = recvCurrentIteration.sublist(writeNodeShape.getSpace()); // { [] -> srcNode[cluster] }
+      auto recvCurrentNode = recvStmt->getClusterMultiAff().setOutTupleId(readNodeId); // { [] -> dstNode[cluster] }
       combuf->codegenRecv(recvCodegen, recvCurrentChunk, recvCurrentSrc, recvCurrentNode);
 
 
@@ -1248,11 +1242,8 @@ namespace {
       auto readFlowCurrentNode = readFlowStmt->getClusterMultiAff().setOutTupleId(readNodeId);
       auto whatsthesourceInfo = rangeProduct(rangeProduct(readFlowCurrentDomain, readFlowCurrentNode), readFlowCurrentReadAccessed.toMultiPwAff()).toPwMultiAff();
       auto readFlowCurrentSrc = sourceOfRead.sublist(writeNodeShape.getSpace()).pullback(whatsthesourceInfo);
-      //auto readFlowCurrentSrcNode = readFlowCurrentSrc.sublist(writeNodeShape.getSpace());
-      auto readFlowBufPtr = combuf->codegenPtrToRecvBuf(readFlowCodegen, readFlowCurrentChunk, readFlowCurrentSrc, readFlowCurrentNode, readFlowCurrentReadAccessed);
-      auto readFlowVal = readFlowCodegen.getIRBuilder().CreateLoad(readFlowBufPtr, "loadedval");
-
-      readLoad->replaceAllUsesWith(readFlowVal);
+      auto readflowVal = combuf->codegenLoadFromRecvBuf(readFlowCodegen, readFlowCurrentChunk, readFlowCurrentSrc, readFlowCurrentNode, readFlowCurrentReadAccessed);
+      readFlowCodegen.updateScalar(readLoad, readflowVal);
     }
 
 
@@ -1315,13 +1306,14 @@ namespace {
         auto writelocalCodegen = writelocalStmtCtx->makeCodegen();
 
         auto writeStore = writeStmtCtx->getStoreAccessor();
-        //auto writeAccessValues = writelocalStmtCtx->getAccessedCoordinate();
+        auto writeVal = writeStore->getValueOperand();
         auto writeAccessRel = writeStmtCtx->getAccessRelation();
+        auto writeAccessed = writeStmtCtx->getAccessed();
 
         auto writelocalCurrent = writelocalEditor.getCurrentIteration().setOutTupleId(writeDomainTuple);
-        auto writelocalCurrentNode = writelocalStmtCtx->getClusterMultiAff(); // { field[indexset] -> node[cluster] }
+        auto writelocalCurrentNode = writelocalStmtCtx->getClusterMultiAff(); // { writelocalStmt[domain] -> node[cluster] }
+        auto writelocalCurrentAccessed = writeAccessed.setInTupleId(writelocalCurrent.getInTupleId()); // { writelocalStmt[domain] -> field[indexset] }
 
-        //auto writelocalCurrentIndex = writelocalCurrent.setOutTupleId(indexsetTupleId);
         SmallVector<Value*,4> writelocalCurrentIndex;
         auto nDims = fty->getNumDimensions();
         writelocalCurrentIndex.reserve(nDims);
@@ -1330,7 +1322,7 @@ namespace {
           writelocalCurrentIndex.push_back(v);
         } 
 
-        writelocalCodegen.codegenStoreLocal(writeStore->getValueOperand(), fvar, writelocalCurrentIndex, writeAccessRel);
+        writelocalCodegen.codegenStoreLocal(writeVal, fvar, writelocalCurrentNode, writelocalCurrentAccessed);
       }
 
 
@@ -1417,7 +1409,7 @@ namespace {
         auto writebackCurrentSrc = selectedWrite.sublist(srcNodeSpace); // { field[indexset] -> srcNode[cluster] }
         auto writebackLocalPtr = combuf->codegenPtrToRecvBuf(writebackCodegen, sendwaitCurrentChunk, sendwaitCurrentNode, writebackCurrentSrc, writebackCurrentIndex);
         auto writebackVal = writebackCodegen.getIRBuilder().CreateLoad(writebackLocalPtr, "loadfromcombuf");
-        writebackCodegen.codegenStoreLocal(writebackVal, fvar, writebackCurrentIndex);
+        writebackCodegen.codegenStoreLocal(writebackVal, fvar, writebackCurrentNode, writebackCurrentIndex);
 
 
         // { srcNode[cluster] }: recv
@@ -1607,9 +1599,9 @@ namespace {
     }
 
 
-     //llvm::Value *allocStackSpace(llvm::Type *ty) LLVM_OVERRIDE {
+    //llvm::Value *allocStackSpace(llvm::Type *ty) LLVM_OVERRIDE {
 
-   // }
+    // }
 
 
     /// ScalarEvolution remembers its SCEVs

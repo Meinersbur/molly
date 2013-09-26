@@ -3,15 +3,7 @@
 
 #include "islpp/Islfwd.h"
 #include "Molly/Mollyfwd.h"
-
-namespace llvm {
-  class Module;
-  class GlobalVariable;
-  class MDNode;
-  class CallInst;
-  class Value;
-  class Instruction;
-}
+#include "LLVMfwd.h"
 
 
 namespace molly {
@@ -42,7 +34,11 @@ namespace molly {
 
     isl::Id getTupleId();
     isl::Space getAccessSpace();
-  }; /* class FieldVariable */
+
+    llvm::Type *getEltType();
+      llvm::Type *getEltPtrType();
+
+  }; // class FieldVariable
 
 } /* namespace molly */
 #endif /* MOLLY_FIELDVARIABLE_H */

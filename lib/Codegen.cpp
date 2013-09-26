@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "polly/CodeGen/BlockGenerators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "FieldLayout.h"
 
 using namespace molly;
 using namespace polly;
@@ -210,6 +211,14 @@ llvm::Value *MollyCodeGenerator::codegenPtrLocal(FieldVariable *fvar, llvm::Arra
 }
 
 
+llvm::CallInst *MollyCodeGenerator::callLocalPtr(FieldVariable *fvar) {
+  Value *args[] = { fvar->getVariable() };
+  Type *tys[] = {  fvar->getEltPtrType(), args[0]->getType() };
+  auto localPtrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_local_ptr, tys);
+  return irBuilder.CreateCall(localPtrFunc, args);
+}
+
+
 llvm::CallInst *MollyCodeGenerator::callCombufSend(molly::CommunicationBuffer *combuf, Value *dstRank) {
   Value *args[] = { combuf->getVariableSend(), dstRank };
   Type *tys[] = { args[0]->getType() };
@@ -257,29 +266,45 @@ llvm::CallInst *MollyCodeGenerator::callCombufRecvbufPtr(molly::CommunicationBuf
   return irBuilder.CreateCall(ptrFunc, args);      
 }
 
-
+#if 0
 void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation) {
+  llvm_unreachable("to be removed");
   auto ptrVal = codegenPtrLocal(fvar, indices);
-  auto store = irBuilder.CreateStore(val, ptrVal);
+  auto store = irBuilder.CreateStore(materialize(val), ptrVal);
 
   auto editor = getStmtEditor();
   accessRelation.setInTupleId_inplace(editor.getDomainTupleId());
   editor.addWriteAccess(store, fvar, accessRelation.move());
 }
+#endif
 
+void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where, isl::MultiPwAff index) {
+  auto bufptr = callLocalPtr(fvar);
 
-void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::MultiPwAff index) {
-  auto indices = codegenMultiAff(index);
-  auto accessRel = index.toMap();
-  codegenStoreLocal(val, fvar, indices, accessRel);
+  auto layout = fvar->getLayout();
+  assert(layout);
+  auto idx = layout->codegenLocalIndex(*this, where, index);
+  auto ptr = irBuilder.CreateGEP(bufptr, idx, "localbufeltptr");
+
+  auto store = irBuilder.CreateStore(materialize(val), ptr);
+  addStoreAccess(fvar->getVariable(), index, store);
 }
 
+
+void MollyCodeGenerator::addScalarStoreAccess(llvm::Value *base, llvm::Instruction *instr) {
+  auto accessFirstElement = stmtCtx->getDomainSpace().mapsTo(0/*1*/).createZeroMultiAff();
+  addStoreAccess(base, accessFirstElement, instr);
+}
 
 void molly::MollyCodeGenerator::addStoreAccess( llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
 {
   stmtCtx->addMemoryAccess(polly::MemoryAccess::MUST_WRITE,base, accessRelation, instr);
 }
 
+void MollyCodeGenerator::addScalarLoadAccess(llvm::Value *base, llvm::Instruction *instr) {
+  auto accessFirstElement = stmtCtx->getDomainSpace().mapsTo(0/*1*/).createZeroMultiAff();
+  addLoadAccess(base, accessFirstElement, instr);
+}
 
 void molly::MollyCodeGenerator::addLoadAccess( llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
 {
@@ -298,9 +323,9 @@ bool MollyCodeGenerator::isDependent(llvm::Value *val) {
     return false;
 
   // Something within this statement is also non-dependent of the SCoP around
-  //auto bb = stmtCtx->getBasicBlock();
-  //if (instr->getParent() == bb)
-  //  return false;
+  auto bb = stmtCtx->getBasicBlock();
+  if (instr->getParent() == bb)
+    return false;
 
   // Something outside the SCoP, but inside the function is also not dependent
   auto scopCtx = stmtCtx->getScopProcessor();
@@ -310,10 +335,40 @@ bool MollyCodeGenerator::isDependent(llvm::Value *val) {
 
   // As special exception, something that dominates all ScopStmts also is not concerned by shuffling the ScopStmts' order
   // This is meant for AllocaInsts we put there
-  if (instr->getParent() == scopRegion->getEntry())
-    return false;
+  //if (instr->getParent() == scopRegion->getEntry())
+  //  return false;
 
   return true;
+}
+
+
+llvm::Value *MollyCodeGenerator::getScalarAlloca(llvm::Value *val) {
+  // Is this value loading the scalar; if yes, it's scalar location is obviously where it has been loaded from
+  if (auto load = dyn_cast<LoadInst>(val)) {
+    auto ptr = load->getPointerOperand();
+    // auto allocaInst = dyn_cast<AllocaInst>(ptr);
+    if (!isDependent(ptr))
+      return ptr;
+  }
+
+  // Look where IndependentBlocks stored the val
+  for (auto itUse = val->use_begin(), endUse= val->use_end(); itUse!=endUse;++itUse ) {
+    auto useInstr = *itUse;
+    if (!isa<StoreInst>(useInstr))
+      continue;
+    if (itUse.getOperandNo() == StoreInst::getPointerOperandIndex())
+      continue; // Must be the value operand, not the target ptr
+
+    auto store = cast<StoreInst>(useInstr);
+    auto ptr = store->getPointerOperand();
+    //if (!isa<AllocaInst>(ptr))
+    //  continue;
+    if (isDependent(ptr))
+      continue; // Write to some array at an index that might depend on the IVs
+
+    return ptr;
+  }
+  return nullptr;
 }
 
 
@@ -331,7 +386,9 @@ llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
   // If possible, let ScalarEvolution handle this
   if (polly::canSynthesize(instr, LI, SE, scopRegion)) { // FIXME: Still works when SCEVCodegen is enabled?
     auto scev = SE->getSCEV(val);
-    return scopCtx->codegenScev(scev, irBuilder.GetInsertPoint());
+    auto result = scopCtx->codegenScev(scev, irBuilder.GetInsertPoint());
+    assert(!isDependent(result));
+    return result;
   }
 
   // Do it manually 
@@ -345,35 +402,36 @@ llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
 
   // If the value is stored somewhere, load it from the same location
   if (!target) {
-    for (auto itUse = val->use_begin(), endUse= val->use_end(); itUse!=endUse;++itUse ) {
-      auto useInstr = *itUse;
-      if (!isa<StoreInst>(useInstr))
-        continue;
-      if (itUse.getOperandNo() == StoreInst::getPointerOperandIndex())
-        continue; // Must be the value operand, not the target ptr
-
-      auto store = cast<StoreInst>(useInstr);
-      auto ptr = store->getPointerOperand();
-      if (isDependent(ptr))
-        continue; // Write to some array at an index that might depend on the IVs
-
-      target = ptr;
-      break;
-    }
+    target = getScalarAlloca(val);
   }
 
   // Otherwise, insert a store ourselves
-  auto accessFirstElement = stmtCtx->getDomainSpace().mapsTo(0/*1*/).createZeroMultiAff();
   if (!target) {
     target = allocStackSpace(val->getType());
     auto store = new StoreInst(val, target, instr->getNextNode());
-    addStoreAccess(target, accessFirstElement, store);
+    addScalarStoreAccess(target, store);
   }
+
+  // TODO: Could also search all LoadInsts to see if this value has already been loaded
 
   // Load the value from memory in the right BB
   auto reload = irBuilder.CreateLoad(target);
-  addLoadAccess(target, accessFirstElement, reload);
+  addScalarLoadAccess(target, reload);
+  assert(!isDependent(reload));
   return reload;
+}
+
+
+void MollyCodeGenerator::updateScalar(llvm::Value *toupdate, llvm::Value *val) {
+  assert(!isDependent(val));
+  auto ptr = getScalarAlloca(toupdate);
+
+  if (ptr) { // if !ptr this should mean that val is not used outside the current ScopStmt
+    auto store = irBuilder.CreateStore(val, ptr);
+    addScalarStoreAccess(ptr, store);
+  }
+  //TODO: If necessary, iterator through all uses and replace those in this BasicBlock
+  //toupdate->replaceAllUsesWith(val);
 }
 
 

@@ -46,6 +46,8 @@
 #include "MollyRegionProcessor.h"
 #include "MollyScopProcessor.h"
 #include "MollyScopStmtProcessor.h"
+#include "RectangularMapping.h"
+#include "FieldLayout.h"
 
 using namespace molly;
 using namespace polly;
@@ -636,10 +638,14 @@ namespace {
 
 
 #pragma region Field Distribution  
-    void fieldDistribution_processFieldType(FieldType *fty) {
+    void fieldDistribution_processFieldType(FieldType *fty) { assert(!fty->isDistributed()); assert(!fty->getLayout());
       auto lengths = fty->getLengths();
       auto cluster = clusterConf->getClusterLengths();
+      auto clusterSpace = clusterConf->getClusterSpace();
       auto nDims = lengths.size();
+
+      auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
+      auto offsetsAff = lengthsAff.copy();
 
       SmallVector<int,4> locallengths;
       for (auto d = nDims-nDims; d<nDims; d+=1) {
@@ -649,9 +655,17 @@ namespace {
         assert(len % clusterLen == 0);
         auto localLen = (len + clusterLen - 1) / clusterLen;
         locallengths.push_back(localLen);
+
+        lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
+        offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
       }
+
+      auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
+      auto layout = FieldLayout::create(fty, nullptr, linearizer);
+
       fty->setDistributed();
       fty->setLocalLength(locallengths, clusterConf->getClusterTuple());
+      fty->setLayout(layout);
     }
 
 
@@ -1094,6 +1108,11 @@ namespace {
         scopCtx->validate();
 
         // Insert communication between ScopStmt
+        // Implementation note: This modifies the original IR;
+        // A more robust(?) implementation would only add the ScopStmts and remember what they were created for
+        // Then, in CodeGeneration, generate that code.
+        // Advantages: Less overhead; more robust because no need to modify IR during analysis -> ScopInfo can be thrown away without consequences; Possibly faster code since we can Aff::pullback the induction-variable conversion
+        // Disadvantages: Modifies Polly itself, hard to keep it independent from Polly; Need to modify both codegens (Cloog and ISL); Theoretically, we can modify the added IR such that it works, no codegen needed at all
         scopCtx->genCommunication();
         scopCtx->validate();
       }
@@ -1109,6 +1128,7 @@ namespace {
 
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
+
           stmtCtx->applyWhere();
           stmtCtx->validate();
         }

@@ -32,12 +32,6 @@ namespace molly {
     llvm::GlobalVariable *varsend;
     llvm::GlobalVariable *varrecv;
 
-    
-    //isl::PwAff countElts;
-
-    //AffineMapping *dstMapping;
-    //AffineMapping *srcMapping;
-
 
   protected:
     CommunicationBuffer() : fty(nullptr), mapping(nullptr), sendbufMapping(nullptr), recvbufMapping(nullptr) { }
@@ -46,6 +40,10 @@ namespace molly {
   private:
     llvm::Value *getSendBufferBase(DefaultIRBuilder &builder);
     llvm::Value *getRecvBufferBase(DefaultIRBuilder &builder);
+
+    isl::Space getIndexsetSpace() {
+      return relation.getSpace().findNthSubspace(isl_dim_out, 2);
+    }
 
   public:
     static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv,  FieldType *fty, isl::Map &&relation) {
@@ -94,6 +92,7 @@ namespace molly {
    void codegenStoreInSendbuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index, llvm::Value *val);
     
     llvm::Value *codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
+     llvm::Value *codegenLoadFromRecvBuf(MollyCodeGenerator &codegen,  isl::MultiPwAff chunk,  isl::MultiPwAff srcCoord,  isl::MultiPwAff dstCoord,  isl::MultiPwAff index);
 
     llvm::Value *codegenSendWait(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);
     void codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);

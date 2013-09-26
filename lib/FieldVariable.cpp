@@ -58,3 +58,13 @@ isl::Id FieldVariable::getTupleId() {
    // Future version may have a layout per variable or even dynamic at runtime with automatic conversion between them
    return fieldTy->getLayout();
  }
+
+ llvm::Type * molly::FieldVariable::getEltType()
+ {
+   return fieldTy->getEltType();
+ }
+
+ llvm::Type * molly::FieldVariable::getEltPtrType()
+ {
+   return fieldTy->getEltPtrType();
+ }

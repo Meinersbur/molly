@@ -44,6 +44,8 @@ namespace molly {
     llvm::Value *allocStackSpace(llvm::Type *ty);
 
   public:
+    llvm::CallInst *callLocalPtr(FieldVariable *fvar);
+
     llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
     llvm::CallInst *callCombufRecv(molly::CommunicationBuffer *combuf, llvm::Value *srcRank);
 
@@ -71,11 +73,16 @@ namespace molly {
     llvm::Value *codegenScev(const llvm::SCEV *scev);
     llvm::Value *codegenId(const isl::Id &id);
 
+
     bool isDependent(llvm::Value *val);
+    llvm::Value *getScalarAlloca(llvm::Value *val);
     llvm::Value *materialize(llvm::Value *val);
 
+    void updateScalar(llvm::Value *ptr, llvm::Value *val);
 
+     void addScalarStoreAccess(llvm::Value *base, llvm::Instruction *instr);
     void addStoreAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
+     void addScalarLoadAccess(llvm::Value *base, llvm::Instruction *instr);
     void addLoadAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
 
     //llvm::Value *codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout);
@@ -84,8 +91,8 @@ namespace molly {
 
     llvm::Value *codegenPtrLocal(FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices);
 
-    void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
-    void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::MultiPwAff index);
+    //void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
+    void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
 
     //void codegenStore(llvm::Value *val, llvm::Value *ptr);
 

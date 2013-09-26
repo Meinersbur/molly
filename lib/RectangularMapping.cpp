@@ -7,6 +7,12 @@ using namespace molly;
 using namespace llvm;
 
 
+  RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::MultiPwAff offsets) {
+    return new RectangularMapping(lengths.move(), offsets.move());
+ }
+
+
+
 RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl::Map &map) {
   auto nDims = map.getOutDimCount();
   auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createZeroMultiPwAff();
@@ -31,8 +37,8 @@ llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const
   assert(nDims == offsets.getOutDimCount());
   auto &irBuilder = codegen.getIRBuilder();
 
-  auto myoffsets = offsets.pullback(domain);
-  auto mylengths = lengths.pullback(domain);
+  auto myoffsets = domain.isValid() ?  offsets.pullback(domain) : offsets;
+  auto mylengths = domain.isValid() ?  lengths.pullback(domain) : lengths;
 
   Value *result = nullptr;
   for (auto i = nDims-nDims; i < nDims; i+=1) {

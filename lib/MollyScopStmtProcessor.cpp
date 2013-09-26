@@ -359,11 +359,7 @@ namespace {
     }
 
 
-    void dump() const LLVM_OVERRIDE {
-      dbgs() << "ScopStmtProcessorImpl:\n";
-      if (stmt)
-        stmt->dump();
-    }
+    void dump() const LLVM_OVERRIDE;
 
 
     // isValid
@@ -597,6 +593,14 @@ namespace {
     }
 
   }; // class MollyScopStmtProcessorImpl
+
+  void MollyScopStmtProcessorImpl::dump() const
+  {
+    dbgs() << "ScopStmtProcessorImpl:\n";
+    if (stmt)
+      stmt->dump();
+  }
+
 } // namespace 
 
 

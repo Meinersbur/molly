@@ -202,13 +202,14 @@ Aff Space::createConstantAff(const Int &c) const {
 }
 
 
-Aff Space::createVarAff(isl_dim_type type, unsigned pos) const {
+Aff Space::createVarAff(isl_dim_type type, pos_t pos) const {
   assert(isSetSpace());
+  assert(type==isl_dim_param || type==isl_dim_set);
   return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), type, pos)); 
 }
 
 
-Aff Space::createAffOnVar(unsigned pos) const {
+Aff Space::createAffOnVar(pos_t pos) const {
   assert(isSetSpace());
   return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_set, pos)); 
 }
