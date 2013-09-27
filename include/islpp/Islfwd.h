@@ -152,6 +152,11 @@ namespace isl {
   // #include <islpp/UnionPwQPolynomialFold.h>
   class UnionPwQPolynomialFold;
 
+  // #include <islpp/Mat.h>
+  class Mat;
+
+  // #include <islpp/Vertices.h>
+  class Vertices;
 } // namespace isl
 #pragma endregion
 

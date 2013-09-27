@@ -118,7 +118,7 @@ namespace isl {
     void setTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_tuple_id(take(), id.takeCopy())); }
     Set setTupleId(Id &&id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.take())); }
     Set setTupleId(const Id &id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Set setTupleId(Id &&id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.take())); }
     Set setTupleId(const Id &id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.takeCopy())); }
 #endif
@@ -236,7 +236,7 @@ namespace isl {
     void apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER; 
     Set apply(Map &&map) const ;
     Set apply(const Map &map) const;
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Set apply(Map &&map) && ;
     Set apply(const Map &map) &&;
 #endif
@@ -290,8 +290,8 @@ namespace isl {
     Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
     Set reorganizeSubspaces(const Space &setSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
 
-    ISLPP_EXSITU_PREFIX Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER { return reorganizeSubspaces(std::move(setSpace), true); }
+    ISLPP_EXSITU_ATTRS Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER { return reorganizeSubspaces(std::move(setSpace), true); }
 
     Set cast(Space space) ISLPP_EXSITU_QUALIFIER;
     void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space).move()); }

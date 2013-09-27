@@ -73,18 +73,18 @@ isl::BasicSet FieldType::getLogicalIndexset() {
   auto dims = getNumDimensions();
   auto space = ctx->createSetSpace(0, dims); //TODO: Assign an id to the tuple
   space.setSetTupleId_inplace(getIndexsetTuple());
-  auto set = isl::BasicSet::create(space.copy());
+  auto set = isl::BasicSet::createUniverse(space.copy());
 
   for (auto d = dims-dims; d < dims; d+=1) {
     auto ge = isl::Constraint::createInequality(space.copy());
     ge.setConstant_inplace(0);
     ge.setCoefficient_inplace(isl_dim_set, 0, 1);
-    set.addConstraint(move(ge));
+    set.addConstraint_inplace(move(ge));
 
     auto lt = isl::Constraint::createInequality(move(space));
     lt.setConstant_inplace(getLengths()[d]);
     lt.setCoefficient_inplace(isl_dim_set, 0, -1);
-    set.addConstraint(move(lt));
+    set.addConstraint_inplace(move(lt));
   }
 
   return set;
@@ -249,7 +249,8 @@ isl::PwMultiAff FieldType::getHomeAff() {
   auto indexset = getLogicalIndexset().toSet().setSetTupleId(maff.getInTupleId());
   //indexset.setSetTupleId_inplace(maff.getInTupleId());
   auto result = maff.restrictDomain(indexset);
-  result.setOutTupleId_inplace(clusterTupleId);
+  result.cast_inplace(result.getDomainSpace().mapsTo(clusterSpace));
+  //result.setOutTupleId_inplace(clusterTupleId);
   return result;
 }
 

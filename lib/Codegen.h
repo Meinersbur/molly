@@ -18,10 +18,14 @@ namespace molly {
   private:
 
     /// Stmt to generate
-    MollyScopStmtProcessor *stmtCtx;//TODO: Remove, should not be directly dependentent on this
+    MollyScopStmtProcessor *stmtCtx;//TODO: Remove, should not be directly dependent on this
 
     /// At which position to insert the code
     DefaultIRBuilder irBuilder;
+
+    Pass *pass;
+
+    isl::Set context;
 
     /// ISL code generator for affine expressions
     isl::AstBuild astBuild;
@@ -31,6 +35,7 @@ namespace molly {
 
   protected:
     isl::Ctx *getIslContext();
+    llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
 
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
@@ -43,7 +48,22 @@ namespace molly {
 
     llvm::Value *allocStackSpace(llvm::Type *ty);
 
+  protected:
+     Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
+
   public:
+    llvm::CallInst *callRuntimeClusterCurrentCoord(llvm::Value *d);
+    llvm::CallInst *callRuntimeClusterCurrentCoord(uint64_t d) {
+      auto intTy = Type::getInt64Ty(getLLVMContext());
+      return callRuntimeClusterCurrentCoord( llvm::ConstantInt::get(intTy, d) ); 
+    }
+
+    llvm::CallInst *callClusterCurrentCoord(llvm::Value *d);
+    llvm::CallInst *callClusterCurrentCoord(uint64_t d) {
+      auto intTy = Type::getInt64Ty(getLLVMContext());
+      return callClusterCurrentCoord( llvm::ConstantInt::get(intTy, d) ); 
+    }
+
     llvm::CallInst *callLocalPtr(FieldVariable *fvar);
 
     llvm::CallInst *callCombufSend(molly::CommunicationBuffer *combuf, llvm::Value *dstRank);
@@ -56,10 +76,15 @@ namespace molly {
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
 
   public:
+    /// Basic constructor
+    /// Usable: getIRBulder(), callXXX()
+     MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass);
+
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
 
-      MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, const std::map<isl_id *, llvm::Value *> &idtovalue);
+   MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue);
+
 
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }
     StmtEditor getStmtEditor();

@@ -779,16 +779,16 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     static const auto Dims = sizeof...(L);
 
 
-    ~array() { MOLLY_DEBUG_FUNCTION_SCOPE
+    ~array() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
       __builtin_molly_field_free(this);
       free(localdata);
     }
 
 
-    array() { MOLLY_DEBUG_FUNCTION_SCOPE
+    array() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
 
-    __builtin_molly_field_init(this);
+    __builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
 
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {

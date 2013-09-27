@@ -664,7 +664,7 @@ namespace {
       auto layout = FieldLayout::create(fty, nullptr, linearizer);
 
       fty->setDistributed();
-      fty->setLocalLength(locallengths, clusterConf->getClusterTuple());
+      fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
       fty->setLayout(layout);
     }
 
@@ -1102,6 +1102,8 @@ namespace {
         auto scopCtx = it.second;
         if (!scopCtx->hasFieldAccess())
           continue;
+
+        scopCtx->validate();
 
         // Decide on which node(s) a ScopStmt should execute 
         scopCtx->computeScopDistibution();

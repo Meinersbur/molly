@@ -184,7 +184,7 @@ namespace isl {
     void mul_inplace(const PwAff &multiplier) ISLPP_INPLACE_QUALIFIER { give(isl_pw_aff_mul(take(), multiplier.takeCopy())); }
     PwAff mul(const PwAff &multiplier) const { return PwAff::enwrap(isl_pw_aff_mul(takeCopy(), multiplier.takeCopy())); }
 
-   ISLPP_EXSITU_PREFIX Aff singletonAff() ISLPP_EXSITU_QUALIFIER;
+   ISLPP_EXSITU_ATTRS Aff singletonAff() ISLPP_EXSITU_QUALIFIER;
   }; // class PwAff
 
 

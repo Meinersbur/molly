@@ -175,7 +175,7 @@ PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIE
 }
 
 
-ISLPP_EXSITU_PREFIX PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_QUALIFIER {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
 

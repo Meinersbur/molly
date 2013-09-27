@@ -127,7 +127,7 @@ namespace molly {
     /// { stmt[domain] -> cluster[coord] }
     isl::Map getWhere(); 
     isl::Map getInstances();
-    void setWhere(isl::Map &&where);
+    void setWhere(isl::Map where);
     /// remove all instances not in keepInsts from domain and wheremap, such that this stmt is less often executed
     void restrictInstances(const isl::Map &keepInsts);
     void removeInstances(const isl::Map &disableInsts);

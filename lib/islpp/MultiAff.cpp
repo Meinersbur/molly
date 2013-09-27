@@ -176,11 +176,11 @@ PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
  }
 
 
- ISLPP_EXSITU_PREFIX BasicSet MultiAff::getDomain() ISLPP_EXSITU_QUALIFIER {
+ ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_QUALIFIER {
  return getDomainSpace().createUniverseBasicSet();
  }
 
 
- ISLPP_EXSITU_PREFIX BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_QUALIFIER {
+ ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_QUALIFIER {
    return toBasicMap().getRange();
  }

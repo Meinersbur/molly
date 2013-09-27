@@ -178,8 +178,8 @@ namespace isl {
     PwMultiAff projectOut(const DimRange &range) const;
     PwMultiAff projectOutSubspace(const Space &subspace) const;
 
-    ISLPP_EXSITU_PREFIX PwMultiAff sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX PwMultiAff sublist(Space subspace) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS PwMultiAff sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS PwMultiAff sublist(Space subspace) ISLPP_EXSITU_QUALIFIER;
 
     PwMultiAff cast(Space space) ISLPP_EXSITU_QUALIFIER;
     void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { give(cast(space).take()); }

@@ -26,50 +26,8 @@ using namespace isl;
 using namespace std;
 
 
-#if 0
-isl_basic_set *BasicSet::takeCopy() const { 
-  assert(set); 
-  return isl_basic_set_copy(this->set); 
-}
-
-void BasicSet::give(isl_basic_set *set) { 
-  if (this->set)
-    isl_basic_set_free(this->set);
-  this->set = set; 
-#ifndef NDEBUG
-  this->_printed = toString();
-#endif
-}
 
 
-BasicSet::~BasicSet() { 
-  if (set) 
-    isl_basic_set_free(set);
-}
-#endif
-
-BasicSet BasicSet::create(const Space &space) {
-  return BasicSet::wrap(isl_basic_set_universe(space.copy().take()));
-}
-
-BasicSet BasicSet::create(Space &&space) {
-  return BasicSet::wrap(isl_basic_set_universe(space.take()));
-}
-
-BasicSet BasicSet::createEmpty(const Space &space){
-  return  BasicSet::wrap(isl_basic_set_empty(space.copy().take()));
-}
-BasicSet BasicSet::createEmpty(Space &&space){
-  return BasicSet::wrap(isl_basic_set_empty(space.take()));
-}
-
-
-BasicSet BasicSet::createUniverse(const Space &space){
-  return  BasicSet::wrap(isl_basic_set_universe(space.copy().take()));
-}
-BasicSet BasicSet::createUniverse(Space &&space){
-  return BasicSet::wrap(isl_basic_set_universe(space.take()));
-}
 BasicSet BasicSet::createNatUniverse(Space &&space){
   return BasicSet::wrap(isl_basic_set_nat_universe(space.take()));
 }
@@ -244,17 +202,6 @@ void BasicSet::alignParams(Space &&model){
 }
 
 
-void BasicSet::addDims(isl_dim_type type, unsigned n){
-  give(isl_basic_set_add_dims(take(), type, n));
-}
-void BasicSet::insertDims(isl_dim_type type, unsigned pos,  unsigned n){
-  give(isl_basic_set_insert_dims(take(), type, pos, n));
-}
-void BasicSet::moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n){
-  give(isl_basic_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, n));
-}
-
-
 void BasicSet::apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER {
   give(isl_basic_set_apply(take(), bmap.take()));
 }
@@ -282,15 +229,23 @@ Vertices BasicSet::computeVertices() const {
 }
 
 
-ISLPP_EXSITU_PREFIX Aff BasicSet::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicSet::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
   auto pwmin = toSet().dimMin(pos);
   return pwmin.singletonAff();
 }
 
-ISLPP_EXSITU_PREFIX Aff BasicSet::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicSet::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
   auto pwmax = toSet().dimMax(pos);
   return pwmax.singletonAff();
 }
+
+ISLPP_EXSITU_ATTRS BasicSet isl::BasicSet::cast( Space space ) ISLPP_EXSITU_QUALIFIER
+{
+  auto mapSpace = getSpace().mapsTo(std::move(space));
+  auto map = mapSpace.equalBasicMap();
+  return apply(map);
+}
+
 
 
 BasicSet isl::params(BasicSet &&params) {

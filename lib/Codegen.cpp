@@ -24,6 +24,8 @@
 #include "polly/CodeGen/BlockGenerators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "FieldLayout.h"
+#include "MollyUtils.h"
+#include "llvm/IR/Module.h"
 
 using namespace molly;
 using namespace polly;
@@ -34,9 +36,14 @@ using isl::enwrap;
 
 isl::AstBuild &MollyCodeGenerator::initAstBuild() {
   if (astBuild.isNull()) {
-    //auto islctx = stmtCtx->getIslContext();
-    auto domain = stmtCtx->getDomainWithNamedDims();
-    this->astBuild = isl::AstBuild::createFromContext(domain);
+    if (stmtCtx) {
+      //auto islctx = stmtCtx->getIslContext();
+      auto domain = context.isValid() ? context : stmtCtx->getDomainWithNamedDims();
+      this->astBuild = isl::AstBuild::createFromContext(domain);
+    } else {
+      assert(context.isValid());
+      this->astBuild = isl::AstBuild::createFromContext(context);
+    }
   }
   return astBuild;
 }
@@ -56,8 +63,13 @@ llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty) {
 }
 
 
+MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, llvm::Pass *pass)
+  :  stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), idtovalue(nullptr){
+}
+
+
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) 
-  : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), idtovalue(nullptr) {
+  : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), pass(stmtCtx->asPass()), idtovalue(nullptr) {
     auto bb = stmtCtx->getBasicBlock();
     if (insertBefore) {
       assert(insertBefore->getParent() == bb);
@@ -66,21 +78,18 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::In
       // Insert at end of block instead
       irBuilder.SetInsertPoint(bb);
     }
-
-    //stmtCtx->identifyDomainDims();
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()), idtovalue(nullptr) {
+MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()), pass(stmtCtx->asPass()), idtovalue(nullptr) {
   //stmtCtx->identifyDomainDims();
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, const std::map<isl_id *, llvm::Value *> &idtovalue) 
-  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), idtovalue(&idtovalue)
-{
-
+MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue) 
+  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), context(context.move()), idtovalue(&idtovalue) {
 }
+
 
 StmtEditor MollyCodeGenerator::getStmtEditor() { 
   return StmtEditor(stmtCtx->getStmt());
@@ -92,8 +101,6 @@ llvm::Value *MollyCodeGenerator::getValueOf(const SCEV *scev) {
   auto result = scopCtx->codegenScev(scev, irBuilder.GetInsertPoint());
   return result;
 }
-
-
 
 
 const std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
@@ -154,7 +161,7 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
 
   auto expr = initAstBuild().exprFromPwAff(aff);
   auto &valueMap = getIdToValueMap();
-  auto pass = stmtCtx->asPass();
+  // auto pass = stmtCtx->asPass();
   auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), valueMap, pass);
   //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
   return result;
@@ -201,13 +208,53 @@ llvm::Value *MollyCodeGenerator::codegenLinearize(const isl::MultiPwAff &coord, 
 
 llvm::Type *MollyCodeGenerator::getIntTy() {
   auto &llvmContext = irBuilder.getContext();
-  return Type::getInt32Ty(llvmContext);
+  return Type::getInt64Ty(llvmContext);
 }
 
 
 llvm::Value *MollyCodeGenerator::codegenPtrLocal(FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices) {
   auto call = callLocalPtrIntrinsic(fvar, indices);
   return irBuilder.Insert(call, "ptr_local");
+}
+
+
+Function *MollyCodeGenerator::getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys) {
+  auto module = getParentModule( irBuilder);
+  auto &llvmContext = module->getContext();
+
+  auto initFunc = module->getFunction(name);
+  if (!initFunc) {
+    auto intTy = Type::getInt64Ty(llvmContext);
+    auto initFuncTy = FunctionType::get(retTy, tys, false);
+    initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
+  }
+
+  // Check if the function matches
+  assert(initFunc->getReturnType() == retTy);
+  assert(initFunc->getFunctionType()->getNumParams() == tys.size());
+  auto nParams = tys.size();
+  for (auto i = nParams-nParams; i<nParams; i+=1) {
+    assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
+  }
+  return initFunc;
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *d) {
+  auto &llvmContext = getLLVMContext();
+  auto intTy = Type::getInt64Ty(llvmContext);
+  Type *tys[] = {intTy};
+  auto funcDecl  = getRuntimeFunc("__molly_cluster_current_coordinate", intTy, tys);
+
+  if (d->getType()!=intTy)
+    d = irBuilder.CreateIntCast(d, intTy , false);
+  return irBuilder.CreateCall(funcDecl, d);
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callClusterCurrentCoord(llvm::Value *d) {
+  auto localPtrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_cluster_current_coordinate);
+  return irBuilder.CreateCall(localPtrFunc, d);
 }
 
 
@@ -379,7 +426,7 @@ llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
 
   auto scopCtx = stmtCtx->getScopProcessor();
   auto scopRegion = stmtCtx->getRegion();
-  auto pass = stmtCtx->asPass();
+  //auto pass = stmtCtx->asPass();
   auto SE = &pass->getAnalysis<ScalarEvolution>();
   auto LI = &pass->getAnalysis<LoopInfo>();
 

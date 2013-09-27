@@ -150,13 +150,13 @@ Map BasicMap::applyRange(const Map &that) const {
 }
 
 
-ISLPP_EXSITU_PREFIX Aff BasicMap::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicMap::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
   auto pwmin = toMap().dimMin(pos);
   return pwmin.singletonAff();
 }
 
 
-ISLPP_EXSITU_PREFIX Aff BasicMap::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicMap::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
   auto pwmax = toMap().dimMax(pos);
   return pwmax.singletonAff();
 }

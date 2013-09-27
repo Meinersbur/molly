@@ -627,7 +627,7 @@ void Set::apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(
 void Set::apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.takeCopy())); } 
 Set Set::apply(Map &&map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.take())); }
 Set Set::apply(const Map &map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
 Set Set::apply(Map &&map) && { return Set::enwrap(isl_set_apply(take(), map.take())); }
 Set Set::apply(const Map &map) && { return Set::enwrap(isl_set_apply(take(), map.takeCopy())); }
 #endif
@@ -1053,7 +1053,7 @@ Set Set::cast(Space space) ISLPP_EXSITU_QUALIFIER {
 }
 
 
-ISLPP_EXSITU_PREFIX Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_QUALIFIER
 {
   return reorganizeSubspaces(std::move(domainSpace), std::move(rangeSpace), true);
 }

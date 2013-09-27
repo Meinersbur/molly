@@ -3,12 +3,14 @@
 
 #include <llvm/Support/Compiler.h> // LLVM_FINAL, LLVM_OVERRIDE
 #include <type_traits> // std::remove_reference
-//#include <llvm/Support/CommandLine.h>
+#include <utility> // std::move, std::forward
 #include <cassert>
+
 
 namespace llvm {
   template<typename> class ArrayRef;
 } // namespace llvm
+
 
 #ifdef __GNUC__
 // Ignore #pragma region
@@ -16,24 +18,26 @@ namespace llvm {
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #endif
 
-#ifndef __has_feature
-#define __has_feature(x) 0
-#endif
+
 #ifndef __has_extension
 #define __has_extension(x) 0
 #endif
 
+
+
 #if __has_extension(cxx_reference_qualified_functions) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 8) || (_GNUC__ == 4 && __GNUC_MINOR__ == 8 && __GNUC_PATCHLEVEL__ >= 1)
+// Supported since clang 3.1 (http://clang.llvm.org/docs/LanguageExtensions.html)
 // Supported since GCC 8.4.1 (http://gcc.gnu.org/projects/cxx0x.html)
-#define ISLPP_LVALUE_THIS_QUALIFIER &
-#define ISLPP_RVALUE_THIS_QUALIFIER &&
-#define ISLPP_HAS_LVALUE_THIS_QUALIFIER 1
-#define ISLPP_HAS_RVALUE_THIS_QUALIFIER 1
+// Not supported in VC++ before Post-RTM OOB CTP (http://blogs.msdn.com/b/somasegar/archive/2013/06/28/cpp-conformance-roadmap.aspx)
+#define ISLPP_LVALUE_FUNCTION & /* LLVM_LVALUE_FUNCTION */
+#define ISLPP_RVALUE_FUNCTION &&
+#define ISLPP_HAS_LVALUE_REFERENCE_THIS 1 
+#define ISLPP_HAS_RVALUE_REFERENCE_THIS 1 /* LLVM_HAS_RVALUE_REFERENCE_THIS */
 #else
-#define ISLPP_LVALUE_THIS_QUALIFIER 
-#define ISLPP_RVALUE_THIS_QUALIFIER 
-#define ISLPP_HAS_LVALUE_THIS_QUALIFIER 0
-#define ISLPP_HAS_RVALUE_THIS_QUALIFIER 0
+#define ISLPP_LVALUE_FUNCTION /* LLVM_LVALUE_FUNCTION */
+#define ISLPP_RVALUE_FUNCTION 
+#define ISLPP_HAS_LVALUE_REFERENCE_THIS 0
+#define ISLPP_HAS_RVALUE_REFERENCE_THIS 0 /* LLVM_HAS_RVALUE_REFERENCE_THIS */
 #endif
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__)
@@ -54,17 +58,17 @@ namespace llvm {
 #endif
 
 
-#define ISLPP_EXSITU_PREFIX ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_EXSITU_ATTRS ISLPP_WARN_UNUSED_RESULT
 #define ISLPP_EXSITU_QUALIFIER const
 
-#define ISLPP_INPLACE_PREFIX
-#define ISLPP_INPLACE_QUALIFIER ISLPP_LVALUE_THIS_QUALIFIER
+#define ISLPP_INPLACE_ATTRS
+#define ISLPP_INPLACE_QUALIFIER ISLPP_LVALUE_FUNCTION
 
-#define ISLPP_CONSUME_PREFIX ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_CONSUME_ATTRS ISLPP_WARN_UNUSED_RESULT
 #define ISLPP_CONSUME_QUALIFIER 
 
 
-#include <utility> // std::move, std::forward
+
 namespace isl {
   using std::move;
   
@@ -103,7 +107,5 @@ namespace isl {
   static inline count_t to_count_t(int n) { assert(n>=0); return n; } 
   static inline count_t to_count_t(count_t n) { return n; }
  
-  
-
 } // namespace isl
 #endif /* ISLPP_ISLPP_COMMON_H */

@@ -125,11 +125,11 @@ namespace isl {
 #pragma region Conversion
     PwAff toPwAff() const;
 
-    ISLPP_EXSITU_PREFIX MultiAff toMultiAff() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS MultiAff toMultiAff() ISLPP_EXSITU_QUALIFIER;
 
-    ISLPP_EXSITU_PREFIX PwMultiAff toPwMultiAff() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS PwMultiAff toPwMultiAff() ISLPP_EXSITU_QUALIFIER;
 
-    ISLPP_EXSITU_PREFIX Map toMap() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Map toMap() ISLPP_EXSITU_QUALIFIER;
 #pragma endregion
 
 
@@ -153,7 +153,7 @@ namespace isl {
     //Space getSpace() const;
     LocalSpace getDomainLocalSpace() const;
     //LocalSpace getLocalSpace() const;
-    ISLPP_EXSITU_PREFIX Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { 
+    ISLPP_EXSITU_ATTRS Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { 
       auto space = getSpace();
       if (space.isMapSpace()) 
         return space.getRangeSpace();
@@ -224,8 +224,8 @@ namespace isl {
     /// Would be ineffective
     //PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
-    ISLPP_EXSITU_PREFIX Aff cast(Space space) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_INPLACE_PREFIX void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(this->cast(space)); }
+    ISLPP_EXSITU_ATTRS Aff cast(Space space) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(this->cast(space)); }
   }; // class Aff
 
 

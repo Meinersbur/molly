@@ -200,89 +200,107 @@ namespace {
     }
 
 
-    private:
-      isl::MultiAff currentNodeCoord; /* { -> node[cluster] } */
-      std::map<isl_id *, llvm::Value *> idtovalue;
 
-      isl::MultiAff getCurrentNodeCoordinate() {
-        if (currentNodeCoord.isValid())
-          return currentNodeCoord;
+  private:
+    isl::MultiAff currentNodeCoord; /* { -> node[cluster] } */
+    std::map<isl_id *, llvm::Value *> idtovalue;
 
-        auto islctx = pm->getIslContext();
-        auto clusterSpace = pm->getClusterConfig()->getClusterSpace();
-         auto nDims = clusterSpace.getSetDimCount();
-        auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(nDims, clusterSpace);
-        
-
-        for (auto i = nDims-nDims; i<nDims; i+=1) {
-          auto value = getClusterCoordinate(i);
-          auto id = islctx->createId("clusterdim" + Twine(i), value);
-          currentNodeCoordSpace.setDimId_inplace(isl_dim_param, i, id);
-          idtovalue[id.keep()] = value;
-        }
-
-        currentNodeCoord = currentNodeCoordSpace.createZeroMultiAff();
-        for (auto i = nDims-nDims; i<nDims; i+=1) {
-          currentNodeCoord.setAff_inplace(i, currentNodeCoord.getDomainSpace().createAffOnVar(i));
-        }
+    isl::MultiAff getCurrentNodeCoordinate() {
+      if (currentNodeCoord.isValid())
         return currentNodeCoord;
+
+      auto clusterConf = pm->getClusterConfig();
+      auto islctx = pm->getIslContext();
+      auto clusterSpace = clusterConf->getClusterSpace();
+      auto nDims = clusterSpace.getSetDimCount();
+      auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(nDims, clusterSpace);
+
+
+      for (auto i = nDims-nDims; i<nDims; i+=1) {
+        auto value = getClusterCoordinate(i);
+        auto id = clusterConf->getClusterDimId(i);
+        currentNodeCoordSpace.setDimId_inplace(isl_dim_in, i, id);
+        idtovalue[id.keep()] = value;
       }
 
-      Function *getRuntimeFunc(StringRef name, Type *retTy, ArrayRef<Type*> tys) {
-         auto module = func->getParent();
-         auto &llvmContext = func->getContext();
+      currentNodeCoord = currentNodeCoordSpace.createZeroMultiAff();
+      for (auto i = nDims-nDims; i<nDims; i+=1) {
+        currentNodeCoord.setAff_inplace(i, currentNodeCoord.getDomainSpace().createAffOnVar(i));
+      }
+      return currentNodeCoord;
+    }
 
-        auto initFunc = module->getFunction(name);
-        if (!initFunc) {
-          auto intTy = Type::getInt64Ty(llvmContext);
-          auto initFuncTy = FunctionType::get(retTy, tys, false);
-          initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
-        }
 
-        // Check if the function matches
-        assert(initFunc->getReturnType() == retTy);
-        assert(initFunc->getFunctionType()->getNumParams() == tys.size());
-        auto nParams = tys.size();
-        for (auto i = nParams-nParams; i<nParams; i+=1) {
-          assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
-        }
-        return initFunc;
+    Function *getRuntimeFunc(StringRef name, Type *retTy, ArrayRef<Type*> tys) {//TODO: Moved to MollyCodegen
+      auto module = func->getParent();
+      auto &llvmContext = func->getContext();
+
+      auto initFunc = module->getFunction(name);
+      if (!initFunc) {
+        auto intTy = Type::getInt64Ty(llvmContext);
+        auto initFuncTy = FunctionType::get(retTy, tys, false);
+        initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
       }
 
-         void replaceGlobalInit(CallInst *call, Function *called) {
-           auto combufs = pm->getCommunicationBuffers();
+      // Check if the function matches
+      assert(initFunc->getReturnType() == retTy);
+      assert(initFunc->getFunctionType()->getNumParams() == tys.size());
+      auto nParams = tys.size();
+      for (auto i = nParams-nParams; i<nParams; i+=1) {
+        assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
+      }
+      return initFunc;
+    }
 
-           for (auto combuf : combufs) {
 
-             assert(!"TODO");
+    void replaceGlobalInit(CallInst *call, Function *called) {
+      auto combufs = pm->getCommunicationBuffers();
 
-           }
+      for (auto combuf : combufs) {
 
-           call->eraseFromParent();
-         }
+        assert(!"TODO");
 
-         void replaceGlobalFree(CallInst *call, Function *called) {
+      }
 
-           call->eraseFromParent();
-         }
+      call->eraseFromParent();
+    }
+
+
+    void replaceGlobalFree(CallInst *call, Function *called) {
+      call->eraseFromParent();
+    }
+
+
+
+    void replaceClusterCurrentCoordinate(CallInst *call, Function *called) {
+      MollyCodeGenerator codegen(call->getParent(), call, asPass());
+      auto dArg = call->getOperand(0);
+      auto result = codegen.callRuntimeClusterCurrentCoord(dArg);
+
+      call->replaceAllUsesWith(result);
+      call->eraseFromParent();
+    }
+
 
     void replaceFieldInit(CallInst *call, Function *called) {
       auto &llvmContext = func->getContext();
       auto module = func->getParent();
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
-      
-      MollyCodeGenerator codegen(call->getParent(), call, idtovalue);
+      auto clusterconf = pm->getClusterConfig();
+      auto clusterContext = clusterconf->getClusterParamShape();
+
+      MollyCodeGenerator codegen(call->getParent(), call, clusterContext, idtovalue);
       auto &builder = codegen.getIRBuilder();
 
       auto fval = call->getArgOperand(0);
-     auto fvar = pm->getFieldVariable(fval);
-     assert(fvar && "Field variable not registered?!?");
-     auto fty = fvar->getFieldType();
+      auto fvar = pm->getFieldVariable(fval);
+      assert(fvar && "Field variable not registered?!?");
+      auto fty = fvar->getFieldType();
 
       auto initFunc = module->getFunction("__molly_local_init");
       if (!initFunc) {
         auto voidTy = Type::getVoidTy(llvmContext);
-        
+
         auto intTy = Type::getInt64Ty(llvmContext);
         Type *tys[] = { voidPtrTy, intTy };
         auto initFuncTy = FunctionType::get(voidTy, tys, false);
@@ -290,10 +308,10 @@ namespace {
       }
 
       auto layout = fvar->getLayout(); //TODO: implement FieldLayout
-     auto sizeVal = layout->codegenLocalSize(codegen, getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
+      auto sizeVal = layout->codegenLocalSize(codegen, getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
 
       auto fvalptr = builder.CreatePointerCast(fval, voidPtrTy);
-      
+
       Value *args[] = { fvalptr, sizeVal };
       builder.CreateCall(initFunc, args);
 
@@ -328,6 +346,12 @@ namespace {
       call->eraseFromParent();
     }
 
+
+    bool isMollyIntrinsics(unsigned intID) {
+      return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_set_local;
+    }
+
+
   public:
     void replaceIntrinsics() LLVM_OVERRIDE {
 
@@ -337,15 +361,17 @@ namespace {
         auto bb = &*it;
         for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
           auto instr = &*itInstr;
-         if (!isa<CallInst>(instr))
-           continue;
-         auto callInstr = cast<CallInst>(instr);
-        auto func = callInstr->getCalledFunction();
-        if (!func)
-          continue;
-        if(!func->isIntrinsic())
-          continue;
-        instrs.push_back(callInstr);
+          if (!isa<CallInst>(instr))
+            continue;
+          auto callInstr = cast<CallInst>(instr);
+          auto func = callInstr->getCalledFunction();
+          if (!func)
+            continue;
+          if(!func->isIntrinsic())
+            continue;
+          if (!isMollyIntrinsics(func->getIntrinsicID()))
+            continue;
+          instrs.push_back(callInstr);
         }
       }
 
@@ -357,6 +383,9 @@ namespace {
 
         auto intID = called->getIntrinsicID();
         switch(intID) {
+        case Intrinsic::molly_cluster_current_coordinate:
+          replaceClusterCurrentCoordinate(instr, called);
+          break;
         case Intrinsic::molly_global_init:
           replaceFieldInit(instr, called);
           break;
@@ -369,7 +398,7 @@ namespace {
         case Intrinsic::molly_field_free:
           replaceFieldFree(instr, called);
           break;
-     
+
         default:
           continue;
         }
@@ -511,7 +540,7 @@ namespace {
 #endif
 
 #ifndef NDEBUG
-            auto RI = this->getAnalysisIfAvailable<RegionInfo>();
+      auto RI = this->getAnalysisIfAvailable<RegionInfo>();
       if (RI) {
         RI->verifyAnalysis();
       }
@@ -572,24 +601,26 @@ namespace {
 #pragma endregion
 
 
-    //private:
-      //SmallVector<Value*, 4> currentClusterCoord;
+  private:
+    SmallVector<Value*, 4> currentClusterCoord;
 
     Value* getClusterCoordinate(unsigned i) LLVM_OVERRIDE {
-      auto &llvmContext = func->getContext();
-      auto intTy = Type::getInt32Ty(llvmContext);
+      auto clusterConf = pm->getClusterConfig();
 
-      //auto varSelfCoords = pm->runtimeMetadata.varSelfCoords;
-      auto metadata = pm->getRuntimeMetadata();
-      auto funcLocalCoord = metadata->funcLocalCoord;
-      DefaultIRBuilder builder(func->getEntryBlock().getFirstNonPHI());
+      currentClusterCoord.reserve(clusterConf->getClusterDims());
+      while (i >= currentClusterCoord.size() )
+        currentClusterCoord.push_back(nullptr);
 
-      //llvm::Intrinsic::getDeclaration();
+      auto &curCoord = currentClusterCoord[i];
+      if (curCoord) {
+        assert(cast<CallInst>(curCoord)->getCalledFunction()->getIntrinsicID() == Intrinsic::molly_cluster_current_coordinate);
+        return curCoord;
+      }
 
-      //auto coordsArray = builder.CreateConstGEP1_32(varSelfCoords, 0, "coords_array");
-      //auto coordPtr = builder.CreateConstGEP1_32(coordsArray, i, "coord");
-      //return builder.CreateLoad(coordPtr, false, "local coord");
-      return builder.CreateCall(funcLocalCoord, ConstantInt::get(intTy, i));
+      auto bb = &func->getEntryBlock();
+      MollyCodeGenerator codegen(bb, bb->getFirstInsertionPt(), asPass());
+      curCoord = codegen.callClusterCurrentCoord(i);
+      return curCoord;
     }
 
 

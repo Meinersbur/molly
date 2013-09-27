@@ -151,8 +151,8 @@ namespace isl {
     void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
     BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
 
-    ISLPP_EXSITU_PREFIX Map intersect(Map &&that) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX Map intersect(const Map &that) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Map intersect(Map &&that) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Map intersect(const Map &that) ISLPP_EXSITU_QUALIFIER;
 
     BasicMap intersectDomain(const BasicSet &bset) ISLPP_EXSITU_QUALIFIER { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
     Map intersectDomain(const Set &set) ISLPP_EXSITU_QUALIFIER;
@@ -162,10 +162,10 @@ namespace isl {
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
     void reverse() { give(isl_basic_map_reverse(take())); }
 
-    ISLPP_EXSITU_PREFIX BasicSet domain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    ISLPP_EXSITU_PREFIX BasicSet getDomain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    ISLPP_EXSITU_PREFIX BasicSet range() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
-    ISLPP_EXSITU_PREFIX BasicSet getRange() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet domain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet range() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_QUALIFIER { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
 
     void removeDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_remove_dims(take(), type, first, n));  }
     void eliminate(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_eliminate(take(), type, first, n)); }
@@ -214,7 +214,7 @@ namespace isl {
     void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_map_add_constraint(take(), constraint.takeCopy()));  }
     BasicMap addContraint(Constraint &&constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.take())); } 
     BasicMap addContraint(const Constraint &constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.takeCopy())); } 
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     BasicMap addContraint(Constraint &&constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.take())); } 
     BasicMap addContraint(const Constraint &constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.takeCopy())); } 
 #endif
@@ -251,8 +251,8 @@ namespace isl {
     BasicMap applyRange(const BasicMap &that) const { return BasicMap::enwrap(isl_basic_map_apply_range(takeCopy(), that.takeCopy())); }
     Map applyRange(const Map &that) const;
 
-    ISLPP_EXSITU_PREFIX Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
   }; // class BasicMap
 
 

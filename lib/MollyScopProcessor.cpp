@@ -315,7 +315,7 @@ namespace {
       auto scop = stmt->getParent();
 
       auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
-      auto home = fieldTy->getHomeAff(); /* field coord -> cluster coord */
+      auto home = fieldTy->getHomeAff();  /* field coord -> cluster coord */
       auto relMap = rel.toMap().setOutTupleId(fieldTy->getIndexsetTuple());
       auto it2rank = relMap.applyRange(home.toMap());
 

@@ -120,7 +120,7 @@ namespace isl {
 
 #pragma region Create other spaces
     Space mapsTo(const Space &range) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
-    ISLPP_EXSITU_PREFIX Space mapsTo(count_t nOut) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range( takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()) )); }
+    ISLPP_EXSITU_ATTRS Space mapsTo(count_t nOut) ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_space_map_from_domain_and_range( takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()) )); }
     Space mapsToItself() ISLPP_EXSITU_QUALIFIER { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
     // If this is a param space
@@ -142,14 +142,15 @@ namespace isl {
 
     /// create a map where the first n_equal dimensions map to equal value
     BasicMap equalBasicMap(unsigned n_equal) const;
+    ISLPP_EXSITU_ATTRS BasicMap equalBasicMap() ISLPP_EXSITU_QUALIFIER;
 
     /// Create a map that equates the selected dimensions
     BasicMap equalBasicMap(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) const;
     BasicMap equalSubspaceBasicMap(const Space &domainSubpace, const Space &rangeSubspace) const;
     BasicMap equalSubspaceBasicMap(const Space &subspace) const;
 
-    ISLPP_EXSITU_PREFIX BasicSet equalBasicSet(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX BasicSet equalBasicSet(Space subspace1, Space subspace2);
+    ISLPP_EXSITU_ATTRS BasicSet equalBasicSet(isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS BasicSet equalBasicSet(Space subspace1, Space subspace2);
 
     /// Create a relation the maps a value to everything that is lexically smaller at dimension pos
     BasicMap lessAtBasicMap(unsigned pos) const;
@@ -311,7 +312,7 @@ namespace isl {
     Space wrap() const { return Space::enwrap(isl_space_wrap(takeCopy())); }
     void wrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_wrap(take())); }
     Space wrap_consume() { return Space::enwrap(isl_space_wrap(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Space wrap() && { return Space::enwrap(isl_space_wrap(take())); }
 #endif
 
@@ -319,7 +320,7 @@ namespace isl {
     Space unwrap() const { return Space::enwrap(isl_space_unwrap(takeCopy())); }
     void unwrap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_space_unwrap(take())); }
     Space unwrap_consume() { return Space::enwrap(isl_space_unwrap(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Space unwrap() && { return Space::enwrap(isl_space_unwrap(take())); }
 #endif
 
@@ -430,7 +431,7 @@ namespace isl {
     Space alignParams_consume( Space &&that) { return Space::enwrap(isl_space_align_params(this->take(), that.take())); }
     void alignParams_inplace(const Space &that) ISLPP_INPLACE_QUALIFIER { give(isl_space_align_params(this->take(), that.takeCopy())); }
     void alignParams_inplace(Space &&that) ISLPP_INPLACE_QUALIFIER { give(isl_space_align_params(this->take(), that.take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Space alignParams(const Space &that) && { return Space::enwrap(isl_space_align_params(this->take(), that.takeCopy())); } 
     Space alignParams(Space &&that) && { return Space::enwrap(isl_space_align_params(this->take(), that.take())); } 
 #endif

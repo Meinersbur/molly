@@ -698,7 +698,12 @@ void StmtEditor::setScattering(isl::Map &&scatter) {
 
 isl::MultiAff StmtEditor::getCurrentIteration()  {
   auto domainSpace = getDomainSpace();
-  return domainSpace.mapsToItself().createIdentityMultiAff();
+  auto result = domainSpace.mapsToItself().createIdentityMultiAff();
+  //auto nDims = result.getInDimCount();
+  //for (auto i = nDims-nDims; i<nDims; i+=1) {
+  //  result.setInDimId_inplace(i, stmt->getDomainId());
+  //}
+  return result;
 }
 
 
@@ -714,7 +719,7 @@ isl::Map StmtEditor:: getInstances() {
 }
 
 
-void StmtEditor::setWhere(isl::Map &&where) {
+void StmtEditor::setWhere(isl::Map where) {
   assert(where.getDomainSpace().matchesSetSpace(getDomainSpace()));
   assert(where.hasOutTupleId());
   assert(where.getDomain().isSupersetOf(getIterationDomain()));

@@ -113,7 +113,7 @@ namespace isl {
     void addMap_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_add_map(take(), map.takeCopy())); }
     UnionMap addMap(Map &&map) const { return UnionMap::enwrap(isl_union_map_add_map(takeCopy(), map.take())); }
     UnionMap addMap(const Map &map) const { return UnionMap::enwrap(isl_union_map_add_map(takeCopy(), map.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     UnionMap addMap(Map &&map) && { return UnionMap::enwrap(isl_union_map_add_map(take(), map.take())); }
     UnionMap addMap(const Map &map) && { return UnionMap::enwrap(isl_union_map_add_map(take(), map.takeCopy())); }
 #endif
@@ -173,7 +173,7 @@ namespace isl {
     void unite_inplace(const UnionMap &that) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_union(take(), that.takeCopy())); }
     UnionMap unite(UnionMap &&that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.take())); }
     UnionMap unite(const UnionMap &that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     UnionMap unite(UnionMap &&that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.take())); }
     UnionMap unite(const UnionMap &that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.takeCopy())); }
 #endif

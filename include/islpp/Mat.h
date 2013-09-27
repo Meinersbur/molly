@@ -14,7 +14,7 @@ namespace isl {
 
 
 namespace isl {
-  class Mat final {
+  class Mat {
 #pragma region Low-level
   private:
     isl_mat *mat;

@@ -57,7 +57,7 @@ void Id::setFreeUser_inplace(void (*freefunc)(void *)) ISLPP_INPLACE_QUALIFIER {
 Id Id::setFreeUser_consume(void (*freefunc)(void *)) ISLPP_CONSUME_QUALIFIER { 
   return Id::enwrap(isl_id_set_free_user(take(), freefunc));
 }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
 Id Id::setFreeUser(void (*freefunc)(void *)) && { 
   return Id::enwrap(isl_id_set_free_user(take(), freefunc));
 }

@@ -7,15 +7,14 @@
 #include <llvm/ADT/ArrayRef.h>
 #include "MollyUtils.h"
 #include "llvm/IR/Function.h"
+#include <llvm/ADT/Twine.h>
 
 using namespace molly;
 using namespace llvm;
 
 
 isl::Space ClusterConfig::getClusterSpace() const {
-  auto result = getIslContext()->createSetSpace(0, clusterLengths.size());
-  result.setSetTupleId_inplace(getClusterTuple());
-  return result;
+  return clusterShape.getSpace();
 }
 
 
@@ -53,4 +52,8 @@ llvm::Value *ClusterConfig::codegenComputeRank(DefaultIRBuilder &builder, ArrayR
 
 auto result = builder.CreateCall(funcCoordToRank, coords);
 return result;
+}
+
+isl::Id molly::ClusterConfig::getClusterDimId( isl::pos_t d ) {
+  return islctx->createId("rankdim" + Twine(d), this);
 }

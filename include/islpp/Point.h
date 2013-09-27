@@ -86,13 +86,13 @@ namespace isl {
 #pragma region Conversion
     /// to singleton BasicSet
     BasicSet toBasicSet() const;
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
       BasicSet toBasicSet() &&;
 #endif
 
     /// to singleton Set
     Set toSet() const;
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
       BasicSet toSet() &&;
 #endif
 #pragma endregion

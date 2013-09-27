@@ -197,7 +197,7 @@ std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
 }
 
 
-  ISLPP_EXSITU_PREFIX Aff PwAff::singletonAff() ISLPP_EXSITU_QUALIFIER {
+  ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_QUALIFIER {
     Aff result;
   foreachPiece([&result] (Set set, Aff aff) -> bool {
       if (result.isValid()) {

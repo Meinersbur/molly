@@ -126,18 +126,18 @@ Aff Ctx::createZeroAff(LocalSpace &&space) {
 BasicSet Ctx::createRectangularSet(const llvm::SmallVectorImpl<unsigned> &lengths) {
   auto dims = lengths.size();
   Space space = createSetSpace(0, dims);
-  BasicSet set = BasicSet::create(space.copy());
+  BasicSet set = BasicSet::createUniverse(space);
 
   for (auto d = dims-dims; d < dims; d+=1) {
     auto ge = Constraint::createInequality(space.copy());
     ge.setConstant_inplace(0);
     ge.setCoefficient_inplace(isl_dim_set, 0, 1);
-    set.addConstraint(move(ge));
+    set.addConstraint_inplace(std::move(ge));
 
     auto lt = Constraint::createInequality(move(space));
     lt.setConstant_inplace(lengths[d]);
     lt.setCoefficient_inplace(isl_dim_set, 0, -1);
-    set.addConstraint(move(lt));
+    set.addConstraint_inplace(std::move(lt));
   }
   return set;
 }

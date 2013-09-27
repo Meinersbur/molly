@@ -25,7 +25,7 @@ MultiPwAff Map::toMultiPwAff() const {
 UnionMap Map::toUnionMap() const {
   return UnionMap::enwrap(isl_union_map_from_map(takeCopy()));
 }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
 UnionMap Map::toUnionMap() && {
   return UnionMap::enwrap(isl_union_map_from_map(take()));
 }

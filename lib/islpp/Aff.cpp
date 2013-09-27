@@ -201,12 +201,12 @@ PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
   return result;
 }
 
-ISLPP_EXSITU_PREFIX Map isl::Aff::toMap() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_QUALIFIER
 {
   return Map::enwrap(isl_map_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_PREFIX Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_QUALIFIER
 {
   assert(getInDimCount() == space.getInDimCount());
   assert(getOutDimCount() == space.getOutDimCount());
@@ -218,12 +218,12 @@ ISLPP_EXSITU_PREFIX Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_QUALIFIER
   return pullback(transformDomain);
 }
 
-ISLPP_EXSITU_PREFIX MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_QUALIFIER
 {
   return MultiAff::enwrap(isl_multi_aff_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_PREFIX PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_QUALIFIER
 {
   return PwMultiAff::enwrap(isl_pw_multi_aff_from_multi_aff(isl_multi_aff_from_aff(takeCopy())));
 }

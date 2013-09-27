@@ -36,7 +36,7 @@ Space Point::getSpace() const {
     BasicSet Point::toBasicSet() const {
       return BasicSet::enwrap(isl_basic_set_from_point(takeCopy()));
     }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
    BasicSet Point::toBasicSet() const {
       return BasicSet::enwrap(isl_basic_set_from_point(take()));
     }
@@ -45,7 +45,7 @@ Space Point::getSpace() const {
     Set Point::toSet() const {
       return Set::enwrap(isl_set_from_point(takeCopy()));
     }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
    Set Point::toSet() const {
      return Set::enwrap(isl_set_from_point(take()));
     }

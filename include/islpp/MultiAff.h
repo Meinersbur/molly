@@ -122,7 +122,7 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::enwrap(isl_multi_aff_get_aff(keep(), pos)); }
-    ISLPP_EXSITU_PREFIX MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
+    ISLPP_EXSITU_ATTRS MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
     void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
     void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
     void push_back(Aff &&aff);
@@ -133,11 +133,11 @@ namespace isl {
     void scale(Int f) { give(isl_multi_aff_scale(take(), f.keep())); };
     //void scaleVec(Vec &&v) { give(isl_multi_aff_scale_vec(take(), v.take())); }
 
-    ISLPP_EXSITU_PREFIX MultiAff alignParams(Space model) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(takeCopy(), model.take())); }
+    ISLPP_EXSITU_ATTRS MultiAff alignParams(Space model) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(takeCopy(), model.take())); }
     void alignParams_inplace(Space model) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_align_params(take(), model.take())); }
-    ISLPP_CONSUME_PREFIX MultiAff alignParams_consume(Space model) ISLPP_CONSUME_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    ISLPP_CONSUME_PREFIX MultiAff alignParams(Space model) && { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
+    ISLPP_CONSUME_ATTRS MultiAff alignParams_consume(Space model) ISLPP_CONSUME_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+    ISLPP_CONSUME_ATTRS MultiAff alignParams(Space model) && { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
 #endif
 
     void gistParams(Set &&context) { give(isl_multi_aff_gist_params(take(), context.take())); }
@@ -183,8 +183,8 @@ namespace isl {
     MultiAff cast(Space space) ISLPP_EXSITU_QUALIFIER;
     void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space)); }
 
-    ISLPP_EXSITU_PREFIX BasicSet getDomain() ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX BasicSet getRange() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_QUALIFIER;
   }; // class MultiAff
 
 

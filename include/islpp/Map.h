@@ -151,7 +151,7 @@ namespace isl {
 
     // to UnionMap
     UnionMap toUnionMap() const;
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     UnionMap toUnionMap() &&;
 #endif
     //operator UnionMap() const;
@@ -259,7 +259,7 @@ namespace isl {
     /// For every element in the map's domain, compute the lexical minimum of the set the element is mapped to
     PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
     PwMultiAff lexminPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     PwMultiAff lexminPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
 #endif
 
@@ -269,7 +269,7 @@ namespace isl {
     /// For every element in the map's domain, compute the lexical maximum of the set the element is mapped to
     PwMultiAff lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
     PwMultiAff lexmaxPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     PwMultiAff lexmaxPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
 #endif
 
@@ -287,7 +287,7 @@ namespace isl {
     void addBasicMap_inplace(const BasicMap &bmap) ISLPP_INPLACE_QUALIFIER { give(isl_map_add_basic_map(take(), bmap.takeCopy())); }
     Map addBasicMap(BasicMap &&bmap) const { return Map::enwrap(isl_map_add_basic_map(takeCopy(), bmap.take())); }
     Map addBasicMap(const BasicMap &bmap) const { return Map::enwrap(isl_map_add_basic_map(takeCopy(), bmap.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map addBasicMap(BasicMap &&bmap) && { return Map::enwrap(isl_map_add_basic_map(take(), bmap.take())); }
     Map addBasicMap(const BasicMap &bmap) && { return Map::enwrap(isl_map_add_basic_map(take(), bmap.takeCopy())); }  
 #endif
@@ -296,7 +296,7 @@ namespace isl {
     /// reverse({ U -> V }) = { V -> U }
     void reverse_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_reverse(take())); }
     Map reverse() const { return Map::enwrap(isl_map_reverse(takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map reverse() && { wrap(isl_map_reverse(take())); }
 #endif
 
@@ -305,7 +305,7 @@ namespace isl {
     void applyDomain_inplace(Map &&map2) ISLPP_INPLACE_QUALIFIER { give(isl_map_apply_domain(take(), map2.take())); }
     Map applyDomain(const Map &map2) const { return Map::enwrap(isl_map_apply_domain(takeCopy(), map2.takeCopy())); }
     Map applyDomain(Map &&map2) const { return Map::enwrap(isl_map_apply_domain(takeCopy(), map2.take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map applyDomain(const Map &map2) && { return Map::wrap(isl_map_apply_domain(take(), map2.takeCopy())); }
     Map applyDomain(Map &&map2) && { return Map::wrap(isl_map_apply_domain(take(), map2.take())); }
 #endif
@@ -317,7 +317,7 @@ namespace isl {
     void applyRange_inplace(Map &&map2) ISLPP_INPLACE_QUALIFIER { give(isl_map_apply_range(take(), map2.take())); }
     Map applyRange(const Map &map2) const { return Map::enwrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
     Map applyRange(Map &&map2) const { return Map::enwrap(isl_map_apply_range(takeCopy(), map2.take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map applyRange(const Map &map2) && { return Map::wrap(isl_map_apply_range(take(), map2.takeCopy())); }
     Map applyRange(Map &&map2) && { return Map::wrap(isl_map_apply_range(take(), map2.take())); }
 #endif
@@ -327,7 +327,7 @@ namespace isl {
     void intersect_inplace(const Map &that) ISLPP_INPLACE_QUALIFIER { give(isl_map_intersect(take(), that.takeCopy())); }
     Map intersect(Map &&that) const { return Map::enwrap(isl_map_intersect(takeCopy(), that.take())); } 
     Map intersect(const Map &that) const { return Map::enwrap(isl_map_intersect(takeCopy(), that.takeCopy())); } 
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map intersect(Map &&that) && { return Map::enwrap(isl_map_intersect(take(), that.take())); } 
     Map intersect(const Map &that) && { return Map::enwrap(isl_map_intersect(take(), that.takeCopy())); }
 #endif
@@ -336,7 +336,7 @@ namespace isl {
     void intersectDomain_inplace(const Set &set) ISLPP_INPLACE_QUALIFIER { give(isl_map_intersect_domain(take(), set.takeCopy())); }
     Map intersectDomain(Set &&set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.take())); }
     Map intersectDomain(const Set &set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map intersectDomain(Set &&set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
     Map intersectDomain(const Set &set) &&{ return Map::enwrap(isl_map_intersect_domain(take(), set.takeCopy())); }
 #endif
@@ -345,7 +345,7 @@ namespace isl {
     void intersectRange_inplace(const Set &set) ISLPP_INPLACE_QUALIFIER { give(isl_map_intersect_range(take(), set.takeCopy())); }
     Map intersectRange(Set &&set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
     Map intersectRange(const Set &set) { return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map intersectRange(Set &&set)&& { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
     Map intersectRange(const Set &set) &&{ return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
 #endif
@@ -354,7 +354,7 @@ namespace isl {
 
     Map subtractDomain(Set &&dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
     Map subtractDomain(const Set &dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map subtractDomain(Set &&dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
     Map subtractDomain(const Set &dom) && { return Map::enwrap(isl_map_subtract_domain(take(), dom.takeCopy())); }
 #endif
@@ -370,7 +370,7 @@ namespace isl {
 
     Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
     Set getDomain() const { return Set::enwrap(isl_map_domain(takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Set getRange() && { return Set::enwrap(isl_map_range(take())); }
     Set getDomain() && { return Set::enwrap(isl_map_domain(take())); }
 #endif
@@ -398,14 +398,14 @@ namespace isl {
     Map deltasMap() const { return Map::enwrap(isl_map_deltas_map(takeCopy())); } 
     Map deltasMap_consume()  { return Map::enwrap(isl_map_deltas_map(take())); } 
     void deltasMap_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_deltas_map(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map deltasMap() && { return Map::enwrap(isl_map_deltas_map(take())); } 
 #endif
 
     /// returns { range - domain }
     Set deltas() const { return Set::enwrap(isl_map_deltas(takeCopy())); }
     Set deltas_consume() { return Set::enwrap(isl_map_deltas(take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Set deltas() && { return Set::enwrap(isl_map_deltas(take())); }
 #endif
 
@@ -466,7 +466,7 @@ namespace isl {
     Map makeDisjoint() const { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
     void makeDisjoint_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_make_disjoint(take()));}
     Map makeDisjoint_consume() { return Map::enwrap(isl_map_make_disjoint(take()));}
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
 #endif
 
@@ -500,7 +500,7 @@ namespace isl {
     Map coalesce() const { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
     void coalesce_inplace() ISLPP_INPLACE_QUALIFIER { give(isl_map_coalesce(take())); } 
     Map coalesce_consume() { return Map::enwrap(isl_map_coalesce(take())); } 
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map coalesce() && { return Map::enwrap(isl_map_coalesce(take())); } 
 #endif
 
@@ -550,13 +550,13 @@ namespace isl {
 
     PwAff dimMax_consume(unsigned pos) { return PwAff::enwrap(isl_map_dim_max(take(), pos)); }
     PwAff dimMax(unsigned pos) const { return PwAff::enwrap(isl_map_dim_max(takeCopy(), pos)); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     PwAff dimMax(unsigned pos) && { return PwAff::enwrap(isl_map_dim_max(take(), pos)); }
 #endif
 
     PwAff dimMin_consume(unsigned pos) { return PwAff::enwrap(isl_map_dim_min(take(), pos)); }
     PwAff dimMin(unsigned pos) const { return PwAff::enwrap(isl_map_dim_min(takeCopy(), pos)); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     PwAff dimMin(unsigned pos) && { return PwAff::enwrap(isl_map_dim_min(take(), pos)); }
 #endif
 
@@ -570,7 +570,7 @@ namespace isl {
     Map sum_consume(Map &&map) { return Map::enwrap(isl_map_sum(take(), map.take())); }
     void sum_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_map_sum(take(), map.takeCopy())); }
     void sum_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_map_sum(take(), map.take())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map sum(const Map &map) && { return Map::enwrap(isl_map_sum(take(), map.takeCopy())); }
     Map sum(Map &&map) && { return Map::enwrap(isl_map_sum(take(), map.take())); }
 #endif
@@ -598,7 +598,7 @@ namespace isl {
     /// { A -> B } to { (A -> B) } (with nested range)
     Set wrap() const { return Set::enwrap(isl_map_wrap(takeCopy())); } 
     Set wrap_consume() { return Set::enwrap(isl_map_wrap(take())); } 
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Set wrap() && { return Set::enwrap(isl_map_wrap(take())); } 
 #endif
 
@@ -631,7 +631,7 @@ namespace isl {
     Map pullback(const Map &that) ISLPP_EXSITU_QUALIFIER { return Map::enwrap( isl_map_apply_range(that.takeCopy(), this->takeCopy()) ); }
     void pullback_inplace(const Map &that) ISLPP_INPLACE_QUALIFIER { give(isl_map_apply_range(that.takeCopy(), this->take())); }
 
-    ISLPP_EXSITU_PREFIX BasicMap simpleHull() ISLPP_EXSITU_QUALIFIER { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_QUALIFIER { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
   }; // class Map
 
 

@@ -1203,7 +1203,7 @@ Space Space::findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange
 }
 
 
-ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2 ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2 ) ISLPP_EXSITU_QUALIFIER
 {
   auto result = universeBasicSet();
   for (auto i = count-count; i < count; i+=1) {
@@ -1213,7 +1213,7 @@ ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsi
 }
 
 
-ISLPP_EXSITU_PREFIX BasicSet isl::Space::equalBasicSet( Space subspace1, Space subspace2 )
+ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( Space subspace1, Space subspace2 )
 {
   assert(isSetSpace());
   auto range1 = this->findSubspace(isl_dim_set, subspace1);
@@ -1236,6 +1236,14 @@ bool isl::Space::match( isl_dim_type thisType, const Space &that, isl_dim_type t
   } 
   return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType));
 }
+
+ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_QUALIFIER
+{
+  assert(isMapSpace());
+  assert(dim(isl_dim_in) == dim(isl_dim_out));
+  return equalBasicMap(std::min(dim(isl_dim_in), dim(isl_dim_out)));
+}
+
 
 
 bool isl::isEqual(const Space &space1, const Space &space2){

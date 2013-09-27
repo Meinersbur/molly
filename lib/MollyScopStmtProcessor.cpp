@@ -115,11 +115,11 @@ namespace {
 
       auto nDims = domain.getDimCount();
       for (auto i = nDims-nDims; i < nDims; i+=1) {
-        if (!domain.hasDimId(i)) {
+        //if (!domain.hasDimId(i)) { /* Domains might be constructed from other means, like iterating over node coords; in this case, its id will be the cluster's rankdim id, which we do not want */
           auto loop = stmt->getLoopForDimension(i);
           auto id = scopCtx->getIdForLoop(loop);
           domain.setDimId_inplace(i, id);
-        }
+        //}
       }
       return domain;
     }

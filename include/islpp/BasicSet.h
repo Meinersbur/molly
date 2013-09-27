@@ -2,14 +2,9 @@
 #define ISLPP_BASICSET_H
 
 #include "islpp_common.h"
-#include "Multi.h"
-#include "Pw.h"
-#include "Spacelike.h"
-#include <llvm/Support/Compiler.h>
-#include <cassert>
-#include <string>
-#include <functional>
+
 #include <isl/space.h> // enum isl_dim_type;
+#include "Spacelike.h" // class Obj<,>
 #include <isl/set.h>
 #include <llvm/Support/ErrorHandling.h>
 #include "Ctx.h"
@@ -17,6 +12,9 @@
 #include "Space.h"
 #include "LocalSpace.h"
 #include "Constraint.h"
+#include <string>
+#include <functional>
+#include "Islfwd.h"
 
 struct isl_basic_set;
 struct isl_constraint;
@@ -24,20 +22,6 @@ struct isl_constraint;
 namespace llvm {
   class raw_ostream;
 } // namespace llvm
-
-namespace isl {
-  class Constraint;
-  class Space;
-  class Set;
-  class LocalSpace;
-  class Ctx;
-  class Mat;
-  class Id;
-  class Int;
-  class BasicMap;
-  class Point;
-  class Vertices;
-} // namespace isl
 
 
 namespace isl {
@@ -106,22 +90,19 @@ namespace isl {
 #pragma endregion
 
 
-        unsigned getDimCount() const { return isl_basic_set_dim(keep(), isl_dim_set); }
-        bool hasDimId(unsigned pos) const { return Spacelike<BasicSet>::hasDimId(isl_dim_set, pos); }
+    unsigned getDimCount() const { return isl_basic_set_dim(keep(), isl_dim_set); }
+    bool hasDimId(unsigned pos) const { return Spacelike<BasicSet>::hasDimId(isl_dim_set, pos); }
     Id getDimId(unsigned pos) const { return Id::enwrap(isl_basic_set_get_dim_id(keep(), isl_dim_set, pos)); }
 
     isl::Id getTupleId() const { return Spacelike<BasicSet>::getTupleId(isl_dim_set); }
     bool hasTupleId() const { return Spacelike<BasicSet>::hasTupleId(isl_dim_set); }
-      BasicSet setTupleId(const Id &id) const  { return Spacelike<BasicSet>::setTupleId(isl_dim_set, id); }
+    BasicSet setTupleId(const Id &id) const  { return Spacelike<BasicSet>::setTupleId(isl_dim_set, id); }
     void setTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { Spacelike<BasicSet>::setTupleId_inplace(isl_dim_set, id); }
 
 #pragma region Creational
-    static BasicSet create(const Space &space);
-    static BasicSet create(Space &&space);
-    static BasicSet createEmpty(const Space &space);
-    static BasicSet createEmpty(Space &&space);
-    static BasicSet createUniverse(const Space &space);
-    static BasicSet createUniverse(Space &&space);
+    static BasicSet create(Ctx *ctx, count_t nparam, count_t dim, count_t extra, count_t n_eq, count_t n_ineq) { return BasicSet::wrap(isl_basic_set_alloc(ctx->keep(), nparam, dim, extra, n_eq, n_ineq)); }
+    static BasicSet createEmpty(Space space) { return BasicSet::wrap(isl_basic_set_empty(space.take())); }
+    static BasicSet createUniverse(Space space) { return BasicSet::wrap(isl_basic_set_universe(space.take())); }
     static BasicSet createNatUniverse(Space &&space);
     static BasicSet createFromConstraintMatrices(Space &&space, Mat &&eq, Mat &&ineq, isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4);
     static BasicSet createFromPoint(Point &&pnt);
@@ -138,21 +119,11 @@ namespace isl {
 #pragma endregion
 
 
-#pragma region Printing
-    //void print(llvm::raw_ostream &out) const;
-    //std::string toString() const;
-    //void dump() const;
-#pragma endregion
-
-
 #pragma region Constraints
-    void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.take())); }
-    void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
-    BasicSet addConstraint(Constraint &&constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.take())); }
-    BasicSet addConstraint(const Constraint &constraint) const { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.takeCopy())); }
-#if ISLPP_HAS_RVALUE_THIS_QUALIFIER
-    BasicSet addConstraint(Constraint &&constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.take())); }
-    BasicSet addConstraint(const Constraint &constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.takeCopy())); }
+    ISLPP_EXSITU_ATTRS  BasicSet addConstraint(Constraint constraint) ISLPP_EXSITU_QUALIFIER { return BasicSet::enwrap(isl_basic_set_add_constraint(takeCopy(), constraint.take())); }
+    ISLPP_INPLACE_ATTRS  void addConstraint_inplace(Constraint constraint) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_add_constraint(take(), constraint.take())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+    BasicSet addConstraint(Constraint constraint) && { return BasicSet::enwrap(isl_basic_set_add_constraint(take(), constraint.take())); }
 #endif
 
     void dropContraint(Constraint &&constraint);
@@ -212,9 +183,9 @@ namespace isl {
     void lift();
     void alignParams(Space &&model);
 
-    void addDims(isl_dim_type type, unsigned n);
-    void insertDims(isl_dim_type type, unsigned pos,  unsigned n);
-    void moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n);
+    //void addDims(isl_dim_type type, unsigned n);
+    //void insertDims(isl_dim_type type, unsigned pos,  unsigned n);
+    //void moveDims(isl_dim_type dst_type, unsigned dst_pos,  isl_dim_type src_type, unsigned src_pos,  unsigned n);
 
     void apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER;
 
@@ -244,8 +215,11 @@ namespace isl {
     BasicSet alignParams(const Space &model) const { return BasicSet::enwrap(isl_basic_set_align_params(takeCopy(), model.takeCopy())); }
 
     /// Returns a somewhat strange aff without a domain (i.e. getSpace() returns a set space)
-    ISLPP_EXSITU_PREFIX Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_PREFIX Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Aff dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Aff dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER;
+
+    ISLPP_EXSITU_ATTRS BasicSet cast(Space space) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(std::move(space))); }
   }; // class BasicSet
 
 

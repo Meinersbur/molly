@@ -4,13 +4,11 @@
 //#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
 #include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType)
 #include <llvm/ADT/ArrayRef.h>
-//#include "islpp/Space.h"
-//#include "islpp/MultiAff.h"
-//#include "islpp/Islfwd.h"
 #include "LLVMfwd.h"
 #include "molly/Mollyfwd.h"
 #include "islpp/Islfwd.h"
 #include "islpp/Id.h"
+#include "islpp/Space.h"
 
 namespace isl {
   class Ctx;
@@ -48,7 +46,8 @@ namespace molly {
     // Local shape(s)
     bool isdistributed;
     llvm::SmallVector<int, 4> localLengths;
-    isl::Id clusterTupleId;
+    //isl::Id clusterTupleId;
+    isl::Space clusterSpace;
     //isl::Set localShape
 
     //llvm::Function *reffunc;
@@ -112,10 +111,10 @@ namespace molly {
     void setDistributed(bool val = true) {
       isdistributed = val;
     }
-    void setLocalLength(const llvm::ArrayRef<int> &lengths, const isl::Id &clusterId) {
+    void setLocalLength(const llvm::ArrayRef<int> &lengths, isl::Space &clusterSpace) {
       this->localLengths.clear();
       this->localLengths.append(lengths.begin(), lengths.end());
-      this->clusterTupleId = clusterId;
+      this->clusterSpace = clusterSpace;
     }
     //void setDistribution(const llvm::ArrayRef<int> &localLengths )
     isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */
