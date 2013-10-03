@@ -88,7 +88,7 @@ Int Aff::getDenominator() const {
   return result;
 }
 
-void Aff::setConstant_inplace(const Int &v)  ISLPP_INPLACE_QUALIFIER {
+void Aff::setConstant_inplace(const Int &v)  ISLPP_INPLACE_FUNCTION {
   give(isl_aff_set_constant(take(), v.keep())); 
 }
 void Aff::setCoefficient(isl_dim_type type, unsigned pos, int v) {
@@ -184,11 +184,11 @@ void Aff::gistParams(Set &&context) {
 }
 
 
-void Aff::pullback_inplace(const Multi<Aff> &ma) ISLPP_INPLACE_QUALIFIER {
+void Aff::pullback_inplace(const Multi<Aff> &ma) ISLPP_INPLACE_FUNCTION {
   give(isl_aff_pullback_multi_aff(take(), ma.takeCopy()));
 }
 
-PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
+PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   auto resultSpace = pma.getDomainSpace().mapsTo(1);
   auto result = resultSpace.createEmptyPwAff();
 
@@ -201,12 +201,12 @@ PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
   return result;
 }
 
-ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_FUNCTION
 {
   return Map::enwrap(isl_map_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_FUNCTION
 {
   assert(getInDimCount() == space.getInDimCount());
   assert(getOutDimCount() == space.getOutDimCount());
@@ -218,12 +218,12 @@ ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_QUALIFIER
   return pullback(transformDomain);
 }
 
-ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_FUNCTION
 {
   return MultiAff::enwrap(isl_multi_aff_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_ATTRS PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_FUNCTION
 {
   return PwMultiAff::enwrap(isl_pw_multi_aff_from_multi_aff(isl_multi_aff_from_aff(takeCopy())));
 }

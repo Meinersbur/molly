@@ -159,7 +159,7 @@ PwMultiAff PwMultiAff::projectOutSubspace(const Space &subspace) const {
 }
 
 
-PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIER {
+PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_FUNCTION {
   auto domainSpace = getDomainSpace();
   auto resultSpace = domainSpace.mapsTo(count);
   auto result = resultSpace.createEmptyPwMultiAff();
@@ -175,7 +175,7 @@ PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_QUALIFIE
 }
 
 
-ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_FUNCTION {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
 
@@ -185,7 +185,7 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_Q
 }
 
 
-PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   assert(getOutDimCount() == space.getOutDimCount());
   assert(getInDimCount() == space.getInDimCount());
 

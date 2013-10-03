@@ -56,15 +56,15 @@ namespace isl {
 
 
 #pragma region Properties
-    ISLPP_EXSITU_ATTRS const char *getName() ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_ATTRS void *getUser() ISLPP_EXSITU_QUALIFIER;
-    template<typename T> ISLPP_EXSITU_ATTRS T getUser() ISLPP_EXSITU_QUALIFIER { return static_cast<T>(getUser()); }
+    ISLPP_EXSITU_ATTRS const char *getName() ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS void *getUser() ISLPP_EXSITU_FUNCTION;
+    template<typename T> ISLPP_EXSITU_ATTRS T getUser() ISLPP_EXSITU_FUNCTION { return static_cast<T>(getUser()); }
 
     /// Set the function to be executued when the last user frees this Id
     /// NOTE: Id's are interned and the freefunc does not change the Id's identity, therefore the freefunc applies to all id's with this identity (name + user)
-    Id setFreeUser(void (*freefunc)(void *)) ISLPP_EXSITU_QUALIFIER;
-    void setFreeUser_inplace(void (*freefunc)(void *)) ISLPP_INPLACE_QUALIFIER;
-    Id setFreeUser_consume(void (*freefunc)(void *)) ISLPP_CONSUME_QUALIFIER;
+    Id setFreeUser(void (*freefunc)(void *)) ISLPP_EXSITU_FUNCTION;
+    void setFreeUser_inplace(void (*freefunc)(void *)) ISLPP_INPLACE_FUNCTION;
+    Id setFreeUser_consume(void (*freefunc)(void *)) ISLPP_CONSUME_FUNCTION;
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Id setFreeUser(void (*freefunc)(void *)) &&;
 #endif

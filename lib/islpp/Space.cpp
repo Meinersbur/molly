@@ -581,49 +581,37 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 
 static unsigned countSubspaceMatches_recursive(const Space &space, const Space &spaceToFind) {
   assert(spaceToFind.isValid());
-  unsigned result = 0;
-  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
-    auto dimCount = space.dim(type);
-
-    if (::matchesSpace(spaceToFind, space.getNestedOrDefault(type))) {
-      // Found the space
-      result+=1;
-      continue; // Do not look into nested spaces
-    }
-
-    if (space.isNested(type)) {
-      auto nestedSpace = space.getNested(type);
-      result += countSubspaceMatches_recursive(nestedSpace, spaceToFind);
-    } 
+  if (space == spaceToFind) {
+    return 1;
   }
 
-  return result;
+  if (space.isWrapping()) {
+    return countSubspaceMatches_recursive(space.unwrap(), spaceToFind);
+  } 
+
+  if (space.isMapSpace()) {
+    return countSubspaceMatches_recursive(space.domain(), spaceToFind) + countSubspaceMatches_recursive(space.range(), spaceToFind);
+  } 
+
+  return 0;
 }
+
 
 static bool findSubspace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
   assert(spaceToFind.isValid());
-
-  for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
-    auto dimCount = space.dim(type);
-    auto startDimPos = currentDimPos;
-
-    if (::matchesSpace(spaceToFind, space.getNestedOrDefault(type))) {
-      // Found the space
-      return true; // Abort the recursion
-    }
-
-    if (space.isNested(type)) {
-      auto nestedSpace = space.getNested(type);
-      if (findSubspace_recursive(nestedSpace, spaceToFind, currentDimPos)) {
-        return true;
-      }
-    } else {
-      currentDimPos += dimCount;
-    }
-
-    assert(currentDimPos == startDimPos+dimCount);
+  if (space == spaceToFind) {
+    return true;
   }
 
+  if (space.isWrapping()) {
+    return findSubspace_recursive(space.unwrap(), spaceToFind, currentDimPos);
+  } 
+  
+  if (space.isMapSpace()) {
+   return findSubspace_recursive(space.domain(), spaceToFind, currentDimPos) || findSubspace_recursive(space.range(), spaceToFind, currentDimPos);
+  } 
+
+  currentDimPos += space.getSetDimCount();
   return false;
 }
 
@@ -1203,7 +1191,7 @@ Space Space::findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange
 }
 
 
-ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2 ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsigned pos1, unsigned count, isl_dim_type type2, unsigned pos2 ) ISLPP_EXSITU_FUNCTION
 {
   auto result = universeBasicSet();
   for (auto i = count-count; i < count; i+=1) {
@@ -1237,7 +1225,7 @@ bool isl::Space::match( isl_dim_type thisType, const Space &that, isl_dim_type t
   return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType));
 }
 
-ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_FUNCTION
 {
   assert(isMapSpace());
   assert(dim(isl_dim_in) == dim(isl_dim_out));

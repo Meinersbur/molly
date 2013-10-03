@@ -8,6 +8,7 @@
 #include "Int.h"
 #include "Obj.h"
 #include "Ctx.h"
+#include <isl/deprecated/point_int.h>
 
 struct isl_point;
 

@@ -78,7 +78,7 @@ void Multi<PwAff>::printProperties(llvm::raw_ostream &out, int depth, int indent
 }
 
 
-const MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) ISLPP_INPLACE_QUALIFIER { 
+const MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) ISLPP_INPLACE_FUNCTION { 
   give(madd.isValid() ? madd.toMultiPwAff().take() : nullptr); 
   return *this;
 }
@@ -88,7 +88,7 @@ const MultiPwAff &Multi<PwAff>::operator=(const MultiAff &madd) ISLPP_INPLACE_QU
   : Obj(pma.isValid() ? pma.toMultiPwAff().take() : nullptr) {}
 
 
-const MultiPwAff &Multi<PwAff>::operator=(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER {
+const MultiPwAff &Multi<PwAff>::operator=(const PwMultiAff &pma) ISLPP_INPLACE_FUNCTION {
   give(pma.isValid() ? pma.toMultiPwAff().take() : nullptr);
   return *this;
 }
@@ -110,14 +110,14 @@ void Multi<PwAff>::push_back(PwAff &&aff) {
 }
 
 
-void MultiPwAff::sublist_inplace(pos_t first, count_t count) ISLPP_INPLACE_QUALIFIER {
+void MultiPwAff::sublist_inplace(pos_t first, count_t count) ISLPP_INPLACE_FUNCTION {
   auto nOutDims = getOutDimCount();
   removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);
   removeDims_inplace(isl_dim_out, 0, first);
 }
 
 
-MultiPwAff MultiPwAff::sublist(const Space &subspace) ISLPP_EXSITU_QUALIFIER {
+MultiPwAff MultiPwAff::sublist(const Space &subspace) ISLPP_EXSITU_FUNCTION {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
 
@@ -169,12 +169,12 @@ MultiPwAff MultiPwAff::pullback(const MultiPwAff &that) ISLPP_EXSITU_QUALIFIER {
 #endif
 
 
-Map MultiPwAff::reverse() ISLPP_EXSITU_QUALIFIER {
+Map MultiPwAff::reverse() ISLPP_EXSITU_FUNCTION {
   return toMap().reverse();
 }
 
 
-MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
+MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   auto nOutDims = getOutDimCount();
   auto resultSpace = Space::createMapFromDomainAndRange(pma.getDomainSpace(), getRangeSpace());
   auto result = resultSpace.createZeroMultiPwAff();
@@ -189,7 +189,7 @@ MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
 }
 
 
-MultiPwAff MultiPwAff::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+MultiPwAff MultiPwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   assert(getOutDimCount() == space.getOutDimCount());
   assert(getInDimCount() == space.getInDimCount());
 

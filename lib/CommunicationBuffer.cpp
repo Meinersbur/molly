@@ -207,3 +207,19 @@ llvm::Type * molly::CommunicationBuffer::getEltType() const {
 llvm::PointerType *molly::CommunicationBuffer::getEltPtrType() const {
   return getFieldType()->getEltPtrType();
 }
+
+
+llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &codegen) {
+  auto var = getVariableSend();
+auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
+codegen.addScalarLoadAccess(var, result);
+return result;
+}
+
+
+llvm::Value *CommunicationBuffer::codegenPtrToRecvbufObj(MollyCodeGenerator &codegen) {
+   auto var = getVariableRecv();
+  auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
+  codegen.addScalarLoadAccess(var, result);
+  return result;
+}

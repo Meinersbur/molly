@@ -17,6 +17,7 @@
 #include "Union.h"
 #include <isl/flow.h>
 #include <vector>
+#include <isl/deprecated/union_map_int.h>
 
 struct isl_union_map;
 
@@ -109,8 +110,8 @@ namespace isl {
     void lexmin() { give(isl_union_map_lexmin(take())); }
     void lexmax() { give(isl_union_map_lexmax(take())); }
 
-    void addMap_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_add_map(take(), map.take())); }
-    void addMap_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_add_map(take(), map.takeCopy())); }
+    void addMap_inplace(Map &&map) ISLPP_INPLACE_FUNCTION { give(isl_union_map_add_map(take(), map.take())); }
+    void addMap_inplace(const Map &map) ISLPP_INPLACE_FUNCTION { give(isl_union_map_add_map(take(), map.takeCopy())); }
     UnionMap addMap(Map &&map) const { return UnionMap::enwrap(isl_union_map_add_map(takeCopy(), map.take())); }
     UnionMap addMap(const Map &map) const { return UnionMap::enwrap(isl_union_map_add_map(takeCopy(), map.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -169,8 +170,8 @@ namespace isl {
 
     void alignParams(Space &&model) { give(isl_union_map_align_params(take(), model.take())); }
 
-    void unite_inplace(UnionMap &&that) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_union(take(), that.take())); }
-    void unite_inplace(const UnionMap &that) ISLPP_INPLACE_QUALIFIER { give(isl_union_map_union(take(), that.takeCopy())); }
+    void unite_inplace(UnionMap &&that) ISLPP_INPLACE_FUNCTION { give(isl_union_map_union(take(), that.take())); }
+    void unite_inplace(const UnionMap &that) ISLPP_INPLACE_FUNCTION { give(isl_union_map_union(take(), that.takeCopy())); }
     UnionMap unite(UnionMap &&that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.take())); }
     UnionMap unite(const UnionMap &that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS

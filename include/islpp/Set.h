@@ -78,16 +78,16 @@ namespace isl {
     Space getSpacelike() const { return getSpace(); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
+    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
 
   public:    
-    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_reset_tuple_id(take())); }
+    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_reset_tuple_id(take())); }
     //void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_reset_dim_id(take(), pos)); }
 
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_insert_dims(take(), type, pos, count)); }
-    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_remove_dims(take(), type, first, count)); }
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_insert_dims(take(), type, pos, count)); }
+    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_remove_dims(take(), type, first, count)); }
 
 
     // optional, default implementation exist
@@ -97,14 +97,14 @@ namespace isl {
     bool hasTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_has_tuple_id(keep()); }
     const char *getTupleName(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_get_tuple_name(keep()); }
     Id getTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return Id::enwrap(isl_set_get_tuple_id(keep())); }
-    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_set_tuple_name(take(), s)); }
+    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_name(take(), s)); }
 
     bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_set_has_dim_id(keep(), type, pos); }
     const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_set_get_dim_name(keep(), type, pos); }
     Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_set_get_dim_id(keep(), type, pos)); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_name(take(), type, pos, s)); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_name(take(), type, pos, s)); }
 
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_dims(take(), type, count)); }
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_add_dims(take(), type, count)); }
 #pragma endregion
 
 
@@ -114,8 +114,8 @@ namespace isl {
     const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }
     Id getTupleId() const { return Id::enwrap(isl_set_get_tuple_id(keep())); }
 
-    void setTupleId_inplace(Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_tuple_id(take(), id.take())); }
-    void setTupleId_inplace(const Id &id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_tuple_id(take(), id.takeCopy())); }
+    void setTupleId_inplace(Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_tuple_id(take(), id.take())); }
+    void setTupleId_inplace(const Id &id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_tuple_id(take(), id.takeCopy())); }
     Set setTupleId(Id &&id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.take())); }
     Set setTupleId(const Id &id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -124,7 +124,7 @@ namespace isl {
 #endif
 
     Set setDimId(unsigned pos, const Id &id) const { return Set::enwrap(isl_set_set_dim_id(takeCopy(), isl_dim_set, pos, id.takeCopy())); }
-    void setDimId_inplace(unsigned pos, const Id &id) ISLPP_INPLACE_QUALIFIER { give(isl_set_set_dim_id(take(), isl_dim_set, pos, id.takeCopy())); }
+    void setDimId_inplace(unsigned pos, const Id &id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_id(take(), isl_dim_set, pos, id.takeCopy())); }
 
     unsigned getDimCount() const { return isl_set_dim(keep(), isl_dim_set); }
     bool hasDimId(unsigned pos) const { return checkBool(isl_set_has_dim_id(keep(), isl_dim_set, pos)); }
@@ -161,7 +161,7 @@ namespace isl {
     void printPovray(llvm::raw_ostream &out) const;
 #pragma endregion
 
-    void addConstraint_inplace(const Constraint &c) ISLPP_INPLACE_QUALIFIER { give(isl_set_add_constraint(take(), c.takeCopy())); }
+    void addConstraint_inplace(const Constraint &c) ISLPP_INPLACE_FUNCTION { give(isl_set_add_constraint(take(), c.takeCopy())); }
     Set addContraint(const Constraint &c) const { return Set::enwrap(isl_set_add_constraint(takeCopy(), c.takeCopy())); }
 
     Set complement() const;
@@ -229,11 +229,11 @@ namespace isl {
     PwAff dimMax(int pos) const;
     PwAff dimMax(const Dim &dim) const;
 
-    void unite_inplace(Set &&that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.take())); }
-    void unite_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_union(take(), that.takeCopy())); }
+    void unite_inplace(Set &&that) ISLPP_INPLACE_FUNCTION { give(isl_set_union(take(), that.take())); }
+    void unite_inplace(const Set &that) ISLPP_INPLACE_FUNCTION { give(isl_set_union(take(), that.takeCopy())); }
 
-    void apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER; 
-    void apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER; 
+    void apply_inplace(Map &&map) ISLPP_INPLACE_FUNCTION; 
+    void apply_inplace(const Map &map) ISLPP_INPLACE_FUNCTION; 
     Set apply(Map &&map) const ;
     Set apply(const Map &map) const;
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -252,15 +252,15 @@ namespace isl {
     Map unwrap() const;
 
     // { A } and { A' -> B } to { A*A' -> B } (where * means intersection)
-    Map chain(const Map &map) ISLPP_EXSITU_QUALIFIER;
+    Map chain(const Map &map) ISLPP_EXSITU_FUNCTION;
 
     // { (A -> B -> C ) } and { B' -> D } to { (A -> B*B' -> C) -> D }
     //Map chainNested(const Map &map) const; // deprecated; use chainSubspace
-    Map chainSubspace(const Map &map) ISLPP_EXSITU_QUALIFIER;
-    Map chainSubspace_consume(const Map &map) ISLPP_CONSUME_QUALIFIER;
+    Map chainSubspace(const Map &map) ISLPP_EXSITU_FUNCTION;
+    Map chainSubspace_consume(const Map &map) ISLPP_CONSUME_FUNCTION;
     Map chainNested(const Map &map, unsigned tuplePos) const; // deprecared?
 
-    void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER;
+    void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
 
     bool isSubsetOf(const Set &that) const { return checkBool(isl_set_is_subset(keep(), that.keep())); }
@@ -275,8 +275,8 @@ namespace isl {
     //Map unwrapTuple_internal(const Id &tupleId) ISLPP_INTERNAL_QUALIFIER;
     Map unwrapSubspace(const Space &subspace) const;
 
-    Set intersect(const Set &that) ISLPP_EXSITU_QUALIFIER { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
-    void intersect_inplace(const Set &that) ISLPP_INPLACE_QUALIFIER { give(isl_set_intersect(take(), that.takeCopy())); }
+    Set intersect(const Set &that) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
+    void intersect_inplace(const Set &that) ISLPP_INPLACE_FUNCTION { give(isl_set_intersect(take(), that.takeCopy())); }
 
     /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
     /// { (A, B, C) }.subspspaceMap({ B }) = { (A, B, C) -> B }
@@ -287,14 +287,14 @@ namespace isl {
 
     //Map reorganizeTuples(llvm::ArrayRef<unsigned> domainTuplePos, llvm::ArrayRef<unsigned> rangeTuplePos);
     Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
-    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
-    Set reorganizeSubspaces(const Space &setSpace, bool mustExist = false) ISLPP_EXSITU_QUALIFIER;
+    Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace, bool mustExist = false) ISLPP_EXSITU_FUNCTION;
+    Set reorganizeSubspaces(const Space &setSpace, bool mustExist = false) ISLPP_EXSITU_FUNCTION;
 
-    ISLPP_EXSITU_ATTRS Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_ATTRS Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_QUALIFIER { return reorganizeSubspaces(std::move(setSpace), true); }
+    ISLPP_EXSITU_ATTRS Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_FUNCTION { return reorganizeSubspaces(std::move(setSpace), true); }
 
-    Set cast(Space space) ISLPP_EXSITU_QUALIFIER;
-    void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space).move()); }
+    Set cast(Space space) ISLPP_EXSITU_FUNCTION;
+    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
   }; // class Set
 
 

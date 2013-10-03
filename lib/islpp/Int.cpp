@@ -1,7 +1,7 @@
 #include "islpp_impl_common.h"
 #include "islpp/Int.h"
 
-#include <isl/int.h>
+#include <isl/deprecated/int.h>
 
 using namespace isl;
 

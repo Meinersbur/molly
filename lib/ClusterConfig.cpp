@@ -42,7 +42,7 @@ llvm::Value *ClusterConfig::codegenComputeRank(DefaultIRBuilder &builder, ArrayR
   auto intTy = Type::getInt32Ty(llvmContext);
 
   if (!funcCoordToRank) {
-    auto module = getParentModule(builder);
+    auto module = getModuleOf(builder);
 
     SmallVector<Type*,4> argTys(getClusterDims(), intTy);
    auto funcTy = FunctionType::get(intTy,argTys, false);

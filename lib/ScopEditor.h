@@ -58,8 +58,6 @@ namespace molly {
     StmtEditor createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name);
     
 
-
-
     /// Create a ScopStmt that are all executed before/after another stmt
     /// Params:
     ///   model     Execute before/after this statement

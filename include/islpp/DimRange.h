@@ -27,8 +27,8 @@ namespace isl {
 
     /* implicit */ DimRange(const DimRange &that) : type(that.type), first(that.first), count(that.count), space(isl_space_copy(that.space)) {  }
     /* implicit */ DimRange(DimRange &&that) : type(that.type), first(that.first), count(that.count), space(that.space) { that.type = isl_dim_cst; that.space = nullptr; }
-    const DimRange &operator=(const DimRange &that) ISLPP_INPLACE_QUALIFIER { this->type = that.type; this->first = that.first; this->count = that.count; this->space = isl_space_copy(that.space); return *this; }
-    const DimRange &operator=(DimRange &&that) ISLPP_INPLACE_QUALIFIER { this->type = that.type; this->first = that.first; this->count = that.count; this->space = that.space; that.type = isl_dim_cst; that.space = nullptr; return *this; }
+    const DimRange &operator=(const DimRange &that) ISLPP_INPLACE_FUNCTION { this->type = that.type; this->first = that.first; this->count = that.count; this->space = isl_space_copy(that.space); return *this; }
+    const DimRange &operator=(DimRange &&that) ISLPP_INPLACE_FUNCTION { this->type = that.type; this->first = that.first; this->count = that.count; this->space = that.space; that.type = isl_dim_cst; that.space = nullptr; return *this; }
 
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, __isl_take isl_space *space);
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, Space &&space);

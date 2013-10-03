@@ -65,13 +65,13 @@ namespace isl {
     Space getSpacelike() const { return getSpace(); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_tuple_id(take(), type, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_tuple_id(take(), type, id.take())); }
     //void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_dim_id(take(), type, pos, id.take())); }
 
   public:
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_insert_dims(take(), type, pos, count)); }
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_insert_dims(take(), type, pos, count)); }
     //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_drop_dims(take(), type, first, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_drop_dims(take(), type, first, count)); }
 
 
     // optional, default implementation exist
@@ -81,20 +81,20 @@ namespace isl {
     //bool hasTupleId(isl_dim_type type) const { return isl_multi_aff_has_tuple_id(keep(), type); }
     const char *getTupleName(isl_dim_type type) const { return isl_multi_aff_get_tuple_name(keep(), type); }
     //Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_multi_aff_get_tuple_id(keep(), type)); }
-    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_tuple_name(take(), type, s)); }
+    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_tuple_name(take(), type, s)); }
 
     //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_multi_aff_has_dim_id(keep(), type, pos); }
     //const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_multi_aff_get_dim_name(keep(), type, pos); }
     //Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_multi_aff_get_dim_id(keep(), type, pos)); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_dim_name(take(), type, pos, s)); }
+    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_dim_name(take(), type, pos, s)); }
 
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_add_dims(take(), type, count)); }
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_add_dims(take(), type, count)); }
 #pragma endregion
 
 
-    Space getDomainSpace() ISLPP_EXSITU_QUALIFIER { return Space::enwrap(isl_multi_aff_get_domain_space(keep())); }
-    Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { return getSpace().getRangeSpace(); }
-    Space getParamsSpace() ISLPP_EXSITU_QUALIFIER { return getSpace().getParamsSpace(); }
+    Space getDomainSpace() ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_multi_aff_get_domain_space(keep())); }
+    Space getRangeSpace() ISLPP_EXSITU_FUNCTION { return getSpace().getRangeSpace(); }
+    Space getParamsSpace() ISLPP_EXSITU_FUNCTION { return getSpace().getParamsSpace(); }
 
 
 #pragma region Conversion
@@ -122,9 +122,9 @@ namespace isl {
 
 #pragma region Multi
     Aff getAff(int pos) const { return Aff::enwrap(isl_multi_aff_get_aff(keep(), pos)); }
-    ISLPP_EXSITU_ATTRS MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
-    void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
-    void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
+    ISLPP_EXSITU_ATTRS MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_FUNCTION { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
+    void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
+    void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
     void push_back(Aff &&aff);
     void push_back(const Aff &aff) { return push_back(aff.copy()); }
 #pragma endregion
@@ -133,9 +133,9 @@ namespace isl {
     void scale(Int f) { give(isl_multi_aff_scale(take(), f.keep())); };
     //void scaleVec(Vec &&v) { give(isl_multi_aff_scale_vec(take(), v.take())); }
 
-    ISLPP_EXSITU_ATTRS MultiAff alignParams(Space model) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(takeCopy(), model.take())); }
-    void alignParams_inplace(Space model) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_align_params(take(), model.take())); }
-    ISLPP_CONSUME_ATTRS MultiAff alignParams_consume(Space model) ISLPP_CONSUME_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
+    ISLPP_EXSITU_ATTRS MultiAff alignParams(Space model) ISLPP_EXSITU_FUNCTION { return MultiAff::enwrap(isl_multi_aff_align_params(takeCopy(), model.take())); }
+    void alignParams_inplace(Space model) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_align_params(take(), model.take())); }
+    ISLPP_CONSUME_ATTRS MultiAff alignParams_consume(Space model) ISLPP_CONSUME_FUNCTION { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     ISLPP_CONSUME_ATTRS MultiAff alignParams(Space model) && { return MultiAff::enwrap(isl_multi_aff_align_params(take(), model.take())); }
 #endif
@@ -156,35 +156,35 @@ namespace isl {
 #pragma endregion
 
 
-    void neg_inplace() ISLPP_INPLACE_QUALIFIER;
+    void neg_inplace() ISLPP_INPLACE_FUNCTION;
     MultiAff neg() const { auto result = copy(); result.neg_inplace(); return result; }
 
     /// Return a subset of affs (name analogous to substr, sublist, not subtraction)
     //TODO: rename to sublist
     MultiAff subMultiAff(unsigned first, unsigned count) const { auto result = copy(); result.subMultiAff_inplace(first, count); return result; }
-    void subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER;
-    MultiAff sublist(const Space &subspace) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.sublist_inplace(subspace); return result; }
-    void sublist_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
+    void subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION;
+    MultiAff sublist(const Space &subspace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.sublist_inplace(subspace); return result; }
+    void sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION;
 
     //TODO: unclear semantics, remove
     MultiAff embedAsSubspace(const Space &framespace) const;
 
     /// Function composition
-    MultiAff pullback(const MultiAff &maff2) ISLPP_EXSITU_QUALIFIER { return MultiAff::enwrap(isl_multi_aff_pullback_multi_aff(takeCopy(), maff2.takeCopy())); }
-    void pullback_inplace(const MultiAff &maff2) ISLPP_INPLACE_QUALIFIER { give(isl_multi_aff_pullback_multi_aff(take(), maff2.takeCopy())); }
+    MultiAff pullback(const MultiAff &maff2) ISLPP_EXSITU_FUNCTION { return MultiAff::enwrap(isl_multi_aff_pullback_multi_aff(takeCopy(), maff2.takeCopy())); }
+    void pullback_inplace(const MultiAff &maff2) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_pullback_multi_aff(take(), maff2.takeCopy())); }
 
-    PwMultiAff pullback(const PwMultiAff &mpa) ISLPP_EXSITU_QUALIFIER;
+    PwMultiAff pullback(const PwMultiAff &mpa) ISLPP_EXSITU_FUNCTION;
 
     /// Would be ineffective
     //MultiPwAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
 
-    PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
+    PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION;
 
-    MultiAff cast(Space space) ISLPP_EXSITU_QUALIFIER;
-    void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(cast(space)); }
+    MultiAff cast(Space space) ISLPP_EXSITU_FUNCTION;
+    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space)); }
 
-    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_QUALIFIER;
-    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_FUNCTION;
   }; // class MultiAff
 
 

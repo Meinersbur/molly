@@ -62,7 +62,7 @@ namespace {
   protected:
     Scop *getParent() const { return stmt->getParent(); }
     MollyScopProcessor *getParentProcessor() const { return pm->getScopContext(getParent()); }
-    MollyFunctionProcessor *getFunctionProcessor() const { return pm->getFuncContext(getParentFunction(stmt)); }
+    MollyFunctionProcessor *getFunctionProcessor() const { return pm->getFuncContext(getFunctionOf(stmt)); }
     ClusterConfig *getClusterConfig() const { return pm->getClusterConfig(); }
     isl::BasicSet getClusterShape() const { return getClusterConfig()->getClusterShape(); }
 
@@ -170,7 +170,7 @@ namespace {
 
     void applyWhere() LLVM_OVERRIDE {
       auto scop = stmt->getParent();
-      auto func = getParentFunction(stmt);
+      auto func = getFunctionOf(stmt);
       //auto funcCtx = pm->getFuncContext(func);
       auto scopCtx = pm->getScopContext(scop);
       // auto se = pm->findOrRunAnalysis<ScalarEvolution>(func);
@@ -234,7 +234,7 @@ namespace {
   protected:
     template<typename Analysis> 
     Analysis *findOrRunAnalysis() {
-      return pm->findOrRunAnalysis<Analysis>(nullptr, getParentRegion(stmt));
+      return pm->findOrRunAnalysis<Analysis>(nullptr, getRegionOf(stmt));
     }
 
 

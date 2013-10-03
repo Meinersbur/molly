@@ -169,7 +169,7 @@ Map Map::applyNested(isl_dim_type type, const Map &map) const {
 }
 
 
-void Map::projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+void Map::projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_FUNCTION {
   auto myspace = getTupleSpace(type);
   auto dims = getSpace().findSubspace(type, subspace);
   assert(dims.isValid());
@@ -192,7 +192,7 @@ Map Map::projectOutSubspace(isl_dim_type type, const Space &subspace) const {
 }
 
 
-    void Map::moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+    void Map::moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
       auto myspace = getSpace();
       auto dimrange = myspace.findSubspace(isl_dim_in, subspace);
       assert(dimrange.isValid());
@@ -206,7 +206,7 @@ Map Map::projectOutSubspace(isl_dim_type type, const Space &subspace) const {
     }
 
 
-   void Map::moveSubspacePrependToRange_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+   void Map::moveSubspacePrependToRange_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
        auto myspace = getSpace();
       auto dimrange = myspace.findSubspace(isl_dim_in, subspace);
       assert(dimrange.isValid());

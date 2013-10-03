@@ -623,8 +623,8 @@ PwAff Set::dimMax(const Dim &dim) const {
 }
 
 
-void Set::apply_inplace(Map &&map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.take())); } 
-void Set::apply_inplace(const Map &map) ISLPP_INPLACE_QUALIFIER { give(isl_set_apply(take(), map.takeCopy())); } 
+void Set::apply_inplace(Map &&map) ISLPP_INPLACE_FUNCTION { give(isl_set_apply(take(), map.take())); } 
+void Set::apply_inplace(const Map &map) ISLPP_INPLACE_FUNCTION { give(isl_set_apply(take(), map.takeCopy())); } 
 Set Set::apply(Map &&map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.take())); }
 Set Set::apply(const Map &map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -692,7 +692,7 @@ Map Set::chainNested(const Map &map, unsigned tuplePos) const {
 }
 
 
-void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_QUALIFIER {
+void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION {
   llvm::SmallVector<unsigned, 4> poss(order.begin(), order.end());
   auto nDims = getSetDimCount();
 
@@ -1029,7 +1029,7 @@ Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_
 }
 
 
-Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_QUALIFIER {
+Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_FUNCTION {
   auto myspace = getSpace();
   auto targetspace = space.normalizeWrapped();
 
@@ -1043,7 +1043,7 @@ Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_QU
 }
 
 
-Set Set::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+Set Set::cast(Space space) ISLPP_EXSITU_FUNCTION {
   assert(space.getSetDimCount() == this->getDimCount());
 
   // No inbuilt cast is ISL
@@ -1053,7 +1053,7 @@ Set Set::cast(Space space) ISLPP_EXSITU_QUALIFIER {
 }
 
 
-ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_FUNCTION
 {
   return reorganizeSubspaces(std::move(domainSpace), std::move(rangeSpace), true);
 }

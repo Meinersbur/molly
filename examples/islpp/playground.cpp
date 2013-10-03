@@ -21,21 +21,21 @@ using std::move;
 
 // Missing in isl
 static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
-	if (!mpwaff)
-		return NULL;
+  if (!mpwaff)
+    return NULL;
 
-	isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
+  isl_space *space = isl_space_domain(isl_multi_pw_aff_get_space(mpwaff));
   isl_map *map = isl_map_universe(isl_space_from_domain(space));
 
   unsigned n = isl_multi_pw_aff_dim(mpwaff, isl_dim_out);
-	for (int i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i) {
     isl_pw_aff *pwaff = isl_multi_pw_aff_get_pw_aff(mpwaff, i); 
-		isl_map *map_i = isl_map_from_pw_aff(pwaff);
-		map = isl_map_flat_range_product(map, map_i);
-	}
+    isl_map *map_i = isl_map_from_pw_aff(pwaff);
+    map = isl_map_flat_range_product(map, map_i);
+  }
 
-	isl_multi_pw_aff_free(mpwaff);
-	return map;
+  isl_multi_pw_aff_free(mpwaff);
+  return map;
 }
 
 
@@ -163,7 +163,32 @@ void test() {
 }
 
 
-int main(int argc_, const char **argv_) {
-  test();
+int main(int argc, const char *argv[]) {
+  auto ctx = isl_ctx_alloc();
+  bool r1,r2;
+
+  {
+    auto space1 = isl_space_wrap(isl_space_alloc(ctx, 1, 5, 5));
+    auto space2 = isl_space_wrap(isl_space_alloc(ctx, 2, 5, 5));
+    isl_space_tuple_match(space1, isl_dim_set, space2, isl_dim_set); // false
+
+    auto set1 = isl_set_universe(space1);
+    auto set2 = isl_set_universe(space2);
+    r1 = isl_set_is_disjoint(set1, set2); // true
+  }
+
+  {
+    auto space1 = isl_space_set_alloc(ctx, 1, 10);
+    auto space2 = isl_space_set_alloc(ctx, 2, 10);
+    isl_space_tuple_match(space1, isl_dim_set, space2, isl_dim_set); // true
+
+    auto set1 = isl_set_universe(space1);
+    auto set2 = isl_set_universe(space2);
+    r2 = isl_set_is_disjoint(set1, set2); // false
+  }
+
+  assert(r1==r2 && "Help! Disjointness is different for nested and unnested spaces!!");
+
+  //test();
   return EXIT_SUCCESS;
 }

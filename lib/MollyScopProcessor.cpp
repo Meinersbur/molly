@@ -215,7 +215,7 @@ namespace {
   public:
     static char ID;
     MollyScopContextImpl(MollyPassManager *pm, Scop *scop) : ScopPass(ID), pm(pm), scop(scop), changedScop(false), scevCodegen(*pm->findOrRunAnalysis<ScalarEvolution>(nullptr, &scop->getRegion()), "scopprocessor") {
-      func = molly::getParentFunction(scop);
+      func = molly::getFunctionOf(scop);
       islctx = pm->getIslContext();
 
       //FIXME: Shouldn't the resolver assigned by the pass manager?
@@ -273,7 +273,7 @@ namespace {
     }
 
     llvm::Function *getParentFunction() LLVM_OVERRIDE {
-      return ::getParentFunction(scop);
+      return getFunctionOf(scop);
     }
 
   private:
@@ -1194,7 +1194,7 @@ namespace {
       auto writeFlowCurrentDomain = writeFlowCurrentIteration.sublist(writeDomain.getSpace());
       auto writeFlowCurrentWriteAccessed = writeFlowCurrentDomain.applyRange(writeAccessed);
       auto writeFlowCurrentNode = writeFlowStmt->getClusterMultiAff().setOutTupleId(writeNodeId);
-      combuf->codegenStoreInSendbuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed, writeVal);
+      combuf->codegenStoreInSendbuf(writeFlowCodegen, writeFlowCurrentChunk, writeFlowCurrentNode, writeFlowCurrentDst, writeFlowCurrentWriteAccessed, writeflowVal);
 
 
       // send
@@ -1322,7 +1322,8 @@ namespace {
           writelocalCurrentIndex.push_back(v);
         } 
 
-        writelocalCodegen.codegenStoreLocal(writeVal, fvar, writelocalCurrentNode, writelocalCurrentAccessed);
+        auto writelocalVal = writelocalCodegen.materialize(writeVal);
+        writelocalCodegen.codegenStoreLocal(writelocalVal, fvar, writelocalCurrentNode, writelocalCurrentAccessed);
       }
 
 

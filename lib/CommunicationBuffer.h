@@ -99,6 +99,9 @@ namespace molly {
     llvm::Value *codegenRecvWait(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);
     void codegenRecv(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord);
 
+    llvm::Value *codegenPtrToSendbufObj(MollyCodeGenerator &codegen);
+    llvm::Value *codegenPtrToRecvbufObj(MollyCodeGenerator &codegen);
+
   }; // class CommunicationBuffer
 } // namespace molly
 #endif /* MOLLY_COMMUNICATIONBUFFER_H */

@@ -49,12 +49,12 @@ Map PwAff::toMap() const {
 }
 
 
-MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_QUALIFIER {
+MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_FUNCTION {
   return MultiPwAff::enwrap(isl_multi_pw_aff_from_pw_aff(takeCopy()));
 }
 
 
- PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_QUALIFIER {
+ PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_FUNCTION {
    //auto result = getSpace().createEmptyPwMultiAff();
    //result.setPwAff_inplace(0, this->copy());
    return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(isl_map_from_pw_aff(takeCopy())));
@@ -143,7 +143,7 @@ PwAff PwAff::pullback(const MultiAff &maff) const {
 }
 
 
-void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_QUALIFIER { 
+void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_FUNCTION { 
   give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy())); 
 }
 
@@ -153,7 +153,7 @@ PwAff PwAff::pullback(const PwMultiAff &pmaff) const {
 }
 
 
-void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_QUALIFIER {
+void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_FUNCTION {
   give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy()));
 }
 
@@ -197,7 +197,7 @@ std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
 }
 
 
-  ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_QUALIFIER {
+  ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
     Aff result;
   foreachPiece([&result] (Set set, Aff aff) -> bool {
       if (result.isValid()) {

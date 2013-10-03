@@ -21,6 +21,7 @@
 #include "MollyPassManager.h"
 #include <polly/CodeGen/BlockGenerators.h>
 #include <llvm/Transforms/IPO.h>
+#include "llvm/Analysis/Verifier.h"
 
 using namespace llvm;
 using namespace std;
@@ -82,12 +83,16 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   auto OScanonicalized = new raw_fd_ostream("3_canonicalized.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OScanonicalized, false, "After canonicalization\n\n"));
 
+  PM.add(llvm::createVerifierPass());
+
   // Do the Molly thing
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
 
   auto OSaftermolly = new raw_fd_ostream("4_mollied.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OSaftermolly, false, "After Molly did its work\n\n"));
+
+  PM.add(llvm::createVerifierPass());
 
 #ifndef NDEBUG
   // cleanup function

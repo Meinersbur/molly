@@ -57,15 +57,25 @@ namespace llvm {
 #define ISLPP_WARN_UNUSED_RESULT LLVM_ATTRIBUTE_UNUSED_RESULT
 #endif
 
+#if __has_attribute(deprecated) || defined(__GNUC__)
+#define ISLPP_DEPRECATED __attribute__((deprecated))
+#define ISLPP_DEPRECATED_MSG(m) __attribute__((deprecated(#m)))
+#elif defined(_MSC_VER)
+#define ISLPP_DEPRECATED __declspec(deprecated)
+#define ISLPP_DEPRECATED_MSG(m) __declspec(deprecated(#m))
+#else
+#define ISLPP_DEPRECATED
+#define ISLPP_DEPRECATED_MSG(m)
+#endif
 
 #define ISLPP_EXSITU_ATTRS ISLPP_WARN_UNUSED_RESULT
-#define ISLPP_EXSITU_QUALIFIER const
+#define ISLPP_EXSITU_FUNCTION const
 
 #define ISLPP_INPLACE_ATTRS
-#define ISLPP_INPLACE_QUALIFIER ISLPP_LVALUE_FUNCTION
+#define ISLPP_INPLACE_FUNCTION ISLPP_LVALUE_FUNCTION
 
 #define ISLPP_CONSUME_ATTRS ISLPP_WARN_UNUSED_RESULT
-#define ISLPP_CONSUME_QUALIFIER 
+#define ISLPP_CONSUME_FUNCTION 
 
 
 

@@ -12,6 +12,7 @@
 #include "Space.h"
 #include "LocalSpace.h"
 #include "Int.h"
+#include <isl/deprecated/aff_int.h>
 
 struct isl_aff;
 
@@ -90,16 +91,16 @@ namespace isl {
 
   protected:
     //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_tuple_id(take(), type, id.take())); }
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER {
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
       assert(type==isl_dim_in);
       cast_inplace(getSpace().setTupleId(type, std::move(id)));
     }
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
+    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
 
   public:
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_insert_dims(take(), type, pos, count)); }
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_insert_dims(take(), type, pos, count)); }
     //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_drop_dims(take(), type, first, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_drop_dims(take(), type, first, count)); }
 
     bool isMap() const { return true; }
     bool isSet() const { return false; }
@@ -118,18 +119,18 @@ namespace isl {
     //Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_aff_get_dim_id(keep(), type, pos)); }
     //void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_dim_name(take(), type, pos, s)); }
 
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_add_dims(take(), type, count)); }
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_add_dims(take(), type, count)); }
 #pragma endregion
 
 
 #pragma region Conversion
     PwAff toPwAff() const;
 
-    ISLPP_EXSITU_ATTRS MultiAff toMultiAff() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS MultiAff toMultiAff() ISLPP_EXSITU_FUNCTION;
 
-    ISLPP_EXSITU_ATTRS PwMultiAff toPwMultiAff() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS PwMultiAff toPwMultiAff() ISLPP_EXSITU_FUNCTION;
 
-    ISLPP_EXSITU_ATTRS Map toMap() ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS Map toMap() ISLPP_EXSITU_FUNCTION;
 #pragma endregion
 
 
@@ -153,7 +154,7 @@ namespace isl {
     //Space getSpace() const;
     LocalSpace getDomainLocalSpace() const;
     //LocalSpace getLocalSpace() const;
-    ISLPP_EXSITU_ATTRS Space getRangeSpace() ISLPP_EXSITU_QUALIFIER { 
+    ISLPP_EXSITU_ATTRS Space getRangeSpace() ISLPP_EXSITU_FUNCTION { 
       auto space = getSpace();
       if (space.isMapSpace()) 
         return space.getRangeSpace();
@@ -166,7 +167,7 @@ namespace isl {
     Int getDenominator() const;
 
     Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); } 
-    void setConstant_inplace(const Int &) ISLPP_INPLACE_QUALIFIER;
+    void setConstant_inplace(const Int &) ISLPP_INPLACE_FUNCTION;
     void setCoefficient(isl_dim_type type, unsigned pos, int);
     void setCoefficient(isl_dim_type type, unsigned pos, const Int &);
     void setDenominator(const Int &);
@@ -217,15 +218,15 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-    Aff pullback(const MultiAff &maff) ISLPP_EXSITU_QUALIFIER { auto result = copy(); result.pullback_inplace(maff); return result; }
-    void pullback_inplace(const MultiAff &) ISLPP_INPLACE_QUALIFIER;
-    PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER;
+    Aff pullback(const MultiAff &maff) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.pullback_inplace(maff); return result; }
+    void pullback_inplace(const MultiAff &) ISLPP_INPLACE_FUNCTION;
+    PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION;
 
     /// Would be ineffective
     //PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
-    ISLPP_EXSITU_ATTRS Aff cast(Space space) ISLPP_EXSITU_QUALIFIER;
-    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_QUALIFIER { obj_give(this->cast(space)); }
+    ISLPP_EXSITU_ATTRS Aff cast(Space space) ISLPP_EXSITU_FUNCTION;
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(this->cast(space)); }
   }; // class Aff
 
 

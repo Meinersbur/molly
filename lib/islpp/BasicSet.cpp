@@ -202,7 +202,7 @@ void BasicSet::alignParams(Space &&model){
 }
 
 
-void BasicSet::apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER {
+void BasicSet::apply_inplace(BasicMap &&bmap) ISLPP_INPLACE_FUNCTION {
   give(isl_basic_set_apply(take(), bmap.take()));
 }
 
@@ -229,17 +229,17 @@ Vertices BasicSet::computeVertices() const {
 }
 
 
-ISLPP_EXSITU_ATTRS Aff BasicSet::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicSet::dimMin(pos_t pos) ISLPP_EXSITU_FUNCTION {
   auto pwmin = toSet().dimMin(pos);
   return pwmin.singletonAff();
 }
 
-ISLPP_EXSITU_ATTRS Aff BasicSet::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicSet::dimMax(pos_t pos) ISLPP_EXSITU_FUNCTION {
   auto pwmax = toSet().dimMax(pos);
   return pwmax.singletonAff();
 }
 
-ISLPP_EXSITU_ATTRS BasicSet isl::BasicSet::cast( Space space ) ISLPP_EXSITU_QUALIFIER
+ISLPP_EXSITU_ATTRS BasicSet isl::BasicSet::cast( Space space ) ISLPP_EXSITU_FUNCTION
 {
   auto mapSpace = getSpace().mapsTo(std::move(space));
   auto map = mapSpace.equalBasicMap();

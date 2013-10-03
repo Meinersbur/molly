@@ -76,7 +76,7 @@ void molly::codegenWriteLocal(DefaultIRBuilder &builder, FieldVariable *fvar, Ar
 
 
 void molly::codegenSendBuf(DefaultIRBuilder &builder, molly::CommunicationBuffer *buf, llvm::Value *dstCoord) {
-  auto module = getParentModule(builder.GetInsertBlock());
+  auto module = getModuleOf(builder.GetInsertBlock());
    auto sendFunc = module->getFunction("__molly_buf_send");
 
    auto var = buf->getVariableSend();

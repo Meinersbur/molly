@@ -150,13 +150,21 @@ Map BasicMap::applyRange(const Map &that) const {
 }
 
 
-ISLPP_EXSITU_ATTRS Aff BasicMap::dimMin(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicMap::dimMin(pos_t pos) ISLPP_EXSITU_FUNCTION {
   auto pwmin = toMap().dimMin(pos);
   return pwmin.singletonAff();
 }
 
 
-ISLPP_EXSITU_ATTRS Aff BasicMap::dimMax(pos_t pos) ISLPP_EXSITU_QUALIFIER {
+ISLPP_EXSITU_ATTRS Aff BasicMap::dimMax(pos_t pos) ISLPP_EXSITU_FUNCTION {
   auto pwmax = toMap().dimMax(pos);
   return pwmax.singletonAff();
+}
+
+
+void isl::BasicMap::cast_inplace(  Space space ) ISLPP_INPLACE_FUNCTION {
+  auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), space.domain()).equalBasicMap();
+  auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), space.range()).equalBasicMap();
+  applyDomain_inplace(domainMap.move());
+  applyRange_inplace(rangeMap.move());
 }

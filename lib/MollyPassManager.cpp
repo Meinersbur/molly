@@ -48,6 +48,7 @@
 #include "MollyScopStmtProcessor.h"
 #include "RectangularMapping.h"
 #include "FieldLayout.h"
+#include "llvm/Analysis/Verifier.h"
 
 using namespace molly;
 using namespace polly;
@@ -123,7 +124,7 @@ namespace {
         return;
 
       if (!func && inRegion) {
-        func = getParentFunction(inRegion);
+        func = getFunctionOf(inRegion);
       }
       //TODO: Also mark passes inherited from Resolver->getAnalysisIfAvailable as invalid so they are not reuse
       auto &preserved = AU.getPreservedSet();
@@ -463,7 +464,7 @@ namespace {
 
     Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) LLVM_OVERRIDE {
       if (region && !func) {
-        func = getParentFunction(region);
+        func = getFunctionOf(region);
       }
 
       if (region) {
@@ -501,7 +502,7 @@ namespace {
 
     Pass *findOrRunAnalysis(AnalysisID passID, Function *func, Region *region) {
       if (region && !func)
-        func = getParentFunction(region);
+        func = getFunctionOf(region);
 
       auto foundPass = findAnalysis(passID, func, region);
       if (foundPass)
@@ -639,33 +640,33 @@ namespace {
 
 #pragma region Field Distribution  
     void fieldDistribution_processFieldType(FieldType *fty) { assert(!fty->isDistributed()); assert(!fty->getLayout());
-      auto lengths = fty->getLengths();
-      auto cluster = clusterConf->getClusterLengths();
-      auto clusterSpace = clusterConf->getClusterSpace();
-      auto nDims = lengths.size();
+    auto lengths = fty->getLengths();
+    auto cluster = clusterConf->getClusterLengths();
+    auto clusterSpace = clusterConf->getClusterSpace();
+    auto nDims = lengths.size();
 
-      auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
-      auto offsetsAff = lengthsAff.copy();
+    auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
+    auto offsetsAff = lengthsAff.copy();
 
-      SmallVector<int,4> locallengths;
-      for (auto d = nDims-nDims; d<nDims; d+=1) {
-        auto len = lengths[d];
-        auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
+    SmallVector<int,4> locallengths;
+    for (auto d = nDims-nDims; d<nDims; d+=1) {
+      auto len = lengths[d];
+      auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
 
-        assert(len % clusterLen == 0);
-        auto localLen = (len + clusterLen - 1) / clusterLen;
-        locallengths.push_back(localLen);
+      assert(len % clusterLen == 0);
+      auto localLen = (len + clusterLen - 1) / clusterLen;
+      locallengths.push_back(localLen);
 
-        lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
-        offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
-      }
+      lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
+      offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
+    }
 
-      auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
-      auto layout = FieldLayout::create(fty, nullptr, linearizer);
+    auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
+    auto layout = FieldLayout::create(fty, nullptr, linearizer);
 
-      fty->setDistributed();
-      fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
-      fty->setLayout(layout);
+    fty->setDistributed();
+    fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
+    fty->setLayout(layout);
     }
 
 
@@ -872,8 +873,8 @@ namespace {
     }
 
 
-    private:
-      DenseMap<const GlobalVariable*, FieldVariable*> fvars;
+  private:
+    DenseMap<const GlobalVariable*, FieldVariable*> fvars;
   public:
     FieldVariable *getFieldVariable(GlobalVariable *gvar) {
       auto fieldTy = getFieldType(cast<StructType>(gvar->getType()->getPointerElementType()));
@@ -936,15 +937,21 @@ namespace {
 
   public :
     CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
-      auto comvarSend = new GlobalVariable(*module, runtimeMetadata.tyCombufSend, false, GlobalValue::PrivateLinkage, nullptr, "combufsend");
-      auto comvarRecv = new GlobalVariable(*module, runtimeMetadata.tyCombufRecv, false, GlobalValue::PrivateLinkage, nullptr, "combufrecv");
+      auto &llvmContext = getLLVMContext();
+      auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+
+      //auto comvarSend = new GlobalVariable(*module, runtimeMetadata.tyCombufSend, false, GlobalValue::PrivateLinkage, Constant::, "combufsend");
+      auto comvarSend = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(voidPtrTy), "combufsend");
+      //auto comvarRecv = new GlobalVariable(*module, runtimeMetadata.tyCombufRecv, false, GlobalValue::PrivateLinkage, nullptr, "combufrecv");
+      auto comvarRecv = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(voidPtrTy), "combufrecv");
+
       auto result = CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy());
       combufs.push_back(result);
       return result;
     }
 
     ArrayRef<CommunicationBuffer *> getCommunicationBuffers() LLVM_OVERRIDE {
-    return combufs;
+      return combufs;
     }
 
   private:
@@ -1092,6 +1099,7 @@ namespace {
 
         auto funcCtx = getFuncContext(func);
         funcCtx->isolateFieldAccesses();
+        verifyFunction(f);
       }
 
       // Find all scops
@@ -1108,6 +1116,7 @@ namespace {
         // Decide on which node(s) a ScopStmt should execute 
         scopCtx->computeScopDistibution();
         scopCtx->validate();
+        verifyFunction(*scopCtx->getParentFunction());
 
         // Insert communication between ScopStmt
         // Implementation note: This modifies the original IR;
@@ -1117,6 +1126,7 @@ namespace {
         // Disadvantages: Modifies Polly itself, hard to keep it independent from Polly; Need to modify both codegens (Cloog and ISL); Theoretically, we can modify the added IR such that it works, no codegen needed at all
         scopCtx->genCommunication();
         scopCtx->validate();
+        verifyFunction(*scopCtx->getParentFunction());
       }
 
       // Create some SCoPs that init the combufs
@@ -1128,25 +1138,33 @@ namespace {
         if (!scopCtx->hasFieldAccess())
           continue;
 
+        verifyFunction(*scopCtx->getParentFunction());
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
 
           stmtCtx->applyWhere();
           stmtCtx->validate();
         }
+        verifyFunction(*scopCtx->getParentFunction());
 
         // Let polly optimize and and codegen the scops
         //scopCtx->pollyOptimize();
         scopCtx->pollyCodegen();
+        verifyFunction(*scopCtx->getParentFunction());
       }
 
 
       // Replace all remaining accesses by some generated intrinsic
       for (auto &func : *module) {
+        if (func.isDeclaration())
+          continue;
+
         auto funcCtx = getFuncContext(&func);
 
         funcCtx->replaceIntrinsics();
+        verifyFunction(func);
         funcCtx->replaceRemainaingIntrinsics();
+        verifyFunction(func);
       }
 
       //FIXME: Find all the leaks

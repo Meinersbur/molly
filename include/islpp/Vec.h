@@ -7,6 +7,7 @@
 #include "Ctx.h"
 #include "Int.h"
 #include "Val.h"
+#include <isl/deprecated/vec_int.h>
 
 namespace llvm {
   class raw_ostream;
@@ -72,7 +73,7 @@ namespace isl {
     int getSize() const { return isl_vec_size(keep()); }
 #pragma endregion
 
-    bool getElement(int pos, Int &v) const { isl_int val; auto retval =isl_vec_get_element(keep(), pos, &val); v = Int::wrap(val); return retval==0; }
+    bool getElement(int pos, Int &v) const { isl_int val; auto retval = isl_vec_get_element(keep(), pos, &val); v = Int::wrap(val); return retval==0; }
     Val getElementVal(int pos) const { return Val::enwrap(isl_vec_get_element_val(keep(), pos)); }
 
     Vec setElement(int pos, const Int &v) const { return enwrap(isl_vec_set_element(takeCopy(), pos, v.keep())); }
@@ -93,12 +94,12 @@ namespace isl {
 
 
 #pragma region Operations
-    Int lcm() const { isl_int result; isl_vec_lcm(keep(), &result); return Int::wrap(result); }
+    //Int lcm() const { isl_int result; isl_vec_lcm(keep(), &result); return Int::wrap(result); }
     Vec ceil() const { return enwrap(isl_vec_ceil(takeCopy())); }
     Vec normalize() const { return enwrap(isl_vec_normalize(takeCopy())); }
     Vec clear() const { return enwrap(isl_vec_clr(takeCopy())); }
     Vec neg() const { return enwrap(isl_vec_neg(takeCopy())); }
-    Vec scale(const Int &m) const { return enwrap(isl_vec_scale(takeCopy(), m.keep())); }
+    //Vec scale(const Int &m) const { return enwrap(isl_vec_scale(takeCopy(), m.keep())); }
     Vec fdiv_r(const Int &m) const { return enwrap(isl_vec_fdiv_r(takeCopy(), m.keep())); }
     Vec extend(unsigned size) const { return enwrap(isl_vec_extend(takeCopy(), size)); }
     Vec zeroExtend(unsigned size) const { return enwrap(isl_vec_zero_extend(takeCopy(), size)); }

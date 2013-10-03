@@ -13,6 +13,7 @@
 #include "LocalSpace.h"
 #include "Int.h"
 #include "Expr.h"
+#include <isl/deprecated/constraint_int.h>
 
 struct isl_constraint;
 
@@ -98,10 +99,10 @@ BasicSet toBasicSet() const;
 
     //Ctx *getCtx() const;
     LocalSpace getLocalSpace() const;
-    void setConstant_inplace(const Int &v) ISLPP_INPLACE_QUALIFIER;
-    void setConstant_inplace(int v) ISLPP_INPLACE_QUALIFIER;
-    void setCoefficient_inplace(isl_dim_type type, int pos, const Int & v) ISLPP_INPLACE_QUALIFIER;
-    void setCoefficient_inplace(isl_dim_type type, int pos, int v) ISLPP_INPLACE_QUALIFIER;
+    void setConstant_inplace(const Int &v) ISLPP_INPLACE_FUNCTION;
+    void setConstant_inplace(int v) ISLPP_INPLACE_FUNCTION;
+    void setCoefficient_inplace(isl_dim_type type, int pos, const Int & v) ISLPP_INPLACE_FUNCTION;
+    void setCoefficient_inplace(isl_dim_type type, int pos, int v) ISLPP_INPLACE_FUNCTION;
 
     bool isEquality() const;
     bool isLowerBound(isl_dim_type type, unsigned pos) const;

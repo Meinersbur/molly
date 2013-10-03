@@ -271,10 +271,12 @@ namespace {
     }
 
 
-
     void replaceClusterCurrentCoordinate(CallInst *call, Function *called) {
-      MollyCodeGenerator codegen(call->getParent(), call, asPass());
+      assert(called->getIntrinsicID() == Intrinsic::molly_cluster_current_coordinate);
+      assert(call->getNumArgOperands() == 1);
       auto dArg = call->getOperand(0);
+
+      auto codegen = makeCodegen(call);
       auto result = codegen.callRuntimeClusterCurrentCoord(dArg);
 
       call->replaceAllUsesWith(result);
@@ -289,7 +291,7 @@ namespace {
       auto clusterconf = pm->getClusterConfig();
       auto clusterContext = clusterconf->getClusterParamShape();
 
-      MollyCodeGenerator codegen(call->getParent(), call, clusterContext, idtovalue);
+      auto codegen = makeCodegen(call);
       auto &builder = codegen.getIRBuilder();
 
       auto fval = call->getArgOperand(0);
@@ -347,16 +349,106 @@ namespace {
     }
 
 
+    MollyCodeGenerator makeCodegen(Instruction *insertBefore) {
+      MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass());
+      return codegen; // NRVO
+    }
+
+
+    void replaceCombufSendPtr(CallInst *call, Function *called) {
+      auto combuf = call->getOperand(0);
+      auto dst = call->getOperand(1);
+
+      auto codegen = makeCodegen(call);
+      auto ptr = codegen.callRuntimeCombufSendPtr(combuf, dst);
+      auto casted = codegen.getIRBuilder().CreatePointerCast(ptr, call->getType());
+      call->replaceAllUsesWith(casted);
+      call->eraseFromParent();
+    }
+
+
+    void replaceCombufRecvPtr(CallInst *call, Function *called) {
+      auto combuf = call->getOperand(0);
+      auto src = call->getOperand(1);
+
+      auto codegen = makeCodegen(call);
+      auto ptr = codegen.callRuntimeCombufSendPtr(combuf, src);
+      auto casted = codegen.getIRBuilder().CreatePointerCast(ptr, call->getType());
+      call->replaceAllUsesWith(casted);
+      call->eraseFromParent();
+    }
+
+
+    void replaceCombufSend(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_combuf_send);
+      assert(call->getNumArgOperands() == 2);
+      auto combuf = call->getOperand(0);
+      auto dst = call->getOperand(1);
+
+      auto codegen = makeCodegen(call);
+      codegen.callRuntimeCombufSend(combuf, dst);
+
+      call->eraseFromParent();
+    }
+
+
+    void replaceCombufRecv(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_combuf_recv);
+      assert(call->getNumArgOperands() == 2);
+      auto combuf = call->getOperand(0);
+      auto src = call->getOperand(1);
+
+      auto codegen = makeCodegen(call);
+      codegen.callRuntimeCombufRecv(combuf, src);
+
+      call->eraseFromParent();
+    }
+
+
+    void replaceLocalPtr(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_local_ptr);
+      assert(call->getNumArgOperands() == 1);
+      auto localobj = call->getOperand(0);
+
+      auto codegen = makeCodegen(call);
+      auto ptr = codegen.callRuntimeLocalPtr(localobj);
+      auto casted = codegen.getIRBuilder().CreatePointerCast(ptr, call->getType(), ptr->getName() + Twine("_casted"));
+
+      call->replaceAllUsesWith(casted);
+      call->eraseFromParent();
+    }
+
+
     bool isMollyIntrinsics(unsigned intID) {
       return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_set_local;
     }
 
 
   public:
-    void replaceIntrinsics() LLVM_OVERRIDE {
 
+    //TODO: This can easily refactored into its own BasicBlockPass
+    void replaceIntrinsics() LLVM_OVERRIDE {
+      assert(isMollyIntrinsics(Intrinsic::molly_cluster_current_coordinate));
+      assert(isMollyIntrinsics(Intrinsic::molly_global_init));
+      assert(isMollyIntrinsics(Intrinsic::molly_global_free));
+      assert(isMollyIntrinsics(Intrinsic::molly_field_init));
+      assert(isMollyIntrinsics(Intrinsic::molly_field_free));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_send_ptr));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_recv_ptr));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_send));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_recv));
+      assert(isMollyIntrinsics(Intrinsic::molly_local_ptr));
+
+      lowerMollyIntrinsics();
+
+      // Second call because some replacements (molly_field_init) may introduce new intrinsics that have to be replaced
+      lowerMollyIntrinsics();
+    }
+
+
+    void lowerMollyIntrinsics() {
       // Make copy of all potentially to-be-replaced instructions
-      SmallVector<CallInst*, 16> instrs;
+      SmallVector<CallInst*, 16> replaceWorklist;
       for (auto it = func->begin(), end = func->end(); it!=end; ++it) {
         auto bb = &*it;
         for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
@@ -371,12 +463,12 @@ namespace {
             continue;
           if (!isMollyIntrinsics(func->getIntrinsicID()))
             continue;
-          instrs.push_back(callInstr);
+          replaceWorklist.push_back(callInstr);
         }
       }
 
 
-      for (auto instr : instrs) {
+      for (auto instr : replaceWorklist) {
         auto called = instr->getCalledFunction();
         if (!called)
           continue;
@@ -387,10 +479,10 @@ namespace {
           replaceClusterCurrentCoordinate(instr, called);
           break;
         case Intrinsic::molly_global_init:
-          replaceFieldInit(instr, called);
+          replaceGlobalInit(instr, called);
           break;
         case Intrinsic::molly_global_free:
-          replaceFieldFree(instr, called);
+          replaceGlobalFree(instr, called);
           break;
         case Intrinsic::molly_field_init:
           replaceFieldInit(instr, called);
@@ -398,7 +490,21 @@ namespace {
         case Intrinsic::molly_field_free:
           replaceFieldFree(instr, called);
           break;
-
+        case Intrinsic::molly_combuf_send_ptr:
+          replaceCombufSendPtr(instr, called);
+          break;
+        case Intrinsic::molly_combuf_recv_ptr:
+          replaceCombufRecvPtr(instr, called);
+          break;
+        case Intrinsic::molly_combuf_send:
+          replaceCombufSend(instr, called);
+          break;
+        case Intrinsic::molly_combuf_recv:
+          replaceCombufRecv(instr, called);
+          break;
+        case Intrinsic::molly_local_ptr:
+          replaceLocalPtr(instr, called);
+          break;
         default:
           continue;
         }

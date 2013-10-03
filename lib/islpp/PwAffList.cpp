@@ -43,7 +43,7 @@ static int sortPwAffCallback(__isl_keep isl_pw_aff *el1, __isl_keep isl_pw_aff *
   auto retval = func( PwAff::enwrapCopy(el1), PwAff::enwrapCopy(el2) );
   return retval ? -1 : 0;
 }
-void PwAffList::sort_inplace(const std::function<int(const PwAff&, const PwAff&)> &func) ISLPP_INPLACE_QUALIFIER {
+void PwAffList::sort_inplace(const std::function<int(const PwAff&, const PwAff&)> &func) ISLPP_INPLACE_FUNCTION {
   give(isl_pw_aff_list_sort(take(), sortPwAffCallback, const_cast<std::function<int(const PwAff&, const PwAff&)>*>(&func)));
 }
 

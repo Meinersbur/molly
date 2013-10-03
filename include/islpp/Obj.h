@@ -120,7 +120,7 @@ namespace isl {
     }
 
   public:
-    void give(StructTy *obj) ISLPP_INPLACE_QUALIFIER {
+    void give(StructTy *obj) ISLPP_INPLACE_FUNCTION {
       assert(obj); 
       getDerived()->release();
       this->obj = obj;
@@ -329,15 +329,16 @@ namespace isl {
     static ObjTy enwrap(__isl_take StructTy *obj) {
       ObjTy result;
       result.reset(obj);
-      return result;
+      return result; // NRVO
     }
 
     static ObjTy enwrapCopy(__isl_keep StructTy *obj) {
       ObjTy result;
       result.reset(obj);
       // A temporary obj such that we can call its takeCopyOrNull method, no need to require implementors to implement a second version of it
-      result.obj = result.takeCopyOrNull();
-      return result;
+      //result.obj = result.takeCopyOrNull();
+       result.addref();
+      return result; // NRVO
     }
 
     // Default implementation if superclass doesn't provide one

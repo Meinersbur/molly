@@ -781,7 +781,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     ~array() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
       __builtin_molly_field_free(this);
-      free(localdata);
+      delete[] localdata;
     }
 
 
@@ -797,7 +797,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         localelts *= locallen;
       }
       MOLLY_DEBUG("localelts=" << localelts);
-      localdata = (T*)malloc(localelts * sizeof(T));
+      localdata = new T[localelts];
       assert(localdata);
 
       if (std::getenv("bla")==(char*)-1) {
@@ -942,8 +942,8 @@ namespace molly {
 } // namespace molly;
 extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size);
 extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size);
-extern "C" void __molly_combuf_send(molly::SendCommunicationBuffer *combuf);
-extern "C" void __molly_combuf_recv(molly::RecvCommunicationBuffer *combuf);
+extern "C" void __molly_combuf_send(void *combuf, uint64_t dstRank) __attribute__((used));
+extern "C" void __molly_combuf_recv(void *combuf, uint64_t srcRank) __attribute__((used));
 extern "C" int __molly_local_coord(int i);
 
 #endif /* MOLLY_H */

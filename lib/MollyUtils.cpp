@@ -66,22 +66,22 @@ llvm::Pass *molly::createPassFromId(const void *passId) {
 }
 
 
-llvm::Function *molly::getParentFunction(llvm::Function *func) { 
+llvm::Function *molly::getFunctionOf(llvm::Function *func) { 
   return func;
 }
-llvm::Function *molly::getParentFunction(const llvm::Region *region) {
+llvm::Function *molly::getFunctionOf(const llvm::Region *region) {
   return region->getEntry()->getParent(); 
 }
-llvm::Function *molly::getParentFunction(llvm::BasicBlock *bb) { 
+llvm::Function *molly::getFunctionOf(llvm::BasicBlock *bb) { 
   return bb->getParent(); 
 }
-llvm::Function *molly::getParentFunction(const polly::Scop *scop) { 
-  return getParentFunction(&scop->getRegion()); 
+llvm::Function *molly::getFunctionOf(const polly::Scop *scop) { 
+  return getFunctionOf(&scop->getRegion()); 
 }
-llvm::Function *molly::getParentFunction(const polly::ScopStmt *stmt) {
-  return getParentFunction(stmt->getParent());
+llvm::Function *molly::getFunctionOf(const polly::ScopStmt *stmt) {
+  return getFunctionOf(stmt->getParent());
 }
-Function *molly::getParentFunction(Value *v) {
+Function *molly::getFunctionOf(Value *v) {
   if (Function *F = dyn_cast<Function>(v))
     return F;
 
@@ -95,40 +95,40 @@ Function *molly::getParentFunction(Value *v) {
 }
 
 
-const llvm::Module *molly::getParentModule(const llvm::Function *func){
+const llvm::Module *molly::getModuleOf(const llvm::Function *func){
   return func->getParent();
 }
-llvm::Module *molly::getParentModule(llvm::Function *func){
+llvm::Module *molly::getModuleOf(llvm::Function *func){
   return func->getParent();
 }
-llvm::Module *molly::getParentModule(polly::Scop *scop) {
-  return getParentFunction(scop)->getParent();
+llvm::Module *molly::getModuleOf(polly::Scop *scop) {
+  return getFunctionOf(scop)->getParent();
 }
-llvm::Module *molly::getParentModule(polly::ScopStmt *scopStmt) {
-  return getParentFunction(scopStmt)->getParent();
+llvm::Module *molly::getModuleOf(polly::ScopStmt *scopStmt) {
+  return getFunctionOf(scopStmt)->getParent();
 }
-const llvm::Module *molly::getParentModule(const llvm::BasicBlock *bb) {
+const llvm::Module *molly::getModuleOf(const llvm::BasicBlock *bb) {
   return bb->getParent()->getParent();
 }
-llvm::Module *molly::getParentModule(llvm::BasicBlock *bb) {
+llvm::Module *molly::getModuleOf(llvm::BasicBlock *bb) {
   return bb->getParent()->getParent();
 }
-const llvm::Module *molly::getParentModule(const llvm::GlobalValue *v){
+const llvm::Module *molly::getModuleOf(const llvm::GlobalValue *v){
   return v->getParent();
 }
-llvm::Module *molly::getParentModule(llvm::GlobalValue *v) {
+llvm::Module *molly::getModuleOf(llvm::GlobalValue *v) {
   return v->getParent();
 }
-llvm::Module *molly::getParentModule(llvm::IRBuilder<> &builder) {
-  return getParentModule(builder.GetInsertBlock());
+llvm::Module *molly::getModuleOf(llvm::IRBuilder<> &builder) {
+  return getModuleOf(builder.GetInsertBlock());
 }
 
 
-llvm::Region *molly::getParentRegion(polly::Scop *scop) {
+llvm::Region *molly::getRegionOf(polly::Scop *scop) {
   return &scop->getRegion();
 }
-llvm::Region *molly::getParentRegion(polly::ScopStmt *scopStmt) {
-  return getParentRegion(scopStmt->getParent());
+llvm::Region *molly::getRegionOf(polly::ScopStmt *scopStmt) {
+  return getRegionOf(scopStmt->getParent());
 }
 
 

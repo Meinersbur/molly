@@ -75,31 +75,25 @@ static inline T *createPass() {
 }
 
 
-llvm::Function *getParentFunction(llvm::Function *func);
-llvm::Function *getParentFunction(const llvm::Region *region);
-llvm::Function *getParentFunction(llvm::BasicBlock *bb);
-llvm::Function *getParentFunction(const polly::Scop *scop);
-llvm::Function *getParentFunction(const polly::ScopStmt *stmt);
-llvm::Function *getParentFunction(llvm::Value *v);
+llvm::Function *getFunctionOf(llvm::Function *func);
+llvm::Function *getFunctionOf(const llvm::Region *region);
+llvm::Function *getFunctionOf(llvm::BasicBlock *bb);
+llvm::Function *getFunctionOf(const polly::Scop *scop);
+llvm::Function *getFunctionOf(const polly::ScopStmt *stmt);
+llvm::Function *getFunctionOf(llvm::Value *v);
 
+const llvm::Module *getModuleOf(const llvm::Function *func);
+llvm::Module *getModuleOf(llvm::Function *func);
+llvm::Module *getModuleOf(polly::Scop *scop);
+llvm::Module *getModuleOf(polly::ScopStmt *scopStmt);
+const llvm::Module *getModuleOf(const llvm::BasicBlock *bb);
+llvm::Module *getModuleOf(llvm::BasicBlock *bb);
+const llvm::Module *getModuleOf(const llvm::GlobalValue *bb);
+llvm::Module *getModuleOf(llvm::GlobalValue *bb);
+llvm::Module *getModuleOf(DefaultIRBuilder &builder);
 
-const llvm::Module *getParentModule(const llvm::Function *func);
-llvm::Module *getParentModule(llvm::Function *func);
-llvm::Module *getParentModule(polly::Scop *scop);
-llvm::Module *getParentModule(polly::ScopStmt *scopStmt);
-const llvm::Module *getParentModule(const llvm::BasicBlock *bb);
-llvm::Module *getParentModule(llvm::BasicBlock *bb);
-const llvm::Module *getParentModule(const llvm::GlobalValue *bb);
-llvm::Module *getParentModule(llvm::GlobalValue *bb);
-llvm::Module *getParentModule(DefaultIRBuilder &builder);
-
-
-
-llvm::Region *getParentRegion(polly::Scop *);
-llvm::Region *getParentRegion(polly::ScopStmt *);
-
-//bool isFieldAccessScopStmt(llvm::BasicBlock *bb, polly::ScopStmt *scopStmt);
-//bool isFieldAccessBasicBlock(llvm::BasicBlock *bb);
+llvm::Region *getRegionOf(polly::Scop *);
+llvm::Region *getRegionOf(polly::ScopStmt *);
 
 llvm::Function *createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
 llvm::Function *createFunction( llvm::Type *rtnTy, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());

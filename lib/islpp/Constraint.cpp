@@ -223,21 +223,21 @@ LocalSpace Constraint::getLocalSpace() const {
   return LocalSpace::enwrap(isl_constraint_get_local_space(keep()));
 }
 
-void  Constraint::setConstant_inplace(const Int &v) ISLPP_INPLACE_QUALIFIER {
+void  Constraint::setConstant_inplace(const Int &v) ISLPP_INPLACE_FUNCTION {
   give(isl_constraint_set_constant(take(), v.keep() ) );
 }
 
-void Constraint::setConstant_inplace(int v) ISLPP_INPLACE_QUALIFIER {
+void Constraint::setConstant_inplace(int v) ISLPP_INPLACE_FUNCTION {
   give(isl_constraint_set_constant_si(take(), v));
 }
 
 
-void Constraint::setCoefficient_inplace(isl_dim_type type, int pos, const Int & v) ISLPP_INPLACE_QUALIFIER {
+void Constraint::setCoefficient_inplace(isl_dim_type type, int pos, const Int & v) ISLPP_INPLACE_FUNCTION {
   give(isl_constraint_set_coefficient(take(), type, pos, v.keep()));
 }
 
 
-void Constraint::setCoefficient_inplace( isl_dim_type type, int pos, int v) ISLPP_INPLACE_QUALIFIER {
+void Constraint::setCoefficient_inplace( isl_dim_type type, int pos, int v) ISLPP_INPLACE_FUNCTION {
   give(isl_constraint_set_coefficient_si(take(), type, pos, v));
 }
 

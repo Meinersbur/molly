@@ -96,7 +96,7 @@ PwMultiAff Multi<Aff>::restrictDomain(const Set &set) const {
 }
 
 
-void Multi<Aff>::neg_inplace() ISLPP_INPLACE_QUALIFIER {
+void Multi<Aff>::neg_inplace() ISLPP_INPLACE_FUNCTION {
   auto size = getOutDimCount();
   for (auto i = size-size; i < size; i+=1) {
     setAff_inplace(i, getAff(i).neg());
@@ -104,14 +104,14 @@ void Multi<Aff>::neg_inplace() ISLPP_INPLACE_QUALIFIER {
 }
 
 
-void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_QUALIFIER {
+void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION {
   auto nOutDims = getOutDimCount();
   removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);
   removeDims_inplace(isl_dim_out, 0, first);
 }
 
 
-void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER {
+void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
   subMultiAff_inplace(range.getFirst(), range.getCount());
@@ -135,7 +135,7 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
 }
 
 
-PwMultiAff MultiAff::pullback(const PwMultiAff &mpa) ISLPP_EXSITU_QUALIFIER {
+PwMultiAff MultiAff::pullback(const PwMultiAff &mpa) ISLPP_EXSITU_FUNCTION {
   auto resultSpace = Space::createMapFromDomainAndRange(mpa.getDomainSpace(), getRangeSpace());
   auto result = resultSpace.createEmptyPwMultiAff();
 
@@ -149,12 +149,12 @@ PwMultiAff MultiAff::pullback(const PwMultiAff &mpa) ISLPP_EXSITU_QUALIFIER {
 }
 
 
-PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
+PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   return pma.pullback(*this);
 }
 
 
- MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_QUALIFIER {
+ MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
    assert(space.getInDimCount() == this->getInDimCount());
    assert(space.getOutDimCount() == this->getOutDimCount());
 
@@ -176,11 +176,11 @@ PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_QUALIFIER {
  }
 
 
- ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_QUALIFIER {
+ ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION {
  return getDomainSpace().createUniverseBasicSet();
  }
 
 
- ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_QUALIFIER {
+ ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION {
    return toBasicMap().getRange();
  }
