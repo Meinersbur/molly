@@ -111,7 +111,7 @@ namespace llvm {
       return keys.tombstone;
     }
     static unsigned getHashValue(const isl::Id& val) {
-      return reinterpret_cast<unsigned>(val.keepOrNull());
+      return llvm::DenseMapInfo<void*>::getHashValue(val.keepOrNull());
     }
     static bool isEqual(const isl::Id &LHS, const isl::Id &RHS) {
       return LHS.keepOrNull() == RHS.keepOrNull();

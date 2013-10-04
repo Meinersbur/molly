@@ -55,7 +55,7 @@ namespace molly {
     llvm::CallInst *callRuntimeClusterCurrentCoord(llvm::Value *d);
     llvm::CallInst *callRuntimeClusterCurrentCoord(uint64_t d) {
       auto intTy = Type::getInt64Ty(getLLVMContext());
-      return callRuntimeClusterCurrentCoord( llvm::ConstantInt::get(intTy, d) ); 
+      return callRuntimeClusterCurrentCoord(llvm::ConstantInt::get(intTy, d)); 
     }
 
     llvm::CallInst *callRuntimeCombufSendPtr(llvm::Value *combufSend, llvm::Value *dstRank);
@@ -87,13 +87,12 @@ namespace molly {
   public:
     /// Basic constructor
     /// Usable: getIRBulder(), callXXX()
-     MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass);
+    MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass);
+    MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, llvm::Pass *pass, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue);
 
+    explicit MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
-    MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
-
-   MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue);
-
+  
 
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }
     StmtEditor getStmtEditor();

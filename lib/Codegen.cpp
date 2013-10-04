@@ -86,8 +86,8 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCt
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue) 
-  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), context(context.move()), idtovalue(&idtovalue) {
+MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue) 
+  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), context(context.move()), idtovalue(&idtovalue) {
 }
 
 

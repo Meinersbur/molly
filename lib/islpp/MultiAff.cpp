@@ -55,7 +55,7 @@ void Multi<Aff>::push_back(Aff &&aff) {
   give(isl_multi_aff_from_aff_list(space.take(), list));
 }
 
-
+#if 0
 // Missing in isl
 static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff *mpwaff) {
   if (!mpwaff)
@@ -74,7 +74,7 @@ static __isl_give isl_map* isl_map_from_multi_pw_aff(__isl_take isl_multi_pw_aff
   isl_multi_pw_aff_free(mpwaff);
   return map;
 }
-
+#endif
 
 BasicMap Multi<Aff>::toBasicMap() const {
   return BasicMap::enwrap(isl_basic_map_from_multi_aff(takeCopy()));

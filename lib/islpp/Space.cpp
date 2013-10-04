@@ -242,7 +242,7 @@ PwAff Space::createZeroPwAff() const {
 
 
 MultiAff Space::createZeroMultiAff() const {
-  assert(isMapSpace());
+  //assert(isMapSpace());
   return MultiAff::enwrap(isl_multi_aff_zero(takeCopy()));
 }
 
@@ -253,7 +253,7 @@ MultiAff Space::createIdentityMultiAff() const {
 
 
 MultiPwAff Space::createZeroMultiPwAff() const {
-  assert(this->isMapSpace());
+  //assert(this->isMapSpace());
   return MultiPwAff::enwrap(isl_multi_pw_aff_zero(takeCopy()));
 }
 

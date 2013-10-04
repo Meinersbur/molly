@@ -213,19 +213,22 @@ namespace {
       auto islctx = pm->getIslContext();
       auto clusterSpace = clusterConf->getClusterSpace();
       auto nDims = clusterSpace.getSetDimCount();
-      auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(nDims, clusterSpace);
 
+      auto paramSpace = clusterSpace.moveDims(isl_dim_param, 0, isl_dim_set, 0, nDims);
+      auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(0, clusterSpace).alignParams(paramSpace);
+      //auto currentNodeCoordSpace = clusterSpace.alignParams(paramSpace);
 
       for (auto i = nDims-nDims; i<nDims; i+=1) {
         auto value = getClusterCoordinate(i);
         auto id = clusterConf->getClusterDimId(i);
-        currentNodeCoordSpace.setDimId_inplace(isl_dim_in, i, id);
+        //currentNodeCoordSpace.setDimId_inplace(isl_dim_param, i, id);
         idtovalue[id.keep()] = value;
       }
 
       currentNodeCoord = currentNodeCoordSpace.createZeroMultiAff();
       for (auto i = nDims-nDims; i<nDims; i+=1) {
-        currentNodeCoord.setAff_inplace(i, currentNodeCoord.getDomainSpace().createAffOnVar(i));
+        auto id = clusterConf->getClusterDimId(i);
+        currentNodeCoord.setAff_inplace(i, currentNodeCoordSpace.getDomainSpace().createAffOnParam(id));
       }
       return currentNodeCoord;
     }
@@ -350,7 +353,8 @@ namespace {
 
 
     MollyCodeGenerator makeCodegen(Instruction *insertBefore) {
-      MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass());
+      //MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass());
+      MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass(), pm->getClusterConfig()->getClusterParamShape(), idtovalue);
       return codegen; // NRVO
     }
 
@@ -506,7 +510,7 @@ namespace {
           replaceLocalPtr(instr, called);
           break;
         default:
-          continue;
+          llvm_unreachable("Need to replace intrinsic!");
         }
       }
     }

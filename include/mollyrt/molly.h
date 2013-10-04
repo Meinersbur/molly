@@ -557,10 +557,12 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     return field->__ptr_local(coords...);
   }
 
+#if 0
   template<typename F>
   int __builtin_molly_locallength(F field, int d) { MOLLY_DEBUG_FUNCTION_SCOPE
     return field->length(0);
   }
+#endif
 
   template<typename F, typename... Args>
   int __builtin_molly_localoffset(F, Args...) { MOLLY_DEBUG_FUNCTION_SCOPE
@@ -652,6 +654,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   }; // class field
 
 
+#pragma region LocalStore
   class LocalStore {
   public:
     virtual void init(uint64_t countElts) = 0;
@@ -661,6 +664,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     virtual size_t getElementSize() const = 0;
     virtual uint64_t getCountElements() const = 0;
   }; // class LocalStore
+#pragma endregion
 
 
   /// A multi-dimensional array; the dimensions must be given at compile-time

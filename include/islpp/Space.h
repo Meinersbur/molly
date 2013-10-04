@@ -374,14 +374,14 @@ namespace isl {
 
     LocalSpace asLocalSpace() const;
 
-   ISLPP_DEPRECATED bool isNested(isl_dim_type type) const { return extractTuple(type).isWrapping(); }
-   ISLPP_DEPRECATED bool isNestedDomain() const {assert(isMapSpace()); return domain().isWrapping(); }
-   ISLPP_DEPRECATED bool isNestedRange() const {assert(isMapSpace()); return range().isWrapping(); }
-   ISLPP_DEPRECATED bool isNestedSet() const {assert(isSetSpace()); return isWrapping(); }
-   ISLPP_DEPRECATED Space getNested(isl_dim_type type) const { return isNested(type) ? extractTuple(type).unwrap() : Space(); }
-   ISLPP_DEPRECATED Space getNestedDomain() const { assert(isMapSpace()); return isNestedDomain() ? domain() : Space(); }
-   ISLPP_DEPRECATED Space getNestedRange() const { assert(isMapSpace()); return isNestedRange() ? range() : Space(); }
-   ISLPP_DEPRECATED Space getNested() const { assert(isSetSpace()); return isWrapping() ? this->copy() : Space(); }
+    ISLPP_DEPRECATED bool isNested(isl_dim_type type) const { return extractTuple(type).isWrapping(); }
+    ISLPP_DEPRECATED bool isNestedDomain() const {assert(isMapSpace()); return domain().isWrapping(); }
+    ISLPP_DEPRECATED bool isNestedRange() const {assert(isMapSpace()); return range().isWrapping(); }
+    ISLPP_DEPRECATED bool isNestedSet() const {assert(isSetSpace()); return isWrapping(); }
+    ISLPP_DEPRECATED Space getNested(isl_dim_type type) const { return isNested(type) ? extractTuple(type).unwrap() : Space(); }
+    ISLPP_DEPRECATED Space getNestedDomain() const { assert(isMapSpace()); return isNestedDomain() ? domain() : Space(); }
+    ISLPP_DEPRECATED Space getNestedRange() const { assert(isMapSpace()); return isNestedRange() ? range() : Space(); }
+    ISLPP_DEPRECATED Space getNested() const { assert(isSetSpace()); return isWrapping() ? this->copy() : Space(); }
 
     ISLPP_DEPRECATED Space getNestedOrDefault(isl_dim_type type) const;
 
@@ -434,15 +434,11 @@ namespace isl {
     Space removeSubspace(const Space &subspace) const;
     Space replaceSubspace(const Space &subspaceToReplace, const Space &replaceBy) const;
 
-    Space alignParams(const Space &that) const { return Space::enwrap(isl_space_align_params(this->takeCopy(), that.takeCopy())); }
-    Space alignParams(Space &&that) const { return Space::enwrap(isl_space_align_params(this->takeCopy(), that.take())); }
-    Space alignParams_consume(const Space &that) { return Space::enwrap(isl_space_align_params(this->take(), that.takeCopy())); }
-    Space alignParams_consume( Space &&that) { return Space::enwrap(isl_space_align_params(this->take(), that.take())); }
-    void alignParams_inplace(const Space &that) ISLPP_INPLACE_FUNCTION { give(isl_space_align_params(this->take(), that.takeCopy())); }
-    void alignParams_inplace(Space &&that) ISLPP_INPLACE_FUNCTION { give(isl_space_align_params(this->take(), that.take())); }
+    ISLPP_EXSITU_ATTRS Space alignParams(Space that) ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_space_align_params(this->takeCopy(), that.take())); }
+    ISLPP_INPLACE_ATTRS  void alignParams_inplace(Space that) ISLPP_INPLACE_FUNCTION { give(isl_space_align_params(this->take(), that.take())); }
+    ISLPP_CONSUME_ATTRS Space alignParams_consume(Space that) ISLPP_CONSUME_FUNCTION{ return Space::enwrap(isl_space_align_params(this->take(), that.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Space alignParams(const Space &that) && { return Space::enwrap(isl_space_align_params(this->take(), that.takeCopy())); } 
-    Space alignParams(Space &&that) && { return Space::enwrap(isl_space_align_params(this->take(), that.take())); } 
+    Space alignParams(Space that) && { return Space::enwrap(isl_space_align_params(this->take(), that.take())); } 
 #endif
 
     /// If a nested set space, unwrap it
