@@ -2,11 +2,10 @@
 #define ISLPP_BASICMAP_H
 
 #include "islpp_common.h"
-#include "Spacelike.h"
 
-#include <isl/map.h>
-#include <cassert>
-#include <llvm/Support/ErrorHandling.h>
+#include "Obj.h" // class Obj<> (base of BasicMap)
+#include "Spacelike.h" // class Spacelike<> (base of BasicMap)
+
 #include "Ctx.h"
 #include "Space.h"
 #include "Aff.h"
@@ -16,9 +15,15 @@
 #include "AffList.h"
 #include "Mat.h"
 #include "MultiAff.h"
-#include <isl/constraint.h>
 #include "Constraint.h"
+
+#include <isl/map.h>
+#include <isl/constraint.h>
 #include <isl/deprecated/map_int.h>
+
+#include <llvm/Support/ErrorHandling.h>
+#include <cassert>
+
 
 struct isl_basic_map;
 

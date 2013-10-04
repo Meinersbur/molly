@@ -6,6 +6,7 @@
 
 #include <llvm/Support/raw_ostream.h>
 #include <isl/id.h>
+#include <llvm/ADT/DenseMapInfo.h>
 
 using namespace isl;
 using namespace llvm;
@@ -83,5 +84,9 @@ llvm::DenseMapInfo<isl::Id>::KeyInitializer::~KeyInitializer() {
 }
 
 llvm::DenseMapInfo<isl::Id>::KeyInitializer llvm::DenseMapInfo<isl::Id> ::keys;
+
+ unsigned llvm::DenseMapInfo<isl::Id>::getHashValue(const isl::Id& val) {
+  return llvm::DenseMapInfo<void*>::getHashValue(val.keepOrNull());
+}
 
 //} // namespace isl

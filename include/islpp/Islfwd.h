@@ -5,7 +5,7 @@
 #pragma region Forward declarations for original isl
 extern "C" {
 
-// #include <isl/ctc.h>
+// #include <isl/ctx.h>
 struct isl_ctx;
 
 // #include <isl/id.h>
@@ -16,6 +16,11 @@ struct isl_basic_map;
 struct isl_map;
 struct isl_basic_set;
 struct isl_set;
+
+// #include <isl/val.h>
+struct isl_val;
+struct isl_multi_val;
+struct isl_val_list;
 
 } // extern "C"
 #pragma endregion

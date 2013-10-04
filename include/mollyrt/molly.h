@@ -563,6 +563,10 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     return field->length(0);
   }
 #endif
+  template<typename F, typename... Args>
+  uint64_t __builtin_molly_local_indexof(F *field, Args... coords) { MOLLY_DEBUG_FUNCTION_SCOPE
+    return 0;
+  }
 
   template<typename F, typename... Args>
   int __builtin_molly_localoffset(F, Args...) { MOLLY_DEBUG_FUNCTION_SCOPE
@@ -713,7 +717,11 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #endif
     size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords2idx(" << out_parampack(", ", coords...) << ")");
-      assert(__builtin_molly_islocal(this, coords...));
+
+    assert(__builtin_molly_islocal(this, coords...));
+    return __builtin_molly_local_indexof(this, coords...);
+
+#if 0
       size_t idx = 0;
       size_t lastlocallen = 0;
       size_t localelts = 1;
@@ -734,12 +742,16 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       assert(0 <= idx && idx < localelts);
       MOLLY_DEBUG("RETURN coords2idx(" << out_parampack(", ", coords...) << ") = " << idx);
       return idx;
+#endif
     }
 
 
     /// Compute the rank which stores a specific value
     rank_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords2rank(" << out_parampack(", ", coords...) << ")");
+
+    return __builtin_molly_rankof(this, coords...);
+#if 0
       rank_t rank = 0;
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
@@ -751,10 +763,14 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         rank = (rank * clusterlen) + clustercoord;
       }
       return rank;
+#endif
     }
 
 
     bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
+       MOLLY_DEBUG("isLocal(" << out_parampack(", ", coords...) << ")");
+    return __builtin_molly_islocal(this, coords...);
+#if 0
       auto expRank = coords2rank(coords...);
       for (auto d = Dims-Dims; d<Dims; d+=1) {
         auto len = _select(d, L...);
@@ -772,6 +788,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         MOLLY_DEBUG("rtn=false coords2rank(coords...)="<<expRank<< " self="<<world_self());
         assert(expRank != world_self());
         return false;
+#endif
       }
     MOLLY_DEBUG("rtn=true coords2rank(coords...)="<<expRank<< " self="<<world_self());
       assert(expRank == world_self());
@@ -794,6 +811,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
     __builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
 
+#if 0
       localelts = 1;
       for (auto d = Dims-Dims; d < Dims; d+=1) {
       auto locallen = __builtin_molly_locallength(this, (uint64_t)d);
@@ -819,6 +837,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         (void)__set_master(dummy, static_cast<int>(L)...);
         (void)isLocal(L...);
       }
+#endif
     }
 
 

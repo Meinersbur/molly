@@ -1,6 +1,8 @@
 #ifndef ISLPP_MULTIVAL_H
 #define ISLPP_MULTIVAL_H
 
+#include "islpp_common.h"
+
 #include "Ctx.h"
 #include "Multi.h"
 #include "Val.h"
@@ -29,7 +31,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_multi_val_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const {  }
+    void dump() const { isl_multi_val_dump(keep()); }
 
   }; // class Multi<Val>
 

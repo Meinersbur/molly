@@ -47,6 +47,7 @@ add_molly_library(Islpp
     AstExpr.cpp
     AstNode.cpp
     AffExpr.cpp
+    ValList.cpp
     
     # deprecated; use AffExpr instead
     Expr.cpp 

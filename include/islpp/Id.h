@@ -110,9 +110,7 @@ namespace llvm {
     static inline isl::Id getTombstoneKey() {
       return keys.tombstone;
     }
-    static unsigned getHashValue(const isl::Id& val) {
-      return llvm::DenseMapInfo<void*>::getHashValue(val.keepOrNull());
-    }
+    static unsigned getHashValue(const isl::Id& val);
     static bool isEqual(const isl::Id &LHS, const isl::Id &RHS) {
       return LHS.keepOrNull() == RHS.keepOrNull();
     }

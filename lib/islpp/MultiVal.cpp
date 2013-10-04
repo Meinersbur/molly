@@ -1,3 +1,4 @@
+#include "islpp_impl_common.h"
 #include "islpp/MultiVal.h"
 
 #include "islpp/Printer.h"

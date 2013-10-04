@@ -1,3 +1,4 @@
+#include "islpp_impl_common.h"
 #include "islpp/Val.h"
 
 #include <llvm/Support/raw_ostream.h>
@@ -5,27 +6,12 @@
 
 using namespace isl;
 
-extern inline Val enwrap(isl_val *val);
 
 void Val::print(llvm::raw_ostream &out) const{
   auto printer = Printer::createToStr(getCtx());
   printer.print(*this);
   out << printer.getString();
 }
-
-#if 0
-std::string Val::toString() const{
-  std::string buf;
-  llvm::raw_string_ostream out(buf);
-  print(out);
-  return out.str();
-}
-
-
-void Val::dump() const{
-  isl_val_dump(keep());
-}
-#endif
 
 
 void Val::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
@@ -34,4 +20,9 @@ void Val::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   } else {
     out << "...";
   }
+}
+
+
+void isl::Val::dump() const {
+  isl_val_dump(keep());
 }
