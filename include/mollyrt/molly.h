@@ -56,6 +56,10 @@ typedef struct { long double x, y; } __float128;
 #define __has_feature(x) 0
 #endif
 
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
 /// LLVM_OVERRIDE - Expands to 'override' if the compiler supports it.
 /// Use to mark virtual methods as overriding a base class method.
 #if __has_feature(cxx_override_control) \
@@ -63,6 +67,14 @@ typedef struct { long double x, y; } __float128;
 #define LLVM_OVERRIDE override
 #else
 #define LLVM_OVERRIDE
+#endif
+
+
+
+#if __has_attribute(used) || defined(__GNUC__)
+#define LLVM_ATTRIBUTE_USED __attribute__((used))
+#else
+#define LLVM_ATTRIBUTE_USED
 #endif
 
 
@@ -767,8 +779,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     }
 
 
-    bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
-       MOLLY_DEBUG("isLocal(" << out_parampack(", ", coords...) << ")");
+    LLVM_ATTRIBUTE_USED bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
+    MOLLY_DEBUG("isLocal(" << out_parampack(", ", coords...) << ")");
     return __builtin_molly_islocal(this, coords...);
 #if 0
       auto expRank = coords2rank(coords...);
@@ -788,11 +800,12 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         MOLLY_DEBUG("rtn=false coords2rank(coords...)="<<expRank<< " self="<<world_self());
         assert(expRank != world_self());
         return false;
-#endif
+
       }
     MOLLY_DEBUG("rtn=true coords2rank(coords...)="<<expRank<< " self="<<world_self());
       assert(expRank == world_self());
       return true;
+#endif
     }
 
   public:
@@ -838,6 +851,22 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
         (void)isLocal(L...);
       }
 #endif
+
+      if (1==0) {
+        MOLLY_DEBUG("This should never execute");
+        // Dead code, but do not optimize away so the template functions get instantiated
+        //TODO: Modify clang::CodeGen to generate the unconditionally
+        T dummy;
+        (void)ptr(static_cast<int>(L)...);
+        (void)__get_local(dummy, static_cast<int>(L)...);
+        (void)__set_local(dummy, static_cast<int>(L)...);
+        (void)__ptr_local(static_cast<int>(L)...);
+        (void)__get_broadcast(dummy, static_cast<int>(L)...);
+        (void)__set_broadcast(dummy, static_cast<int>(L)...);
+        (void)__get_master(dummy, static_cast<int>(L)...);
+        (void)__set_master(dummy, static_cast<int>(L)...);
+        (void)isLocal(L...);
+      }
     }
 
 
@@ -879,21 +908,21 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     }
 
 #pragma region Local access
-    void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) { MOLLY_DEBUG_FUNCTION_SCOPE
+    LLVM_ATTRIBUTE_USED void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) { MOLLY_DEBUG_FUNCTION_SCOPE
        assert(__builtin_molly_islocal(this, coords...));
        auto idx = coords2idx(coords...);
        assert(0 <= idx && idx < localelts);
        assert(localdata);
        val = localdata[idx];
     }
-    void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) { MOLLY_DEBUG_FUNCTION_SCOPE
+    LLVM_ATTRIBUTE_USED void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
       assert(0 <= idx && idx < localelts);
       assert(localdata);
       localdata[idx] = val;
     }
-    T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) { MOLLY_DEBUG_FUNCTION_SCOPE
+    LLVM_ATTRIBUTE_USED T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("Coords are (" << out_parampack(", ", coords...) << ")");
       assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
@@ -907,15 +936,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #pragma endregion
 
 
-    void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
-     if (isLocal(coords...)) {
-        __get_local(val, coords...);
-        broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result
-      } else {
-        broadcast_recv(&val, sizeof(T), coords2rank(coords...));
-      }
-    }
-    void __set_broadcast(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
+   LLVM_ATTRIBUTE_USED void __get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast);
+    LLVM_ATTRIBUTE_USED void __set_broadcast(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords=("<<out_parampack(", ", coords...) << ") L=("<<out_parampack(", ", L...) <<")");
       if (isLocal(coords...)) {
         __set_local(val, coords...);
@@ -925,9 +947,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       }
     }
 
-    void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
+    LLVM_ATTRIBUTE_USED void __get_master(T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_get_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
     }
-    void __set_master(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
+    LLVM_ATTRIBUTE_USED void __set_master(const T &val, typename _inttype<L>::type... coords) const __attribute__((molly_fieldmember)) __attribute__((molly_set_master)) { MOLLY_DEBUG_FUNCTION_SCOPE
     }
 
     private:
@@ -968,5 +990,16 @@ extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf
 extern "C" void __molly_combuf_send(void *combuf, uint64_t dstRank) __attribute__((used));
 extern "C" void __molly_combuf_recv(void *combuf, uint64_t srcRank) __attribute__((used));
 extern "C" int __molly_local_coord(int i);
+
+
+template<typename T, uint64_t... L>
+LLVM_ATTRIBUTE_USED void molly::array<T, L...>::__get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
+  if (isLocal(coords...)) {
+    __get_local(val, coords...);
+    broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result
+  } else {
+    broadcast_recv(&val, sizeof(T), coords2rank(coords...));
+  }
+}
 
 #endif /* MOLLY_H */

@@ -111,6 +111,11 @@ void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLA
 }
 
 
+void isl::Multi<Aff>::dump() const {
+  isl_multi_aff_dump(keep());
+}
+
+
 void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());

@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 
+#if 0
 // Required by ISL
 // From http://cboard.cprogramming.com/c-programming/127793-snprintf-linux-ok-windows-problem.html
 // by Bayint Naung 
@@ -21,6 +22,7 @@ int snprintf(char *str, size_t size, const char *fmt, ...) {
     va_end(ap);    
     return ret;    
 }
+#endif
 
 #ifdef __cplusplus
 }

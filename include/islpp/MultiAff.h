@@ -54,7 +54,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_multi_aff_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_multi_aff_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -125,8 +125,8 @@ namespace isl {
     ISLPP_EXSITU_ATTRS MultiAff setAff(int pos, Aff &&el) ISLPP_EXSITU_FUNCTION { return MultiAff::enwrap(isl_multi_aff_set_aff(takeCopy(), pos, el.take())); }
     void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
     void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
-    void push_back(Aff &&aff);
-    void push_back(const Aff &aff) { return push_back(aff.copy()); }
+    ISLPP_DEPRECATED void push_back(Aff &&aff);
+    ISLPP_DEPRECATED void push_back(const Aff &aff) { return push_back(aff.copy()); }
 #pragma endregion
 
 

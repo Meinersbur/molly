@@ -123,6 +123,7 @@ namespace isl {
     void print(const AstNode &);
     void print(const PwAffList &);
     void print(const AffList &);
+    void print(const ValList &);
 
     void flush();
   }; // class Printer

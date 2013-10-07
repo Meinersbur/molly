@@ -31,7 +31,7 @@ namespace molly {
     isl::AstBuild astBuild;
 
     /// Required by polly::IslExprBuilder to map params and domain dims to variables that contain these values
-    const std::map<isl_id *, llvm::Value *> *idtovalue;
+    std::map<isl_id *, llvm::Value *> idtovalue;
 
   protected:
     isl::Ctx *getIslContext();
@@ -39,7 +39,7 @@ namespace molly {
 
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
-   const std::map<isl_id *, llvm::Value *> &getIdToValueMap();
+   void fillIdToValueMap();
 
     llvm::Module *getModule();
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
@@ -84,6 +84,18 @@ namespace molly {
     llvm::CallInst *callCombufSendbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *dst);
     llvm::CallInst *callCombufRecvbufPtr(molly::CommunicationBuffer *combuf, llvm::Value *src);
 
+
+    llvm::CallInst *callValueLoad(FieldVariable *fvar, llvm::Value *valptr, llvm::Value *rank, llvm::Value *idx);
+    llvm::CallInst *callRuntimeValueLoad(FieldVariable *fvar, llvm::Value *srcbufptr, llvm::Value *rank, llvm::Value *idx);
+    llvm::LoadInst *codegenValueLoad(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx);
+
+    llvm::CallInst *callValueStore(FieldVariable *fvar, llvm::Value *valueToStore, llvm::Value *rank, llvm::Value *idx);
+    llvm::CallInst *callRuntimeValueStore(FieldVariable *fvar,  llvm::Value *dstbufptr, llvm::Value *rank, llvm::Value *idx);
+    void codegenValueStore(FieldVariable *fvar, llvm::Value *val, llvm::Value *rank, llvm::Value *idx);
+
+    llvm::CallInst *callFieldRankof(FieldVariable *layout, llvm::ArrayRef<llvm::Value *> coords);
+    llvm::CallInst *callLocalIndexof(FieldVariable *layout, llvm::ArrayRef<llvm::Value *> coords);
+
   public:
     /// Basic constructor
     /// Usable: getIRBulder(), callXXX()
@@ -97,6 +109,7 @@ namespace molly {
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }
     StmtEditor getStmtEditor();
 
+    void addParam(isl::Id id, llvm::Value *val);
 
     //llvm::Value *codegenAff(const isl::Aff &aff);
     llvm::Value *codegenAff(const isl::PwAff &aff);
@@ -105,6 +118,7 @@ namespace molly {
     //std::vector<llvm::Value *> codegenMultiAff(const isl::PwMultiAff &maff);
     llvm::Value *codegenScev(const llvm::SCEV *scev);
     llvm::Value *codegenId(const isl::Id &id);
+
 
 
     bool isDependent(llvm::Value *val);

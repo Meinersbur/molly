@@ -45,15 +45,28 @@ llvm::Value *ClusterConfig::codegenComputeRank(DefaultIRBuilder &builder, ArrayR
     auto module = getModuleOf(builder);
 
     SmallVector<Type*,4> argTys(getClusterDims(), intTy);
-   auto funcTy = FunctionType::get(intTy,argTys, false);
+    auto funcTy = FunctionType::get(intTy,argTys, false);
     funcCoordToRank = Function::Create(funcTy, GlobalValue::PrivateLinkage, "Coord2Rank", module);
     //FIXME: Call MPI_Cart_rank
   }
 
-auto result = builder.CreateCall(funcCoordToRank, coords);
-return result;
+  auto result = builder.CreateCall(funcCoordToRank, coords);
+  return result;
 }
+
 
 isl::Id molly::ClusterConfig::getClusterDimId( isl::pos_t d ) {
   return islctx->createId("rankdim" + Twine(d), this);
+}
+
+
+isl::MultiAff molly::ClusterConfig::getClusterLengthsAff() const {
+  auto nDims = getClusterDims();
+  auto space = islctx->createMapSpace(0, 0, nDims);
+  auto result = space.createZeroMultiAff();
+  auto domspace = space.getDomainSpace();
+  for (auto d = nDims-nDims; d<nDims; d+=1) {
+    result.setAff_inplace(d, domspace.createConstantAff(getClusterLength(d)));
+  }
+  return result;
 }

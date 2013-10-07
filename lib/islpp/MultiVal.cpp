@@ -7,7 +7,7 @@
 using namespace isl;
 
 
- void MultiVal::print(llvm::raw_ostream &out) const {
+ void isl::MultiVal::print(llvm::raw_ostream &out) const {
      if (isNull())
     return;
 
@@ -15,4 +15,9 @@ using namespace isl;
   Printer printer = Printer::createToStr(getCtx());
   printer.print(*this);
   printer.print(out);
+ }
+
+
+ void isl::MultiVal::dump() const {
+   isl_multi_val_dump(keep());
  }

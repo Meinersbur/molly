@@ -95,7 +95,7 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   llvm::install_fatal_error_handler(LLVMErrorHandler,
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
-#ifdef Molly
+#ifdef MOLLY
 #if 0
   if (Clang->getLangOpts().CPlusPlus) {
     Clang->getHeaderSearchOpts().AddPath("C:/Users/Meinersbur/src/molly/molly/include/mollyrt/", frontend::CXXSystem, false, false);

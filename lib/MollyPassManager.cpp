@@ -639,34 +639,35 @@ namespace {
 
 
 #pragma region Field Distribution  
-    void fieldDistribution_processFieldType(FieldType *fty) { assert(!fty->isDistributed()); assert(!fty->getLayout());
-    auto lengths = fty->getLengths();
-    auto cluster = clusterConf->getClusterLengths();
-    auto clusterSpace = clusterConf->getClusterSpace();
-    auto nDims = lengths.size();
+    void fieldDistribution_processFieldType(FieldType *fty) { 
+      assert(!fty->isDistributed()); assert(!fty->getLayout());
+      auto lengths = fty->getLengths();
+      auto cluster = clusterConf->getClusterLengths();
+      auto clusterSpace = clusterConf->getClusterSpace();
+      auto nDims = lengths.size();
 
-    auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
-    auto offsetsAff = lengthsAff.copy();
+      auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
+      auto offsetsAff = lengthsAff.copy();
 
-    SmallVector<int,4> locallengths;
-    for (auto d = nDims-nDims; d<nDims; d+=1) {
-      auto len = lengths[d];
-      auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
+      SmallVector<int,4> locallengths;
+      for (auto d = nDims-nDims; d<nDims; d+=1) {
+        auto len = lengths[d];
+        auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
 
-      assert(len % clusterLen == 0);
-      auto localLen = (len + clusterLen - 1) / clusterLen;
-      locallengths.push_back(localLen);
+        assert(len % clusterLen == 0);
+        auto localLen = (len + clusterLen - 1) / clusterLen;
+        locallengths.push_back(localLen);
 
-      lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
-      offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
-    }
+        lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
+        offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
+      }
 
-    auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
-    auto layout = FieldLayout::create(fty, nullptr, linearizer);
+      auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
+      auto layout = FieldLayout::create(fty, nullptr, linearizer);
 
-    fty->setDistributed();
-    fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
-    fty->setLayout(layout);
+      fty->setDistributed();
+      fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
+      fty->setLayout(layout);
     }
 
 

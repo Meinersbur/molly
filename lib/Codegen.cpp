@@ -50,26 +50,21 @@ isl::AstBuild &MollyCodeGenerator::initAstBuild() {
 
 
 llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty) {
-  auto scopCtx  = stmtCtx->getScopProcessor();
-  auto func = scopCtx->getParentFunction();
-  auto bb = &func->getEntryBlock();
-
-  auto region = scopCtx->getRegion();
-  //auto bb = region->getEntry();
-  assert(!region->contains(bb));
-
-  auto result = new AllocaInst(ty, Twine(), bb->getFirstInsertionPt());
+  auto bb = irBuilder.GetInsertBlock();
+  auto func = getFunctionOf(bb);
+  auto entryBB = &func->getEntryBlock();
+  auto result = new AllocaInst(ty, Twine(), entryBB->getFirstInsertionPt());
   return result;
 }
 
 
 MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, llvm::Pass *pass)
-  :  stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), idtovalue(nullptr){
+  :  stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass) {
 }
 
 
 MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore) 
-  : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), pass(stmtCtx->asPass()), idtovalue(nullptr) {
+  : stmtCtx(stmtCtx), irBuilder(stmtCtx->getLLVMContext()), pass(stmtCtx->asPass()) {
     auto bb = stmtCtx->getBasicBlock();
     if (insertBefore) {
       assert(insertBefore->getParent() == bb);
@@ -78,21 +73,31 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::In
       // Insert at end of block instead
       irBuilder.SetInsertPoint(bb);
     }
+
+    fillIdToValueMap();
 }
 
 
-MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()), pass(stmtCtx->asPass()), idtovalue(nullptr) {
-  //stmtCtx->identifyDomainDims();
+MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCtx(stmtCtx), irBuilder(stmtCtx->getBasicBlock()), pass(stmtCtx->asPass()) {
+  fillIdToValueMap();
 }
 
 
 MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue) 
-  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), context(context.move()), idtovalue(&idtovalue) {
+  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), context(context.move()), idtovalue(idtovalue) {
 }
 
 
 StmtEditor MollyCodeGenerator::getStmtEditor() { 
   return StmtEditor(stmtCtx->getStmt());
+}
+
+
+void MollyCodeGenerator::addParam(isl::Id id, llvm::Value *val) {
+  astBuild.reset();
+
+  context.addParamDim_inplace(id);
+  idtovalue[id.keep()] = val; //TODO: Is the reference to idtovalue shared with someone?
 }
 
 
@@ -103,11 +108,9 @@ llvm::Value *MollyCodeGenerator::getValueOf(const SCEV *scev) {
 }
 
 
-const std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() {
-  if (idtovalue)
-    return *idtovalue;
-
-  auto &result = stmtCtx->getIdToValueMap();
+void MollyCodeGenerator::fillIdToValueMap() {
+  //auto &result = stmtCtx->getIdToValueMap();
+  auto &result = idtovalue;
 
   auto scopCtx = stmtCtx->getScopProcessor();
   auto &params = scopCtx->getParamSCEVs();
@@ -116,8 +119,8 @@ const std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() 
 
   auto nExpected = params.size()+nDomainDims;
   assert(result.size() <= nExpected);
-  if (result.size() == nExpected)
-    return result;
+  //if (result.size() == nExpected)
+  //  return result;
 
   // 1. Context parameters
   for (auto paramScev : params) {
@@ -133,8 +136,6 @@ const std::map<isl_id *, llvm::Value *> & MollyCodeGenerator::getIdToValueMap() 
     assert(id.isValid());
     result[id.keep()] = iv;
   }
-
-  return result;
 }
 
 
@@ -160,9 +161,8 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
 
 
   auto expr = initAstBuild().exprFromPwAff(aff);
-  auto &valueMap = getIdToValueMap();
   // auto pass = stmtCtx->asPass();
-  auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), valueMap, pass);
+  auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), idtovalue, pass);
   //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
   return result;
 }
@@ -314,7 +314,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeLocalPtr(llvm::Value *localobj) {
   auto intTy = Type::getInt64Ty(llvmContext);
 
   Type *tys[] = {voidPtrTy};
-    auto funcDecl  = getRuntimeFunc("__molly_local_ptr", voidPtrTy, voidPtrTy);
+    auto funcDecl  = getRuntimeFunc("__molly_local_ptr", voidPtrTy, tys);
 
     auto localvoidptr = irBuilder.CreatePointerCast(localobj, voidPtrTy);
     return irBuilder.CreateCall(funcDecl, localvoidptr);
@@ -382,18 +382,58 @@ llvm::CallInst *MollyCodeGenerator::callCombufRecvbufPtr(molly::CommunicationBuf
   return irBuilder.CreateCall(ptrFunc, args);      
 }
 
-#if 0
-void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation) {
-  llvm_unreachable("to be removed");
-  auto ptrVal = codegenPtrLocal(fvar, indices);
-  auto store = irBuilder.CreateStore(materialize(val), ptrVal);
 
-  auto editor = getStmtEditor();
-  accessRelation.setInTupleId_inplace(editor.getDomainTupleId());
-  editor.addWriteAccess(store, fvar, accessRelation.move());
+
+llvm::CallInst *MollyCodeGenerator::callValueLoad(FieldVariable *fvar, llvm::Value *valptr, llvm::Value *rank, llvm::Value *idx) {
+  Value *args[] = { fvar->getVariable(), valptr, rank, idx };
+  Type *tys[] = { args[0]->getType(), args[1]->getType() };
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_value_load, tys);
+  return irBuilder.CreateCall(ptrFunc, args);      
 }
-#endif
+llvm::CallInst *MollyCodeGenerator::callRuntimeValueLoad(FieldVariable *fvar, llvm::Value *valptr, llvm::Value *rank, llvm::Value *idx) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
 
+  Type *tys[] = { voidPtrTy, voidPtrTy };
+  auto funcDecl  = getRuntimeFunc("__molly_value_load", voidTy, tys);
+
+  auto fvarvoidptr = irBuilder.CreatePointerCast(fvar->getVariable(), voidPtrTy);
+  auto valvoidptr = irBuilder.CreatePointerCast(valptr, voidPtrTy);
+  return irBuilder.CreateCall4(funcDecl, fvarvoidptr, valvoidptr, rank, idx);
+}
+llvm::LoadInst *MollyCodeGenerator::codegenValueLoad(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx) {
+  auto tmp = allocStackSpace(fvar->getEltType());
+  callValueLoad(fvar, tmp, rank, idx);
+  return irBuilder.CreateLoad(tmp, "valld");
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callValueStore(FieldVariable *fvar, llvm::Value *valueToStore, llvm::Value *rank, llvm::Value *idx) {
+  Value *args[] = { fvar->getVariable(), valueToStore, rank, idx };
+  Type *tys[] = { args[0]->getType(), args[1]->getType() };
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_value_store, tys);
+  return irBuilder.CreateCall(ptrFunc, args);      
+}
+llvm::CallInst *MollyCodeGenerator::callRuntimeValueStore(FieldVariable *fvar,  llvm::Value *dstbufptr, llvm::Value *rank, llvm::Value *idx) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+
+  Type *tys[] = { voidPtrTy, voidPtrTy };
+  auto funcDecl  = getRuntimeFunc("__molly_value_store", voidTy, tys);
+
+  auto fvarvoidptr = irBuilder.CreatePointerCast(fvar->getVariable(), voidPtrTy);
+  auto valvoidptr = irBuilder.CreatePointerCast(dstbufptr, voidPtrTy);
+  return irBuilder.CreateCall4(funcDecl, fvarvoidptr, valvoidptr, rank, idx);
+}
+ void MollyCodeGenerator::codegenValueStore(FieldVariable *fvar, llvm::Value *val, llvm::Value *rank, llvm::Value *idx) {
+   auto tmp = allocStackSpace(fvar->getEltType());
+   irBuilder.CreateStore(val, tmp);
+   callValueStore(fvar, tmp, rank, idx);
+ }
 void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where, isl::MultiPwAff index) {
   auto bufptr = callLocalPtr(fvar);
 
@@ -404,6 +444,46 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
 
   auto store = irBuilder.CreateStore(materialize(val), ptr);
   addStoreAccess(fvar->getVariable(), index, store);
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callFieldRankof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords) {
+  auto nDims = coords.size();
+
+  SmallVector<Value *, 4> args;
+  args.push_back(fvar->getVariable());
+  for (auto coord : coords) {
+    args.push_back(coord); 
+  }
+
+  SmallVector<Type *, 4> tys;
+  tys.push_back(args[0]->getType());
+  for (auto i = nDims-nDims; i<nDims;i+=1) {
+    tys.push_back(coords[i]->getType());
+  }
+
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_field_rankof, tys);
+  return irBuilder.CreateCall(ptrFunc, args);      
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callLocalIndexof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords) {
+  auto nDims = coords.size();
+
+  SmallVector<Value *, 4> args;
+  args.push_back(fvar->getVariable());
+  for (auto coord : coords) {
+    args.push_back(coord); 
+  }
+
+  SmallVector<Type *, 4> tys;
+  tys.push_back(args[0]->getType());
+  for (auto i = nDims-nDims; i<nDims;i+=1) {
+    tys.push_back(coords[i]->getType());
+  }
+
+  auto ptrFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_local_indexof, tys);
+  return irBuilder.CreateCall(ptrFunc, args);    
 }
 
 

@@ -120,6 +120,10 @@ namespace isl {
   template<> class List<PwAff>;
   typedef List<PwAff> PwAffList;
 
+  // ValList.h
+  template<> class List<Val>;
+  typedef List<Val> ValList;
+
   // Multi.h
   template<typename T> class Multi;
 

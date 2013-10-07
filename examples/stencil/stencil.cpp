@@ -1,22 +1,5 @@
-
-//template<int... L>
-//class [[molly::lengths(L...))]] testclass {};
-
-
 #include <molly.h>
-
 #include <iostream>
-
-#if 0
-//================ 
-template<class T, class U> 
-struct Foo { }; 
-
-template<class... Args> 
-void Bar(Foo<Args...> f) { } 
-
-int main2() { Foo<int, float> f; Bar(f); }
-#endif
 
 //molly::array<int> My0DField;
 //molly::array<int, 4> My1DField;

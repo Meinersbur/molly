@@ -20,6 +20,7 @@
 #include "Codegen.h"
 #include "llvm/IR/Module.h"
 #include "FieldLayout.h"
+#include "RectangularMapping.h"
 
 using namespace molly;
 using namespace polly;
@@ -351,6 +352,10 @@ namespace {
       call->eraseFromParent();
     }
 
+    // MollyCodeGenerator makeCodegen(Instruction *insertBefore, isl::Set context , const std::map<isl_id *, llvm::Value *> idtovalue) {
+    //  MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass(), context.move(), idtovalue);
+    //  return codegen; // NRVO
+    //}
 
     MollyCodeGenerator makeCodegen(Instruction *insertBefore) {
       //MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass());
@@ -423,6 +428,110 @@ namespace {
     }
 
 
+    void replaceValueAccess(llvm::Instruction *accInstr) {
+      auto acc = FieldAccess::fromAccessInstruction(accInstr);
+      assert(acc.isValid());
+      auto codegen = makeCodegen(accInstr);
+
+      auto coords = acc.getCoordinates();
+      auto field =  acc.getBaseField();
+      auto fvar = pm->getFieldVariable(field);
+
+      auto rank = codegen.callFieldRankof(fvar, coords);
+      auto idx = codegen.callLocalIndexof(fvar, coords);
+
+      if (acc.isRead()) {
+        auto loadInst = acc.getLoadInst();
+        auto mollyLoad = codegen.codegenValueLoad(fvar, rank, idx);
+        loadInst->replaceAllUsesWith(mollyLoad);
+        loadInst->eraseFromParent(); 
+      } else if (acc.isWrite()) {
+        auto storeInst = acc.getStoreInst();
+        codegen.codegenValueStore(fvar, storeInst->getValueOperand(), rank, idx);
+        storeInst->eraseFromParent();
+      } else
+        llvm_unreachable("Strange access");
+    }
+
+
+    void replacePtr(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_ptr);
+      assert(call->getNumArgOperands() >= 2);
+      //auto fieldobj = call->getOperand(0);
+      //auto nCoords = call->getNumArgOperands() -1;
+
+      //for (auto i=nCoords-nCoords; i<nCoords; i+=1) {
+      //  auto coord = call->getOperand(i+1);
+      //}
+
+      SmallVector<Instruction *,4> uses;
+      for (auto useIt = call->use_begin(), end = call->use_end(); useIt!=end; ++useIt) {
+        auto opno = useIt.getOperandNo();
+        auto use = &useIt.getUse();
+        auto user = cast<Instruction>(*useIt);
+
+        // Make copy because replaceValueAccess() will erease the instr from the list
+        uses.push_back(user);
+      }
+
+      for (auto use : uses) {
+        replaceValueAccess(use);
+      }
+      call->eraseFromParent();
+    }
+
+    isl::Ctx *getIslContext() {
+      return pm->getIslContext();
+    }
+
+    void replaceFieldRankof(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_field_rankof);
+      assert(call->getNumArgOperands() >= 2);
+      auto fieldobj = call->getOperand(0);
+      SmallVector<Value*,4> coords;
+      auto nDims = call->getNumArgOperands() - 1;
+      coords.reserve(nDims);  
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coords.push_back(call->getOperand(i+1));
+      }
+      auto clusterConf = pm->getClusterConfig();
+
+      auto fvar = pm->getFieldVariable(fieldobj);
+      auto fty = fvar->getFieldType();
+      auto layout = fvar->getLayout();
+      auto dist = fty->getHomeAff(); // { field[indexset] -> node[cluster] } 
+
+      auto islctx = getIslContext();
+      auto codegen = makeCodegen(call);
+      auto paramsSpace = islctx->createParamsSpace(nDims);
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        auto coord = call->getOperand(i+1);
+        auto id = islctx->createId("idx" + Twine(i), coord);
+        paramsSpace.setDimId_inplace(isl_dim_param, i, id);
+        codegen.addParam(id, coord);
+      }
+
+      auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
+      auto coordsAff = coordsAffSpace.createZeroMultiAff();
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
+      }
+      coordsAffSpace =  coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+      coordsAff.cast_inplace(coordsAffSpace);
+
+      auto homeAff = dist.pullback(coordsAff); // { [] -> node[cluster] }
+
+
+      auto clusterLengths = clusterConf->getClusterLengthsAff();
+      RectangularMapping mapping(clusterLengths, clusterLengths.getSpace().createZeroMultiAff());
+      auto trans = homeAff.getDomainSpace().mapsToItself().createIdentityMultiAff();
+      auto rank = mapping.codegenIndex(codegen, trans, homeAff);
+
+      call->replaceAllUsesWith(rank);
+      call->eraseFromParent();
+    }
+
+
     bool isMollyIntrinsics(unsigned intID) {
       return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_set_local;
     }
@@ -482,6 +591,9 @@ namespace {
         case Intrinsic::molly_cluster_current_coordinate:
           replaceClusterCurrentCoordinate(instr, called);
           break;
+        case Intrinsic::molly_field_rankof:
+          replaceFieldRankof(instr, called);
+          break;
         case Intrinsic::molly_global_init:
           replaceGlobalInit(instr, called);
           break;
@@ -508,6 +620,9 @@ namespace {
           break;
         case Intrinsic::molly_local_ptr:
           replaceLocalPtr(instr, called);
+          break;
+        case Intrinsic::molly_ptr:
+          replacePtr(instr, called);
           break;
         default:
           llvm_unreachable("Need to replace intrinsic!");
@@ -656,6 +771,7 @@ namespace {
       }
 #endif
     }
+
 
     void isolateFieldAccesses() {
       // "Normalize" existing BasicBlocks

@@ -216,6 +216,7 @@ Aff Space::createAffOnVar(pos_t pos) const {
 
 
 Aff Space::createAffOnParam(const Id &dimId) const {
+  assert(isSetSpace());
   auto pos = findDimById(isl_dim_param, dimId);
   assert(pos >= 0);
   return Aff::enwrap(isl_aff_var_on_domain(isl_local_space_from_space(takeCopy()), isl_dim_param, pos)); 

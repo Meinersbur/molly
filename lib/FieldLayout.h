@@ -29,7 +29,7 @@ namespace molly {
   protected:
     explicit FieldLayout(FieldType *fty) : fty(fty), affine(nullptr), linearizer(nullptr) {    }
 
-    FieldLayout(FieldType *fty,AffineMapping *affine,  RectangularMapping *linearizer) : fty(fty), affine(affine), linearizer(linearizer) {}
+    FieldLayout(FieldType *fty, AffineMapping *affine, RectangularMapping *linearizer) : fty(fty), affine(affine), linearizer(linearizer) {}
 
   public:
     static FieldLayout *create(FieldType *fty){ 

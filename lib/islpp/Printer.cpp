@@ -24,6 +24,7 @@
 #include "islpp/AstExpr.h"
 #include "islpp/AstNode.h"
 #include "islpp/PwAffList.h"
+#include "islpp/ValList.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -250,6 +251,11 @@ void Printer::print(const PwAffList &list) {
 
 void Printer::print(const AffList &list) {
   give(isl_printer_print_aff_list(take(), list.keep()));
+}
+
+
+void Printer::print(const ValList &list) {
+  give(isl_printer_print_val_list(take(), list.keep()));
 }
 
 

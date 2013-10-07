@@ -412,7 +412,7 @@ namespace isl {
     Dim addDim_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION {
       getDerived()->addDims_inplace(type, 1);
       auto dims = getDerived()->dim(type);
-      return Dim::enwrap(getDerived()->getSpacelike(), type, dims-1);
+      return Dim::enwrap(type, dims-1, getDerived()->getSpace());
     }
 
     Dim addOutDim_inplace() ISLPP_INPLACE_FUNCTION {
@@ -524,6 +524,15 @@ namespace isl {
 #pragma endregion
 
     SpaceTy resetSpace(isl_dim_type type) const { auto result = getDerived()->copy(); result.resetSpace_inplace(type); return result; }
+
+    Dim addParamDim_inplace() ISLPP_INPLACE_FUNCTION { return addDim_inplace(isl_dim_param); }
+    Dim addParamDim_inplace(Id id) ISLPP_INPLACE_FUNCTION {
+      auto result = addDim_inplace(isl_dim_param); 
+    setDimId_inplace(result.getType(), result.getPos(), id.move());
+    return result;
+    }
+
+
   }; // class Spacelike
 
 

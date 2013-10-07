@@ -114,7 +114,7 @@ void FieldType::dump() {
   getLogicalIndexset().dump();
 }
 
-
+#if 0
 isl::Map FieldType::getDistributionMapping() {
   auto result = getDistributionAff().toMap();
   //TODO: index >= 0 && index < length[d]
@@ -137,11 +137,11 @@ isl::MultiAff FieldType::getDistributionAff() {
     // => nodecoord = [gcoord/len]
     auto gcoord = indexspace.createVarAff(isl_dim_set, d);
     auto nodecoord = div(gcoord.move(), indexspace.createConstantAff(len));
-    result.push_back(nodecoord.move());
+    result.setAff_inplace(d, nodecoord.move());
   }
   return result;
 }
-
+#endif
 
 llvm::Type *FieldType::getEltType() const {
   //FIXME: In future versions, the element type might depend on the element accessed, if there is a struct type in between 

@@ -111,14 +111,14 @@ namespace molly {
     void setDistributed(bool val = true) {
       isdistributed = val;
     }
-    void setLocalLength(const llvm::ArrayRef<int> &lengths, isl::Space &clusterSpace) {
+    void setLocalLength(const llvm::ArrayRef<int> &lengths, isl::Space clusterSpace) {
       this->localLengths.clear();
       this->localLengths.append(lengths.begin(), lengths.end());
-      this->clusterSpace = clusterSpace;
+      this->clusterSpace = clusterSpace.move();
     }
     //void setDistribution(const llvm::ArrayRef<int> &localLengths )
-    isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */
-    isl::MultiAff getDistributionAff(); /* global coordinate -> node coordinate */
+    //isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */
+    //isl::MultiAff getDistributionAff(); /* global coordinate -> node coordinate */
 
     llvm::Function *getFuncGetBroadcast() {
       assert(metadata.funcGetBroadcast);
@@ -130,7 +130,7 @@ namespace molly {
     }
     llvm::Function *getFuncSetLocal() {
       assert(metadata.funcSetLocal);
-    return metadata.funcSetLocal;
+      return metadata.funcSetLocal;
     }
 
     llvm::Function *getFuncPtrLocal() {

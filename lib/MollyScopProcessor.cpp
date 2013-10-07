@@ -1616,11 +1616,19 @@ namespace {
     }
 
 
+    // We need to always return the same id for same loop since we use that Id as key in maps
+    // Usually ISL would remember itself always created ids, but we use the key as weak reference so ISL generates a new id after refcount drops to 0 
+    llvm::DenseMap<const Loop *, isl::Id> storedDomIds;
     isl::Id getIdForLoop(const Loop *loop) LLVM_OVERRIDE {
+      auto &id = storedDomIds[loop];
+      if (id.isValid())
+        return id;
+
       auto depth = loop->getLoopDepth();
       loop->getCanonicalInductionVariable();
       auto indvar = loop->getCanonicalInductionVariable();
-      return islctx->createId("dom" + Twine(depth-1), loop);
+      id = islctx->createId("dom" + Twine(depth-1), loop);
+      return id;
     }
 
 

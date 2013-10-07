@@ -30,6 +30,7 @@ namespace isl {
   class Point;
   class Constraint;
   class AstBuild;
+  class Space;
 } // namespace isl
 
 extern "C" {
@@ -39,6 +40,10 @@ extern "C" {
 
 
 namespace isl {
+
+  /// Ensure both spaces have the same param dimensions in the same order
+  void compatibilize(/*inout*/Space &space1, /*inout*/Space &space2);
+
   /// Whenever a new set, relation or similar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
   class Space : public Obj<Space,isl_space>, public Spacelike<Space> {
 
@@ -119,7 +124,11 @@ namespace isl {
 
 
 #pragma region Create other spaces
-    Space mapsTo(const Space &range) ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), range.takeCopy())); }
+    Space mapsTo(Space range) ISLPP_EXSITU_FUNCTION { 
+      auto self = copy();
+      compatibilize(self, range);
+      return Space::enwrap(isl_space_map_from_domain_and_range(self.take(), range.take()));
+    }
     ISLPP_EXSITU_ATTRS Space mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_space_map_from_domain_and_range( takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()) )); }
     Space mapsToItself() ISLPP_EXSITU_FUNCTION { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
@@ -492,9 +501,6 @@ namespace isl {
 
   // Test for equality of domain and range dimensions, but not param dims as these are aligned automatically
   static inline bool matchesSpace(const Space &lhs, const Space &rhs) { return lhs.matchesSpace(rhs); }
-
-  /// Ensure both spaces have the same param dimensions in the same order
-  void compatibilize(/*inout*/Space &space1, /*inout*/Space &space2);
 
   /// Create spacenesting from valid subspaces
   Space combineSpaces(const Space &lhs, const Space &rhs);
