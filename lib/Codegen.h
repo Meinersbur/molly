@@ -52,6 +52,9 @@ namespace molly {
      Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
 
   public:
+    llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
+    llvm::CallInst *callRuntimeLocalIndexof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords);
+
     llvm::CallInst *callRuntimeClusterCurrentCoord(llvm::Value *d);
     llvm::CallInst *callRuntimeClusterCurrentCoord(uint64_t d) {
       auto intTy = Type::getInt64Ty(getLLVMContext());

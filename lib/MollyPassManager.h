@@ -68,6 +68,9 @@ namespace molly {
 
      virtual CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) = 0;
      virtual llvm:: ArrayRef<CommunicationBuffer *> getCommunicationBuffers() = 0;
+
+    virtual  llvm::Function *emitFieldRankofFunc(FieldLayout *layout)= 0;
+    virtual llvm::Function *emitLocalIndexofFunc(FieldLayout *layout) = 0;
   }; // class MollyPassManager
 
   extern char &MollyPassManagerID;

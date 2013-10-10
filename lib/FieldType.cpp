@@ -57,11 +57,6 @@ llvm::LLVMContext *FieldType::getLLVMContext() {
 }
 
 
-llvm::Module *FieldType::getModule() {
-  return module;
-}
-
-
 FieldType::~FieldType() {
   int a = 0;
 }
@@ -259,6 +254,20 @@ isl::Map FieldType::getHomeRel() {
   return getHomeAff().toMap().reverse().intersectRange(getLogicalIndexset());
 }
 
+
+#if 0
+/// Get the coordinate that falls into the local range
+/// { field[indexset] -> [nDims] }
+isl::MultiAff FieldType::getLocalIdxAff() {
+   auto coordSpace = getLogicalIndexsetSpace();
+   auto nDims = getNumDimensions();
+     auto maff = getIslContext()->createMapSpace(coordSpace, nDims).createZeroMultiAff();
+
+
+
+  return result;
+}
+#endif
 
 llvm::StringRef FieldType::getName() const {
   auto result = StringRef(metadata.clangTypeName);

@@ -203,7 +203,7 @@ namespace {
 
 
   private:
-    isl::MultiAff currentNodeCoord; /* { -> node[cluster] } */
+    isl::MultiAff currentNodeCoord; /* { [] -> node[cluster] } */
     std::map<isl_id *, llvm::Value *> idtovalue;
 
     isl::MultiAff getCurrentNodeCoordinate() {
@@ -283,6 +283,18 @@ namespace {
       auto codegen = makeCodegen(call);
       auto result = codegen.callRuntimeClusterCurrentCoord(dArg);
 
+      // We replaced the intrinsics by the runtime function, let that code generator know is
+      // Otherwise, it would continue the freed value
+      // Alternatively, we could clear this cache
+      for ( auto &currentnodefunc : currentClusterCoord) {
+        if (currentnodefunc == call) 
+          currentnodefunc = result;
+      }
+      for (auto &vtoid : idtovalue) {
+        if (vtoid.second == call)
+          vtoid.second = result;
+      }
+
       call->replaceAllUsesWith(result);
       call->eraseFromParent();
     }
@@ -299,27 +311,21 @@ namespace {
       auto &builder = codegen.getIRBuilder();
 
       auto fval = call->getArgOperand(0);
-      auto fvar = pm->getFieldVariable(fval);
-      assert(fvar && "Field variable not registered?!?");
-      auto fty = fvar->getFieldType();
+      //auto fvar = pm->getFieldVariable(fval);
+      //if (fvar) {
+      //auto fty = fvar->getFieldType();
+      auto fty = pm->getFieldType(cast<StructType>(fval->getType()->getPointerElementType()));
 
-      auto initFunc = module->getFunction("__molly_local_init");
-      if (!initFunc) {
-        auto voidTy = Type::getVoidTy(llvmContext);
-
-        auto intTy = Type::getInt64Ty(llvmContext);
-        Type *tys[] = { voidPtrTy, intTy };
-        auto initFuncTy = FunctionType::get(voidTy, tys, false);
-        initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, "__molly_local_init", module);
-      }
-
-      auto layout = fvar->getLayout(); //TODO: implement FieldLayout
+      auto layout = fty->getLayout();
       auto sizeVal = layout->codegenLocalSize(codegen, getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
 
-      auto fvalptr = builder.CreatePointerCast(fval, voidPtrTy);
+      auto rankFunc = pm->emitFieldRankofFunc(layout);
+      auto indexFunc = pm->emitLocalIndexofFunc(layout);
 
-      Value *args[] = { fvalptr, sizeVal };
-      builder.CreateCall(initFunc, args);
+      codegen.callRuntimeLocalInit(fval, sizeVal, rankFunc, indexFunc);
+    //} else {
+      // Constructor should have been inlined; let's assume this is the non-inlined version that will never be called since we have no way to find out to which 
+    //}
 
       call->eraseFromParent();
     }
@@ -352,13 +358,11 @@ namespace {
       call->eraseFromParent();
     }
 
-    // MollyCodeGenerator makeCodegen(Instruction *insertBefore, isl::Set context , const std::map<isl_id *, llvm::Value *> idtovalue) {
-    //  MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass(), context.move(), idtovalue);
-    //  return codegen; // NRVO
-    //}
 
     MollyCodeGenerator makeCodegen(Instruction *insertBefore) {
-      //MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass());
+      // ensure idtovalue is up to date
+      getCurrentNodeCoordinate();
+
       MollyCodeGenerator codegen(insertBefore->getParent(), insertBefore, asPass(), pm->getClusterConfig()->getClusterParamShape(), idtovalue);
       return codegen; // NRVO
     }
@@ -484,6 +488,9 @@ namespace {
       return pm->getIslContext();
     }
 
+
+
+
     void replaceFieldRankof(CallInst *call, Function *called) {
       assert(called->getIntrinsicID() == Intrinsic::molly_field_rankof);
       assert(call->getNumArgOperands() >= 2);
@@ -532,6 +539,62 @@ namespace {
     }
 
 
+    void replaceLocalIndexof(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_local_indexof);
+      assert(call->getNumArgOperands() >= 2);
+      auto fieldobj = call->getOperand(0);
+
+      SmallVector<Value*,4> coords;
+      auto nDims = call->getNumArgOperands() - 1;
+      coords.reserve(nDims);  
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coords.push_back(call->getOperand(i+1));
+      }
+
+      auto fvar = pm->getFieldVariable(fieldobj);
+       auto codegen = makeCodegen(call);
+
+      Value *idx;
+      if (fvar) {
+        // Field known at runtime; inline the computation
+
+
+      auto clusterConf = pm->getClusterConfig();
+
+      
+      auto fty = fvar->getFieldType();
+      auto layout = fvar->getLayout();
+
+      auto islctx = getIslContext();
+     
+      auto paramsSpace = islctx->createParamsSpace(nDims);
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        auto coord = call->getOperand(i+1);
+        auto id = islctx->createId("idx" + Twine(i), coord);
+        paramsSpace.setDimId_inplace(isl_dim_param, i, id);
+        codegen.addParam(id, coord);
+      }
+
+      auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
+      auto coordsAff = coordsAffSpace.createZeroMultiAff();
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
+      }
+      coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+      coordsAff.cast_inplace(coordsAffSpace);
+
+      auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
+      // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
+       idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
+      } else {
+        // Field not known at runtime; call the virtual method
+        codegen.callRuntimeLocalIndexof(fvar, coords);
+      }
+      call->replaceAllUsesWith(idx);
+      call->eraseFromParent();
+    }
+
+
     bool isMollyIntrinsics(unsigned intID) {
       return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_set_local;
     }
@@ -554,8 +617,8 @@ namespace {
 
       lowerMollyIntrinsics();
 
-      // Second call because some replacements (molly_field_init) may introduce new intrinsics that have to be replaced
-      lowerMollyIntrinsics();
+      // Second call because some replacements (molly_field_init, field_rankof) may introduce new intrinsics that have to be replaced
+      lowerMollyIntrinsics(); 
     }
 
 
@@ -593,6 +656,9 @@ namespace {
           break;
         case Intrinsic::molly_field_rankof:
           replaceFieldRankof(instr, called);
+          break;
+        case Intrinsic::molly_local_indexof:
+          replaceLocalIndexof(instr, called);
           break;
         case Intrinsic::molly_global_init:
           replaceGlobalInit(instr, called);
@@ -839,7 +905,7 @@ namespace {
 
       auto &curCoord = currentClusterCoord[i];
       if (curCoord) {
-        assert(cast<CallInst>(curCoord)->getCalledFunction()->getIntrinsicID() == Intrinsic::molly_cluster_current_coordinate);
+        //assert(cast<CallInst>(curCoord)->getCalledFunction()->getIntrinsicID() == Intrinsic::molly_cluster_current_coordinate); // Or the runtime'e function
         return curCoord;
       }
 

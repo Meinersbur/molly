@@ -409,7 +409,7 @@ namespace isl {
     SpaceTy removeDims(const DimRange &range) && { return getDerived()->removeDims_consume(range.getType(), range.getFirst(), range.getCount()); }
 #endif
 
-    Dim addDim_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION {
+    Dim addDim_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { 
       getDerived()->addDims_inplace(type, 1);
       auto dims = getDerived()->dim(type);
       return Dim::enwrap(type, dims-1, getDerived()->getSpace());
@@ -527,11 +527,11 @@ namespace isl {
 
     Dim addParamDim_inplace() ISLPP_INPLACE_FUNCTION { return addDim_inplace(isl_dim_param); }
     Dim addParamDim_inplace(Id id) ISLPP_INPLACE_FUNCTION {
-      auto result = addDim_inplace(isl_dim_param); 
+      assert(findDimById(isl_dim_param, id)==-1);
+      auto result = getDerived()->addDim_inplace(isl_dim_param); 
     setDimId_inplace(result.getType(), result.getPos(), id.move());
     return result;
     }
-
 
   }; // class Spacelike
 

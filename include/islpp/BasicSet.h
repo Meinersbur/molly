@@ -60,10 +60,10 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { 
-      auto newspace = getSpace().setTupleId(type, std::move(id));
-      cast_inplace(newspace);
-      //give(isl_basic_set_set_tuple_id(take(), type, id.take())); 
+    void setTupleId_internal(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { 
+      //auto newspace = getSpace().setTupleId(type, std::move(id));
+      //cast_inplace(newspace);
+      give(isl_basic_set_set_tuple_id(take(), id.take())); 
     }
     //void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_dim_id(take(), type, pos, id.take())); }
 

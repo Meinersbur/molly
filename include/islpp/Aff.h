@@ -90,7 +90,7 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:
-    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_tuple_id(take(), type, id.take())); }
+    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_tuple_id(take(), type, id.take())); }
     void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
       assert(type==isl_dim_in);
       cast_inplace(getSpace().setTupleId(type, std::move(id)));
@@ -112,7 +112,7 @@ namespace isl {
     //bool hasTupleId(isl_dim_type type) const { return isl_aff_has_tuple_id(keep(), type); }
     //const char *getTupleName(isl_dim_type type) const { return isl_aff_get_tuple_name(keep(), type); }
     //Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_aff_get_tuple_id(keep(), type)); }
-    //void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_tuple_name(take(), type, s)); }
+    //void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_tuple_name(take(), type, s)); }
 
     //bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_aff_has_dim_id(keep(), type, pos); }
     const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_aff_get_dim_name(keep(), type, pos); }

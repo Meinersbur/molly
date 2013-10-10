@@ -268,6 +268,7 @@ Point Space::zeroPoint() const {
   return Point::enwrap(isl_point_zero(keep()));
 }
 
+
 Constraint Space::createZeroConstraint() const {
   return Constraint::enwrap(isl_equality_alloc(isl_local_space_from_space(takeCopy())));
 }
@@ -1233,6 +1234,18 @@ ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_FUNCTION
   return equalBasicMap(std::min(dim(isl_dim_in), dim(isl_dim_out)));
 }
 
+
+ISLPP_EXSITU_ATTRS Space isl::Space::createMapSpace( count_t nDomainDims, Space rangeSpace ) ISLPP_EXSITU_FUNCTION
+{
+  assert(isParamsSpace());
+  assert(rangeSpace.isSetSpace());
+
+  auto range = isl_space_align_params(rangeSpace.take(), takeCopy());
+  auto domain = isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nDomainDims);
+  domain = isl_space_align_params(domain, isl_space_copy(range)); 
+  auto result = isl_space_map_from_domain_and_range(domain, range); domain = nullptr; range=nullptr;
+  return Space::enwrap(result);
+}
 
 
 bool isl::isEqual(const Space &space1, const Space &space2){

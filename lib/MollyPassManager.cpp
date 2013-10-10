@@ -49,6 +49,8 @@
 #include "RectangularMapping.h"
 #include "FieldLayout.h"
 #include "llvm/Analysis/Verifier.h"
+#include "molly/Mollyfwd.h"
+#include "Codegen.h"
 
 using namespace molly;
 using namespace polly;
@@ -1052,6 +1054,164 @@ namespace {
 
 
 
+#pragma region molly::MollyPassManager
+    ClusterConfig *getClusterConfig() LLVM_OVERRIDE {
+      return clusterConf.get();
+    }
+
+    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE {
+      return &runtimeMetadata;
+    }
+
+    void modifiedScop() LLVM_OVERRIDE {
+      changedScop = true;
+    }
+#pragma endregion
+
+
+
+    // TODO: Move to MollyModuleManager
+    llvm::Function *emitFieldRankofFunc(FieldLayout *layout) LLVM_OVERRIDE   {
+      auto &rankoffunc = layout->rankoffunc;
+      if (rankoffunc) 
+        return rankoffunc;
+
+      auto fty = layout->getFieldType();
+      auto module = fty->getModule();
+      auto &llvmContext = module->getContext();
+      auto nDims = fty->getNumDimensions();
+      auto intTy = Type::getInt64Ty(llvmContext);
+
+      SmallVector<Type *, 4> tys;
+      tys.push_back(fty->getType());
+      for (auto i = nDims-nDims;i<nDims;i+=1) {
+        tys.push_back(intTy);
+      }
+
+      auto funcTy = FunctionType::get(intTy, tys, false);
+      rankoffunc = Function::Create(funcTy, GlobalValue::PrivateLinkage, "__mollyemitted_field" + Twine::utohexstr(reinterpret_cast<intptr_t>(this)) + "_rankof", module);
+
+      auto entry = BasicBlock::Create(llvmContext, "entry", rankoffunc);
+
+      MollyCodeGenerator codegen(entry, nullptr, this);
+
+      SmallVector<Value*,4> coords;
+      auto itArg = rankoffunc->getArgumentList().begin();
+      //auto fieldobj = itArg;
+      ++itArg;
+      for (auto endArg = rankoffunc->getArgumentList().end();itArg!=endArg;++itArg) {
+        coords.push_back(itArg);
+      }
+
+      auto paramsSpace = islctx->createParamsSpace(nDims);
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        auto coord = coords[i];
+        auto id = islctx->createId("idx" + Twine(i), coord);
+        paramsSpace.setDimId_inplace(isl_dim_param, i, id);
+        codegen.addParam(id, coord);
+      }
+
+      auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
+      auto coordsAff = coordsAffSpace.createZeroMultiAff();
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
+      }
+      coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+      coordsAff.cast_inplace(coordsAffSpace);
+
+      auto dist = fty->getHomeAff(); // { field[indexset] -> node[cluster] } 
+      auto homeAff = dist.pullback(coordsAff); // { [] -> node[cluster] }
+
+      auto clusterLengths = clusterConf->getClusterLengthsAff();
+      RectangularMapping mapping(clusterLengths, clusterLengths.getSpace().createZeroMultiAff());
+      auto trans = homeAff.getDomainSpace().mapsToItself().createIdentityMultiAff();
+      auto rank = mapping.codegenIndex(codegen, trans, homeAff);
+
+      codegen.getIRBuilder().CreateRet(rank);
+
+      return rankoffunc;
+    }
+
+
+    llvm::Function *emitLocalIndexofFunc(FieldLayout *layout) LLVM_OVERRIDE {
+      auto &localidxfunc = layout->localidxfunc;
+      if (localidxfunc) 
+        return localidxfunc;
+
+      auto fty = layout->getFieldType();
+      auto module = fty->getModule();
+      auto &llvmContext = module->getContext();
+      auto nDims = fty->getNumDimensions();
+
+      auto intTy = Type::getInt64Ty(llvmContext);
+
+      SmallVector<Type *, 4> tys;
+      tys.push_back(fty->getType());
+      for (auto i = nDims-nDims;i<nDims;i+=1) {
+        tys.push_back(intTy);
+      }
+
+      auto funcTy = FunctionType::get(intTy, tys, false);
+      localidxfunc = Function::Create(funcTy, GlobalValue::PrivateLinkage, "__mollyemitted_local" + Twine::utohexstr(reinterpret_cast<intptr_t>(this)) + "_indexof", module);
+      auto entry = BasicBlock::Create(llvmContext, "entry", localidxfunc);
+
+      MollyCodeGenerator codegen(entry, nullptr, this);
+
+      SmallVector<Value*,4> coords;
+      auto itArg = localidxfunc->getArgumentList().begin();
+      //auto fieldobj = itArg;
+      ++itArg;
+      for (auto endArg = localidxfunc->getArgumentList().end();itArg!=endArg;++itArg) {
+        coords.push_back(itArg);
+      }
+
+      auto islctx = getIslContext();
+      auto paramsSpace = islctx->createParamsSpace(nDims);
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        auto coord = coords[i];
+        auto id = islctx->createId("idx" + Twine(i), coord);
+        paramsSpace.setDimId_inplace(isl_dim_param, i, id);
+        codegen.addParam(id, coord);
+      }
+
+      auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
+      auto coordsAff = coordsAffSpace.createZeroMultiAff();
+      for (auto i = nDims-nDims; i <nDims; i+=1) {
+        coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
+      }
+      coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+      coordsAff.cast_inplace(coordsAffSpace);
+
+      auto clusterConf = getClusterConfig();
+      auto nClusterDims = clusterConf->getClusterDims();
+      //auto clusterParamSpace = islctx->createParamsSpace(nClusterDims);
+      auto clusterParamSpace = clusterConf->getClusterParamSpace();
+      //for (auto i = nClusterDims-nClusterDims; i <nClusterDims;i+=1) {
+      //  auto curcoord = codegen.callClusterCurrentCoord(i);
+      //  auto id = clusterConf->getClusterDimId(i);
+      //  codegen.addParam(id, curcoord);
+      //  clusterParamSpace.setSetDimId_inplace(i, id);
+      //}
+
+      auto curnodeSpace = clusterParamSpace.createMapSpace(0, clusterConf->getClusterSpace());
+      auto curnode = curnodeSpace.createZeroMultiAff();
+      for (auto i = nClusterDims-nClusterDims; i <nClusterDims;i+=1) {
+        auto id = clusterConf->getClusterDimId(i);
+        curnode.setAff_inplace(i,curnodeSpace.getDomainSpace().createAffOnParam(id));
+
+        auto curcoord = codegen.callClusterCurrentCoord(i);
+        codegen.addParam(id, curcoord);
+      }
+
+      //auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
+      // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
+      auto idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
+      codegen.getIRBuilder().CreateRet(idx);
+
+      return localidxfunc;
+    }
+
+
 #pragma region llvm::ModulePass
   public:
     void releaseMemory() LLVM_OVERRIDE {
@@ -1168,6 +1328,9 @@ namespace {
         verifyFunction(func);
       }
 
+      // Implement function that are expected to exist
+      implementMollyExternalFunction();
+
       //FIXME: Find all the leaks
       //this->islctx.reset();
       this->clusterConf.reset();
@@ -1176,19 +1339,55 @@ namespace {
     }
 
 
-#pragma region molly::MollyPassManager
-    ClusterConfig *getClusterConfig() LLVM_OVERRIDE {
-      return clusterConf.get();
-    }
+    void implementMollyExternalFunction() {
+      auto &llvmContext = getLLVMContext();
 
-    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE {
-      return &runtimeMetadata;
-    }
+      for (auto &func : *module) {
+        auto &attrs = func.getAttributes();
+        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_rankof")) {
+          assert(func.isDeclaration());
+          
+          SmallVector<Value *,4> args;
+          auto itArgs = func.arg_begin();
+          auto fieldobj = &*itArgs;
+          args.push_back(fieldobj);
+          itArgs++;
+          SmallVector<Value *,4> coords;
+          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
+            coords.push_back(&*itArgs);
+            args.push_back(&*itArgs);
+          }
 
-    void modifiedScop() LLVM_OVERRIDE {
-      changedScop = true;
+         auto fty = getFieldType(cast<StructType>(fieldobj->getType()));
+         auto layout = fty->getLayout();
+
+          auto realfunc = emitFieldRankofFunc(layout);
+        auto bb = BasicBlock::Create(llvmContext, "entry", realfunc);
+        IRBuilder<> builder(bb);
+       auto ret = builder.CreateCall(realfunc, args);
+       builder.CreateRet(ret);
+        }
+
+        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_indexof")) {
+          assert(func.isDeclaration());
+
+          auto fieldobj = &func.getArgumentList().front();
+           SmallVector<Value *,4> args;
+          for (auto &arg :func.getArgumentList() ) {
+            args.push_back(&arg);
+          }
+
+          auto fty = getFieldType(cast<StructType>(fieldobj->getType()));
+          auto layout = fty->getLayout();
+           auto realfunc = emitLocalIndexofFunc(layout);
+
+           auto bb = BasicBlock::Create(llvmContext, "entry", realfunc);
+           IRBuilder<> builder(bb);
+           auto ret = builder.CreateCall(realfunc, args);
+           builder.CreateRet(ret);
+        }
+      }
     }
-#pragma endregion
 
   }; // class MollyPassManagerImpl
 

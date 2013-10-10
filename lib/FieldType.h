@@ -60,7 +60,6 @@ namespace molly {
 
     void readMetadata();
     llvm::LLVMContext *getLLVMContext();
-    llvm::Module *getModule();
 
   public:
     ~FieldType();
@@ -85,6 +84,8 @@ namespace molly {
       assert(metadata.llvmType);
       return metadata.llvmType;
     }
+
+    llvm::Module *getModule() const { return module; }
 
     //llvm::Function *getRefFunc();
     //llvm::Function *getIsLocalFunc();
@@ -167,6 +168,8 @@ namespace molly {
     /// { globalcoord -> nodecoord } where the value is stored
     isl::PwMultiAff getHomeAff(); 
     isl::Map getHomeRel(); /* { cluster[nodecoord] -> fty[indexset] } which coordnated are stored at these nodes */
+
+    //isl::MultiAff getLocalIdxAff();
 
     llvm::StringRef getName() const;
 

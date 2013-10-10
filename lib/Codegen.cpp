@@ -59,7 +59,12 @@ llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty) {
 
 
 MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, llvm::Pass *pass)
-  :  stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass) {
+  :  stmtCtx(nullptr), irBuilder(insertBB->getContext()), pass(pass) {
+    if (insertBefore) {
+      assert(insertBB==insertBefore->getParent());
+      irBuilder.SetInsertPoint(insertBefore);
+    } else
+      irBuilder.SetInsertPoint(insertBB);
 }
 
 
@@ -84,7 +89,12 @@ MollyCodeGenerator::MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx) : stmtCt
 
 
 MollyCodeGenerator::MollyCodeGenerator(llvm::BasicBlock *insertBB, llvm::Instruction *insertBefore, Pass *pass, isl::Set context, const std::map<isl_id *, llvm::Value *> &idtovalue) 
-  : stmtCtx(nullptr), irBuilder(insertBB, insertBefore), pass(pass), context(context.move()), idtovalue(idtovalue) {
+  : stmtCtx(nullptr), irBuilder(insertBB->getContext()), pass(pass), context(context.move()), idtovalue(idtovalue) {
+    if (insertBefore) {
+      assert(insertBB==insertBefore->getParent());
+      irBuilder.SetInsertPoint(insertBefore);
+    } else
+      irBuilder.SetInsertPoint(insertBB);
 }
 
 
@@ -96,8 +106,15 @@ StmtEditor MollyCodeGenerator::getStmtEditor() {
 void MollyCodeGenerator::addParam(isl::Id id, llvm::Value *val) {
   astBuild.reset();
 
+  // Create a empty context if none was there
+  // Not possible in constructor since we may not have a isl::Ctx
+  if (context.isNull()) {
+    auto islctx = id.getCtx();
+    context = islctx->createSetSpace(0,0).universeSet();
+  }
+
   context.addParamDim_inplace(id);
-  idtovalue[id.keep()] = val; //TODO: Is the reference to idtovalue shared with someone?
+  idtovalue[id.keep()] = val; 
 }
 
 
@@ -237,6 +254,50 @@ Function *MollyCodeGenerator::getRuntimeFunc(llvm::StringRef name, llvm::Type *r
     assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
   }
   return initFunc;
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callRuntimeLocalInit(llvm::Value *fvar, llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc){
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+
+  Type *tys[] = { voidPtrTy, intTy, voidPtrTy, voidPtrTy };
+  auto funcDecl  = getRuntimeFunc("__molly_local_init", voidTy, tys);
+
+  auto fvarvoid = irBuilder.CreatePointerCast(fvar, voidPtrTy);
+  auto rankofvoid = irBuilder.CreatePointerCast(rankoffunc, voidPtrTy);
+  auto indexofvoid = irBuilder.CreatePointerCast(indexoffunc, voidPtrTy);
+  return irBuilder.CreateCall4(funcDecl, fvarvoid, elts, rankofvoid, indexofvoid);
+}
+
+
+llvm::CallInst *MollyCodeGenerator::callRuntimeLocalIndexof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto nDims = coords.size();
+
+  SmallVector<Type*,4> tys;
+  SmallVector<Value*,4> args;
+  tys.reserve(1+coords.size());
+  args.reserve(1+coords.size());
+
+  // "this"
+  tys.push_back(voidPtrTy);
+  args.push_back(fvar->getVariable());
+
+  // Args
+  for (auto i =nDims-nDims;i<nDims;i+=1) {
+    tys.push_back(intTy);
+    args.push_back(coords[i]);
+  }
+
+  auto funcDecl  = getRuntimeFunc("__molly_local_indexof", intTy, tys);
+
+  return irBuilder.CreateCall(funcDecl, args);
 }
 
 
@@ -634,3 +695,4 @@ void MollyCodeGenerator::updateScalar(llvm::Value *toupdate, llvm::Value *val) {
 isl::Ctx *molly::MollyCodeGenerator::getIslContext() {
   return stmtCtx->getIslContext();
 }
+

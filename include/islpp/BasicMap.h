@@ -65,12 +65,13 @@ namespace isl {
     LocalSpace getLocalSpace() const { return LocalSpace::enwrap(isl_basic_map_get_local_space(keep())); }
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
-    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_QUALIFIER { give(isl_basic_set_set_tuple_id(take(), type, id.take())); }
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
-      auto space = getSpace();
-      space.setTupleId_inplace(type, id.move());
-      cast_inplace(space);
-    }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_tuple_id(take(), type, id.take())); }
+    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
+   //   auto space = getSpace();
+   //   space.setTupleId_inplace(type, id.move());
+   //   cast_inplace(space);
+    //}
+    //void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_dim_id(take(), type, pos, id.take())); }
     void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { 
       auto space = getSpace();
       space.setDimId_inplace(type, pos, id.move());

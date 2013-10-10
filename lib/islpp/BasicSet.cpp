@@ -52,6 +52,8 @@ BasicSet BasicSet::createFromBasicMap(BasicMap &&bmap) {
 BasicSet BasicSet::readFromFile(Ctx *ctx, FILE *input){
   return BasicSet::wrap(isl_basic_set_read_from_file(ctx->keep(), input));
 }
+
+
 BasicSet BasicSet::readFromStr(Ctx *ctx, const char *str) {
   return BasicSet::wrap(isl_basic_set_read_from_str(ctx->keep(), str));
 }

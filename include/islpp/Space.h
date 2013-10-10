@@ -133,8 +133,9 @@ namespace isl {
     Space mapsToItself() ISLPP_EXSITU_FUNCTION { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
     // If this is a param space
-    Space createSetSpace(unsigned nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
-    Space createMapSpace(unsigned nDomainDims, unsigned nRangeDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_alloc(getCtx()->keep(), 0, nDomainDims, nRangeDims), takeCopy())); }
+    Space createSetSpace(count_t nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
+    Space createMapSpace(count_t nDomainDims, count_t nRangeDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_alloc(getCtx()->keep(), 0, nDomainDims, nRangeDims), takeCopy())); }
+   ISLPP_EXSITU_ATTRS Space createMapSpace(count_t nDomainDims, Space rangeSpace) ISLPP_EXSITU_FUNCTION;
 #pragma endregion
 
 

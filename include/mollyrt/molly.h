@@ -196,7 +196,7 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 
 //TODO: improve:
 // - Put 2 char tag in front to mark severity
-// - Refector part that writes prologue (severity, indention, __FILE__:__LINE__) to allow at other places
+// - Refactor part that writes prologue (severity, indention, __FILE__:__LINE__) to allow at other places
 // - make configurable which rank to print
 // - account for newlines
 // - allow arbitrary code
@@ -727,6 +727,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
   private:
 #endif
+
+      size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(local_indexof);
+#if 0
     size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords2idx(" << out_parampack(", ", coords...) << ")");
 
@@ -756,8 +759,11 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       return idx;
 #endif
     }
+#endif
 
 
+    uint64_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(field_rankof);
+#if 0
     /// Compute the rank which stores a specific value
     rank_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords2rank(" << out_parampack(", ", coords...) << ")");
@@ -777,11 +783,16 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       return rank;
 #endif
     }
+#endif
 
 
     LLVM_ATTRIBUTE_USED bool isLocal(typename _inttype<L>::type... coords) const MOLLYATTR(islocalfunc) MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
     MOLLY_DEBUG("isLocal(" << out_parampack(", ", coords...) << ")");
-    return __builtin_molly_islocal(this, coords...);
+   
+    auto expectedRank = coords2rank(coords...);
+    auto myrank = world_self(); // TODO: This is the MPI rank, probably not the same as what molly thinks the rank is
+    return expectedRank==myrank;
+
 #if 0
       auto expRank = coords2rank(coords...);
       for (auto d = Dims-Dims; d<Dims; d+=1) {
@@ -909,14 +920,14 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 #pragma region Local access
     LLVM_ATTRIBUTE_USED void __get_local(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_local) { MOLLY_DEBUG_FUNCTION_SCOPE
-       assert(__builtin_molly_islocal(this, coords...));
+       //assert(__builtin_molly_islocal(this, coords...));
        auto idx = coords2idx(coords...);
        assert(0 <= idx && idx < localelts);
        assert(localdata);
        val = localdata[idx];
     }
     LLVM_ATTRIBUTE_USED void __set_local(const T &val, typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(set_local) { MOLLY_DEBUG_FUNCTION_SCOPE
-      assert(__builtin_molly_islocal(this, coords...));
+      //assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
       assert(0 <= idx && idx < localelts);
       assert(localdata);
@@ -924,7 +935,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     }
     LLVM_ATTRIBUTE_USED T *__ptr_local(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptr_local) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("Coords are (" << out_parampack(", ", coords...) << ")");
-      assert(__builtin_molly_islocal(this, coords...));
+      //assert(__builtin_molly_islocal(this, coords...));
       auto idx = coords2idx(coords...);
       assert(0 <= idx && idx < localelts);
       assert(localdata);

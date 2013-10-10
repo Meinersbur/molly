@@ -29,7 +29,8 @@ namespace molly {
   protected:
     explicit FieldLayout(FieldType *fty) : fty(fty), affine(nullptr), linearizer(nullptr) {    }
 
-    FieldLayout(FieldType *fty, AffineMapping *affine, RectangularMapping *linearizer) : fty(fty), affine(affine), linearizer(linearizer) {}
+    FieldLayout(FieldType *fty, AffineMapping *affine, RectangularMapping *linearizer) 
+      : fty(fty), affine(affine), linearizer(linearizer), rankoffunc(nullptr), localidxfunc(nullptr) {}
 
   public:
     static FieldLayout *create(FieldType *fty){ 
@@ -46,6 +47,15 @@ namespace molly {
 
     llvm::Value *codegenLocalIndex(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator, isl::MultiPwAff coords);
     llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
+
+    llvm::Function *rankoffunc;
+    //llvm::Function *emitFieldRankofFunc();
+
+    llvm::Function *localidxfunc;
+    //llvm::Function *emitLocalIdxFunc() {
+
+    FieldType *getFieldType() { return fty; }
+    
 
   }; // class FieldLayout
 
