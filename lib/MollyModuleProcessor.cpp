@@ -1,6 +1,6 @@
 #include "MollyModuleProcessor.h"
 
-#include "llvm\PassAnalysisSupport.h"
+#include <llvm/PassAnalysisSupport.h>
 #include "MollyPassManager.h"
 
 using namespace molly;
