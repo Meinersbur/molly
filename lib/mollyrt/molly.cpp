@@ -3,6 +3,7 @@
  *
  * Do not use __builtin_molly_* in here, they won't work. In fact, most builtins from the user application will be transformed to to calls to this runtime library
  */
+#define __MOLLYRT
 #include "molly.h"
 
 #include <malloc.h>
@@ -14,8 +15,7 @@ using namespace molly;
 
 #define MOLLY_COMMUNICATOR_MPI
 
-extern "C" void test() {
-}
+extern "C" void test_mollyrt() {}
 
 namespace molly {
   class MPICommunicator;
@@ -270,17 +270,6 @@ int molly::getClusterLength(int d) {
  } // namespace molly
 
 
- extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size) {
- }
-
- extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size) {
- }
-
- extern "C" void __molly_combuf_send(SendCommunicationBuffer *combuf) {
- }
-
- extern "C" void __molly_combuf_recv(RecvCommunicationBuffer *combuf) {
- }
 
  extern "C" int __molly_local_coord(int i) {
    return getClusterLength(i);
@@ -312,11 +301,7 @@ public:
 //===----------------------------------------------------------------------===//
 extern "C" {
 
-uint64_t __molly_cluster_pos(uint64_t dimension) {
-}
 
-uint64_t __molly_cluster_rankof(int coords[]) {
-}
 
 
 void __molly_local_init(void *localbuf, uint64_t count) {
@@ -324,51 +309,6 @@ void __molly_local_init(void *localbuf, uint64_t count) {
   assert(count > 0);
   auto ls = static_cast<LocalStore*>(localbuf); // i.e. LocalStore MUST be first base class
   ls->init(count);
-}
-
-void __molly_local_free(void *localbuf) {
-
-}
-
-void *__molly_local_ptr(void *localbuf, uint64_t pos, size_t eltSize) {
-}
-
-
-void *__molly_combuf_send_alloc(uint64_t dstCount, size_t eltSize) {
-}
-
-void __molly_combuf_send_dst_init(void *sendbuf, uint64_t dst, uint64_t count) {
-}
-
-void __molly_combuf_send_free(void *sendbuf) {
-}
-
-void __molly_combuf_send_ptr(void *sendbuf, uint64_t dst, uint64_t pos) {
-}
-   
-void __molly_combuf_send_wait(void *sendbuf) {
-}
-
-void __molly_combuf_send(void *sendbuf) {
-}
-
-
-void *__molly_combuf_recv_alloc(uint64_t srcCount, size_t eltSize) {
-}
-
-void __molly_combuf_recv_src_init(void *recvbuf, uint64_t src) {
-}
-
-void __molly_combuf_recv_free(void *recvbuf) {
-}
-
-void __molly_combuf_send_ptr(void *recvbuf, uint64_t src, uint64_t pos) {
-}
-
-void __molly_combuf_recv_wait(void *recvbuf) {
-}
-
-void __molly_combuf_recv(void *recvbuf) {
 }
 
 }

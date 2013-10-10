@@ -453,13 +453,14 @@ namespace molly {
 
   private:
     template<size_t... Indices>
-    __attribute__((molly_inline)) 
+    MOLLYATTR(inline)
     subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)   {
       return subty(owner, coords[Indices]..., appendCoord);
     }
 
   public:
-    subty operator[](int i) /*TODO: const*/  __attribute__((molly_inline)) {
+    MOLLYATTR(inline)
+    subty operator[](int i) /*TODO: const*/ {
       assert(0 <= i);
       assert(i < _unqueue<Togo...>::value);
       return buildSubtyHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
@@ -478,20 +479,22 @@ namespace molly {
     fieldty *owner;
     int coords[nStored]; 
   public:
-    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) __attribute__((molly_inline))
+    MOLLYATTR(inline)
+    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) 
       : owner(owner), coords({coords...}) {
         assert(owner);
     }
 
   private:
     template<size_t... Indices>
-    __attribute__((molly_inline))
+    MOLLYATTR(inline)
     T &getPtrHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int last)  {
       return *owner->ptr(coords[Indices]..., last);
     }
 
   public:
-    T &operator[](int i)  __attribute__((molly_inline)) /*TODO: const*/{
+    MOLLYATTR(inline)
+    T &operator[](int i)  /*TODO: const*/{
       assert(0 <= i); // Check lower bound of coordinate
       assert(i < Togo); // Check upper bound of coordinate
       return getPtrHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
@@ -640,10 +643,11 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   };
 
 #pragma region _select
-  static inline int _select(int i) __attribute__(( molly_inline )) ; // Forward declaration
+  MOLLYATTR(inline)
+  static inline int _select(int i); // Forward declaration
 
   template<typename FirstType, typename... Types>
-  __attribute__(( molly_inline ))
+  MOLLYATTR(inline)
   static inline int _select(int i, FirstType first, Types... list)  {
     assert(i < (int)(1/*first*/+sizeof...(list)));
     if (i == 0)
@@ -651,7 +655,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     return _select(i-1, list...); // This is no recursion, every _select has a different signature
   }
 
-  __attribute__(( molly_inline ))
+  MOLLYATTR(inline)
   static inline int _select(int i) { // overload for compiler-tim termination, should never be called
 #ifdef _MSC_VER
     __assume(false);
@@ -673,6 +677,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #pragma region LocalStore
   class LocalStore {
   public:
+    virtual ~LocalStore() {}
+
     virtual void init(uint64_t countElts) = 0;
     virtual void release() = 0;
 
@@ -683,6 +689,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #pragma endregion
 
 
+#ifndef __MOLLYRT
   /// A multi-dimensional array; the dimensions must be given at compile-time
   /// T = underlaying type (must be POD)
   /// L = sizes of dimensions (each >= 1)
@@ -967,6 +974,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
       uint64_t localoffset(uint64_t d) { return __builtin_molly_localoffset(this, d); }
       uint64_t locallength(uint64_t d) { return __builtin_molly_locallength(this, d); }
   } MOLLYATTR(lengths(L))/* NOTE: clang doesn't parse the whatever in [[molly::length(whatever)]] at all*/; // class array
+#endif
 
   /// A multi-dimensional array, but its dimensions are not known ar compile-time
   /// T = underlaying type
@@ -998,11 +1006,11 @@ namespace molly {
 } // namespace molly;
 extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size);
 extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size);
-extern "C" void __molly_combuf_send(void *combuf, uint64_t dstRank) __attribute__((used));
-extern "C" void __molly_combuf_recv(void *combuf, uint64_t srcRank) __attribute__((used));
+//extern "C" LLVM_ATTRIBUTE_USED void __molly_combuf_send(void *combuf, uint64_t dstRank);
+//extern "C" LLVM_ATTRIBUTE_USED void __molly_combuf_recv(void *combuf, uint64_t srcRank);
 extern "C" int __molly_local_coord(int i);
 
-
+#ifndef __MOLLYRT
 template<typename T, uint64_t... L>
 LLVM_ATTRIBUTE_USED void molly::array<T, L...>::__get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
   if (isLocal(coords...)) {
@@ -1012,5 +1020,6 @@ LLVM_ATTRIBUTE_USED void molly::array<T, L...>::__get_broadcast(T &val, typename
     broadcast_recv(&val, sizeof(T), coords2rank(coords...));
   }
 }
+#endif
 
 #endif /* MOLLY_H */

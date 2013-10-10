@@ -1343,7 +1343,7 @@ namespace {
       auto &llvmContext = getLLVMContext();
 
       for (auto &func : *module) {
-        auto &attrs = func.getAttributes();
+        const auto &attrs = func.getAttributes();
         if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_rankof")) {
           assert(func.isDeclaration());
           
