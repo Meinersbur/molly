@@ -2,7 +2,7 @@
 #define MOLLY_FIELDVARIABLE_H
 
 #include "islpp/Islfwd.h"
-#include "Molly/Mollyfwd.h"
+#include "molly/Mollyfwd.h"
 #include "LLVMfwd.h"
 
 

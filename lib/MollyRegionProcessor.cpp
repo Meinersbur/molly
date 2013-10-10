@@ -1,7 +1,7 @@
 #include "MollyRegionProcessor.h"
 
-#include "llvm\Support\Compiler.h"
-#include "llvm\PassAnalysisSupport.h"
+#include <llvm/Support/Compiler.h>
+#include <llvm/PassAnalysisSupport.h>
 #include "MollyPassManager.h"
 
 using namespace molly;
