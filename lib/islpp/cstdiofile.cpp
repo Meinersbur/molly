@@ -26,12 +26,14 @@ using namespace std;
 CstdioFile::CstdioFile() {
 #ifdef CSTDIOFILE_OPEN_MEMSTREAM
   // Unix version
+  buf = nullptr;
+  writtensize = 0;
   fd = open_memstream(&buf, &writtensize);
 #endif
 
 #ifdef CSTDIOFILE_FOPEN_S
   // _tempnam, fopen_s only available in MSVCRT
-  auto tmpfilename = _tempnam( NULL, "tmp" );
+  auto tmpfilename = _tempnam(NULL, "tmp");
   assert(tmpfilename);
   auto retval = fopen_s(&fd, tmpfilename, "w+bTD"); // T=Specifies a file as temporary. If possible, it is not flushed to disk; D=Specifies a file as temporary. It is deleted when the last file pointer is closed.
   assert(retval == NULL);
@@ -53,7 +55,7 @@ CstdioFile::CstdioFile() {
 
 #ifdef CSTDIOFILE_CREATETEMPORARYFILEONDISK
   // LLVM platform-dependent implementation
-  llvm::Path::createTemporaryFileOnDisk
+  llvm::Path::createTemporaryFileOnDisk();
 #endif
 }
 
@@ -73,6 +75,7 @@ void CstdioFile::close() {
 
 std::string CstdioFile::readAsStringAndClose() {
 #ifdef CSTDIOFILE_OPEN_MEMSTREAM
+  close();
   return std::string(buf, writtensize);
 #else
   // Determine file size
@@ -108,7 +111,7 @@ llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
   }
 
   fsetpos(tmp.fd, &savepos);
-
 #endif
+
   return OS;
 }

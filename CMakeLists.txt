@@ -108,7 +108,7 @@ set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -fno-exceptions -D__mollycc_
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
   list(APPEND MOLLYCC_COMMON_FLAGS "-I${_include}")
 endforeach()
-#set(MOLLYCC_VERBOSE_FLAGS -v -save-temps)
+#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -w -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
 set(MOLLYCC_VERBOSE_FLAGS -v -w -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
 #set(MOLLYCC_VERBOSE_FLAGS)
 set(MOLLYCC_PLATFORM_FLAGS -target "i686-pc-mingw32")

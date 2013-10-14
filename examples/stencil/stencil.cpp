@@ -10,6 +10,7 @@
 
 //#pragma layout interchange(0,1)
 
+//#pragma molly transform("{ [i,j] -> [j,i] }", 0)
 //#pragma molly transform("{ [i] -> [node, j] : node = [i/32], i = node*32 + j }", 1)
 molly::array<int, 128> FieldSrc;
 molly::array<int, 128> FieldDst;
@@ -21,10 +22,13 @@ extern "C" {
   static void fill() {
     auto len = FieldSrc.length();
     for (int i = 0; i < len; i+=1) {
+      //FieldSrc[i,j] = i+3;
       FieldSrc[i] = i+3;
     }
   }
 }
+
+
 
 #if 0
 extern "C" void test() {
