@@ -457,11 +457,11 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeValueLoad(FieldVariable *fvar, ll
   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
   auto intTy = Type::getInt64Ty(llvmContext);
 
-  Type *tys[] = { voidPtrTy, voidPtrTy };
-  auto funcDecl  = getRuntimeFunc("__molly_value_load", voidTy, tys);
+  Type *tys[] = { voidPtrTy/*field*/, voidPtrTy/*buffer*/, intTy/*rank*/, intTy/*idx*/};
+  auto funcDecl  = getRuntimeFunc("__molly_value_load", voidTy, tys); auto funcTy = funcDecl->getFunctionType();
 
-  auto fvarvoidptr = irBuilder.CreatePointerCast(fvar->getVariable(), voidPtrTy);
-  auto valvoidptr = irBuilder.CreatePointerCast(valptr, voidPtrTy);
+  auto fvarvoidptr = irBuilder.CreatePointerCast(fvar->getVariable(), funcTy->getParamType(0));
+  auto valvoidptr = irBuilder.CreatePointerCast(valptr, funcTy->getParamType(1));
   return irBuilder.CreateCall4(funcDecl, fvarvoidptr, valvoidptr, rank, idx);
 }
 llvm::LoadInst *MollyCodeGenerator::codegenValueLoad(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx) {
@@ -483,7 +483,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeValueStore(FieldVariable *fvar,  
   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
   auto intTy = Type::getInt64Ty(llvmContext);
 
-  Type *tys[] = { voidPtrTy, voidPtrTy };
+  Type *tys[] = { voidPtrTy/*field*/, voidPtrTy/*buffer*/, intTy/*rank*/, intTy/*idx*/};
   auto funcDecl  = getRuntimeFunc("__molly_value_store", voidTy, tys);
 
   auto fvarvoidptr = irBuilder.CreatePointerCast(fvar->getVariable(), voidPtrTy);

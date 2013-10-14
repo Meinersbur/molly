@@ -595,8 +595,44 @@ namespace {
     }
 
 
+    void replaceValueLoad(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_value_load);
+      assert(call->getNumArgOperands() == 4);
+
+      auto fvarval = call->getOperand(0);
+      auto valptr = call->getOperand(1);
+      auto rank = call->getOperand(2);
+      auto localidx = call->getOperand(3);
+
+      auto fvar = pm->getFieldVariable(fvarval);
+
+      auto codegen = makeCodegen(call);
+      codegen.callRuntimeValueLoad(fvar, valptr, rank, localidx);
+
+      call->eraseFromParent();
+    }
+
+
+    void replaceValueStore(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_value_store);
+      assert(call->getNumArgOperands() == 4);
+
+      auto fvarval = call->getOperand(0);
+      auto valptr = call->getOperand(1);
+      auto rank = call->getOperand(2);
+      auto localidx = call->getOperand(3);
+
+      auto fvar = pm->getFieldVariable(fvarval);
+
+      auto codegen = makeCodegen(call);
+      codegen.callRuntimeValueStore(fvar, valptr, rank, localidx);
+
+      call->eraseFromParent();
+    }
+
+
     bool isMollyIntrinsics(unsigned intID) {
-      return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_set_local;
+      return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_value_store;
     }
 
 
@@ -614,6 +650,8 @@ namespace {
       assert(isMollyIntrinsics(Intrinsic::molly_combuf_send));
       assert(isMollyIntrinsics(Intrinsic::molly_combuf_recv));
       assert(isMollyIntrinsics(Intrinsic::molly_local_ptr));
+      assert(isMollyIntrinsics(Intrinsic::molly_value_store));
+      assert(isMollyIntrinsics(Intrinsic::molly_value_load));
 
       lowerMollyIntrinsics();
 
@@ -651,6 +689,12 @@ namespace {
 
         auto intID = called->getIntrinsicID();
         switch(intID) {
+        case Intrinsic::molly_global_init:
+          replaceGlobalInit(instr, called);
+          break;
+        case Intrinsic::molly_global_free:
+          replaceGlobalFree(instr, called);
+          break;
         case Intrinsic::molly_cluster_current_coordinate:
           replaceClusterCurrentCoordinate(instr, called);
           break;
@@ -660,11 +704,11 @@ namespace {
         case Intrinsic::molly_local_indexof:
           replaceLocalIndexof(instr, called);
           break;
-        case Intrinsic::molly_global_init:
-          replaceGlobalInit(instr, called);
-          break;
-        case Intrinsic::molly_global_free:
-          replaceGlobalFree(instr, called);
+        case Intrinsic::molly_value_load:
+          replaceValueLoad(instr,called);
+            break;
+        case Intrinsic::molly_value_store:
+          replaceValueStore(instr, called);
           break;
         case Intrinsic::molly_field_init:
           replaceFieldInit(instr, called);

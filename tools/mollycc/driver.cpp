@@ -212,6 +212,11 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
     const char *Suffix;
     const char *ModeFlag;
   } suffixes [] = {
+#ifdef MOLLY
+    // Molly is always C++
+    //TODO: This should be name-insensitive
+    { "mollycc",   "--driver-mode=g++" },
+#endif
     { "clang",     0 },
     { "clang++",   "--driver-mode=g++" },
     { "clang-c++", "--driver-mode=g++" },
