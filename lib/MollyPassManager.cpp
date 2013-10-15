@@ -1083,7 +1083,7 @@ namespace {
       auto intTy = Type::getInt64Ty(llvmContext);
 
       SmallVector<Type *, 4> tys;
-      tys.push_back(fty->getType());
+      tys.push_back(PointerType::getUnqual(fty->getType()));
       for (auto i = nDims-nDims;i<nDims;i+=1) {
         tys.push_back(intTy);
       }
@@ -1146,7 +1146,7 @@ namespace {
       auto intTy = Type::getInt64Ty(llvmContext);
 
       SmallVector<Type *, 4> tys;
-      tys.push_back(fty->getType());
+      tys.push_back(PointerType::getUnqual(fty->getType()));
       for (auto i = nDims-nDims;i<nDims;i+=1) {
         tys.push_back(intTy);
       }
@@ -1346,45 +1346,54 @@ namespace {
         const auto &attrs = func.getAttributes();
         if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_rankof")) {
           assert(func.isDeclaration());
-          
+
           SmallVector<Value *,4> args;
           auto itArgs = func.arg_begin();
           auto fieldobj = &*itArgs;
           args.push_back(fieldobj);
-          itArgs++;
+          ++itArgs;
           SmallVector<Value *,4> coords;
           for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
             coords.push_back(&*itArgs);
             args.push_back(&*itArgs);
           }
 
-         auto fty = getFieldType(cast<StructType>(fieldobj->getType()));
-         auto layout = fty->getLayout();
+          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
+          auto layout = fty->getLayout();
 
           auto realfunc = emitFieldRankofFunc(layout);
-        auto bb = BasicBlock::Create(llvmContext, "entry", realfunc);
-        IRBuilder<> builder(bb);
-       auto ret = builder.CreateCall(realfunc, args);
-       builder.CreateRet(ret);
+          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
+          IRBuilder<> builder(bb);
+          auto ret = builder.CreateCall(realfunc, args);
+          builder.CreateRet(ret);
         }
 
-        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_indexof")) {
+        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_local_indexof")) {
           assert(func.isDeclaration());
 
-          auto fieldobj = &func.getArgumentList().front();
-           SmallVector<Value *,4> args;
-          for (auto &arg :func.getArgumentList() ) {
-            args.push_back(&arg);
+          auto itArgs = func.arg_begin();
+          auto fieldobj = &*itArgs;
+
+          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
+          auto layout = fty->getLayout();
+          auto realfunc = emitLocalIndexofFunc(layout);
+
+          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
+          IRBuilder<> builder(bb);
+
+          SmallVector<Value *,4> args;
+          auto fvarvalty = realfunc->getArgumentList().front().getType();
+          args.push_back(builder.CreatePointerCast(fieldobj, fvarvalty));
+          ++itArgs;
+          SmallVector<Value *,4> coords;
+          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
+            coords.push_back(&*itArgs);
+            args.push_back(&*itArgs);
           }
 
-          auto fty = getFieldType(cast<StructType>(fieldobj->getType()));
-          auto layout = fty->getLayout();
-           auto realfunc = emitLocalIndexofFunc(layout);
 
-           auto bb = BasicBlock::Create(llvmContext, "entry", realfunc);
-           IRBuilder<> builder(bb);
-           auto ret = builder.CreateCall(realfunc, args);
-           builder.CreateRet(ret);
+          auto ret = builder.CreateCall(realfunc, args);
+          builder.CreateRet(ret);
         }
       }
     }

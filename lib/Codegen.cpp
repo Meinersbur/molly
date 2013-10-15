@@ -273,7 +273,9 @@ llvm::CallInst *molly::MollyCodeGenerator::callRuntimeLocalInit(llvm::Value *fva
 }
 
 
-llvm::CallInst *MollyCodeGenerator::callRuntimeLocalIndexof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords) {
+llvm::CallInst *MollyCodeGenerator::callRuntimeLocalIndexof(llvm::Value *fvar, llvm::ArrayRef<llvm::Value *> coords) {
+  assert(fvar);
+
   auto &llvmContext = getLLVMContext();
   auto voidTy = Type::getVoidTy(llvmContext);
   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
@@ -287,7 +289,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeLocalIndexof(FieldVariable *fvar,
 
   // "this"
   tys.push_back(voidPtrTy);
-  args.push_back(fvar->getVariable());
+  args.push_back(fvar);
 
   // Args
   for (auto i =nDims-nDims;i<nDims;i+=1) {
@@ -295,7 +297,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeLocalIndexof(FieldVariable *fvar,
     args.push_back(coords[i]);
   }
 
-  auto funcDecl  = getRuntimeFunc("__molly_local_indexof", intTy, tys);
+  auto funcDecl = getRuntimeFunc("__molly_local_indexof", intTy, tys);
 
   return irBuilder.CreateCall(funcDecl, args);
 }

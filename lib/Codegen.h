@@ -53,7 +53,7 @@ namespace molly {
 
   public:
     llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
-    llvm::CallInst *callRuntimeLocalIndexof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords);
+    llvm::CallInst *callRuntimeLocalIndexof(llvm::Value *fvar, llvm::ArrayRef<llvm::Value *> coords);
 
     llvm::CallInst *callRuntimeClusterCurrentCoord(llvm::Value *d);
     llvm::CallInst *callRuntimeClusterCurrentCoord(uint64_t d) {

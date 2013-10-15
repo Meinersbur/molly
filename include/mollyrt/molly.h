@@ -689,7 +689,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #pragma endregion
 
 
-#ifndef __MOLLYRT
+//#ifndef __MOLLYRT
+#if 1
   /// A multi-dimensional array; the dimensions must be given at compile-time
   /// T = underlaying type (must be POD)
   /// L = sizes of dimensions (each >= 1)
@@ -735,7 +736,10 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
   private:
 #endif
 
-      size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(local_indexof);
+      MOLLYATTR(inline) uint64_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(local_indexof);
+      //{
+      // return __builtin_molly_local_indexof(this, coords...);
+      //}
 #if 0
     size_t coords2idx(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("coords2idx(" << out_parampack(", ", coords...) << ")");
@@ -769,7 +773,10 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #endif
 
 
-    uint64_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(field_rankof);
+     MOLLYATTR(inline) uint64_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(field_rankof);
+     //{
+     //  return __builtin_molly_rankof(this, coords...);
+     //}
 #if 0
     /// Compute the rank which stores a specific value
     rank_t coords2rank(typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) { MOLLY_DEBUG_FUNCTION_SCOPE
@@ -840,6 +847,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     array() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
       MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
 
+    //TODO: Do not call here, Molly should generate a call to __molly_field_init for every field it found
     __builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
 
 #if 0

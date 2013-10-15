@@ -323,9 +323,9 @@ namespace {
       auto indexFunc = pm->emitLocalIndexofFunc(layout);
 
       codegen.callRuntimeLocalInit(fval, sizeVal, rankFunc, indexFunc);
-    //} else {
+      //} else {
       // Constructor should have been inlined; let's assume this is the non-inlined version that will never be called since we have no way to find out to which 
-    //}
+      //}
 
       call->eraseFromParent();
     }
@@ -552,43 +552,43 @@ namespace {
       }
 
       auto fvar = pm->getFieldVariable(fieldobj);
-       auto codegen = makeCodegen(call);
+      auto codegen = makeCodegen(call);
 
       Value *idx;
       if (fvar) {
         // Field known at runtime; inline the computation
 
 
-      auto clusterConf = pm->getClusterConfig();
+        auto clusterConf = pm->getClusterConfig();
 
-      
-      auto fty = fvar->getFieldType();
-      auto layout = fvar->getLayout();
 
-      auto islctx = getIslContext();
-     
-      auto paramsSpace = islctx->createParamsSpace(nDims);
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
-        auto coord = call->getOperand(i+1);
-        auto id = islctx->createId("idx" + Twine(i), coord);
-        paramsSpace.setDimId_inplace(isl_dim_param, i, id);
-        codegen.addParam(id, coord);
-      }
+        auto fty = fvar->getFieldType();
+        auto layout = fvar->getLayout();
 
-      auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
-      auto coordsAff = coordsAffSpace.createZeroMultiAff();
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
-        coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
-      }
-      coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
-      coordsAff.cast_inplace(coordsAffSpace);
+        auto islctx = getIslContext();
 
-      auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
-      // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
-       idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
+        auto paramsSpace = islctx->createParamsSpace(nDims);
+        for (auto i = nDims-nDims; i <nDims; i+=1) {
+          auto coord = call->getOperand(i+1);
+          auto id = islctx->createId("idx" + Twine(i), coord);
+          paramsSpace.setDimId_inplace(isl_dim_param, i, id);
+          codegen.addParam(id, coord);
+        }
+
+        auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
+        auto coordsAff = coordsAffSpace.createZeroMultiAff();
+        for (auto i = nDims-nDims; i <nDims; i+=1) {
+          coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
+        }
+        coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+        coordsAff.cast_inplace(coordsAffSpace);
+
+        auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
+        // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
+        idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
       } else {
         // Field not known at runtime; call the virtual method
-        codegen.callRuntimeLocalIndexof(fvar, coords);
+        codegen.callRuntimeLocalIndexof(fieldobj, coords);
       }
       call->replaceAllUsesWith(idx);
       call->eraseFromParent();
@@ -696,6 +696,7 @@ namespace {
           replaceGlobalFree(instr, called);
           break;
         case Intrinsic::molly_cluster_current_coordinate:
+        case Intrinsic::molly_cluster_pos:
           replaceClusterCurrentCoordinate(instr, called);
           break;
         case Intrinsic::molly_field_rankof:
@@ -706,7 +707,7 @@ namespace {
           break;
         case Intrinsic::molly_value_load:
           replaceValueLoad(instr,called);
-            break;
+          break;
         case Intrinsic::molly_value_store:
           replaceValueStore(instr, called);
           break;
