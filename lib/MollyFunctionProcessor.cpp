@@ -557,10 +557,7 @@ namespace {
       Value *idx;
       if (fvar) {
         // Field known at runtime; inline the computation
-
-
         auto clusterConf = pm->getClusterConfig();
-
 
         auto fty = fvar->getFieldType();
         auto layout = fvar->getLayout();
@@ -630,6 +627,26 @@ namespace {
       call->eraseFromParent();
     }
 
+#if 0
+    void replaceClusterMyrank(CallInst *call, Function *called) {
+      assert(called->getIntrinsicID() == Intrinsic::molly_cluster_myrank);
+      assert(call->getNumArgOperands() == 0);
+
+      auto ClusterConf = pm->getClusterConfig();
+
+      auto codegen = makeCodegen(call);
+
+
+      auto clusterLengths = clusterConf->getClusterLengthsAff();
+      RectangularMapping mapping(clusterLengths, clusterLengths.getSpace().createZeroMultiAff());
+      auto trans = homeAff.getDomainSpace().mapsToItself().createIdentityMultiAff();
+      auto rank = mapping.codegenIndex(codegen, trans, homeAff);
+
+      
+      call->replaceAllUsesWith(casted);
+      call->eraseFromParent();
+    }
+#endif
 
     bool isMollyIntrinsics(unsigned intID) {
       return Intrinsic::molly_1d_islocal <= intID && intID <= Intrinsic::molly_value_store;
@@ -652,6 +669,7 @@ namespace {
       assert(isMollyIntrinsics(Intrinsic::molly_local_ptr));
       assert(isMollyIntrinsics(Intrinsic::molly_value_store));
       assert(isMollyIntrinsics(Intrinsic::molly_value_load));
+      assert(isMollyIntrinsics(Intrinsic::molly_cluster_myrank));
 
       lowerMollyIntrinsics();
 
@@ -735,6 +753,9 @@ namespace {
         case Intrinsic::molly_ptr:
           replacePtr(instr, called);
           break;
+        //case Intrinsic::molly_cluster_myrank:
+        //  replaceClusterMyrank(instr, called);
+        //  break;
         default:
           llvm_unreachable("Need to replace intrinsic!");
         }

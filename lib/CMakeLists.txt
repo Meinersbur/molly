@@ -1,4 +1,6 @@
 
+set(LLVM_NEXT_DEPENDS intrinsics_gen)
+
 add_molly_library(LLVMMolly
   SOURCES
     # General
@@ -53,8 +55,8 @@ add_molly_library(LLVMMolly
     Polly
   LINK_LIBS 
     Islpp
-  TARGET_DEPENDS 
-    intrinsics_gen
+#  TARGET_DEPENDS 
+#    intrinsics_gen
   EXTERNAL_LIBS 
     #${GMP_LIBRARY} 
     #${ISL_LIBRARY} 

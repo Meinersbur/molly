@@ -90,11 +90,11 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:
-    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_tuple_id(take(), type, id.take())); }
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
-      assert(type==isl_dim_in);
-      cast_inplace(getSpace().setTupleId(type, std::move(id)));
-    }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_tuple_id(take(), type, id.take())); }
+    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
+    //  assert(type==isl_dim_in);
+    //  cast_inplace(getSpace().setTupleId(type, std::move(id)));
+    //}
     void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
 
   public:

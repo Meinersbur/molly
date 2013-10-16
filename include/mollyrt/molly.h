@@ -562,7 +562,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 
 
-
+extern "C" uint64_t __molly_cluster_myrank();
 
 
 #pragma region Dummy builtins for other compilers
@@ -804,7 +804,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
     MOLLY_DEBUG("isLocal(" << out_parampack(", ", coords...) << ")");
    
     auto expectedRank = coords2rank(coords...);
-    auto myrank = world_self(); // TODO: This is the MPI rank, probably not the same as what molly thinks the rank is
+    auto myrank = __molly_cluster_myrank();
+    //world_self(); // TODO: This is the MPI rank, probably not the same as what molly thinks the rank is
     return expectedRank==myrank;
 
 #if 0

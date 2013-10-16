@@ -111,7 +111,7 @@ bool LocalSpace::isSet() const {
   return isl_local_space_is_set(keep());
 }
 
-
+#if 0
 bool LocalSpace::hasDimId(isl_dim_type type, unsigned pos) const {
   return isl_local_space_has_dim_id(keep(), type, pos);
 }
@@ -124,15 +124,18 @@ bool LocalSpace::hasDimName(isl_dim_type type, unsigned pos) const{
 const char *LocalSpace::getDimName(isl_dim_type type, unsigned pos) const{
   return isl_local_space_get_dim_name(keep(), type, pos);
 }
+#endif
 void LocalSpace::setDimName(isl_dim_type type, unsigned pos, const char *s){
   give(isl_local_space_set_dim_name(take(), type, pos, s));
 }
 void LocalSpace::setDimId(isl_dim_type type, unsigned pos, Id &&id) {
   give(isl_local_space_set_dim_id(take(), type, pos, id.take()));
 }
+#if 0
 Space LocalSpace::getSpace() const {
   return Space::enwrap(isl_local_space_get_space(keep()));
 }
+#endif
 Aff LocalSpace::getDiv(int pos) const {
   return Aff::enwrap(isl_local_space_get_div(keep(), pos));
 }

@@ -101,6 +101,7 @@ namespace isl {
     void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_tuple_name(take(), type, s)); }
 
     bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_space_has_dim_id(keep(), type, pos); }
+    bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_space_has_dim_name(keep(), type, pos); }
     const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_space_get_dim_name(keep(), type, pos); }
     Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_space_get_dim_id(keep(), type, pos)); }
     void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_dim_name(take(), type, pos, s)); }

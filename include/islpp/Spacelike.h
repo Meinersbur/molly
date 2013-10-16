@@ -200,6 +200,7 @@ namespace isl {
     void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { getDerived()->setTupleId_inplace(type, getDerived()->getCtx()->createId(s)); }
 
     bool hasDimId(isl_dim_type type, pos_t pos) const { return getDerived()->getSpacelike().hasDimId(type, pos); }
+    bool hasDimName(isl_dim_type type, pos_t pos) const { return getDerived()->getSpacelike().hasDimName(type, pos); }
     const char *getDimName(isl_dim_type type, pos_t pos) const { return getDerived()->getSpacelike().getDimName(type, pos); }
     Id getDimId(isl_dim_type type, pos_t pos) const { return getDerived()->getSpacelike().getDimId(type, pos); }
     void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { getDerived()->setDimId_inplace(type, pos, getDerived()->getCtx()->createId(s)); }
