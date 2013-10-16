@@ -21,8 +21,8 @@ namespace molly {
   private:
     FieldType *fty;
 
-    /* { chunk[domain] -> (src[cluster], dst[cluster], field[indexset]) } */
-    isl::Map relation; 
+    /// { chunk[domain] -> (src[cluster], dst[cluster], field[indexset]) }
+    isl::Map relation;
 
     /// Buffer data layout
     RectangularMapping *mapping; // Maps from { (chunk[domain], src[cluster], dst[cluster]) }
@@ -46,7 +46,7 @@ namespace molly {
     }
 
   public:
-    static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv,  FieldType *fty, isl::Map &&relation) {
+    static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv, FieldType *fty, isl::Map &&relation) {
       auto result = new CommunicationBuffer();
       result->varsend = varsend;
       result->varrecv = varrecv;
@@ -87,6 +87,9 @@ namespace molly {
 
     //llvm::Value *codegenReadFromBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
     //void codegenWriteToBuffer(MollyCodeGenerator *codegen, const isl::MultiPwAff &indices);
+
+    // TODO: Move all the codegen functions somewhere else; this class represents a communication buffer, but is not responsible to generate code for it
+    void codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm, FunctionPass *pass, isl::PwMultiAff selfCoord);
 
     llvm::Value *codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
    void codegenStoreInSendbuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index, llvm::Value *val);

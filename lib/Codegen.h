@@ -35,8 +35,7 @@ namespace molly {
 
   protected:
     isl::Ctx *getIslContext();
-    llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
-
+   
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
    void fillIdToValueMap();
@@ -52,6 +51,9 @@ namespace molly {
      Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
 
   public:
+    llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
+
+    llvm::CallInst *callLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalIndexof(llvm::Value *fvar, llvm::ArrayRef<llvm::Value *> coords);
 
@@ -60,6 +62,12 @@ namespace molly {
       auto intTy = Type::getInt64Ty(getLLVMContext());
       return callRuntimeClusterCurrentCoord(llvm::ConstantInt::get(intTy, d)); 
     }
+
+    llvm::CallInst *callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize);
+    llvm::CallInst *callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize);
+
+    llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *countElts);
+    llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *countElts);
 
     llvm::CallInst *callRuntimeCombufSendPtr(llvm::Value *combufSend, llvm::Value *dstRank);
     llvm::CallInst *callRuntimeCombufRecvPtr(llvm::Value *combufRecv, llvm::Value *srcRank);
@@ -98,6 +106,8 @@ namespace molly {
 
     llvm::CallInst *callFieldRankof(FieldVariable *layout, llvm::ArrayRef<llvm::Value *> coords);
     llvm::CallInst *callLocalIndexof(FieldVariable *layout, llvm::ArrayRef<llvm::Value *> coords);
+
+    llvm::CallInst *callFieldInit(llvm::Value *field, llvm::MDNode *metadata);
 
   public:
     /// Basic constructor

@@ -206,7 +206,7 @@ namespace {
     isl::MultiAff currentNodeCoord; /* { [] -> node[cluster] } */
     std::map<isl_id *, llvm::Value *> idtovalue;
 
-    isl::MultiAff getCurrentNodeCoordinate() {
+    isl::MultiAff getCurrentNodeCoordinate() LLVM_OVERRIDE {
       if (currentNodeCoord.isValid())
         return currentNodeCoord;
 
@@ -359,7 +359,7 @@ namespace {
     }
 
 
-    MollyCodeGenerator makeCodegen(Instruction *insertBefore) {
+    MollyCodeGenerator makeCodegen(Instruction *insertBefore) LLVM_OVERRIDE {
       // ensure idtovalue is up to date
       getCurrentNodeCoordinate();
 
@@ -707,12 +707,12 @@ namespace {
 
         auto intID = called->getIntrinsicID();
         switch(intID) {
-        case Intrinsic::molly_global_init:
-          replaceGlobalInit(instr, called);
-          break;
-        case Intrinsic::molly_global_free:
-          replaceGlobalFree(instr, called);
-          break;
+        //case Intrinsic::molly_global_init:
+        //  replaceGlobalInit(instr, called);
+        //  break;
+        //case Intrinsic::molly_global_free:
+        //  replaceGlobalFree(instr, called);
+        //  break;
         case Intrinsic::molly_cluster_current_coordinate:
         case Intrinsic::molly_cluster_pos:
           replaceClusterCurrentCoordinate(instr, called);

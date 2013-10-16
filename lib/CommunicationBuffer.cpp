@@ -6,6 +6,7 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <random>
 #include "RectangularMapping.h"
+#include <polly/ScopInfo.h>
 
 using namespace molly;
 //using namespace polly;
@@ -96,6 +97,46 @@ void CommunicationBuffer::doLayoutMapping() {
   this->mapping = new AffineMapping(aff.move());
   this->countElts = count;
 #endif
+}
+
+
+void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm,  FunctionPass *pass, isl::PwMultiAff selfCoord) {
+  auto eltSizeQuery = &pass->getAnalysis<DataLayout>();
+  auto &llvmContext = codegen.getLLVMContext();
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto &builder = codegen.getIRBuilder();
+
+  auto eltTy = fty->getEltType();
+  auto eltSize =  eltSizeQuery->getTypeAllocSize(eltTy);
+  auto eltSizeVal = ConstantInt::get(intTy, eltSize);
+
+  auto nDst = sendbufMapping->codegenSize(codegen, selfCoord); // TODO: Need the max over all chunks
+  auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal);
+  builder.CreateStore(sendobj, getVariableSend());
+
+
+  auto nSrc = recvbufMapping->codegenSize(codegen, selfCoord); // TODO: Need the max over all chunks
+  auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal);
+  builder.CreateStore(recvobj, getVariableRecv());
+
+  
+  auto scopEd = ScopEditor::newScop(builder.GetInsertPoint(), pass);
+ auto scatterId = scopEd.getScatterTupleId();
+ auto scop = scopEd.getScop();
+ auto islctx = isl::enwrap(scop->getIslCtx());
+ auto voidSpace = islctx->createSetSpace(0, 0);
+ auto scatterSpace = voidSpace.setSetTupleId(scatterId);
+
+ auto sendDomainSpace = getSrcNodeSpace();
+  auto sendDomain = getRange(selfCoord).apply(wrap(relation).reorderSubspaces(sendDomainSpace, getDstNodeSpace()));
+  auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff();
+  auto sendWhere = selfCoord.pullback( sendDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
+ auto sendStmtEd = scopEd.createStmt(sendDomain.move(),  sendScattering.move(),  sendWhere.move(), "send_dst_init");
+ auto sendStmt = sendStmtEd.getStmt();
+auto sendBB = sendStmt->getBasicBlock();
+
+auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
+
 }
 
 

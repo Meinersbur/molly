@@ -289,11 +289,7 @@ public:
 
 
 
-// If running with molly optimization, the original main method will be renamed to this one
-// This is a weak symbol because we want it compilable without mollycc, when main is not renamed to __molly_orig_main
-extern "C" int __molly_orig_main(int argc, char *argv[]) __attribute__((weak));
-// ... and a new main generated, that just calls __molly_main
-extern "C" int main(int argc, char *argv[]);
+
 
 #pragma endregion
 
@@ -609,6 +605,17 @@ namespace {
 #pragma endregion
 
 
+// If running with molly optimization, the original main method will be renamed to this one
+// This is a weak symbol because we want it compilable without mollycc, when main is not renamed to __molly_orig_main
+//extern "C" int __molly_orig_main(int argc, char *argv[]) __attribute__((weak));
+
+// ... and a new main generated, that just calls __molly_main
+//extern "C" int main(int argc, char *argv[]);
+
+
+extern "C" void __molly_generated_init();
+extern "C" void __molly_orig_main(int argc, char *argv[], char *envp[]);
+extern "C" void __molly_generated_release();
 
 #pragma region Molly generates calls to these
 
@@ -621,18 +628,20 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   communicator = new MPICommunicator();
   communicator->init(nClusterDims, clusterShape, clusterPeriodic, argc, argv);
   //Communicator::init(argc, argv);
+  __molly_generated_init();
 
   // Molly puts combuf and local storage initialization here
   //TODO: Molly could also put these into .ctor
-  __builtin_molly_global_init();
+  //__builtin_molly_global_init();
 
   //FIXME: Exception-handling, but currently we do not support exceptions
-  auto retval = __molly_orig_main(argc, argv);
+  auto retval = __molly_orig_main(argc, argv, envp);
   //auto retval = __builtin_molly_orig_main(argc, argv, envp);
 
   // Molly puts combuf and local storage release here
   //TODO: Molly could also put these into .dtor
-  __builtin_molly_global_free();
+  //__builtin_molly_global_free();
+  __molly_generated_release();
 
   //Communicator::finalize();
   delete communicator;
@@ -719,6 +728,21 @@ extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t
 
 extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) {
   recvbuf->recv(src);
+}
+
+#pragma endregion
+
+
+#pragma region Load and store of single values
+
+/// Intrinsic: molly.value.load
+extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) {
+  assert(!"to implement");
+}
+
+/// Intrinsic: molly.value.store
+extern "C" void __molly_value_store(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) {
+  assert(!"to implement");
 }
 
 #pragma endregion

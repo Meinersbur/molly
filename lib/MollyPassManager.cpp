@@ -252,7 +252,7 @@ namespace {
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
       //alwaysPreserve.insert(&polly::IndependentBlocksID);
 
-      this->callToMain = nullptr;
+     //this->callToMain = nullptr;
     }
 
 
@@ -732,47 +732,130 @@ namespace {
     }
 
   private:
-    CallInst *callToMain;
+    //CallInst *callToMain;
+
+
+
+    void emitMollyInit() {
+      auto &llvmContext=  getLLVMContext();
+      auto voidTy = Type::getVoidTy(llvmContext);
+
+      auto initFuncTy = FunctionType::get(voidTy, false);
+      auto initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, "__molly_generated_init", module);
+       auto funcCtx = getFuncContext(initFunc);
+      auto entryBB = BasicBlock::Create(llvmContext, "entry", initFunc);
+     auto ret = ReturnInst::Create(llvmContext, entryBB);
+
+      auto codegen = funcCtx->makeCodegen(ret);
+      auto translator = funcCtx->getCurrentNodeCoordinate(); /* {  -> node[cluster] } */
+
+      for (auto &fvarpair : fvars) {
+        auto fvar = fvarpair.second;
+        // Currently done in ctor
+      }
+
+      for (auto combuf : combufs) {
+        combuf->codegenInit(codegen, translator);
+      }
+    }
+
+    void emitMollyRelease() {
+      auto &llvmContext=  getLLVMContext();
+      auto voidTy = Type::getVoidTy(llvmContext);
+      auto initFuncTy = FunctionType::get(voidTy, false);
+      auto initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, "__molly_generated_release", module);
+      auto funcCtx = getFuncContext(initFunc);
+      auto entryBB = BasicBlock::Create(llvmContext, "entry", initFunc);
+      auto ret = ReturnInst::Create(llvmContext, entryBB);
+
+      //TODO: deinitialization; currently skipped because the program ends anyways
+      //TODO: Must also executed with a call to exit(), including to exit(0) without error (MPI_Finalize)
+    }
+
+    void implementGeneratedFunctions() {
+      // The alternative is to put these into llvm.global_ctors and llvm.global_dtors
+      emitMollyInit();
+      emitMollyRelease();
+    }
 
     void wrapMain() {
-      auto &context = module->getContext();
+      auto &llvmContext = module->getContext();
+      auto boolTy = Type::getInt8Ty(llvmContext); // Type::getInt1Ty(llvmContext);
+      auto charTy = Type::getInt8Ty(llvmContext);
+      auto int32Ty = Type::getInt32Ty(llvmContext);
+       auto int64Ty = Type::getInt64Ty(llvmContext);
+      auto ppCharTy = PointerType::getUnqual(charTy);
+      auto pint64Ty = PointerType::getUnqual(int64Ty);
+      auto pBoolTy = PointerType::getUnqual(boolTy);
+
 
       // Search main function
       auto origMainFunc = module->getFunction("main");
       if (!origMainFunc) {
         //FIXME: This means that either we are compiling modules independently (instead of whole program as intended), or this program as already been optimized 
         // The driver should resolve this
-        return;
         llvm_unreachable("No main function found");
+        return;
       }
 
       // Rename old main function
       const char *replMainName = "__molly_orig_main";
-      auto replMainFunc = module->getFunction(replMainName);
-      if (replMainFunc) {
+      if (module->getFunction(replMainName)) {
         llvm_unreachable("main already replaced?");
       }
-
       origMainFunc->setName(replMainName);
 
+
+
+
       // Find the wrapper function from MollyRT
-      auto rtMain = module->getOrInsertFunction("__molly_main", Type::getInt32Ty(context), Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8PtrTy(context), 0)/*argv*/, NULL);
+      auto rtMain = module->getOrInsertFunction("__molly_main", int32Ty, int32Ty/*argc*/, ppCharTy/*argv*/, ppCharTy/*envp*/, int64Ty/*nClusterDims*/, pint64Ty/*clusterShape*/, pBoolTy/*clusterPeriodic*/, NULL);
       assert(rtMain);
 
       // Create new main function
-      Type *parmTys[] = {Type::getInt32Ty(context)/*argc*/, PointerType::get(Type::getInt8PtrTy(context), 0)/*argv*/ };
-      auto mainFuncTy = FunctionType::get(Type::getInt32Ty(context), parmTys, false);
+      Type *parmTys[] = {int32Ty/*argc*/,  ppCharTy/*argv*/, ppCharTy/*envp*/ };
+      auto mainFuncTy = FunctionType::get(int32Ty, parmTys, false);
       auto wrapFunc = Function::Create(mainFuncTy, GlobalValue::ExternalLinkage, "main", module);
+      auto argIt = wrapFunc->arg_begin();
+      auto argc = &*argIt;
+      ++argIt;
+      auto argv = &*argIt;
+      ++argIt;
+      auto envp = &*argIt;
+      assert(++argIt == wrapFunc->arg_end());
 
-      auto entry = BasicBlock::Create(context, "entry", wrapFunc);
+      auto entry = BasicBlock::Create(llvmContext, "entry", wrapFunc);
       IRBuilder<> builder(entry);
 
+      
+
+      // space for cluster parameters
+      auto nClusterDims = clusterConf->getClusterDims();
+      //auto clusterShape = builder.CreateAlloca(int64Ty, ConstantInt::get(int32Ty, nClusterDims), "clusterShape");
+     //auto clusterPeridodic = builder.CreateAlloca(int64Ty, ConstantInt::get(boolTy, nClusterDims), "clusterPeridodic");
+      
+      SmallVector<Constant*,4> clusterShapeVals;
+      SmallVector<Constant*,4> clusterPeridicVals;
+      for (auto i=nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+        clusterShapeVals.push_back( ConstantInt::get(int64Ty, clusterConf->getClusterLength(i)) );
+        clusterPeridicVals.push_back(ConstantInt::get(boolTy,0)); // Nothing periodic yet
+      }
+      clusterShapeVals.push_back(Constant::getNullValue(int64Ty));
+     auto clusterShape = ConstantArray::get(ArrayType::get(int64Ty, nClusterDims+1), clusterShapeVals  );
+     auto clusterPeriodic = ConstantArray::get(ArrayType::get(int64Ty, nClusterDims), clusterPeridicVals  );
+
       // Create a call to the wrapper main function
-      SmallVector<Value *, 2> args;
-      collect(args, wrapFunc->getArgumentList());
+
+     Value *args[] = { argc, argv, envp, ConstantInt::get(int64Ty, nClusterDims), clusterShape, clusterPeriodic };
+
+      //SmallVector<Value *, 6> args;
+      //collect(args, wrapFunc->getArgumentList());
       //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
+     //args.push_back(ConstantInt::get(int64Ty, nClusterDims));
+     //args.push_back(clusterShape);
+     //args.push_back(clusterPeriodic);
       auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
-      this->callToMain = ret;
+      //this->callToMain = ret;
       DEBUG(llvm::dbgs() << ">>>Wrapped main\n");
       modifiedIR();
       builder.CreateRet(ret);
@@ -1033,8 +1116,9 @@ namespace {
 
     void addCallToCombufInit() {
       auto initFunc = emitAllCombufInit();
-      IRBuilder<> builder(callToMain);
-      builder.CreateCall(initFunc);
+      llvm_unreachable("WTF");
+     //IRBuilder<> builder(callToMain);
+      //builder.CreateCall(initFunc);
     }
 
 
@@ -1212,6 +1296,66 @@ namespace {
     }
 
 
+    void implementMollyExternalFunctions() {
+      auto &llvmContext = getLLVMContext();
+
+      for (auto &func : *module) {
+        const auto &attrs = func.getAttributes();
+        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_rankof")) {
+          assert(func.isDeclaration());
+
+          SmallVector<Value *,4> args;
+          auto itArgs = func.arg_begin();
+          auto fieldobj = &*itArgs;
+          args.push_back(fieldobj);
+          ++itArgs;
+          SmallVector<Value *,4> coords;
+          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
+            coords.push_back(&*itArgs);
+            args.push_back(&*itArgs);
+          }
+
+          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
+          auto layout = fty->getLayout();
+
+          auto realfunc = emitFieldRankofFunc(layout);
+          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
+          IRBuilder<> builder(bb);
+          auto ret = builder.CreateCall(realfunc, args);
+          builder.CreateRet(ret);
+        }
+
+        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_local_indexof")) {
+          assert(func.isDeclaration());
+
+          auto itArgs = func.arg_begin();
+          auto fieldobj = &*itArgs;
+
+          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
+          auto layout = fty->getLayout();
+          auto realfunc = emitLocalIndexofFunc(layout);
+
+          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
+          IRBuilder<> builder(bb);
+
+          SmallVector<Value *,4> args;
+          auto fvarvalty = realfunc->getArgumentList().front().getType();
+          args.push_back(builder.CreatePointerCast(fieldobj, fvarvalty));
+          ++itArgs;
+          SmallVector<Value *,4> coords;
+          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
+            coords.push_back(&*itArgs);
+            args.push_back(&*itArgs);
+          }
+
+
+          auto ret = builder.CreateCall(realfunc, args);
+          builder.CreateRet(ret);
+        }
+      }
+    }
+
+
 #pragma region llvm::ModulePass
   public:
     void releaseMemory() LLVM_OVERRIDE {
@@ -1328,8 +1472,16 @@ namespace {
         verifyFunction(func);
       }
 
-      // Implement function that are expected to exist
-      implementMollyExternalFunction();
+      // As the method name says
+      implementGeneratedFunctions();
+
+      // Implement functions that are expected to exist
+      implementMollyExternalFunctions();
+
+      // generate a new main function
+      wrapMain();
+
+     
 
       //FIXME: Find all the leaks
       //this->islctx.reset();
@@ -1338,68 +1490,7 @@ namespace {
       return changedIR;
     }
 
-
-    void implementMollyExternalFunction() {
-      auto &llvmContext = getLLVMContext();
-
-      for (auto &func : *module) {
-        const auto &attrs = func.getAttributes();
-        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_field_rankof")) {
-          assert(func.isDeclaration());
-
-          SmallVector<Value *,4> args;
-          auto itArgs = func.arg_begin();
-          auto fieldobj = &*itArgs;
-          args.push_back(fieldobj);
-          ++itArgs;
-          SmallVector<Value *,4> coords;
-          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
-            coords.push_back(&*itArgs);
-            args.push_back(&*itArgs);
-          }
-
-          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
-          auto layout = fty->getLayout();
-
-          auto realfunc = emitFieldRankofFunc(layout);
-          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
-          IRBuilder<> builder(bb);
-          auto ret = builder.CreateCall(realfunc, args);
-          builder.CreateRet(ret);
-        }
-
-        if (attrs.hasAttribute(AttributeSet::FunctionIndex, "molly_local_indexof")) {
-          assert(func.isDeclaration());
-
-          auto itArgs = func.arg_begin();
-          auto fieldobj = &*itArgs;
-
-          auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
-          auto layout = fty->getLayout();
-          auto realfunc = emitLocalIndexofFunc(layout);
-
-          auto bb = BasicBlock::Create(llvmContext, "entry", &func);
-          IRBuilder<> builder(bb);
-
-          SmallVector<Value *,4> args;
-          auto fvarvalty = realfunc->getArgumentList().front().getType();
-          args.push_back(builder.CreatePointerCast(fieldobj, fvarvalty));
-          ++itArgs;
-          SmallVector<Value *,4> coords;
-          for (auto endArgs = func.arg_end(); itArgs!=endArgs;++itArgs) {
-            coords.push_back(&*itArgs);
-            args.push_back(&*itArgs);
-          }
-
-
-          auto ret = builder.CreateCall(realfunc, args);
-          builder.CreateRet(ret);
-        }
-      }
-    }
-
   }; // class MollyPassManagerImpl
-
 } // namespace
 
 

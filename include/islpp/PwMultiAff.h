@@ -157,7 +157,8 @@ namespace isl {
     void pullback_inplace(PwMultiAff pma) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
 
     //PwMultiAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
-    PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION { return pma.pullback(*this); }
+   ISLPP_EXSITU_ATTRS PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION { return pma.pullback(*this); }
+   ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION { return toMap().applyRange(map); }
 
     bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
     //bool foreachPiece(const std::function<void(Set ,MultiAff , bool &stop)> &) const;

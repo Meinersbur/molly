@@ -17,6 +17,7 @@ namespace molly {
     virtual llvm::FunctionPass *asPass() = 0;
     //virtual llvm::AnalysisResolver *asResolver() = 0;
 
+   virtual isl::MultiAff getCurrentNodeCoordinate() = 0;
     virtual llvm::Value *getClusterCoordinate(unsigned i) = 0;
 
   public:
@@ -24,6 +25,8 @@ namespace molly {
 
    virtual void replaceIntrinsics() = 0;
    virtual void replaceRemainaingIntrinsics() = 0; // TODO: Remove functionality into replaceIntrinsics()
+
+  virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
 
   public:
     static MollyFunctionProcessor *create(MollyPassManager *pm, llvm::Function *func);

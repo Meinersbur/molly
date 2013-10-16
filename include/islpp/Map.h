@@ -685,11 +685,16 @@ namespace isl {
   static inline BasicMap convexHull(Map &&map) { return BasicMap::enwrap(isl_map_convex_hull(map.take()));} 
   static inline BasicMap polyhedralHull(Map &&map) { return BasicMap::enwrap(isl_map_polyhedral_hull(map.take()));} 
 
-  static inline Set wrap(Map &&map) { return Set::enwrap(isl_map_wrap(map.take()));} 
+  static inline Set wrap(Map map) { return Set::enwrap(isl_map_wrap(map.take())); } 
 
-  static inline Set params(Map &&map) { return Set::enwrap(isl_map_params(map.take()));}
-  static inline Set domain(Map &&map) { return Set::enwrap(isl_map_domain(map.take()));}
-  static inline Set range(Map &&map) { return Set::enwrap(isl_map_range(map.take()));}
+  static inline Set params(Map map) { return Set::enwrap(isl_map_params(map.take()));}
+  static inline Set domain(Map map) { return Set::enwrap(isl_map_domain(map.take()));}
+  static inline Set range(Map map) { return Set::enwrap(isl_map_range(map.take()));}
+
+  // TODO: which name is better? With out without get?
+  static inline Set getParams(Map map) { return Set::enwrap(isl_map_params(map.take()));}
+  static inline Set getDomain(Map map) { return Set::enwrap(isl_map_domain(map.take()));}
+  static inline Set getRange(Map map) { return Set::enwrap(isl_map_range(map.take()));}
 
 
   static inline BasicMap sample(Map &&map) { return BasicMap::enwrap(isl_map_sample(map.take())); }
