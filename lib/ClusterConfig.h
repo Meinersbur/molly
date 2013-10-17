@@ -14,6 +14,7 @@
 #include "islpp/Islfwd.h"
 #include "islpp/Id.h"
 #include "islpp/BasicSet.h"
+#include "molly/Mollyfwd.h"
 
 
 namespace molly {
@@ -73,6 +74,7 @@ namespace molly {
     isl::MultiAff getMasterRank() const;
 
     llvm::Value *codegenComputeRank(DefaultIRBuilder &builder, llvm::ArrayRef<llvm::Value*> coords);
+    llvm::Value *codegenRank(MollyCodeGenerator &codegen, isl::PwMultiAff coords);
   }; // class ClusterConfig
 } // namespace molly
 #endif /* MOLLY_CLUSTERCONFIG_H */

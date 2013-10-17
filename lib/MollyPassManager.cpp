@@ -252,7 +252,7 @@ namespace {
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
       //alwaysPreserve.insert(&polly::IndependentBlocksID);
 
-     //this->callToMain = nullptr;
+      //this->callToMain = nullptr;
     }
 
 
@@ -737,17 +737,17 @@ namespace {
 
 
     void emitMollyInit() {
-      auto &llvmContext=  getLLVMContext();
+      auto &llvmContext = getLLVMContext();
       auto voidTy = Type::getVoidTy(llvmContext);
 
       auto initFuncTy = FunctionType::get(voidTy, false);
       auto initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, "__molly_generated_init", module);
-       auto funcCtx = getFuncContext(initFunc);
+      auto funcCtx = getFuncContext(initFunc);
       auto entryBB = BasicBlock::Create(llvmContext, "entry", initFunc);
-     auto ret = ReturnInst::Create(llvmContext, entryBB);
+      auto ret = ReturnInst::Create(llvmContext, entryBB);
 
       auto codegen = funcCtx->makeCodegen(ret);
-      auto translator = funcCtx->getCurrentNodeCoordinate(); /* {  -> node[cluster] } */
+      auto translator = funcCtx->getCurrentNodeCoordinate(); /* { [] -> rank[cluster] } */
 
       for (auto &fvarpair : fvars) {
         auto fvar = fvarpair.second;
@@ -755,7 +755,7 @@ namespace {
       }
 
       for (auto combuf : combufs) {
-        combuf->codegenInit(codegen, translator);
+        combuf->codegenInit(codegen, this, funcCtx->asPass(), translator);
       }
     }
 
@@ -783,8 +783,9 @@ namespace {
       auto boolTy = Type::getInt8Ty(llvmContext); // Type::getInt1Ty(llvmContext);
       auto charTy = Type::getInt8Ty(llvmContext);
       auto int32Ty = Type::getInt32Ty(llvmContext);
-       auto int64Ty = Type::getInt64Ty(llvmContext);
-      auto ppCharTy = PointerType::getUnqual(charTy);
+      auto int64Ty = Type::getInt64Ty(llvmContext);
+      auto pCharTy = PointerType::getUnqual(charTy);
+      auto ppCharTy = PointerType::getUnqual(pCharTy);
       auto pint64Ty = PointerType::getUnqual(int64Ty);
       auto pBoolTy = PointerType::getUnqual(boolTy);
 
@@ -827,33 +828,38 @@ namespace {
       auto entry = BasicBlock::Create(llvmContext, "entry", wrapFunc);
       IRBuilder<> builder(entry);
 
-      
+
 
       // space for cluster parameters
       auto nClusterDims = clusterConf->getClusterDims();
       //auto clusterShape = builder.CreateAlloca(int64Ty, ConstantInt::get(int32Ty, nClusterDims), "clusterShape");
-     //auto clusterPeridodic = builder.CreateAlloca(int64Ty, ConstantInt::get(boolTy, nClusterDims), "clusterPeridodic");
-      
+      //auto clusterPeridodic = builder.CreateAlloca(int64Ty, ConstantInt::get(boolTy, nClusterDims), "clusterPeridodic");
+
       SmallVector<Constant*,4> clusterShapeVals;
       SmallVector<Constant*,4> clusterPeridicVals;
       for (auto i=nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
-        clusterShapeVals.push_back( ConstantInt::get(int64Ty, clusterConf->getClusterLength(i)) );
+        clusterShapeVals.push_back(ConstantInt::get(int64Ty, clusterConf->getClusterLength(i)));
         clusterPeridicVals.push_back(ConstantInt::get(boolTy,0)); // Nothing periodic yet
       }
       clusterShapeVals.push_back(Constant::getNullValue(int64Ty));
-     auto clusterShape = ConstantArray::get(ArrayType::get(int64Ty, nClusterDims+1), clusterShapeVals  );
-     auto clusterPeriodic = ConstantArray::get(ArrayType::get(int64Ty, nClusterDims), clusterPeridicVals  );
+      auto clusterShapeCst = ConstantArray::get(ArrayType::get(int64Ty, nClusterDims+1), clusterShapeVals);
+      auto clusterShape = new GlobalVariable(*module, clusterShapeCst->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage, clusterShapeCst, Twine("clusterShape"));
+
+      auto clusterPeriodicCst = ConstantArray::get(ArrayType::get(boolTy, nClusterDims), clusterPeridicVals);
+      auto clusterPeriodic = new GlobalVariable(*module, clusterPeriodicCst->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage, clusterPeriodicCst, Twine("clusterPeriodic"));
 
       // Create a call to the wrapper main function
 
-     Value *args[] = { argc, argv, envp, ConstantInt::get(int64Ty, nClusterDims), clusterShape, clusterPeriodic };
+      auto clusterShapePtr = builder.CreateConstGEP2_32(clusterShape, 0, 0, "clusterShapePtr"); // Pointer to first element of the array
+      auto clusterPeriodicPtr = builder.CreateConstGEP2_32(clusterPeriodic, 0, 0, "clusterPeriodicPtr");
+      Value *args[] = { argc, argv, envp, ConstantInt::get(int64Ty, nClusterDims), clusterShapePtr, clusterPeriodicPtr };
 
       //SmallVector<Value *, 6> args;
       //collect(args, wrapFunc->getArgumentList());
       //args.append(wrapFunc->arg_begin(), wrapFunc->arg_end());
-     //args.push_back(ConstantInt::get(int64Ty, nClusterDims));
-     //args.push_back(clusterShape);
-     //args.push_back(clusterPeriodic);
+      //args.push_back(ConstantInt::get(int64Ty, nClusterDims));
+      //args.push_back(clusterShape);
+      //args.push_back(clusterPeriodic);
       auto ret = builder.CreateCall(rtMain, args, "call_to_rtMain");
       //this->callToMain = ret;
       DEBUG(llvm::dbgs() << ">>>Wrapped main\n");
@@ -1117,7 +1123,7 @@ namespace {
     void addCallToCombufInit() {
       auto initFunc = emitAllCombufInit();
       llvm_unreachable("WTF");
-     //IRBuilder<> builder(callToMain);
+      //IRBuilder<> builder(callToMain);
       //builder.CreateCall(initFunc);
     }
 
@@ -1395,7 +1401,7 @@ namespace {
       // Generate access functions
       generateAccessFuncs();
 
-      wrapMain();
+      //wrapMain();
 
       for (auto &f : *module) {
         auto func = &f;
@@ -1459,7 +1465,14 @@ namespace {
       }
 
 
-      // Replace all remaining accesses by some generated intrinsic
+      // As the method name says
+      implementGeneratedFunctions();
+
+      // Implement functions that are expected to exist
+      implementMollyExternalFunctions();
+
+
+      // Replace all remaining accesses by some generated intrinsics
       for (auto &func : *module) {
         if (func.isDeclaration())
           continue;
@@ -1472,16 +1485,12 @@ namespace {
         verifyFunction(func);
       }
 
-      // As the method name says
-      implementGeneratedFunctions();
-
-      // Implement functions that are expected to exist
-      implementMollyExternalFunctions();
 
       // generate a new main function
       wrapMain();
 
-     
+
+
 
       //FIXME: Find all the leaks
       //this->islctx.reset();

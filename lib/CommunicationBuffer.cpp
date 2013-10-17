@@ -7,6 +7,9 @@
 #include <random>
 #include "RectangularMapping.h"
 #include <polly/ScopInfo.h>
+#include "MollyPassManager.h"
+#include "MollyScopStmtProcessor.h"
+#include "ClusterConfig.h"
 
 using namespace molly;
 //using namespace polly;
@@ -105,6 +108,7 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto &llvmContext = codegen.getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
   auto &builder = codegen.getIRBuilder();
+  auto clusterConf = pm->getClusterConfig();
 
   auto eltTy = fty->getEltType();
   auto eltSize =  eltSizeQuery->getTypeAllocSize(eltTy);
@@ -127,16 +131,44 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
  auto voidSpace = islctx->createSetSpace(0, 0);
  auto scatterSpace = voidSpace.setSetTupleId(scatterId);
 
- auto sendDomainSpace = getSrcNodeSpace();
+ {
+   auto sendDomainSpace = getDstNodeSpace();
   auto sendDomain = getRange(selfCoord).apply(wrap(relation).reorderSubspaces(sendDomainSpace, getDstNodeSpace()));
   auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff();
-  auto sendWhere = selfCoord.pullback( sendDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
+  auto sendWhere = selfCoord.pullback(sendDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
  auto sendStmtEd = scopEd.createStmt(sendDomain.move(),  sendScattering.move(),  sendWhere.move(), "send_dst_init");
  auto sendStmt = sendStmtEd.getStmt();
 auto sendBB = sendStmt->getBasicBlock();
-
 auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
+ auto  sendCodegen = sendStmtCtx->makeCodegen();
+ auto &sendBuilder = sendCodegen.getIRBuilder();
 
+ auto combufSend = sendBuilder.CreateLoad(getVariableSend(), "sendbuf");
+ auto sendDstAff = sendStmtEd.getCurrentIteration(); /* { -> dstNode[cluster] } */
+ auto sendDstRank = clusterConf->codegenRank(codegen, sendDstAff);
+auto sendSize = sendbufMapping->codegenSize(sendCodegen, sendDstAff);
+ sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, sendSize);
+ }
+
+
+ {
+   auto recvDomainSpace = getSrcNodeSpace();
+   auto recvDomain = getRange(selfCoord).apply(wrap(relation).reorderSubspaces(recvDomainSpace, getSrcNodeSpace()));
+   auto recvScattering = recvDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff();
+   auto recvWhere = selfCoord.pullback( recvDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
+   auto recvStmtEd = scopEd.createStmt(recvDomain.move(),  recvScattering.move(),  recvWhere.move(), "recv_src_init");
+   auto recvStmt = recvStmtEd.getStmt();
+   auto recvBB = recvStmt->getBasicBlock();
+   auto recvStmtCtx = pm->getScopStmtContext(recvStmt);
+   auto  recvCodegen = recvStmtCtx->makeCodegen();
+   auto &recvBuilder = recvCodegen.getIRBuilder();
+
+   auto combufRecv = recvBuilder.CreateLoad(getVariableSend(), "recvbuf");
+   auto recvSrcAff = recvStmtEd.getCurrentIteration(); /* { -> dstNode[cluster] } */
+    auto recvSrcRank = clusterConf->codegenRank(codegen, recvSrcAff);
+   auto recvSize = recvbufMapping->codegenSize(recvCodegen, recvSrcAff);
+   recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvSrcRank, recvSize);
+ }
 }
 
 

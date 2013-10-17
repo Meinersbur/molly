@@ -76,6 +76,7 @@ namespace isl {
 
 #pragma region Create spaces
     Space createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
+    Space createMapSpace(unsigned n_in/*domain*/, unsigned n_out/*range*/);
     Space createMapSpace(Space &&domain, Space &&range);
     Space createMapSpace(Space &&domain, unsigned n_out);
     Space createMapSpace(const Space &domain, unsigned n_out);

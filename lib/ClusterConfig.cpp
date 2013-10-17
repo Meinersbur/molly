@@ -8,6 +8,8 @@
 #include "MollyUtils.h"
 #include "llvm/IR/Function.h"
 #include <llvm/ADT/Twine.h>
+#include "Codegen.h"
+#include "RectangularMapping.h"
 
 using namespace molly;
 using namespace llvm;
@@ -52,6 +54,19 @@ llvm::Value *ClusterConfig::codegenComputeRank(DefaultIRBuilder &builder, ArrayR
 
   auto result = builder.CreateCall(funcCoordToRank, coords);
   return result;
+}
+
+
+//TODO: ClusterConf is not about code generation, just storing the cluster's shape
+llvm::Value *ClusterConfig::codegenRank(MollyCodeGenerator &codegen, isl::PwMultiAff coords) {
+  assert(getClusterDims() == coords.getOutDimCount());
+  auto nDims = getClusterDims();
+
+  auto clusterLengths = getClusterLengthsAff();
+  RectangularMapping mapping(clusterLengths, clusterLengths.getSpace().createZeroMultiAff());
+  auto trans = getIslContext()->createMapSpace(0,0).createZeroMultiAff();
+  auto rank = mapping.codegenIndex(codegen, trans, coords);
+  return rank;
 }
 
 

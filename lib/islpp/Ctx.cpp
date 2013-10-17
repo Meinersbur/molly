@@ -87,6 +87,11 @@ Space Ctx::createMapSpace(unsigned nparam/*params*/, unsigned n_in/*domain*/, un
 }
 
 
+ Space Ctx::createMapSpace(unsigned n_in/*domain*/, unsigned n_out/*range*/) {
+   return Space::createMapSpace(this, 0, n_in, n_out);
+ }
+
+
 Space Ctx::createMapSpace(Space &&domain, Space &&range) {
   return Space::createMapFromDomainAndRange(domain.move(), range.move());
 }

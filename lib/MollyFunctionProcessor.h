@@ -5,6 +5,8 @@
 #include "molly/Mollyfwd.h"
 #include "Pollyfwd.h"
 #include "LLVMfwd.h"
+#include "islpp/Islfwd.h"
+
 
 namespace molly {
 
