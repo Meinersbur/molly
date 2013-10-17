@@ -200,3 +200,9 @@ PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
 
   return result;
 }
+
+
+ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange( Map map ) ISLPP_EXSITU_FUNCTION
+{
+  return toMap().applyRange(map);
+}

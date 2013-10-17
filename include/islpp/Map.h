@@ -653,8 +653,7 @@ namespace isl {
 
   static inline BasicMap simpleHull(Map map) { return BasicMap::enwrap(isl_map_simple_hull(map.take())); }
   static inline BasicMap unshiftedSimpleHull(Map &&map) { return BasicMap::enwrap(isl_map_unshifted_simple_hull(map.take())); }
-  static inline Map sum(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_sum(map1.takeCopy(), map2.takeCopy())); }
-  static inline Map sum(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_sum(map1.take(), map2.take())); }
+  static inline Map sum(Map map1, Map map2) { return Map::enwrap(isl_map_sum(map1.take(), map2.take())); }
 
   static inline PwMultiAff lexminPwMultiAff(Map &&map) {return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(map.take())); } 
   static inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(map.take())); } 
