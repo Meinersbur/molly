@@ -129,7 +129,7 @@ namespace isl {
     void setAff_inplace(int pos, const Aff &el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.takeCopy())); }
     void setAff_inplace(int pos, Aff &&el) ISLPP_INPLACE_FUNCTION { give(isl_multi_aff_set_aff(take(), pos, el.take())); }
     ISLPP_DEPRECATED void push_back(Aff &&aff);
-    ISLPP_DEPRECATED void push_back(const Aff &aff) { return push_back(aff.copy()); }
+    //ISLPP_DEPRECATED void push_back(const Aff &aff) { return push_back(aff.copy()); }
 #pragma endregion
 
 

@@ -323,11 +323,7 @@ Value *IslExprBuilder::createOp(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "Expression not of type isl_ast_expr_op");
   switch (isl_ast_expr_get_op_type(Expr)) {
-  case isl_ast_op_error:
-  case isl_ast_op_cond:
-  case isl_ast_op_and_then:
-  case isl_ast_op_or_else:
-  case isl_ast_op_call:
+  default:
     llvm_unreachable("Unsupported isl ast expression");
   case isl_ast_op_max:
   case isl_ast_op_min:

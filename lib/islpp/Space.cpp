@@ -453,8 +453,8 @@ AstBuild Space::createAstBuild() const {
   return AstBuild::enwrap(isl_ast_build_from_context(isl_set_universe(takeCopy())));
 }
 
-
-Space Space:: getNestedOrDefault(isl_dim_type type) const {
+#if 0
+Space Space::getNestedOrDefault(isl_dim_type type) const {
   if (isNested(type))
     return getNested(type);
   return extractTuple(type);
@@ -579,7 +579,7 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 
   return DimRange();
 }
-
+#endif
 
 static unsigned countSubspaceMatches_recursive(const Space &space, const Space &spaceToFind) {
   assert(spaceToFind.isValid());
@@ -622,7 +622,7 @@ DimRange Space::findSubspace(isl_dim_type type, const Space &subspace) const {
   assert((isSetSpace() && type==isl_dim_set) || (isMapSpace() && (type==isl_dim_in || type==isl_dim_out)));
 
   // trivial case
-  auto nested = getNestedOrDefault(type);
+  auto nested = extractTuple(type);
   auto seek = subspace.normalizeUnwrapped();
   if (::matchesSpace(nested, seek))
     return DimRange::enwrap(type, 0, this->dim(type), *this);
@@ -655,7 +655,7 @@ static bool removeTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/un
 
     if (space.isNested(type)) {
       // Inner node
-      auto nested = space.getNested(type);
+      auto nested = space.extractTuple(type);
 
       Space nestedResult;
       unsigned nestedTupleCount,nestedFirst;
@@ -664,7 +664,7 @@ static bool removeTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/un
 
         if (nestedResult.isNull()) {
           // Remove tuple from space, i.e. return the other tuple
-          result = space.isMapSpace() ? space.getNested(reverseDimType(type)) : Space();
+          result = space.isMapSpace() ? space.extractTuple(reverseDimType(type)) : Space();
         } else {
           // Replace the previously nested space by the new one
           result = space.setNested(type, nestedResult);
@@ -721,19 +721,21 @@ static bool insertTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/co
       // That is, we insert as a new domain an move the current space as new range
       result = space.wrap();
       result.insertDims_inplace(isl_dim_in, 0, space.getInDimCount()+space.getOutDimCount());
-      result.setOutNested(space);
+      result = combineSpaces(result.domain(), space);
+      //result.castRange_inplace(space);
       //TODO: Copy DimIds
       first = 0;
       return true;
     }
 
     if (space.isNestedDomain()) {
-      auto nestedDomain = space.getNestedDomain();
+      auto nestedDomain = space.domain();
 
       Space nestedResult;
       unsigned nestedFirst,nestedTupleCount;
       if (insertTuple(nestedResult, nestedDomain, insert, insertTuplePos+domainTuplePos, nestedFirst, nestedTupleCount)) {
-        result = space.setInNested(nestedResult);
+        result = combineSpaces(nestedResult, space.range());
+       // result = space.castDomain(nestedResult);
         first = domainDimPos+nestedFirst;
         return true;
       }
@@ -751,19 +753,22 @@ static bool insertTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/co
       auto nestedRange = space.range();
       nestedRange.wrap_inplace();
       nestedRange.addDims_inplace(isl_dim_in, insertDimCount);
-      nestedRange.setInNested_inplace(insert);
+      nestedRange = combineSpaces(insert, nestedRange.range());
+      //nestedRange.setInNested_inplace(insert);
       result = space.insertDims(isl_dim_out, 0, insertDimCount);
-      result.setNested_inplace(isl_dim_out, nestedRange);
+      result = combineSpaces(result.domain(), nestedRange);
+      //result.setNested_inplace(isl_dim_out, nestedRange);
       first = rangeDimPos;
       return true;
     }
 
     if (space.isNestedRange()) {
-      auto nestedRange = space.getNestedRange();
+      auto nestedRange = space.range();
       Space nestedResult;
       unsigned nestedFirst,nestedTupleCount;
       if (insertTuple(nestedResult, nestedRange, insert, insertTuplePos-rangeTuplePos, nestedFirst, nestedTupleCount)) {
-        result = space.setOutNested(nestedRange);
+        //result = space.setOutNested(nestedRange);
+        result = combineSpaces(space.domain(), nestedRange);
         first = rangeDimPos+ nestedFirst;
         return true;
       }
@@ -779,7 +784,8 @@ static bool insertTuple(/*out*/Space &result, /*in*/const Space &space, /*in*/co
       // Insert before
       first = runningTuplePos;
       result = space.insertDims(isl_dim_in, 0, insert.getInDimCount()+insert.getOutDimCount());
-      result.setNested_inplace(isl_dim_in, insert);
+      result = combineSpaces(insert, result.range());
+      //result.setNested_inplace(isl_dim_in, insert);
       return true;
     }
 
@@ -845,7 +851,7 @@ static void queryNesting_recursive(const Space &space, /*out*/unsigned &nestedCo
   for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
     if (space.isNested(type)) {
 
-      auto part = space.getNested(type);
+      auto part = space.extractTuple(type);
       unsigned partNestedCount,partNestedDepth;
       queryNesting_recursive(part,partNestedCount, partNestedDepth);
       maxDepth = std::max(maxDepth, partNestedDepth+1);
@@ -890,7 +896,7 @@ static bool findTupleByPosition_recursive(const Space &space, unsigned searchTup
     }
 
     if (space.isNested(type)) {
-      auto nestedSpace = space.getNested(type);
+      auto nestedSpace = space.extractTuple(type);
       if (findTupleByPosition_recursive(nestedSpace, searchTuplePos, currentTuplePos, currentDimPos, foundTupleDimCount, tupleId)) {
         return true;
       }
@@ -918,7 +924,7 @@ bool Space::findTuple(isl_dim_type type, unsigned tuplePos, /*out*/unsigned &fir
   tupleId = Id();
   unsigned currentTuplePos = 0;
   firstDim = 0;
-  return findTupleByPosition_recursive(getNested(type), tuplePos, currentTuplePos, firstDim, dimCount, tupleId);
+  return findTupleByPosition_recursive(extractTuple(type), tuplePos, currentTuplePos, firstDim, dimCount, tupleId);
 }
 
 
@@ -931,7 +937,7 @@ static bool findTupleByDimPosition_recursive(const Space &space, unsigned search
     auto startDimPos = currentDimPos;
 
     if (space.isNested(type)) {
-      auto nestedSpace = space.getNested(type);
+      auto nestedSpace = space.extractTuple(type);
       if (findTupleByDimPosition_recursive(nestedSpace, searchDimPos, currentTuplePos, currentDimPos, foundTupleDimCount, tupleId)) {
         return true;
       }
@@ -968,7 +974,7 @@ bool Space::findTupleAt(isl_dim_type type, unsigned dimPos, /*out*/unsigned &fir
   tupleId.clear();
   tuplePos = 0;
   firstDim = 0;
-  return findTupleByPosition_recursive(getNested(type), tuplePos, tuplePos, firstDim, dimCount, tupleId);
+  return findTupleByPosition_recursive(extractTuple(type), tuplePos, tuplePos, firstDim, dimCount, tupleId);
 }
 
 
@@ -984,7 +990,7 @@ static bool findTupleById_recursive(const Space &space, const Id &searchTupleId,
     }
 
     if (space.isNested(type)) {
-      auto nestedSpace = space.getNested(type);
+      auto nestedSpace = space.extractTuple(type);
       if (findTupleById_recursive(nestedSpace, searchTupleId, currentTuplePos, currentDimPos, foundTupleDimCount)) {
         return true;
       }
@@ -1010,7 +1016,7 @@ bool Space::findTuple(isl_dim_type type, const Id &tupleToFind, /*out*/unsigned 
   dimCount = -1;
   unsigned currentTuplePos = 0;
   firstDim = 0;
-  return findTupleById_recursive(getNested(type), tupleToFind, currentTuplePos, firstDim, dimCount);
+  return findTupleById_recursive(extractTuple(type), tupleToFind, currentTuplePos, firstDim, dimCount);
 }
 
 
@@ -1023,7 +1029,7 @@ unsigned Space:: findTuplePos(isl_dim_type type, const Id &tupleToFind) const {
   unsigned dimCount = -1;
   unsigned currentTuplePos = 0;
   unsigned firstDim = 0;
-  auto retval = findTupleById_recursive(getNested(type), tupleToFind, currentTuplePos, firstDim, dimCount);
+  auto retval = findTupleById_recursive(extractTuple(type), tupleToFind, currentTuplePos, firstDim, dimCount);
   assert(retval);
   return currentTuplePos;
 }
@@ -1060,7 +1066,7 @@ static void flattenNestedSpaces_recursive(/*inout*/std::vector<Space> &result, /
 
   for (auto type = space.isMapSpace() ? isl_dim_in : isl_dim_set; type <= isl_dim_out; ++type) {
     if (space.isNested(type)) {
-      auto nested = space.getNested(type);
+      auto nested = space.extractTuple(type);
       flattenNestedSpaces_recursive(result, nested);
     } else {
       result.push_back(space.extractTuple(type));

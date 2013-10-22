@@ -371,16 +371,16 @@ namespace isl {
     ISLPP_DEPRECATED bool isNestedDomain() const {assert(isMapSpace()); return domain().isWrapping(); }
     ISLPP_DEPRECATED bool isNestedRange() const {assert(isMapSpace()); return range().isWrapping(); }
     ISLPP_DEPRECATED bool isNestedSet() const {assert(isSetSpace()); return isWrapping(); }
-    ISLPP_DEPRECATED Space getNested(isl_dim_type type) const { return isNested(type) ? extractTuple(type).unwrap() : Space(); }
-    ISLPP_DEPRECATED Space getNestedDomain() const { assert(isMapSpace()); return isNestedDomain() ? domain() : Space(); }
-    ISLPP_DEPRECATED Space getNestedRange() const { assert(isMapSpace()); return isNestedRange() ? range() : Space(); }
+    //ISLPP_DEPRECATED Space getNested(isl_dim_type type) const { return isNested(type) ? extractTuple(type).unwrap() : Space(); }
+    //ISLPP_DEPRECATED Space getNestedDomain() const { assert(isMapSpace()); return isNestedDomain() ? domain() : Space(); }
+    //ISLPP_DEPRECATED Space getNestedRange() const { assert(isMapSpace()); return isNestedRange() ? range() : Space(); }
     ISLPP_DEPRECATED Space getNested() const { assert(isSetSpace()); return isWrapping() ? this->copy() : Space(); }
 
-    ISLPP_DEPRECATED Space getNestedOrDefault(isl_dim_type type) const;
+    //ISLPP_DEPRECATED Space getNestedOrDefault(isl_dim_type type) const;
 
 
     /// Set the nested spaces
-    ISLPP_DEPRECATED void setNested_inplace(isl_dim_type type, const Space &nest) ISLPP_INPLACE_FUNCTION { obj_give(setNested(type,nest)); } 
+    //ISLPP_DEPRECATED void setNested_inplace(isl_dim_type type, const Space &nest) ISLPP_INPLACE_FUNCTION { obj_give(setNested(type,nest)); } 
     ISLPP_DEPRECATED Space setNested(isl_dim_type type, const Space &nest) const { 
       if (isSetSpace() && type==isl_dim_set) 
         return nest;
@@ -391,16 +391,16 @@ namespace isl {
       else 
         llvm_unreachable("unsupported type");
     }
-    ISLPP_DEPRECATED void setInNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION { assert(isMapSpace()); setNested_inplace(isl_dim_in, nest); }
-    ISLPP_DEPRECATED Space setInNested(const Space &nest) const { assert(isMapSpace()); return setNested(isl_dim_in,nest); }
-    ISLPP_DEPRECATED void setOutNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION {assert(isMapSpace()); setNested_inplace(isl_dim_out, nest); }
-    ISLPP_DEPRECATED Space setOutNested(const Space &nest) const { assert(isMapSpace()); return setNested(isl_dim_in,nest); }
+    //ISLPP_DEPRECATED void setInNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION { assert(isMapSpace()); setNested_inplace(isl_dim_in, nest); }
+    //ISLPP_DEPRECATED Space setInNested(const Space &nest) const { assert(isMapSpace()); return setNested(isl_dim_in,nest); }
+    //ISLPP_DEPRECATED void setOutNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION {assert(isMapSpace()); setNested_inplace(isl_dim_out, nest); }
+    //ISLPP_DEPRECATED Space setOutNested(const Space &nest) const { assert(isMapSpace()); return setNested(isl_dim_in,nest); }
 
-    DimRange findNestedTuple(unsigned tuplePos) const;
-    DimRange findNestedTuple(const Id &tupleId) const;
+    //DimRange findNestedTuple(unsigned tuplePos) const;
+    //DimRange findNestedTuple(const Id &tupleId) const;
     DimRange findSubspace(isl_dim_type type, const Space &subspace) const;
 
-    Space moveTuple(isl_dim_type dst_type, unsigned dst_tuplePos, isl_dim_type src_type, unsigned src_tuplePos) const;
+   ISLPP_DEPRECATED Space moveTuple(isl_dim_type dst_type, unsigned dst_tuplePos, isl_dim_type src_type, unsigned src_tuplePos) const;
 
     /// 0=isNull();
     /// 1=isSetSpace()

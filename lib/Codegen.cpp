@@ -354,7 +354,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
    Type *tys[] = { voidPtrTy, intTy, intTy };
-   auto funcDecl  = getRuntimeFunc("int_molly_combuf_send_dst_init", voidTy, tys);
+   auto funcDecl  = getRuntimeFunc("__molly_combuf_send_dst_init", voidTy, tys);
 
    //auto combufVal = irBuilder.CreatePointerCast(combufSend, voidPtrTy);
    return irBuilder.CreateCall3(funcDecl, combufSend, dst, countElts);
@@ -368,7 +368,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
    Type *tys[] = {voidPtrTy,intTy, intTy};
-   auto funcDecl  = getRuntimeFunc("int_molly_combuf_recv_src_init", voidTy, tys);
+   auto funcDecl  = getRuntimeFunc("__molly_combuf_recv_src_init", voidTy, tys);
    return irBuilder.CreateCall3(funcDecl, combufSend, src, countElts);
  }
 
