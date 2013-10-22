@@ -158,6 +158,19 @@ namespace molly {
 
     //  llvm::Value *codegenGetPtrSendBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &dst, const isl::MultiPwAff &index);
     //  llvm::Value *codegenGetPtrRecvBuf(molly::CommunicationBuffer *combuf, const isl::MultiPwAff &src, const isl::MultiPwAff &index);
+
+    llvm::LoadInst *createScalarLoad(llvm::Value *ptr, const llvm::Twine &name) {
+      auto result = irBuilder.CreateLoad(ptr, name);
+      addScalarLoadAccess(ptr, result);
+      return result;
+    }
+
+    llvm::StoreInst *createStore( llvm::Value *val, llvm::Value *ptr) {
+      auto result = irBuilder.CreateStore(val, ptr);
+      addScalarStoreAccess(ptr, result);
+      return result;
+    }
+
   }; // class MollyCodeGenerator
 
 } // namespace molly

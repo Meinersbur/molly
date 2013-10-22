@@ -21,20 +21,51 @@ using namespace llvm;
 using namespace std;
 using isl::enwrap;
 
+static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, Pass *pass, const Twine &dedicatedPostfix = ".dedicated", const Twine &contPostfix = ".cont");
+static bool splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, BasicBlock* &before, BasicBlock* &after, Pass *pass);
 
-ScopEditor ScopEditor::newScop(llvm::Instruction *insertBefore, llvm::FunctionPass *p) {
-  auto beforeBB  = insertBefore->getParent();
-  auto afterBB = SplitBlock(beforeBB, insertBefore, p);
 
-  // Insert an empty BB into the middle
-  auto scopBB = SplitBlock(beforeBB, beforeBB->getTerminator(), p);
+static BasicBlock *SplitBlockWithName(BasicBlock *Old, Instruction *SplitPt, Pass *P, const Twine &postfix) {
+  auto name = Old->getName();
+  auto result = SplitBlock(Old, SplitPt, P);
+  result->setName(name + postfix);
+  return result;
+}
+
+
+/// Return the jump target BB if the instruction is an unconditional jump; nullptr otherwise
+static BasicBlock *getUnconditionalJumpTarget(TerminatorInst *term) {
+  auto br = dyn_cast<BranchInst>(term);
+  if (br && br->isUnconditional()) {
+    assert(br->getNumSuccessors() == 1);
+    return br->getSuccessor(0);
+  }
+  return nullptr;
+}
+
+
+ScopEditor ScopEditor::newScop(isl::Ctx *ctx, llvm::Instruction *insertBefore, llvm::FunctionPass *p) {
+  auto scopBB = insertDedicatedBB(nullptr, insertBefore, true, p, "");
+  auto name = scopBB->getName();
+
+  //auto exitBB = SplitBlockWithName(scopBB, scopBB->getTerminator(), p, ".endscop");
+  //scopBB->setName(".enterscop");
+  auto exitBB = getUnconditionalJumpTarget(scopBB->getTerminator());
 
   auto dt = &p->getAnalysis<llvm::DominatorTree>();
   auto ri = &p->getAnalysis<llvm::RegionInfo>();
-  auto region = new Region(scopBB, scopBB, ri, dt); // Need to add to RegionInfo's list off regions?
+  auto prarentRegion = ri->getRegionFor(scopBB);
+  assert(scopBB!=exitBB);
+  auto region = new Region(scopBB, exitBB, ri, dt, prarentRegion); // Need to add to RegionInfo's list off regions?
+  ri->setRegionFor(scopBB, region);
+  //ri->setRegionFor(exitBB, region);
 
-  auto scop = Scop::create(region);
-  return ScopEditor(scop);
+ // TODO: Do not forget to make ScopInfo detect this
+  // Currently the caller must do this
+
+  auto SE = &p->getAnalysis<ScalarEvolution>();
+  auto scop = Scop::create(ctx->keep(), region, SE);
+  return ScopEditor(scop, p);
 }
 
 
@@ -106,17 +137,6 @@ static void addBasicBlockToLoop(BasicBlock *headerBB, Loop* loop, LoopInfo *LI) 
       L = L->getParentLoop();
     }
   }
-}
-
-
-/// Return the jump target BB if the instruction is an unconditional jump; nullptr otherwise
-static BasicBlock *getUnconditionalJumpTarget(TerminatorInst *term) {
-  auto br = dyn_cast<BranchInst>(term);
-  if (br->isUnconditional()) {
-    assert(br->getNumSuccessors() == 1);
-    return br->getSuccessor(0);
-  }
-  return nullptr;
 }
 
 
@@ -255,8 +275,11 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
       parentLoop = commonLoop;
 
     loop = new Loop();
-    //loop->setParentLoop(parentLoop);
-    parentLoop->addChildLoop(loop);
+    if (parentLoop) { // Otherwise, it's a top-level loop
+      parentLoop->addChildLoop(loop);
+    } else {
+      LI-> addTopLevelLoop(loop);
+    }
     addBasicBlockToLoop(headerBB, loop, LI);
     addBasicBlockToLoop(bodyBB, loop, LI);
     addBasicBlockToLoop(footerBB, loop, LI);
@@ -306,7 +329,7 @@ static bool splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, b
 
 
 /// Insert a new BB at the given location; guaranteed to be empty except with an unconditional jump terminator
-static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, Pass *pass) {
+static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, Pass *pass, const Twine &dedicatedPostfix, const Twine &contPostfix) {
   if (!into)
     into = insertBefore->getParent();
 
@@ -324,12 +347,12 @@ static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore
 
   // Does the first already fulfill the condition?
   if (before->size()==1) {
-    if (p) after->setName(Twine(name) + ".cont");
+    if (p) after->setName(Twine(name) + contPostfix);
     return before;
   }
 
   if (p)
-    after->setName(Twine(name) + ".dedicated");
+    after->setName(Twine(name) + dedicatedPostfix);
 
   // Does the second already fulfill the conditions?
   if (after->size()==1 && getUnconditionalJumpTarget(after->getTerminator()))
@@ -337,7 +360,7 @@ static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore
 
   // Insert the new BB between p.first && p.second
   auto last = SplitBlock(after, &after->front(), pass);
-  last->setName(Twine(name) + ".cont");
+  last->setName(Twine(name) + contPostfix);
   return after;
 }
 
@@ -372,7 +395,7 @@ static BasicBlock* insertLoop(BasicBlock *into, Instruction *insertBefore, Value
 }
 
 
-StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name) {
+StmtEditor ScopEditor::createStmt(isl::Set domain, isl::Map scattering, isl::Map where, const std::string &name) {
   assert(isSubset(domain, scattering.getDomain()));
   assert(isSubset(domain, where.getDomain()));
 
@@ -387,6 +410,9 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
   SmallVector<Loop*, 4> nests;
   nests.reserve(nDomainDims);
 
+  // Loop analysis is necessary, otherwise insertLoop() will not be able to tell us the the Loop and therefore the LoopInductionVariable
+  auto li = &pass->getAnalysis<LoopInfo>();
+
   auto innermostRegion = &scop->getRegion();
   auto innermostBody = innermostRegion->getEntry();
   auto innermostInsertion  = innermostBody->getTerminator();
@@ -394,7 +420,8 @@ StmtEditor ScopEditor::createStmt(isl::Set &&domain, isl::Map &&scattering, isl:
   for (auto i = nDomainDims-nDomainDims; i < nDomainDims; i+=1) {
     Loop *theLoop = nullptr;
     Region *newRegion = nullptr;
-    auto newBB =  insertLoop(innermostBody, innermostInsertion, its, pass, innermostLoop, theLoop, innermostRegion, newRegion);
+    auto newBB = insertLoop(innermostBody, innermostInsertion, its, pass, innermostLoop, theLoop, innermostRegion, newRegion);
+    assert(theLoop);
     nests.push_back(theLoop);
 
     innermostLoop = theLoop;
@@ -535,7 +562,7 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   auto intTy = Type::getInt32Ty(llvmContext);
 
   auto model = this;
-  auto modelDomain = getIterationDomain().resetSpace(isl_dim_set);
+  auto modelDomain = getIterationDomain().cast();
   auto subdomain = newdomain.projectOut(isl_dim_set, modelDomain.getDimCount(), newdomain.getDimCount() - modelDomain.getDimCount());
   assert(subdomain <= modelDomain);
   //auto subscatter = subscatter_.resetSpace(isl_dim_in);

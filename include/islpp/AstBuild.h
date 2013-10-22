@@ -55,8 +55,8 @@ namespace isl {
     UnionMap getSchedule() const { return UnionMap::enwrap(isl_ast_build_get_schedule(keep())); }
 #pragma endregion
 
-    AstExpr exprFromAff(const Aff &aff) const;
-    AstExpr exprFromPwAff(const PwAff &paff) const;
+    AstExpr exprFromAff(Aff aff) const;
+    AstExpr exprFromPwAff(PwAff paff) const;
     AstExpr callFromPwMultiAff(const PwMultiAff &pmaff) const;
     AstNode astFromSchedule(const UnionMap &schedule) const;
 

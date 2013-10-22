@@ -25,7 +25,7 @@ using namespace isl;
   
 
 #else
-Dim Dim::enwrap( isl_dim_type type, unsigned pos,  Space space) {
+Dim Dim::enwrap( isl_dim_type type, unsigned pos, Space space) {
   return Dim( type, pos, space.take());
 }
 

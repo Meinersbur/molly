@@ -10,6 +10,8 @@
 #include "MollyPassManager.h"
 #include "MollyScopStmtProcessor.h"
 #include "ClusterConfig.h"
+#include "MollyFunctionProcessor.h"
+#include "MollyScopProcessor.h"
 
 using namespace molly;
 //using namespace polly;
@@ -43,12 +45,12 @@ llvm::Value *CommunicationBuffer::getRecvBufferBase(DefaultIRBuilder &builder) {
 
 
 isl::Space CommunicationBuffer::getDstNodeSpace() {
-  return relation.getSpace().findNthSubspace(isl_dim_out, 1);
+  return relation.getSpace().findNthSubspace(isl_dim_out, 1).resetDimIds(isl_dim_set);
 }
 
 
 isl::Space CommunicationBuffer::getSrcNodeSpace() {
-  return relation.getSpace().findNthSubspace(isl_dim_out, 0);
+  return relation.getSpace().findNthSubspace(isl_dim_out, 0).resetDimIds(isl_dim_set);
 }
 
 
@@ -103,72 +105,113 @@ void CommunicationBuffer::doLayoutMapping() {
 }
 
 
-void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm,  FunctionPass *pass, isl::PwMultiAff selfCoord) {
+void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm, MollyFunctionProcessor *funcCtx) {
+  auto pass = funcCtx->asPass();
   auto eltSizeQuery = &pass->getAnalysis<DataLayout>();
   auto &llvmContext = codegen.getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
   auto &builder = codegen.getIRBuilder();
   auto clusterConf = pm->getClusterConfig();
+  auto islctx = getIslContext();
 
   auto eltTy = fty->getEltType();
-  auto eltSize =  eltSizeQuery->getTypeAllocSize(eltTy);
+  auto eltSize = eltSizeQuery->getTypeAllocSize(eltTy);
   auto eltSizeVal = ConstantInt::get(intTy, eltSize);
 
-  auto nDst = sendbufMapping->codegenSize(codegen, selfCoord); // TODO: Need the max over all chunks
+  auto srcRankSpace = getSrcNodeSpace();
+  auto dstRankSpace = getDstNodeSpace();
+
+  auto srcDstRelation = wrap(relation).reorderSubspaces(srcRankSpace, dstRankSpace);
+  auto dstSrcRelation = srcDstRelation.reverse();
+
+  auto selfCoord = funcCtx->getCurrentNodeCoordinate();
+  auto srcSelfRank = selfCoord.castRange(srcRankSpace);
+  auto dstSelfRank = selfCoord.castRange(dstRankSpace);
+
+  auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
   auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal);
   builder.CreateStore(sendobj, getVariableSend());
 
-
-  auto nSrc = recvbufMapping->codegenSize(codegen, selfCoord); // TODO: Need the max over all chunks
+  auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
   auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal);
   builder.CreateStore(recvobj, getVariableRecv());
 
-  
-  auto scopEd = ScopEditor::newScop(builder.GetInsertPoint(), pass);
- auto scatterId = scopEd.getScatterTupleId();
- auto scop = scopEd.getScop();
- auto islctx = isl::enwrap(scop->getIslCtx());
- auto voidSpace = islctx->createSetSpace(0, 0);
- auto scatterSpace = voidSpace.setSetTupleId(scatterId);
 
- {
-   auto sendDomainSpace = getDstNodeSpace();
-  auto sendDomain = getRange(selfCoord).apply(wrap(relation).reorderSubspaces(sendDomainSpace, getDstNodeSpace()));
-  auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff();
-  auto sendWhere = selfCoord.pullback(sendDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
- auto sendStmtEd = scopEd.createStmt(sendDomain.move(),  sendScattering.move(),  sendWhere.move(), "send_dst_init");
- auto sendStmt = sendStmtEd.getStmt();
-auto sendBB = sendStmt->getBasicBlock();
-auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
- auto  sendCodegen = sendStmtCtx->makeCodegen();
- auto &sendBuilder = sendCodegen.getIRBuilder();
+  auto scopEd = ScopEditor::newScop(islctx, builder.GetInsertPoint(), pass);
+  auto scop = scopEd.getScop();
+  auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx
+  scopInfo->setScop(scop); // Force to take this scop without trying to detect it
+  pm->registerEvaluatedAnalysis(scopInfo, &scop->getRegion());
+  auto scopCtx = pm->getScopContext(scop);
+ 
 
- auto combufSend = sendBuilder.CreateLoad(getVariableSend(), "sendbuf");
- auto sendDstAff = sendStmtEd.getCurrentIteration(); /* { -> dstNode[cluster] } */
- auto sendDstRank = clusterConf->codegenRank(codegen, sendDstAff);
-auto sendSize = sendbufMapping->codegenSize(sendCodegen, sendDstAff);
- sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, sendSize);
- }
+  selfCoord = scopCtx->getCurrentNodeCoordinate(); // Required; will add coordinates of the current node to the context
+  srcSelfRank = selfCoord.castRange(srcRankSpace);
+  dstSelfRank = selfCoord.castRange(dstRankSpace);
+
+  //scopCtx->getCurrentNodeCoordinate();
+  //auto nClusterDims = clusterConf->getClusterDims();
+  //for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+  // auto value = funcCtx ->getClusterCoordinate(i);
+  // auto id = selfCoord.getOutDimId(i);
+  // scopEd
+  //}
+
+  auto scatterId = scopEd.getScatterTupleId();
+  auto voidSpace = islctx->createSetSpace(0, 0);
+  auto scatterSpace = voidSpace.setSetTupleId(scatterId);
+
+  {
+    auto sendDomainSpace = dstRankSpace;
+    auto sendDomain = srcSelfRank.getRange().apply(srcDstRelation); // { dstNode[cluster] }
+    auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { dstNode[cluster] -> scattering[] }
+    auto sendWhere = dstSrcRelation; // { dstNode[cluster] -> srcNode[cluster] }
+    auto sendStmtEd = scopEd.createStmt(sendDomain, sendScattering, sendWhere, "send_dst_init");
+    auto sendStmt = sendStmtEd.getStmt();
+    auto sendBB = sendStmt->getBasicBlock();
+    auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
+    auto sendCodegen = sendStmtCtx->makeCodegen();
+    auto &sendBuilder = sendCodegen.getIRBuilder();
+
+    auto sendSrcAff = sendStmtCtx->getClusterMultiAff();
+    auto combufSend = sendCodegen.createScalarLoad(getVariableSend(), "combuf_send");
+    //sendCodegen.addScalarLoadAccess()
+    //auto combufSend = sendCodegen.materialize();
+    auto sendDstAff = sendStmtEd.getCurrentIteration(); /* { [domain] -> dstNode[cluster] } */
+    auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff);
+
+    auto sendWhat = rangeProduct(sendSrcAff.castRange(srcRankSpace), sendDstAff.castRange(dstRankSpace));
+    auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks
+    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, sendSize);
+  }
 
 
- {
-   auto recvDomainSpace = getSrcNodeSpace();
-   auto recvDomain = getRange(selfCoord).apply(wrap(relation).reorderSubspaces(recvDomainSpace, getSrcNodeSpace()));
-   auto recvScattering = recvDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff();
-   auto recvWhere = selfCoord.pullback( recvDomainSpace.mapsTo(selfCoord.getDomainSpace()).createZeroMultiAff()  );
-   auto recvStmtEd = scopEd.createStmt(recvDomain.move(),  recvScattering.move(),  recvWhere.move(), "recv_src_init");
-   auto recvStmt = recvStmtEd.getStmt();
-   auto recvBB = recvStmt->getBasicBlock();
-   auto recvStmtCtx = pm->getScopStmtContext(recvStmt);
-   auto  recvCodegen = recvStmtCtx->makeCodegen();
-   auto &recvBuilder = recvCodegen.getIRBuilder();
 
-   auto combufRecv = recvBuilder.CreateLoad(getVariableSend(), "recvbuf");
-   auto recvSrcAff = recvStmtEd.getCurrentIteration(); /* { -> dstNode[cluster] } */
-    auto recvSrcRank = clusterConf->codegenRank(codegen, recvSrcAff);
-   auto recvSize = recvbufMapping->codegenSize(recvCodegen, recvSrcAff);
-   recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvSrcRank, recvSize);
- }
+  {
+    auto recvDomainSpace = srcRankSpace;
+    auto recvDomain = dstSelfRank.getRange().apply(dstSrcRelation); // { srcNode[cluster] }
+    auto recvScattering = recvDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { srcNode[cluster] -> scattering[] }
+    auto recvWhere = srcDstRelation; // { dstNode[cluster] -> srcNode[cluster] }
+    auto recvStmtEd = scopEd.createStmt(recvDomain, recvScattering, recvWhere, "send_dst_init");
+    auto recvStmt = recvStmtEd.getStmt();
+    auto recvBB = recvStmt->getBasicBlock();
+    auto recvStmtCtx = pm->getScopStmtContext(recvStmt);
+    auto recvCodegen = recvStmtCtx->makeCodegen();
+    auto &recvBuilder = recvCodegen.getIRBuilder();
+
+    auto recvSrcAff = recvStmtCtx->getClusterMultiAff();
+    auto combufRecv = recvCodegen.createScalarLoad(getVariableRecv(), "combuf_recv");
+    //auto combufRecv = recvCodegen.materialize(getVariableRecv());
+    auto recvDstAff = recvStmtEd.getCurrentIteration(); /* { [domain] -> srcNode[cluster] } */
+    auto recvDstRank = clusterConf->codegenRank(recvCodegen, recvSrcAff);
+
+    auto recvWhat = rangeProduct(recvSrcAff.castRange(dstRankSpace), recvSrcAff.castRange(srcRankSpace));
+    auto recvSize = mapping->codegenMaxSize(recvCodegen, recvWhat); // Max over all chunks
+    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvDstRank, recvSize);
+  }
+
+  // Now we constructed a SCoP, so tell Polly to generate the code for it...
+  scopCtx->pollyCodegen();
 }
 
 
@@ -282,16 +325,42 @@ llvm::PointerType *molly::CommunicationBuffer::getEltPtrType() const {
 }
 
 
+isl::Space molly::CommunicationBuffer::getDstNamedDims()
+{
+  auto result = getDstNodeSpace();
+  auto islctx = result.getCtx();
+  auto nDims = result.getSetDimCount();
+  for (auto i = nDims-nDims; i<nDims;i+=1) {
+    auto id = islctx->createId("dstdim" + Twine(i));
+    result.setDimId_inplace(isl_dim_set, i, id);
+  }
+  return result;
+}
+
+
+isl::Space molly::CommunicationBuffer::getSrcNamedDims()
+{
+  auto result = getDstNodeSpace();
+  auto islctx = result.getCtx();
+  auto nDims = result.getSetDimCount();
+  for (auto i = nDims-nDims; i<nDims;i+=1) {
+    auto id = islctx->createId("srcdim" + Twine(i));
+    result.setDimId_inplace(isl_dim_set, i, id);
+  }
+  return result;
+}
+
+
 llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &codegen) {
   auto var = getVariableSend();
-auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
-codegen.addScalarLoadAccess(var, result);
-return result;
+  auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
+  codegen.addScalarLoadAccess(var, result);
+  return result;
 }
 
 
 llvm::Value *CommunicationBuffer::codegenPtrToRecvbufObj(MollyCodeGenerator &codegen) {
-   auto var = getVariableRecv();
+  auto var = getVariableRecv();
   auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
   codegen.addScalarLoadAccess(var, result);
   return result;

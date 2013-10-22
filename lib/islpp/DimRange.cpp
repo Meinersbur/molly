@@ -13,13 +13,8 @@ DimRange DimRange::enwrap(isl_dim_type type, unsigned first, unsigned count, __i
 }
 
 
-DimRange DimRange::enwrap(isl_dim_type type, unsigned first, unsigned count, Space &&space) { 
+DimRange DimRange::enwrap(isl_dim_type type, unsigned first, unsigned count, Space space) { 
   return DimRange(type, first, count, space.take()); 
-}
-
-
-DimRange DimRange::enwrap(isl_dim_type type, unsigned first, unsigned count, const Space &space) { 
-  return DimRange(type, first, count, space.takeCopy()); 
 }
 
 

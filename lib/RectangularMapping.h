@@ -40,6 +40,7 @@ namespace molly {
 
     llvm::Value *codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator, const isl::MultiPwAff &coords);
     llvm::Value *codegenSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator);
+    llvm::Value *codegenMaxSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator);
 
   }; // class RectangularMapping
 

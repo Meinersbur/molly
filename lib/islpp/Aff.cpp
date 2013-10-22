@@ -206,17 +206,24 @@ ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_FUNCTION
   return Map::enwrap(isl_map_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_FUNCTION
-{
+
+ISLPP_EXSITU_ATTRS Aff isl::Aff::cast( Space space ) ISLPP_EXSITU_FUNCTION{
   assert(getInDimCount() == space.getInDimCount());
   assert(getOutDimCount() == space.getOutDimCount());
-  assert(getRangeSpace() == space.getRangeSpace());
+  assert(::matchesSpace(getRangeSpace(), space.getRangeSpace()));
 
-  auto transformDomainSpace = getDomainSpace().mapsTo(space.getDomainSpace());
-  auto transformDomain = transformDomainSpace.createIdentityMultiAff();
-
-  return pullback(transformDomain);
+  return castDomain(space.getDomainSpace());
 }
+
+
+ISLPP_INPLACE_ATTRS void Aff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
+  assert(getInDimCount() == domainSpace.getSetDimCount());
+
+  auto transformDomainSpace = domainSpace.mapsTo(getDomainSpace());
+  auto transformDomain = transformDomainSpace.createIdentityMultiAff();
+  pullback_inplace(transformDomain);
+}
+
 
 ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_FUNCTION
 {

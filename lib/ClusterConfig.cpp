@@ -64,7 +64,7 @@ llvm::Value *ClusterConfig::codegenRank(MollyCodeGenerator &codegen, isl::PwMult
 
   auto clusterLengths = getClusterLengthsAff();
   RectangularMapping mapping(clusterLengths, clusterLengths.getSpace().createZeroMultiAff());
-  auto trans = getIslContext()->createMapSpace(0,0).createZeroMultiAff();
+  auto trans = getIslContext()->createMapSpace(coords.getDomainSpace(),0).createZeroMultiAff();
   auto rank = mapping.codegenIndex(codegen, trans, coords);
   return rank;
 }

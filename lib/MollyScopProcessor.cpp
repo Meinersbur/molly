@@ -1550,7 +1550,6 @@ namespace {
     }
 
     void pollyCodegen() {
-
       switch (CodeGenerator) {
 #ifdef CLOOG_FOUND
       case CODEGEN_CLOOG:

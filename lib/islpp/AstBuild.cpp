@@ -12,12 +12,12 @@ void  AstBuild::print(llvm::raw_ostream &out) const {
 }
 
 
-AstExpr AstBuild::exprFromAff(const Aff &aff) const {
+AstExpr AstBuild::exprFromAff(Aff aff) const {
   return AstExpr::enwrap(isl_ast_expr_from_aff(aff.takeCopy(), keep()));
 }
 
 
-AstExpr AstBuild::exprFromPwAff(const PwAff &paff) const {
+AstExpr AstBuild::exprFromPwAff(PwAff paff) const {
   return AstExpr::enwrap(isl_ast_build_expr_from_pw_aff(keep(), paff.takeCopy()));
 }
 

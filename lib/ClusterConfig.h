@@ -47,7 +47,7 @@ namespace molly {
        auto nDims = lengths.size();
 
       auto space = islctx->createSetSpace(0, nDims);
-      space.setSetTupleId_inplace( getClusterTuple());
+      space.setSetTupleId_inplace(getClusterTuple());
       for (auto d=nDims-nDims;d<nDims;d+=1) {
         auto id = getClusterDimId(d);
         space.setSetDimId_inplace(d, id.move());

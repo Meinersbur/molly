@@ -2,15 +2,15 @@
 
 #include <llvm/IR/IRBuilder.h>
 #include "Codegen.h"
+//#include "islpp/MultiPwAff.h"
 
 using namespace molly;
 using namespace llvm;
 
 
-  RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::MultiPwAff offsets) {
-    return new RectangularMapping(lengths.move(), offsets.move());
- }
-
+RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::MultiPwAff offsets) {
+  return new RectangularMapping(lengths.move(), offsets.move());
+}
 
 
 RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl::Map &map) {
@@ -37,8 +37,10 @@ llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const
   assert(nDims == offsets.getOutDimCount());
   auto &irBuilder = codegen.getIRBuilder();
 
-  auto myoffsets = domain.isValid() ?  offsets.pullback(domain) : offsets;
-  auto mylengths = domain.isValid() ?  lengths.pullback(domain) : lengths;
+  auto myoffsets = domain.isValid() ? offsets.pullback(domain) : offsets;
+  auto mylengths = domain.isValid() ? lengths.pullback(domain) : lengths;
+  //assert(matchesSpace(coords, mylengths));
+  //assert(matchesSpace(coords, myoffsets));
 
   Value *result = nullptr;
   for (auto i = nDims-nDims; i < nDims; i+=1) {
@@ -67,7 +69,7 @@ llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const 
   auto nDims = lengths.getOutDimCount();
   auto &irBuilder = codegen.getIRBuilder();
 
-    auto mylengths = lengths.pullback(domain);
+  auto mylengths = lengths.pullback(domain);
 
   Value *result = ConstantInt::get(codegen.getIntTy(), 1, true);
   for (auto i = nDims-nDims; i < nDims; i+=1) {
@@ -77,6 +79,33 @@ llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const 
   return result;
 }
 
+
+llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator) {
+  //domaintranslator; // { [domain] -> srcNode[cluster],dstNode[cluster] }
+  //lengths; // { [chunk],srcNode[cluster],dstNode[cluster] -> field[indexset] }
+
+  auto mylengths = lengths.toMap().wrap().reorderSubspaces( domaintranslator.getRangeSpace(), lengths.getRangeSpace() ); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
+  auto lenout = domaintranslator.applyRange(mylengths); // { [domain] -> field[indexset] }
+ 
+
+ //auto wantedSpace = lengths.getDomainSpace();
+ //auto underdefined = domaintranslator.toMultiPwAff().embedIntoRangeSpace(wantedSpace); // { [A,C] -> [A,B,C] } 
+ //auto mylengths = lengths.pullback(underdefined.toPwMultiAff()); // { [A,C] -> len[] }, now get the max size of all [A,B]
+
+ //auto lenout = mylengths.projectOut(isl_dim_in, 0, mylengths.getInDimCount()); // { -> len[] }
+ //auto lengthsMap = mylengths.reverse(); // { len[] -> [A,C] }
+
+ // We cannot optimize over the non-linear size function, so we do it per dimension which hence is a overapproximation
+ auto nDims = mylengths.getOutDimCount();
+ auto &irBuilder = codegen.getIRBuilder();
+ Value *result = ConstantInt::get(codegen.getIntTy(), 1, true);
+ for (auto i = nDims-nDims; i < nDims; i+=1) {
+   auto max = lenout.dimMax(i);
+   auto term = codegen.codegenAff(max);
+   result = irBuilder.CreateNSWMul(result, term, "size");
+ }
+ return result;
+}
 
 
 #if 0

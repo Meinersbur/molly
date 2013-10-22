@@ -54,11 +54,11 @@ MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_FUNCTION {
 }
 
 
- PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_FUNCTION {
-   //auto result = getSpace().createEmptyPwMultiAff();
-   //result.setPwAff_inplace(0, this->copy());
-   return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(isl_map_from_pw_aff(takeCopy())));
- }
+PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_FUNCTION {
+  //auto result = getSpace().createEmptyPwMultiAff();
+  //result.setPwAff_inplace(0, this->copy());
+  return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(isl_map_from_pw_aff(takeCopy())));
+}
 
 
 void PwAff::print(llvm::raw_ostream &out) const{
@@ -197,19 +197,19 @@ std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
 }
 
 
-  ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
-    Aff result;
+ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
+  Aff result;
   foreachPiece([&result] (Set set, Aff aff) -> bool {
-      if (result.isValid()) {
-        result.reset();
-        return true; // break with error; no singleton pw
-      }
-      result = aff;
-      return false; // continue to see if there are multiple
-    });
+    if (result.isValid()) {
+      result.reset();
+      return true; // break with error; no singleton pw
+    }
+    result = aff;
+    return false; // continue to see if there are multiple
+  });
   assert(result.isValid());
-    return result;
-  }
+  return result;
+}
 
 PwAff isl::unionMin(PwAff &&pwaff1, PwAff &&pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_min(pwaff1.take(), pwaff2.take()));
@@ -305,4 +305,34 @@ Set isl::geSet(PwAff &&pwaff1, PwAff &&pwaff2){
 }
 Set isl::gtSet(PwAff &&pwaff1, PwAff &&pwaff2){
   return Set::enwrap(isl_pw_aff_gt_set(pwaff1.take(), pwaff2.take()));
+}
+
+
+ISLPP_EXSITU_ATTRS PwAff isl::PwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+  assert(dim(isl_dim_in) == space.dim(isl_dim_in));
+  assert(dim(isl_dim_out) == space.dim(isl_dim_out));
+
+  auto domainSpace = space.getDomainSpace();
+  auto transfromDomainSpace = getDomainSpace().mapsTo(domainSpace);
+  auto transformDomain = transfromDomainSpace.createUniverseBasicMap();
+
+  auto result = space.createEmptyPwAff();
+  foreachPiece([&result,&domainSpace,&transformDomain](Set set, Aff aff) {
+    //aff.pullback_inplace(transformDomain);
+    aff.castDomain_inplace(domainSpace);
+    set.apply_inplace(transformDomain);
+    result.unionAdd_inplace(PwAff::create(set, aff)); // TODO: disjoint union add for speed
+    return true;
+  });
+  return result;
+}
+
+
+ISLPP_INPLACE_ATTRS void PwAff:: castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION { 
+  assert(dim(isl_dim_in) == domainSpace.getSetDimCount());
+
+  auto transfromDomainSpace = Space::createMapFromDomainAndRange(domainSpace, getDomainSpace());
+  auto transformDomain = transfromDomainSpace.createIdentityMultiAff();
+
+  pullback_inplace(transformDomain);
 }

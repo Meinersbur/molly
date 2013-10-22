@@ -168,8 +168,8 @@ clang::CodeGen::MollyRuntimeMetadata *MollyCodeGenerator::getRtMetadata() {
 
 // SCEVAffinator::getPwAff
 llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
-  //TODO: What does polly::buildIslAff do with several pieces?
-  assert(aff.nPiece() == 1);
+  //TODO: What does polly::buildIslAff do with several pieces? Answer: Insert select instructions 
+  //assert(aff.nPiece() == 1);
   // If it splits the BB to test for piece inclusion, the additional ScopStmt would not consider them as belonging to them.
   // Three solution ideas:
   // 1. Use conditional assignment instead of branches
@@ -177,7 +177,7 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
   // 3. Create new ScopStmts for each peace, let Polly generate code to distinguish them
 
 
-  auto expr = initAstBuild().exprFromPwAff(aff);
+  auto expr = initAstBuild().exprFromPwAff(aff); //aff.resetDimIds(isl_dim_all)
   // auto pass = stmtCtx->asPass();
   auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), idtovalue, pass);
   //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
@@ -328,7 +328,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
-   auto voidPtrTy = PointerType::getUnqual(voidTy);
+   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
    Type *tys[] = {intTy,intTy};
    auto funcDecl  = getRuntimeFunc("__molly_combuf_send_alloc", voidPtrTy, tys);
@@ -339,7 +339,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
-   auto voidPtrTy = PointerType::getUnqual(voidTy);
+   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
    Type *tys[] = {intTy,intTy};
    auto funcDecl  = getRuntimeFunc("__molly_combuf_recv_alloc", voidPtrTy, tys);
@@ -351,10 +351,12 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
-   auto voidPtrTy = PointerType::getUnqual(voidTy);
+   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
-   Type *tys[] = {voidPtrTy,intTy, intTy};
+   Type *tys[] = { voidPtrTy, intTy, intTy };
    auto funcDecl  = getRuntimeFunc("int_molly_combuf_send_dst_init", voidTy, tys);
+
+   //auto combufVal = irBuilder.CreatePointerCast(combufSend, voidPtrTy);
    return irBuilder.CreateCall3(funcDecl, combufSend, dst, countElts);
  }
 
@@ -363,7 +365,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
-   auto voidPtrTy = PointerType::getUnqual(voidTy);
+   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
    Type *tys[] = {voidPtrTy,intTy, intTy};
    auto funcDecl  = getRuntimeFunc("int_molly_combuf_recv_src_init", voidTy, tys);

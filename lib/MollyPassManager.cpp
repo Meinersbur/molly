@@ -452,6 +452,13 @@ namespace {
         removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
 
       // Add pass info
+      registerEvaluatedAnalysis(pass, region);
+    }
+
+
+    void registerEvaluatedAnalysis(llvm::RegionPass *pass, llvm::Region *region) LLVM_OVERRIDE {
+       auto passID = pass->getPassID();
+
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
       auto &intfs = passInfo->getInterfacesImplemented();
@@ -747,7 +754,7 @@ namespace {
       auto ret = ReturnInst::Create(llvmContext, entryBB);
 
       auto codegen = funcCtx->makeCodegen(ret);
-      auto translator = funcCtx->getCurrentNodeCoordinate(); /* { [] -> rank[cluster] } */
+      //auto translator = funcCtx->getCurrentNodeCoordinate(); /* { [] -> rank[cluster] } */
 
       for (auto &fvarpair : fvars) {
         auto fvar = fvarpair.second;
@@ -755,7 +762,7 @@ namespace {
       }
 
       for (auto combuf : combufs) {
-        combuf->codegenInit(codegen, this, funcCtx->asPass(), translator);
+        combuf->codegenInit(codegen, this, funcCtx);
       }
     }
 
@@ -1054,7 +1061,7 @@ namespace {
       IRBuilder<> builder (bb);
       auto rtn = builder.CreateRetVoid();
 
-      auto editor = ScopEditor::newScop(rtn, getFuncContext(func)->asPass());
+      auto editor = ScopEditor::newScop(islctx, rtn, getFuncContext(func)->asPass());
       auto scop = editor.getScop();
       auto scopCtx = getScopContext(scop);
 

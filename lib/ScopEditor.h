@@ -37,7 +37,7 @@ namespace molly {
     static ScopEditor create(polly::Scop *scop) { return ScopEditor(scop); }
     static ScopEditor create(polly::Scop *scop, llvm::Pass *pass) { return ScopEditor(scop, pass); }
 
-    static ScopEditor newScop(llvm::Instruction *insertBefore, llvm::FunctionPass *p);
+    static ScopEditor newScop(isl::Ctx *ctx, llvm::Instruction *insertBefore, llvm::FunctionPass *p);
 
     polly::Scop *getScop() { return scop; }
 
@@ -55,7 +55,7 @@ namespace molly {
     //llvm::Value *getParamDimValue(unsigned pos);
     //isl::Id getParamDimId(unsigned pos);
 
-    StmtEditor createStmt(isl::Set &&domain, isl::Map &&scattering, isl::Map &&where, const std::string &name);
+    StmtEditor createStmt(isl::Set domain, isl::Map scattering, isl::Map where, const std::string &name);
     
 
     /// Create a ScopStmt that are all executed before/after another stmt

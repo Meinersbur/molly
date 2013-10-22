@@ -116,6 +116,23 @@ void isl::Multi<Aff>::dump() const {
 }
 
 
+
+
+ISLPP_CONSUME_ATTRS BasicMap isl::Multi<Aff>::reverse_consume() ISLPP_CONSUME_FUNCTION
+{
+  return BasicMap::enwrap(isl_basic_map_reverse(isl_basic_map_from_multi_aff(take())));
+}
+
+
+ISLPP_EXSITU_ATTRS BasicMap isl::Multi<Aff>::reverse() ISLPP_EXSITU_FUNCTION
+{
+  return copy().reverse_consume();
+}
+
+
+
+
+
 void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
@@ -140,17 +157,8 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
 }
 
 
-PwMultiAff MultiAff::pullback(const PwMultiAff &mpa) ISLPP_EXSITU_FUNCTION {
-  auto resultSpace = Space::createMapFromDomainAndRange(mpa.getDomainSpace(), getRangeSpace());
-  auto result = resultSpace.createEmptyPwMultiAff();
-
-  mpa.foreachPiece([this,&result](Set &&set, MultiAff &&maff) {
-    auto backpulled = this->pullback(maff);
-    result.unionAdd_inplace(PwMultiAff::create(set, backpulled));
-    return false;
-  });
-
-  return result;
+PwMultiAff MultiAff::pullback(PwMultiAff mpa) ISLPP_EXSITU_FUNCTION {
+  return PwMultiAff::enwrap(isl_pw_multi_aff_pullback_pw_multi_aff( isl_pw_multi_aff_from_multi_aff(takeCopy()), mpa.take()  ));
 }
 
 
@@ -159,33 +167,56 @@ PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
 }
 
 
- MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
-   assert(space.getInDimCount() == this->getInDimCount());
-   assert(space.getOutDimCount() == this->getOutDimCount());
+MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+  assert(space.getInDimCount() == this->getInDimCount());
+  assert(space.getOutDimCount() == this->getOutDimCount());
 
-   auto domainSpace = space.getDomainSpace();
-   auto rangeSpace = space.getRangeSpace();
-   auto resultSpace = domainSpace.mapsTo(rangeSpace);
-   auto translateSpace = domainSpace.mapsTo(getDomainSpace());
-   auto translate = translateSpace.createIdentityMultiAff();
-   auto result = resultSpace.createZeroMultiAff();
+  auto domainSpace = space.getDomainSpace();
+  auto rangeSpace = space.getRangeSpace();
+  auto resultSpace = domainSpace.mapsTo(rangeSpace);
+  auto translateSpace = domainSpace.mapsTo(getDomainSpace());
+  auto translate = translateSpace.createIdentityMultiAff();
+  auto result = resultSpace.createZeroMultiAff();
 
-   auto nOutDims = getOutDimCount();
-   for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
-     auto aff = getAff(i);
-     auto backpulled = aff.pullback(translate);
-     result.setAff_inplace(i, backpulled);
-   }
+  auto nOutDims = getOutDimCount();
+  for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
+    auto aff = getAff(i);
+    auto backpulled = aff.pullback(translate);
+    result.setAff_inplace(i, backpulled);
+  }
 
-   return result;
- }
-
-
- ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION {
- return getDomainSpace().createUniverseBasicSet();
- }
+  return result;
+}
 
 
- ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION {
-   return toBasicMap().getRange();
- }
+ISLPP_INPLACE_ATTRS void MultiAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
+  assert(domainSpace.getSetDimCount() == this->getInDimCount());
+
+  auto translateSpace = Space::createMapFromDomainAndRange(domainSpace, getDomainSpace());
+  auto translate = translateSpace.move().createIdentityMultiAff();
+  pullback_inplace(translate.move());
+}
+
+
+ISLPP_EXSITU_ATTRS MultiAff MultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION {
+  assert(rangeSpace.getSetDimCount() == this->getOutDimCount());
+
+  auto resultSpace = Space::createMapFromDomainAndRange(getDomainSpace(), rangeSpace);
+  auto result = resultSpace.createZeroMultiAff();
+
+  auto nOutDims = getOutDimCount();
+  for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
+    result.setAff_inplace(i, getAff(i));
+  }
+  return result;
+}
+
+
+ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION {
+  return getDomainSpace().createUniverseBasicSet();
+}
+
+
+ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION {
+  return toBasicMap().getRange();
+}

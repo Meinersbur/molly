@@ -110,6 +110,75 @@ void Multi<PwAff>::push_back(PwAff &&aff) {
 }
 
 
+ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoDomainSpace( Space framespace ) ISLPP_EXSITU_FUNCTION
+{
+  assert(framespace.isSet());
+  auto domainSpace = getDomainSpace();
+  auto rangeSpace = getRangeSpace();
+  auto nRangeDims = getOutDimCount();
+  auto range = framespace.findSubspace(isl_dim_set, domainSpace);
+  assert(range.isValid());
+
+  auto outSpace = framespace.replaceSubspace(domainSpace, rangeSpace);
+  auto resultSpace = Space::createMapFromDomainAndRange(framespace, outSpace);
+  auto result = resultSpace.createZeroMultiPwAff();
+  pos_t i = 0;
+  auto nFirst = range.getFirst();
+  for (;i<nFirst;i+=1) {
+    result.setPwAff_inplace(i, framespace.createAffOnVar(i));
+  }
+  auto nEnd = range.getEnd();
+  for (;i<nEnd;i+=1) {
+    result.setPwAff_inplace(i, this->getPwAff(i-nFirst));
+  }
+  auto nDims = resultSpace.getOutDimCount();
+  for (;i<nDims;i+=1) {
+    result.setPwAff_inplace(i, framespace.createAffOnVar(nFirst+nRangeDims+(i-nEnd)));
+  }
+  assert(i==framespace.getSetDimCount());
+
+  return result;
+}
+
+
+ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoRangeSpace(Space frameRangeSpace) ISLPP_EXSITU_FUNCTION {
+  assert(frameRangeSpace.isSet());
+  auto domainSpace = getDomainSpace();
+  auto rangeSpace = getRangeSpace();
+  auto nDomainDims = getInDimCount();
+  auto nRangeDims = getOutDimCount();
+  auto range = frameRangeSpace.findSubspace(isl_dim_set, rangeSpace);
+  assert(range.isValid());
+
+  auto inSpace = frameRangeSpace.replaceSubspace(rangeSpace, domainSpace);
+  auto resultSpace = Space::createMapFromDomainAndRange(inSpace, frameRangeSpace);
+  auto result = resultSpace.createZeroMultiPwAff();
+  auto nFirst = range.getFirst();
+  for (auto i = nFirst-nFirst;i<nFirst;i+=1) {
+    result.setPwAff_inplace(i, inSpace.createAffOnVar(i));
+  }
+   auto nPostfix = frameRangeSpace.getSetDimCount() - range.getEnd();
+  for (auto i = nDomainDims-nDomainDims;i<nDomainDims;i+=1) {
+    auto aff = this->getPwAff(i);
+    aff.insertDims_inplace(isl_dim_in, 0, nFirst);
+    aff.addDims_inplace(isl_dim_in, nPostfix);
+    aff.castDomain_inplace(inSpace);
+    result.setPwAff_inplace(nFirst+i, aff);
+  }
+ 
+  for (auto i=nPostfix-nPostfix;i<nPostfix;i+=1) {
+    result.setPwAff_inplace(nFirst+nDomainDims+i, inSpace.createAffOnVar(nFirst+nRangeDims+i));
+  }
+
+  return result;
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::MultiPwAff::projectOut( isl_dim_type type, pos_t first, count_t count ) ISLPP_EXSITU_FUNCTION {
+  return toMap().projectOut(type, first, count);
+}
+
+
 void MultiPwAff::sublist_inplace(pos_t first, count_t count) ISLPP_INPLACE_FUNCTION {
   auto nOutDims = getOutDimCount();
   removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);

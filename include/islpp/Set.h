@@ -74,37 +74,38 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    Space getSpace() const { return Space::enwrap(isl_set_get_space(keep())); }
-    Space getSpacelike() const { return getSpace(); }
+    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_set_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION { return getSpace(); }
+
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return true; }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return false; }
+
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_set_dim(keep(), type); }
+    ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_set_find_dim_by_id(keep(), type, id.keep()); }
+
+    ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { assert(type==isl_dim_set); return checkBool(isl_set_has_tuple_name(keep())); }
+    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { assert(type==isl_dim_set); return isl_set_get_tuple_name(keep()); }
+    ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_name(take(), s)); }
+    ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { assert(type==isl_dim_set); return checkBool(isl_set_has_tuple_id(keep())); }
+    ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { assert(type==isl_dim_set); return Id::enwrap(isl_set_get_tuple_id(keep())); }
+    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
+    ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_reset_tuple_id(take())); }
+
+    ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_set_has_dim_name(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return isl_set_get_dim_name(keep(), type, pos); }
+    ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_name(take(), type, pos, s)); }
+    ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_set_has_dim_id(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_set_get_dim_id(keep(), type, pos)); }
+    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
+    //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_set_reset_dim_id(take(), type, pos)); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_id(take(), id.take())); }
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_id(take(), type, pos, id.take())); }
-
-  public:    
-    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_reset_tuple_id(take())); }
-    //void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_QUALIFIER { assert(type==isl_dim_set); give(isl_set_reset_dim_id(take(), pos)); }
-
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_insert_dims(take(), type, pos, count)); }
-    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_remove_dims(take(), type, first, count)); }
-
-
-    // optional, default implementation exist
-    unsigned dim(isl_dim_type type) const { return isl_set_dim(keep(), type); }
-    int findDimById(isl_dim_type type, const Id &id) const { return isl_set_find_dim_by_id(keep(), type, id.keep()); }
-
-    bool hasTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_has_tuple_id(keep()); }
-    const char *getTupleName(isl_dim_type type) const { assert(type==isl_dim_set); return isl_set_get_tuple_name(keep()); }
-    Id getTupleId(isl_dim_type type) const { assert(type==isl_dim_set); return Id::enwrap(isl_set_get_tuple_id(keep())); }
-    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { assert(type==isl_dim_set); give(isl_set_set_tuple_name(take(), s)); }
-
-    bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_set_has_dim_id(keep(), type, pos); }
-    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_set_get_dim_name(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_set_get_dim_id(keep(), type, pos)); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_set_set_dim_name(take(), type, pos, s)); }
-
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_set_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void addDims_internal(isl_dim_type type, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_set_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_set_insert_dims(take(), type, pos, count)); }
+  public:
+    ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_set_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_set_remove_dims(take(), type, first, count)); }
 #pragma endregion
 
 
@@ -114,13 +115,10 @@ namespace isl {
     const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }
     Id getTupleId() const { return Id::enwrap(isl_set_get_tuple_id(keep())); }
 
-    void setTupleId_inplace(Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_tuple_id(take(), id.take())); }
-    void setTupleId_inplace(const Id &id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_tuple_id(take(), id.takeCopy())); }
-    Set setTupleId(Id &&id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.take())); }
-    Set setTupleId(const Id &id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.takeCopy())); }
+    void setTupleId_inplace(Id id) ISLPP_INPLACE_FUNCTION { give(isl_set_set_tuple_id(take(), id.take())); }
+    Set setTupleId(Id id) const { return Set::enwrap(isl_set_set_tuple_id(takeCopy(), id.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Set setTupleId(Id &&id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.take())); }
-    Set setTupleId(const Id &id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.takeCopy())); }
+    Set setTupleId(Id id) && { return Set::enwrap(isl_set_set_tuple_id(take(), id.take())); }
 #endif
 
     Set setDimId(unsigned pos, const Id &id) const { return Set::enwrap(isl_set_set_dim_id(takeCopy(), isl_dim_set, pos, id.takeCopy())); }
@@ -284,7 +282,7 @@ namespace isl {
     Map subrangeMap(unsigned first, unsigned count) const;
 
     Set resetTupleId() const { return Set::enwrap(isl_set_reset_tuple_id(takeCopy())); }
-
+    
     //Map reorganizeTuples(llvm::ArrayRef<unsigned> domainTuplePos, llvm::ArrayRef<unsigned> rangeTuplePos);
     Map reorganizeSubspaceList(llvm::ArrayRef<Space> domainTuplePos, llvm::ArrayRef<Space> rangeTuplePos);
     Map reorganizeSubspaces(const Space &domainSpace, const Space &rangeSpace, bool mustExist = false) ISLPP_EXSITU_FUNCTION;
@@ -293,8 +291,15 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Map reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_FUNCTION { return reorganizeSubspaces(std::move(setSpace), true); }
 
-    Set cast(Space space) ISLPP_EXSITU_FUNCTION;
-    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
+    ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
+
+    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION {      return cast(getSpace().untyped());    }
+
+    //FIXME: Not part of public isl interface
+     ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
+     ISLPP_INPLACE_ATTRS void resetSpace_inplace(Space dim) ISLPP_INPLACE_FUNCTION { give(isl_set_reset_space(take(), dim.take())); }
+     ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION { return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
   }; // class Set
 
 

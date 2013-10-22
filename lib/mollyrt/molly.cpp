@@ -446,7 +446,7 @@ namespace {
 
   public:
     ~MPISendCommunicationBuffer() {
-      delete buf;
+      free(buf);
     }
 
     MPISendCommunicationBuffer() : parent(nullptr) {
@@ -533,7 +533,7 @@ namespace {
 
   public:
     ~MPIRecvCommunicationBuffer() {
-      delete buf;
+      free(buf);
     }
 
     MPIRecvCommunicationBuffer() : parent(nullptr) {
@@ -614,7 +614,7 @@ namespace {
 
 
 extern "C" void __molly_generated_init();
-extern "C" void __molly_orig_main(int argc, char *argv[], char *envp[]);
+extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]);
 extern "C" void __molly_generated_release();
 
 #pragma region Molly generates calls to these

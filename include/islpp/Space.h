@@ -10,8 +10,8 @@
 #include "Multi.h"
 #include "Id.h"
 #include "Expr.h"
-#include "Obj.h"
-#include "Spacelike.h"
+#include "Obj.h" // isl::Obj<,> (baseclass of isl::Space)
+#include "Spacelike.h" // isl::Spacelike<> (baseclass of isl::Space)
 
 struct isl_space;
 
@@ -33,16 +33,17 @@ namespace isl {
   class Space;
 } // namespace isl
 
-extern "C" {
-  // Forgotten declaration is <isl/space.h>
-  __isl_give isl_space *isl_space_reset_dim_id(__isl_take isl_space *space, enum isl_dim_type type, unsigned pos);
-} // extern "C"
-
 
 namespace isl {
 
   /// Ensure both spaces have the same param dimensions in the same order
   void compatibilize(/*inout*/Space &space1, /*inout*/Space &space2);
+
+  /// Test for equality of domain and range dimensions, but not param dims as these are aligned automatically
+  bool matchesSpace(const Space &lhs, const Space &rhs);
+
+  /// Like matchesSpace, bu never compares dim ids, just tuple ids recursively
+  bool matchesTuples(const Space &lhs, const Space &rhs);
 
   /// Whenever a new set, relation or similar object is created from scratch, the space in which it lives needs to be specified using an isl_space. Each space involves zero or more parameters and zero, one or two tuples of set or input/output dimensions. The parameters and dimensions are identified by an isl_dim_type and a position. The type isl_dim_param refers to parameters, the type isl_dim_set refers to set dimensions (for spaces with a single tuple of dimensions) and the types isl_dim_in and isl_dim_out refer to input and output dimensions (for spaces with two tuples of dimensions). Local spaces (see Local Spaces) also contain dimensions of type isl_dim_div. Note that parameters are only identified by their position within a given object. Across different objects, parameters are (usually) identified by their names or identifiers. Only unnamed parameters are identified by their positions across objects. The use of unnamed parameters is discouraged.
   class Space : public Obj<Space,isl_space>, public Spacelike<Space> {
@@ -55,7 +56,6 @@ namespace isl {
 
   public:
     Space() { }
-    //static ObjTy wrap(StructTy *obj) { return Space::enwrap(obj); }// obsolete
 
     /* implicit */ Space(const ObjTy &that) : Obj(that) { }
     /* implicit */ Space(ObjTy &&that) : Obj(std::move(that)) { }
@@ -64,49 +64,45 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_space_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_space_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    Space getSpace() const { return *this; }
-    Space getSpacelike() const { return *this; }
+    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return *this; }
+    ISLPP_PROJECTION_ATTRS Space getSpacelike() ISLPP_PROJECTION_FUNCTION { return *this; }
+
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_is_params(keep())); }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_is_set(keep())); }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_is_map(keep())); }
+
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_space_dim(keep(), type); }
+    ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_space_find_dim_by_id(keep(), type, id.keep()); }
+
+    ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_has_tuple_name(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_space_get_tuple_name(keep(), type); }
+    ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_tuple_name(take(), type, s)); }
+    ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_has_tuple_id(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_space_get_tuple_id(keep(), type)); }
+    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { give(isl_space_set_tuple_id(take(), type, id.take())); }
+    ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_space_reset_tuple_id(take(), type)); }
+
+    ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_has_dim_name(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return isl_space_get_dim_name(keep(), type, pos); }
+    ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_dim_name(take(), type, pos, s)); }
+    ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_space_has_dim_id(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_space_get_dim_id(keep(), type, pos)); }
+    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_space_set_dim_id(take(), type, pos, id.take())); }
+    //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_space_reset_dim_id(take(), type, pos)); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_space_set_tuple_id(take(), type, id.take())); }
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_space_set_dim_id(take(), type, pos, id.take())); }
-
-    // optional
-    bool isSet() const { return isSetSpace(); }
-    bool isMap() const { return isMapSpace(); }
-
+    ISLPP_INPLACE_ATTRS void addDims_internal(isl_dim_type type, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_space_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_space_insert_dims(take(), type, pos, count)); }
   public:
-    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_space_reset_tuple_id(take(), type)); }
-    void resetDimId_inplace(isl_dim_type type, unsigned pos) ISLPP_INPLACE_FUNCTION { give(isl_space_reset_dim_id(take(), type, pos)); }
-
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_space_insert_dims(take(), type, pos, count)); }
-    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_space_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_space_drop_dims(take(), type, first, count)); }
-
-
-    // optional, default implementation exist
-    count_t dim(isl_dim_type type) const { return isl_space_dim(keep(), type); }
-    int findDimById(isl_dim_type type, const Id &id) const { return isl_space_find_dim_by_id(keep(), type, id.keep()); }
-
-    bool hasTupleId(isl_dim_type type) const { return isl_space_has_tuple_id(keep(), type); }
-    const char *getTupleName(isl_dim_type type) const { return isl_space_get_tuple_name(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_space_get_tuple_id(keep(), type)); }
-    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_tuple_name(take(), type, s)); }
-
-    bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_space_has_dim_id(keep(), type, pos); }
-    bool hasDimName(isl_dim_type type, unsigned pos) const { return isl_space_has_dim_name(keep(), type, pos); }
-    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_space_get_dim_name(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_space_get_dim_id(keep(), type, pos)); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_space_set_dim_name(take(), type, pos, s)); }
-
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_space_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_space_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_space_drop_dims(take(), type, first, count)); }
 #pragma endregion
 
 
@@ -136,7 +132,7 @@ namespace isl {
     // If this is a param space
     Space createSetSpace(count_t nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
     Space createMapSpace(count_t nDomainDims, count_t nRangeDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_alloc(getCtx()->keep(), 0, nDomainDims, nRangeDims), takeCopy())); }
-   ISLPP_EXSITU_ATTRS Space createMapSpace(count_t nDomainDims, Space rangeSpace) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS Space createMapSpace(count_t nDomainDims, Space rangeSpace) ISLPP_EXSITU_FUNCTION;
 #pragma endregion
 
 
@@ -236,19 +232,15 @@ namespace isl {
     bool isNontrivialSetSpace() const { return isSetSpace() && !isParamsSpace(); }
     bool isMapSpace() const;
 
-    bool match(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const;
+
+    bool match(isl_dim_type thisType, const Space &that, isl_dim_type thatType) const {
+      return isl::matchesSpace(extractTuple(thisType), that.extractTuple(thatType));
+    }
 
 
 #pragma region Matching spaces
     bool matchesSpace(const Space &that) const {
-      if (that.isSetSpace())
-        return matchesSetSpace(that);
-
-      if (that.isMapSpace())
-        return matchesMapSpace(that);
-
-      assert(that.isParamsSpace());
-      return isParamsSpace();
+      return isl::matchesSpace(*this, that);
     }
 
 
@@ -263,10 +255,7 @@ namespace isl {
 
     bool matchesSetSpace(const Space &that) const {
       assert(that.isSetSpace());
-
-      if (!this->isSetSpace())
-        return false;
-      return this->match(isl_dim_set, that, isl_dim_set);
+      return isSet() && isl::matchesSpace(*this, that);
     }
 
 
@@ -282,20 +271,13 @@ namespace isl {
 
 
     bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) const {
-      assert(domainSpace.isSetSpace());
-      assert(rangeSpace.isSetSpace());
-      if (!isMapSpace())
-        return false;
-      return match(isl_dim_in, domainSpace, isl_dim_set) && match(isl_dim_out, rangeSpace, isl_dim_set);
+      return isMap() && isl::matchesSpace(domain(), domainSpace) && isl::matchesSpace(range(), rangeSpace);
     }
 
 
-    bool matchesMapSpace (const Space &that)  const {
+    bool matchesMapSpace(const Space &that)  const {
       assert(that.isMapSpace());
-      if (!this->isMapSpace())
-        return false;
-
-      return match(isl_dim_in, that, isl_dim_in) && match(isl_dim_out, that, isl_dim_out);
+      return isMap() && isl::matchesSpace(*this, that);
     }
 
 
@@ -479,6 +461,19 @@ namespace isl {
     /// Return the pos' (0=first element) encountered leaf space in a depth-first traversal
     Space findNthSubspace(isl_dim_type type, unsigned pos, DimRange &dimrange) const;
     Space findNthSubspace(isl_dim_type type, unsigned pos) const { DimRange dummy; return findNthSubspace(type, pos, dummy); }
+
+    /// Remove nesting and dim ids from non-param dimensions
+    ISLPP_EXSITU_ATTRS Space untyped() ISLPP_EXSITU_FUNCTION {
+      if (isParamsSpace())
+        return *this;
+
+      if (isSetSpace()) {
+        return params().createSetSpace(getSetDimCount());
+      }
+
+      assert(isMapSpace());
+      return params().createMapSpace(getInDimCount(), getOutDimCount());
+    }
   }; // class Space
 
 
@@ -501,14 +496,16 @@ namespace isl {
   static inline bool operator==(const Space &lhs, const Space &rhs) { return (lhs.isNull() && rhs.isNull()) || (lhs.isValid() && rhs.isValid() && isEqual(lhs, rhs)); }
   static inline bool operator!=(const Space &lhs, const Space &rhs) { return !operator==(lhs, rhs); }
 
-  // Test for equality of domain and range dimensions, but not param dims as these are aligned automatically
-  static inline bool matchesSpace(const Space &lhs, const Space &rhs) { return lhs.matchesSpace(rhs); }
-
-  /// Create spacenesting from valid subspaces
+  /// Create spaceNesting from valid subspaces
   Space combineSpaces(const Space &lhs, const Space &rhs);
 
   static inline Space operator>>(const Space &domainSpace, const Space &rangeSpace) {
     return isl::Space::createMapFromDomainAndRange(domainSpace.normalizeWrapped(), rangeSpace.normalizeWrapped());
+  }
+
+  template<typename T, typename S>
+  static inline bool matchesSpace(const Spacelike<T> &lhs, const Spacelike<S> &rhs) {
+    return matchesSpace(lhs.getDerived()->getSpace(), rhs.getDerived()->getSpace());
   }
 
 } // namespace isl

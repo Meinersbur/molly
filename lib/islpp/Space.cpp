@@ -560,7 +560,7 @@ DimRange Space::findNestedTuple(unsigned tuplePos) const {
 
 DimRange Space:: findNestedTuple(const Id &tupleId) const {
   if (isMapSpace()) {
-    unsigned pos,count;
+    unsigned pos, count;
     if (findNestedTuple_recursive(*this, tupleId, pos, count)) {
       auto nDomainDims = getInDimCount();
       if (pos >= nDomainDims) 
@@ -583,7 +583,7 @@ DimRange Space:: findNestedTuple(const Id &tupleId) const {
 
 static unsigned countSubspaceMatches_recursive(const Space &space, const Space &spaceToFind) {
   assert(spaceToFind.isValid());
-  if (space == spaceToFind) {
+  if (matchesSpace(space, spaceToFind)) {
     return 1;
   }
 
@@ -601,16 +601,16 @@ static unsigned countSubspaceMatches_recursive(const Space &space, const Space &
 
 static bool findSubspace_recursive(const Space &space, const Space &spaceToFind, /*inout*/unsigned &currentDimPos) {
   assert(spaceToFind.isValid());
-  if (space == spaceToFind) {
+  if (matchesSpace(space, spaceToFind)) {
     return true;
   }
 
   if (space.isWrapping()) {
     return findSubspace_recursive(space.unwrap(), spaceToFind, currentDimPos);
   } 
-  
+
   if (space.isMapSpace()) {
-   return findSubspace_recursive(space.domain(), spaceToFind, currentDimPos) || findSubspace_recursive(space.range(), spaceToFind, currentDimPos);
+    return findSubspace_recursive(space.domain(), spaceToFind, currentDimPos) || findSubspace_recursive(space.range(), spaceToFind, currentDimPos);
   } 
 
   currentDimPos += space.getSetDimCount();
@@ -1099,35 +1099,24 @@ static bool replaceSubspace_recursive(/*inout*/Space &space, const Space &toBeRe
     return true;
   }
 
-  if (space.isSetSpace()) {
-    if (space.isNested(isl_dim_set)) {
-      auto nested = space.getNested(isl_dim_set);
-      if (replaceSubspace_recursive(nested, toBeReplaced, replacement)) {
-        space = nested;
-        return true;
-      } 
-    }
-  } else if (space.isMapSpace()) {
-    auto nestedDomain = space.getNestedOrDefault(isl_dim_in);
-    if (matchesSpace(nestedDomain, toBeReplaced)) {
-      space = combineSpaces(replacement, space.getNestedOrDefault(isl_dim_out));
-      return true;
-    }
-    if (replaceSubspace_recursive(nestedDomain, toBeReplaced, replacement)) {
-      space = combineSpaces(nestedDomain, space.getNestedOrDefault(isl_dim_out));
-      return true;
-    }
+  if (space.isMapSpace()) {
+    auto domain = space.domain();
+    auto range = space.range();
+    if (replaceSubspace_recursive(domain, toBeReplaced, replacement)) 
+      return space = combineSpaces(domain, range),true;
 
-    auto nestedRange = space.getNestedOrDefault(isl_dim_out);
-    if (matchesSpace(nestedRange, toBeReplaced)) {
-      space = combineSpaces(nestedDomain, replacement);
-      return true;
-    }
-    if (replaceSubspace_recursive(nestedRange, toBeReplaced, replacement)) {
-      space = combineSpaces(nestedDomain, nestedRange);
-      return true;
-    }
+    if (replaceSubspace_recursive(range, toBeReplaced, replacement)) 
+      return space = combineSpaces(domain, range),true;
+
+    return false;
   }
+
+  assert(space.isSetSpace());
+  if (space.isWrapping()) {
+    space = space.unwrap();
+    return replaceSubspace_recursive(space, toBeReplaced, replacement);
+  }
+
   return false;
 }
 
@@ -1160,15 +1149,15 @@ static bool findNthSubspace_recursive(const Space &space, Space &resultSpace, un
   if (space.isMapSpace()) {
     if (findNthSubspace_recursive(space.getDomainSpace(), resultSpace, posToGo, first))
       return true;
-     if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, posToGo, first))
-       return true;
+    if (findNthSubspace_recursive(space.getRangeSpace(), resultSpace, posToGo, first))
+      return true;
   } else if (space.isWrapping()) {
-   if (findNthSubspace_recursive(space.unwrap(), resultSpace, posToGo, first))
-     return true;
+    if (findNthSubspace_recursive(space.unwrap(), resultSpace, posToGo, first))
+      return true;
   } else {
     // Leaf space
     if (posToGo==0) {
-    // Found
+      // Found
       resultSpace = space;
       return true;
     }
@@ -1215,28 +1204,14 @@ ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( Space subspace1, Space su
 }
 
 
-bool isl::Space::match( isl_dim_type thisType, const Space &that, isl_dim_type thatType ) const
-{
-  if (thisType!=isl_dim_param && thatType!=isl_dim_param && this->isNested(thisType) && that.isNested(thatType)) {
-    // Bug workaround: If the spaces are nested, isl_space_match will also compare the param dims
-    auto tmp1 = *this;
-    auto tmp2 = that;
-    compatibilize(tmp1, tmp2);
-    return checkBool(isl_space_match(tmp1.keep(), thisType, tmp2.keep(), thatType)); 
-  } 
-  return checkBool(isl_space_match(keep(), thisType, that.keep(), thatType));
-}
-
-ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS BasicMap isl::Space::equalBasicMap() ISLPP_EXSITU_FUNCTION {
   assert(isMapSpace());
   assert(dim(isl_dim_in) == dim(isl_dim_out));
   return equalBasicMap(std::min(dim(isl_dim_in), dim(isl_dim_out)));
 }
 
 
-ISLPP_EXSITU_ATTRS Space isl::Space::createMapSpace( count_t nDomainDims, Space rangeSpace ) ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS Space isl::Space::createMapSpace( count_t nDomainDims, Space rangeSpace ) ISLPP_EXSITU_FUNCTION {
   assert(isParamsSpace());
   assert(rangeSpace.isSetSpace());
 
@@ -1246,6 +1221,12 @@ ISLPP_EXSITU_ATTRS Space isl::Space::createMapSpace( count_t nDomainDims, Space 
   auto result = isl_space_map_from_domain_and_range(domain, range); domain = nullptr; range=nullptr;
   return Space::enwrap(result);
 }
+
+void isl::Space::dump() const
+{
+  isl_space_dump(keep());
+}
+
 
 
 bool isl::isEqual(const Space &space1, const Space &space2){
@@ -1299,3 +1280,96 @@ void isl::compatibilize(/*inout*/Space &space1, /*inout*/Space &space2) {
   space2.alignParams_inplace(space1); // change the order of spaces of space2 to match space1
   assert(checkBool(isl_space_match(space1.keep(), isl_dim_param, space2.keep(), isl_dim_param)));
 }
+
+
+bool matchesTuples_recursive(const Space &lhs, const Space &rhs) {
+  if (lhs.keep() == rhs.keep())
+    return true;
+
+  bool isParams = lhs.isParams();
+  if (isParams != rhs.isParams())
+    return false;
+  if (isParams)
+    return true;
+
+  if (lhs.dim(isl_dim_out) != lhs.dim(isl_dim_out))
+    return false;
+
+  bool hasOutTupleId  = lhs.hasTupleId(isl_dim_out);
+  if (hasOutTupleId != rhs.hasTupleId(isl_dim_out)) 
+    return false;
+
+  if (hasOutTupleId) {
+    if (lhs.getTupleId(isl_dim_out) != rhs.getTupleId(isl_dim_out))
+      return false;
+  }
+
+  auto isMap = lhs.isMap();
+  if (isMap != rhs.isMap())
+    return false;
+
+  if (isMap) {
+    return matchesTuples_recursive(lhs.domain(), rhs.domain()) &&  matchesTuples_recursive(lhs.range(), rhs.range());
+  }
+
+  auto isWrapping = lhs.isWrapping();
+  if (isWrapping != rhs.isWrapping())
+    return false;
+
+  if (isWrapping) {
+    return matchesTuples_recursive(lhs.unwrap(), rhs.unwrap());
+  }
+
+  return true;
+}
+
+
+bool isl::matchesTuples(const Space &lhs, const Space &rhs) {
+  return matchesTuples_recursive(lhs, rhs);
+}
+
+
+bool isl::matchesSpace(const Space &lhs, const Space &rhs) { assert(lhs.isValid()); assert(rhs.isValid());
+  if (lhs.keep() == rhs.keep())
+    return true;
+
+  if (!matchesTuples_recursive(lhs, rhs))
+    return false;
+
+  // Matches if have different ids???
+  return true;
+
+  auto nOutDims = lhs.dim(isl_dim_out);
+  assert(nOutDims == rhs.dim(isl_dim_out));
+  for (auto i = nOutDims-nOutDims; i < nOutDims;i+=1) {
+    bool hasDimId = lhs.hasDimId(isl_dim_out, i);
+    if (hasDimId != rhs.hasDimId(isl_dim_out, i))
+      return false;
+    if (!hasDimId)
+      continue;
+
+    auto lhsDimId = lhs.getDimId(isl_dim_out, i);
+    auto rhsDimId = rhs.getDimId(isl_dim_out, i);
+    if (lhsDimId != rhsDimId)
+      return false;
+  }
+
+  auto nInDims = lhs.dim(isl_dim_in);
+  assert(nInDims == rhs.dim(isl_dim_in));
+  for (auto i = nInDims-nInDims; i < nInDims;i+=1) {
+    bool hasDimId = lhs.hasDimId(isl_dim_in, i);
+    if (hasDimId != rhs.hasDimId(isl_dim_in, i))
+      return false;
+    if (!hasDimId)
+      continue;
+
+    auto lhsDimId = lhs.getDimId(isl_dim_in, i);
+    auto rhsDimId = rhs.getDimId(isl_dim_in, i);
+    if (lhsDimId != rhsDimId)
+      return false;
+  }
+
+  return true;
+}
+
+

@@ -33,27 +33,8 @@ Map PwMultiAff::toMap() const {
 }
 
 
-MultiPwAff PwMultiAff::toMultiPwAff() const { 
-  auto nPieces = this->nPieces();
-  auto result = getSpace().createZeroMultiPwAff();
-  auto nOut = result.getOutDimCount();
-  auto list = PwAffList::alloc(getCtx(), nOut);
-
-  for (auto i=nOut-nOut; i < nOut; i+=1) {
-    auto resultPwAff = getDomainSpace().mapsTo(1).createEmptyPwAff();
-
-    foreachPiece([&resultPwAff,i](Set &&set, MultiAff &&maff) -> bool {
-      auto aff = maff.getAff(i);
-      auto paff = PwAff::create(set, aff);
-      assert(isDisjoint(resultPwAff.domain(), set));
-      resultPwAff.unionMin_inplace(paff); // No add_piece or disjount_union publicly available, pieces are disjount
-      return false;
-    });
-
-    list.add_inplace(resultPwAff);
-    result.setPwAff_inplace(i, resultPwAff);
-  }
-  return result;
+MultiPwAff PwMultiAff::toMultiPwAff() const {
+  return MultiPwAff::enwrap(isl_multi_pw_aff_from_pw_multi_aff(takeCopy()));
 }
 
 
@@ -195,6 +176,40 @@ PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   auto result = space.move().createEmptyPwMultiAff();
   meAligned.foreachPiece([&result,&space](Set&&set,MultiAff&&maff) -> bool {
     result.unionAdd_inplace(PwMultiAff::create(set.cast(space.getDomainSpace()), maff.cast(space))); // TODO: disjointUnion/addPiece 
+    return false;
+  });
+
+  return result;
+}
+
+
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION {
+  assert(getInDimCount() == domainSpace.getSetDimCount());
+
+  domainSpace.alignParams_inplace(this->getSpace());
+  auto meAligned = this->alignParams(domainSpace);
+
+  auto result = Space::createMapFromDomainAndRange(domainSpace, getRangeSpace()).createEmptyPwMultiAff();
+  meAligned.foreachPiece([&result,&domainSpace](Set&&set,MultiAff&&maff) -> bool {
+    auto resultPiece = PwMultiAff::create(set.cast(domainSpace), maff.castDomain(domainSpace));
+    result.unionAdd_inplace(resultPiece.move()); // TODO: disjointUnion/addPiece 
+    return false;
+  });
+
+  return result;
+}
+
+
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION {
+  assert(getOutDimCount() == rangeSpace.getSetDimCount());
+
+  rangeSpace.alignParams_inplace(this->getSpace());
+  auto meAligned = this->alignParams(rangeSpace);
+
+  auto result = Space::createMapFromDomainAndRange(getDomainSpace(), rangeSpace).createEmptyPwMultiAff();
+  meAligned.foreachPiece([&result,&rangeSpace](Set &&set, MultiAff &&maff) -> bool {
+    auto resultPiece = PwMultiAff::create(set.move(), maff.castRange(rangeSpace));
+    result.unionAdd_inplace(resultPiece.move()); // TODO: disjointUnion/addPiece 
     return false;
   });
 

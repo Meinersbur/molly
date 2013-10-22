@@ -92,38 +92,38 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    Space getSpace() const { return Space::enwrap(isl_map_get_space(keep())); }
-    Space getSpacelike() const { return getSpace(); }
+    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_map_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS Space getSpacelike() ISLPP_PROJECTION_FUNCTION { return getSpace(); }
+
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return false; }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return true; }
+
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_map_dim(keep(), type); }
+    ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_map_find_dim_by_id(keep(), type, id.keep()); }
+
+    ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_map_has_tuple_name(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_map_get_tuple_name(keep(), type); }
+    ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_map_set_tuple_name(take(), type, s)); }
+    ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_map_has_tuple_id(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_map_get_tuple_id(keep(), type)); }
+    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { give(isl_map_set_tuple_id(take(), type, id.take())); }
+    ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_map_reset_tuple_id(take(), type)); }
+
+    ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_map_has_dim_name(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return isl_map_get_dim_name(keep(), type, pos); }
+    ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_map_set_dim_name(take(), type, pos, s)); }
+    ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_map_has_dim_id(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_map_get_dim_id(keep(), type, pos)); }
+    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_map_set_dim_id(take(), type, pos, id.take())); }
+    //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_map_reset_dim_id(take(), type, pos)); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_map_set_tuple_id(take(), type, id.take())); }
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_map_set_dim_id(take(), type, pos, id.take())); }
-
-    // optional
-    bool isSet() const { return false; }
-    bool isMap() const { return true; }
-
+    ISLPP_INPLACE_ATTRS void addDims_internal(isl_dim_type type, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_map_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_map_insert_dims(take(), type, pos, count)); }
   public:
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_map_insert_dims(take(), type, pos, count)); }
-    void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_map_remove_dims(take(), type, first, count)); }
-
-
-    // optional, default implementation exist
-    unsigned dim(isl_dim_type type) const { return isl_map_dim(keep(), type); }
-    int findDimById(isl_dim_type type, const Id &id) const { return isl_map_find_dim_by_id(keep(), type, id.keep()); }
-
-    bool hasTupleId(isl_dim_type type) const { return isl_map_has_tuple_id(keep(), type); }
-    const char *getTupleName(isl_dim_type type) const { return isl_map_get_tuple_name(keep(), type); }
-    Id getTupleId(isl_dim_type type) const { return Id::enwrap(isl_map_get_tuple_id(keep(), type)); }
-    void setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_map_set_tuple_name(take(), type, s)); }
-
-    bool hasDimId(isl_dim_type type, unsigned pos) const { return isl_map_has_dim_id(keep(), type, pos); }
-    const char *getDimName(isl_dim_type type, unsigned pos) const { return isl_map_get_dim_name(keep(), type, pos); }
-    Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_map_get_dim_id(keep(), type, pos)); }
-    void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_map_set_dim_name(take(), type, pos, s)); }
-
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_map_add_dims(take(), type, count)); }
+    ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_map_remove_dims(take(), type, first, count)); }
 #pragma endregion
 
 
@@ -315,13 +315,10 @@ namespace isl {
 
     /// Function composition
     /// { U -> V }.applyRange({ X -> Y }) = { U -> {X->Y}(V) } => { U -> Y }
-    void applyRange_inplace(const Map &map2) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(take(), map2.takeCopy())); }
-    void applyRange_inplace(Map &&map2) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(take(), map2.take())); }
-    Map applyRange(const Map &map2) const { return Map::enwrap(isl_map_apply_range(takeCopy(), map2.takeCopy())); }
-    Map applyRange(Map &&map2) const { return Map::enwrap(isl_map_apply_range(takeCopy(), map2.take())); }
+    void applyRange_inplace(Map map2) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(take(), map2.take())); }
+    Map applyRange(Map map2) const { return Map::enwrap(isl_map_apply_range(takeCopy(), map2.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map applyRange(const Map &map2) && { return Map::wrap(isl_map_apply_range(take(), map2.takeCopy())); }
-    Map applyRange(Map &&map2) && { return Map::wrap(isl_map_apply_range(take(), map2.take())); }
+    Map applyRange(Map map2) && { return Map::wrap(isl_map_apply_range(take(), map2.take())); }
 #endif
 
 
@@ -352,13 +349,11 @@ namespace isl {
     Map intersectRange(const Set &set) &&{ return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
 #endif
 
-    void intersectParams(Set &&params) { give(isl_map_intersect_params(take(), params.take())); }
+    void intersectParams(Set params) { give(isl_map_intersect_params(take(), params.take())); }
 
-    Map subtractDomain(Set &&dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
-    Map subtractDomain(const Set &dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.takeCopy())); }
+    Map subtractDomain(Set dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map subtractDomain(Set &&dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
-    Map subtractDomain(const Set &dom) && { return Map::enwrap(isl_map_subtract_domain(take(), dom.takeCopy())); }
+    Map subtractDomain(Set dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
 #endif
 
     void subtract_inplace(const Map &map) ISLPP_INPLACE_FUNCTION { return give(isl_map_subtract(take(), map.takeCopy())); }
@@ -623,9 +618,9 @@ namespace isl {
     Map domainProduct(const Map &that) const { return Map::enwrap(isl_map_domain_product(this->takeCopy(), that.takeCopy())); }
     Map rangeProduct(const Map &that) const { return Map::enwrap(isl_map_range_product(this->takeCopy(), that.takeCopy())); }
 
-    Map resetTupleId(isl_dim_type type) const { return Map::enwrap(isl_map_reset_tuple_id(takeCopy(), type)); }
-    Map resetTupleId_consume(isl_dim_type type) { return Map::enwrap(isl_map_reset_tuple_id(take(), type)); }
-    void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_map_reset_tuple_id(take(), type)); }
+    //Map resetTupleId(isl_dim_type type) const { return Map::enwrap(isl_map_reset_tuple_id(takeCopy(), type)); }
+    //Map resetTupleId_consume(isl_dim_type type) { return Map::enwrap(isl_map_reset_tuple_id(take(), type)); }
+    //void resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_map_reset_tuple_id(take(), type)); }
 
     Map moveSubspaceAppendToRange(const Space &subspace) const { auto result = copy(); result.moveSubspaceAppendToRange_inplace(subspace); return result; }
     void moveSubspaceAppendToRange_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION;

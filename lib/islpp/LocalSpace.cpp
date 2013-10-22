@@ -105,13 +105,13 @@ Constraint LocalSpace::createInequalityConstraint() const {
 Ctx *LocalSpace::getCtx() const {
   return Ctx::enwrap(isl_local_space_get_ctx(keep()));
 }
-#endif
+
 
 bool LocalSpace::isSet() const {
   return isl_local_space_is_set(keep());
 }
 
-#if 0
+
 bool LocalSpace::hasDimId(isl_dim_type type, unsigned pos) const {
   return isl_local_space_has_dim_id(keep(), type, pos);
 }

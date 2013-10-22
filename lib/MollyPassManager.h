@@ -41,6 +41,7 @@ namespace molly {
     virtual FieldVariable *getFieldVariable(llvm::Value *val) = 0;
 
     virtual void runRegionPass(llvm::RegionPass *, llvm::Region *) = 0;
+    virtual void registerEvaluatedAnalysis(llvm::RegionPass *pass, llvm::Region *region) = 0;
     virtual void runFunctionPass(llvm::FunctionPass *, llvm::Function *) = 0;
     virtual void runModulePass(llvm::ModulePass *) = 0;
 

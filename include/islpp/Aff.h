@@ -226,7 +226,10 @@ namespace isl {
     //PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
     ISLPP_EXSITU_ATTRS Aff cast(Space space) ISLPP_EXSITU_FUNCTION;
-    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(this->cast(space)); }
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(this->cast(isl::move(space))); }
+
+    ISLPP_EXSITU_ATTRS Aff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(domainSpace); return result; }
+       ISLPP_INPLACE_ATTRS void castDomain_inplace(Space space) ISLPP_INPLACE_FUNCTION;
   }; // class Aff
 
 

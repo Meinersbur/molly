@@ -31,8 +31,7 @@ namespace isl {
     const DimRange &operator=(DimRange &&that) ISLPP_INPLACE_FUNCTION { this->type = that.type; this->first = that.first; this->count = that.count; this->space = that.space; that.type = isl_dim_cst; that.space = nullptr; return *this; }
 
     static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, __isl_take isl_space *space);
-    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, Space &&space);
-    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, const Space &space);
+    static DimRange enwrap(isl_dim_type type, unsigned first, unsigned count, Space space);
 
   public:
     bool isNull() const { return type==isl_dim_cst; }

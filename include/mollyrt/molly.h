@@ -216,6 +216,7 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 #define MOLLY_VAR(...) \
     dbgPrintVars(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
 
+//TODO: molly attribute that allows function calls to this in SCoPs
 #define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
 #else
 #define MOLLY_DEBUG(...) ((void)0)
@@ -461,8 +462,8 @@ namespace molly {
   public:
     MOLLYATTR(inline)
     subty operator[](int i) /*TODO: const*/ {
-      assert(0 <= i);
-      assert(i < _unqueue<Togo...>::value);
+      //assert(0 <= i);
+      //assert(i < _unqueue<Togo...>::value);
       return buildSubtyHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
     }
   }; // class _array_partial_subscript
@@ -897,30 +898,30 @@ extern "C" uint64_t __molly_cluster_myrank();
     }
 
 
-    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { MOLLY_DEBUG_FUNCTION_SCOPE
-      assert(0 <= d && d < (int)sizeof...(L));
+    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { //MOLLY_DEBUG_FUNCTION_SCOPE
+      //assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
 
     /// Overload for length(int) for !D
     template<typename Dummy = void>
     typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, int, Dummy>::type >::type
-      length() MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
+      length() MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
         return length(0);
     }
 
 
     /// Returns a pointer to the element with the given coordinates; Molly will track loads and stores to this memory location and insert communication code
-    T *ptr(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptrfunc) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
+    T *ptr(typename _inttype<L>::type... coords) MOLLYATTR(fieldmember) MOLLYATTR(ptrfunc) MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
       return (T*)__builtin_molly_ptr(this, coords...);
     }
 
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
-        assert(0 <= i);
-        assert(i < _unqueue<L...>::value);
+      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+        //assert(0 <= i);
+        //assert(i < _unqueue<L...>::value);
         return *ptr(i);
     }
 
@@ -928,9 +929,9 @@ extern "C" uint64_t __molly_cluster_myrank();
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { MOLLY_DEBUG_FUNCTION_SCOPE
-        assert(0 <= i);
-        assert(i < _unqueue<L...>::value);
+      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+        //assert(0 <= i);
+        //assert(i < _unqueue<L...>::value);
         return subty(this, i);
     }
 
