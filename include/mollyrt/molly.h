@@ -228,24 +228,8 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 class DebugFunctionScope {
   const char *funcname;
 public:
-  DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
-    if (!__molly_isMaster())
-      return;
-      for (int i = _debugindention; i > 0; i-=1) {
-        std::cerr << "  ";
-      }
-      std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
-    _debugindention += 1;
-  }
-  ~DebugFunctionScope() {
-    if (!__molly_isMaster())
-          return;
-    _debugindention -= 1;
-    for (int i = _debugindention; i > 0; i-=1) {
-      std::cerr << "  ";
-    }
-    std::cerr << "EXIT  " << funcname << std::endl;
-  }
+  DebugFunctionScope(const char *funcname, const char *file, int line);
+  ~DebugFunctionScope();
 };
 #endif
 

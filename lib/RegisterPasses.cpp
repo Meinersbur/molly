@@ -47,7 +47,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 
   llvm::errs() << "Molly: Enabled lvl " << optLevel << "\n";
 
-  PM.add(llvm::createStripSymbolsPass(true));
+  //PM.add(llvm::createStripSymbolsPass(true));
 
   std::string infoDummy;
   auto  OSorig = new raw_fd_ostream("0_orig.ll", infoDummy);

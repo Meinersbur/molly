@@ -133,8 +133,8 @@ macro(mollycc_compile _outfile)
     set(_flags ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${PARM_FLAGS} -mllvm -molly)
   endif ()
   add_custom_command(
-    OUTPUT ${_outfile}
-    COMMAND mollycc ${_flags} ${_realsources} -o ${_outfile} ${PARM_LIBS}
+    OUTPUT "${_outfile}"
+    COMMAND mollycc ${_flags} ${_realsources} -o "${_outfile}" ${PARM_LIBS}
     DEPENDS mollycc ${_realsources} ${PARM_LIBS}
     IMPLICIT_DEPENDS ${_realsources}
     COMMENT "${PARM_COMMENT}")
@@ -154,17 +154,17 @@ macro(mollycc_compile_link _outfile)
   list(LENGTH PARM_SOURCES _sourceslen)
   if (_sourceslen EQUAL 1 AND NOT PARM_AR)
     if (PARM_BC)
-      mollycc_compile(${_outfile} ${_plain}
+      mollycc_compile("${_outfile}" ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -emit-llvm -c ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_LL)
-      mollycc_compile(${_outfile} ${_plain}
+      mollycc_compile("${_outfile}" ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -emit-llvm -S ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
     elseif (PARM_OBJ)
-      mollycc_compile(${_outfile} ${_plain}
+      mollycc_compile("${_outfile}" ${_plain}
         SOURCES ${PARM_SOURCES}
         FLAGS -c ${PARM_FLAGS}
         COMMENT ${PARM_COMMENT})
@@ -185,49 +185,49 @@ macro(mollycc_compile_link _outfile)
   
     set(_intermediates)
     foreach(_src IN LISTS _realsources)
-      get_filename_component(_base ${_src} NAME)
+      get_filename_component(_base "${_src}" NAME)
       if (PARM_LL)
-        set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.ll)
+        set(_intermediatefilename "${CMAKE_CURRENT_BINARY_DIR}/${_base}.ll")
         mollycc_compile(${_intermediatefilename} ${_plain}
           SOURCES ${_src}
           FLAGS -emit-llvm -S ${PARM_FLAGS}
           )
       elseif (PARM_BC OR PARM_OBJ)
-        set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.bc)
+        set(_intermediatefilename "${CMAKE_CURRENT_BINARY_DIR}/${_base}.bc")
         mollycc_compile(${_intermediatefilename} ${_plain}
           SOURCES ${_src}
           FLAGS -emit-llvm -c ${PARM_FLAGS}
           )
       elseif (PARM_AR)
-        set(_intermediatefilename ${CMAKE_CURRENT_BINARY_DIR}/${_base}.o)
-        mollycc_compile(${_intermediatefilename} ${_plain}
+        set(_intermediatefilename "${CMAKE_CURRENT_BINARY_DIR}/${_base}.o")
+        mollycc_compile("${_intermediatefilename}" ${_plain}
           SOURCES ${_src}
           FLAGS -c ${PARM_FLAGS}
           )
       else ()
         message(FATAL_ERROR "Select one linker output")
       endif ()
-      list(APPEND _intermediates ${_intermediatefilename})
+      list(APPEND _intermediates "${_intermediatefilename}")
     endforeach ()
   
     if (PARM_BC)
       add_custom_command(
         OUTPUT ${_outfile}
-        COMMAND llvm-link ${_intermediates} -o ${_outfile}
+        COMMAND llvm-link ${_intermediates} -o "${_outfile}"
         DEPENDS llvm-link ${_intermediates}
         COMMENT ${PARM_COMMENT}
         VERBATIM)
     elseif (PARM_LL)
       add_custom_command(
         OUTPUT ${_outfile}
-        COMMAND llvm-link -S ${_intermediates} -o ${_outfile}
+        COMMAND llvm-link -S ${_intermediates} -o "${_outfile}"
         DEPENDS llvm-link ${_intermediates}
         COMMENT ${PARM_COMMENT}
         VERBATIM)
     elseif (PARM_OBJ)
       add_custom_command(
-        OUTPUT ${_outfile}.bc
-        COMMAND llvm-link -S ${_intermediates} -o ${_outfile}.bc
+        OUTPUT "${_outfile}.bc"
+        COMMAND llvm-link -S ${_intermediates} -o "${_outfile}.bc"
         DEPENDS llvm-link ${_intermediates}
         COMMENT ${PARM_COMMENT}
         VERBATIM)
@@ -239,9 +239,9 @@ macro(mollycc_compile_link _outfile)
     elseif (PARM_AR)
       add_custom_command(
         OUTPUT ${_outfile}
-        COMMAND ${CMAKE_AR} as ${_outfile} ${_intermediates} 
+        COMMAND "${CMAKE_AR}" as "${_outfile}" ${_intermediates} 
         DEPENDS ${_intermediates}
-        COMMENT ${PARM_COMMENT}
+        COMMENT "${PARM_COMMENT}"
         VERBATIM)
     else ()
         message(FATAL_ERROR "Select one linker output")

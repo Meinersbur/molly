@@ -857,10 +857,33 @@ extern "C" uint64_t __molly_cluster_myrank() {
  }
  return result;
 }
-
-
+ 
+ 
 extern "C" bool __molly_isMaster() {
 return communicator->isMaster();
 }
 
 #pragma endregion
+ 
+
+
+DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
+  if (!__molly_isMaster())
+    return;
+  for (int i = _debugindention; i > 0; i-=1) {
+    std::cerr << "  ";
+  }
+  std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
+  _debugindention += 1;
+}
+
+DebugFunctionScope::~DebugFunctionScope() {
+  if (!__molly_isMaster())
+    return;
+  _debugindention -= 1;
+  for (int i = _debugindention; i > 0; i-=1) {
+    std::cerr << "  ";
+  }
+  std::cerr << "EXIT  " << funcname << std::endl;
+}
+
