@@ -247,6 +247,7 @@ namespace {
   public:
     static char ID;
     MollyPassManagerImpl() : ModulePass(ID), moduleCtx(nullptr) {
+      this->combuftagcounter = 0;
       //alwaysPreserve.insert(&polly::PollyContextPassID);
       //alwaysPreserve.insert(&molly::MollyContextPassID);
       //alwaysPreserve.insert(&polly::ScopInfo::ID);
@@ -1033,6 +1034,7 @@ namespace {
 #pragma region Communication buffers
   private:
     std::vector<CommunicationBuffer *> combufs;
+    uint64_t combuftagcounter;
 
   public :
     CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
@@ -1044,8 +1046,9 @@ namespace {
       //auto comvarRecv = new GlobalVariable(*module, runtimeMetadata.tyCombufRecv, false, GlobalValue::PrivateLinkage, nullptr, "combufrecv");
       auto comvarRecv = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(voidPtrTy), "combufrecv");
 
-      auto result = CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy());
+      auto result = CommunicationBuffer::create(comvarSend, comvarRecv, fty, relation.copy(), combuftagcounter);
       combufs.push_back(result);
+      combuftagcounter+=1;
       return result;
     }
 

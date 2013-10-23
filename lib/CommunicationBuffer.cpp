@@ -192,7 +192,8 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
       sendCodegen.createArrayStore( sendStmtCtx->getDomainValue(i), coords, i );
     }
 
-    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, nClusterDimsVal, coords, sendSize);
+    auto tagVal = ConstantInt::get(intTy, tag);
+    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, nClusterDimsVal, coords, sendSize, tagVal);
   }
 
 
@@ -221,7 +222,9 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
     for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
       recvCodegen.createArrayStore( recvStmtCtx->getDomainValue(i), coords, i );
     }
-    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvDstRank, nClusterDimsVal, coords, recvSize);
+
+    auto tagVal = ConstantInt::get(intTy, tag);
+    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvDstRank, nClusterDimsVal, coords, recvSize, tagVal);
   }
 
   // Now we constructed a SCoP, so tell Polly to generate the code for it...

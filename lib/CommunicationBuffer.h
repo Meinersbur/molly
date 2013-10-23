@@ -20,6 +20,7 @@ namespace molly {
   class CommunicationBuffer {
   private:
     FieldType *fty;
+    uint64_t tag; // Unique identifier per communication-event
 
     /// { chunk[domain] -> (src[cluster], dst[cluster], field[indexset]) }
     isl::Map relation;
@@ -50,13 +51,14 @@ namespace molly {
 
 
   public:
-    static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv, FieldType *fty, isl::Map relation) {
+    static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv, FieldType *fty, isl::Map relation, uint64_t tag) {
       auto result = new CommunicationBuffer();
       result->varsend = varsend;
       result->varrecv = varrecv;
       //result->baseOffset = baseOffset;
       result->fty = fty;
       result->relation = std::move(relation);
+      result->tag = tag;
       return result;
     }
 

@@ -35,10 +35,10 @@ namespace molly {
 
   protected:
     isl::Ctx *getIslContext();
-   
+
     llvm::Value *getValueOf(const llvm::SCEV *scev);
     llvm::Value *getValueOf(Value *val) { return val; }
-   void fillIdToValueMap();
+    void fillIdToValueMap();
 
     llvm::Module *getModule();
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
@@ -48,7 +48,7 @@ namespace molly {
     llvm::Value *allocStackSpace(llvm::Type *ty);
 
   protected:
-     Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
+    Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
 
   public:
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
@@ -66,8 +66,8 @@ namespace molly {
     llvm::CallInst *callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize);
     llvm::CallInst *callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize);
 
-    llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts);
-    llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *nClusterDims, llvm::Value *srcCoords, llvm::Value *countElts);
+    llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts, llvm::Value *tag);
+    llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *nClusterDims, llvm::Value *srcCoords, llvm::Value *countElts, llvm::Value *tag);
 
     llvm::CallInst *callRuntimeCombufSendPtr(llvm::Value *combufSend, llvm::Value *dstRank);
     llvm::CallInst *callRuntimeCombufRecvPtr(llvm::Value *combufRecv, llvm::Value *srcRank);
@@ -117,7 +117,7 @@ namespace molly {
 
     explicit MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx);
     MollyCodeGenerator(MollyScopStmtProcessor *stmtCtx, llvm::Instruction *insertBefore);
-  
+
 
     DefaultIRBuilder &getIRBuilder() { return irBuilder; }
     StmtEditor getStmtEditor();
@@ -140,9 +140,9 @@ namespace molly {
 
     void updateScalar(llvm::Value *ptr, llvm::Value *val);
 
-     void addScalarStoreAccess(llvm::Value *base, llvm::Instruction *instr);
+    void addScalarStoreAccess(llvm::Value *base, llvm::Instruction *instr);
     void addStoreAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
-     void addScalarLoadAccess(llvm::Value *base, llvm::Instruction *instr);
+    void addScalarLoadAccess(llvm::Value *base, llvm::Instruction *instr);
     void addLoadAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr);
 
     //llvm::Value *codegenLinearize(const isl::MultiPwAff &coord, const molly::AffineMapping *layout);
@@ -170,13 +170,13 @@ namespace molly {
       addScalarStoreAccess(ptr, result);
       return result;
     }
-     llvm::StoreInst *createArrayStore( llvm::Value *val, llvm::Value *baseptr, llvm::Value *idxVal, isl::PwAff idxAff) {
+    llvm::StoreInst *createArrayStore( llvm::Value *val, llvm::Value *baseptr, llvm::Value *idxVal, isl::PwAff idxAff) {
       auto ptr = irBuilder.CreateGEP(baseptr, idxVal);
       auto result = irBuilder.CreateStore(val, ptr);
       addStoreAccess(baseptr, idxAff.toMap(), result);
       return result;
-     }
-     llvm::StoreInst *createArrayStore( llvm::Value *val, llvm::Value *baseptr, int idx);
+    }
+    llvm::StoreInst *createArrayStore(llvm::Value *val, llvm::Value *baseptr, int idx);
 
   }; // class MollyCodeGenerator
 

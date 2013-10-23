@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <mpi.h> 
 #include <assert.h>
+#include <vector>
  
 using namespace molly;
 
@@ -302,6 +303,11 @@ public:
 namespace {
 
   class MPICommunicator {
+    friend class MPISendCommunication;
+    friend class MPISendCommunicationBuffer;
+    friend class MPIRecvCommunication;
+    friend class MPIRecvCommunicationBuffer;
+
     // From init
     bool initialized;
     int nClusterDims;
@@ -334,6 +340,21 @@ namespace {
       MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
     }
 
+    int getMPICommRank(uint64_t nClusterDims, uint64_t *coords) {
+      assert(this->nClusterDims == nClusterDims);
+
+      //TODO: This is a waste; avoid using alloca? Use int right away?
+      std::vector<int> intCoords;
+      intCoords.resize(nClusterDims);
+      for (auto i=nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+        intCoords[i] = coords[i];
+      }
+
+      int rank;
+      auto coordsData = intCoords.data();
+      PMPI_Cart_rank(_cart_comm, coordsData, &rank);
+      return rank;
+    }
 
   public:
     MPICommunicator() : initialized(false) {}
@@ -422,6 +443,7 @@ namespace {
     bool isMaster() {
       return _world_self==0;
     }
+
   }; // class MPICommunicator
 
 } // namespace
@@ -441,23 +463,44 @@ namespace {
     size_t elts;
     size_t eltSize;
     uint64_t dst;
+    uint64_t tag;
 
     void *buf;
+    MPI_Request request;
+
+#ifndef NDEBUG
+    std::vector<int> dstCoords;
+#endif
 
   public:
-    ~MPISendCommunicationBuffer() {
-      free(buf);
+    ~MPISendCommunicationBuffer() { MOLLY_DEBUG_FUNCTION_SCOPE
+      if (buf) {
+        MPI_CHECK(MPI_Request_free(&request));
+        free(buf); 
+        buf = nullptr;
+      }
     }
 
-    MPISendCommunicationBuffer() : parent(nullptr) {
+    MPISendCommunicationBuffer() : parent(nullptr), buf(nullptr) { 
     }
 
-    void init(MPISendCommunication *parent, size_t elts, size_t eltSize, uint64_t dst) {
+    void init(MPISendCommunication *parent, size_t elts, size_t eltSize, uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
       this->parent=parent;
-    this->elts=elts;
-    this->eltSize=eltSize;
-    this->dst = dst;
+      this->elts=elts;
+      this->eltSize=eltSize;
+      this->dst = dst;
+      this->tag = tag;
       this->buf = malloc(elts * eltSize);
+
+#ifndef NDEBUG
+      this->dstCoords.resize(nClusterDims);
+      for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+        this->dstCoords[i] = dstCoords[i];
+      }
+#endif
+
+      auto dstMpiRank = communicator->getMPICommRank(nClusterDims, dstCoords);
+    MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
     }
 
     void *getDataPtr() {
@@ -465,12 +508,19 @@ namespace {
       return buf;
     }
 
-    void send() {
-      assert(false);
+    void send() { MOLLY_DEBUG_FUNCTION_SCOPE
+      MPI_CHECK(MPI_Start(&request));
     }
 
-    void wait() {
-      assert(false);
+    void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+      MPI_Status status;
+      MPI_CHECK(MPI_Wait(&request, &status));
+
+#ifndef NDEBUG
+      int count = -1;
+      MPI_Get_count(&status, MPI_BYTE, &count);
+       assert(count > 0 && "Nothing received");
+#endif
     }
 
   }; // class MPISendCommunicationBuffer
@@ -493,23 +543,25 @@ public:
     delete[] dstBufs;
   }
 
-  MPISendCommunication(uint64_t dstCount, uint64_t eltSize) : dstCount(dstCount), eltSize(eltSize) {
+  MPISendCommunication(uint64_t dstCount, uint64_t eltSize) : dstCount(dstCount), eltSize(eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
+    // FIXME: Currently nodes are indexed at a global scale, not in the range [0..dstCount)
+    dstCount = communicator->_world_ranks; 
     dstBufs = new MPISendCommunicationBuffer[dstCount];
   }
 
-  void initDst(uint64_t dst, uint64_t count) {
-    getBuffer(dst)->init(this, count, eltSize, dst);
+  void initDst(uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
+    getBuffer(dst)->init(this, count, eltSize, dst, nClusterDims, dstCoords, tag);
   }
 
-  void *getDataPtr(uint64_t dst) {
+  void *getDataPtr(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
     return getBuffer(dst)->getDataPtr();
   }
 
-  void send(uint64_t dst) {
+  void send(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
     return getBuffer(dst)->send();
   }
 
-  void wait(uint64_t dst) {
+  void wait(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
     return getBuffer(dst)->wait();
   }
 
@@ -528,36 +580,67 @@ namespace {
     size_t elts;
     size_t eltSize;
     uint64_t src;
+    uint64_t tag;
 
     void *buf;
+        MPI_Request request;
+
+#ifndef NDEBUG
+        std::vector<int> srcCoords;
+#endif
 
   public:
     ~MPIRecvCommunicationBuffer() {
+      if (buf) {
+       MPI_CHECK( MPI_Request_free(&request));
       free(buf);
+      buf = nullptr;
+      }
     }
 
-    MPIRecvCommunicationBuffer() : parent(nullptr) {
+    MPIRecvCommunicationBuffer() : parent(nullptr), buf(nullptr) {
     }
 
-    void init(MPIRecvCommunication *parent, size_t elts, size_t eltSize, uint64_t src) {
+    void init(MPIRecvCommunication *parent, size_t elts, size_t eltSize, uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
       this->parent=parent;
-      this->elts=elts;
-      this->eltSize=eltSize;
-      this->src = src;
-      this->buf = malloc(elts * eltSize);
+    this->elts=elts;
+    this->eltSize=eltSize;
+    this->src = src;
+    this->tag = tag;
+    this->buf = malloc(elts * eltSize);
+
+#ifndef NDEBUG
+    this->srcCoords.resize(nClusterDims);
+    for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+      this->srcCoords[i] = srcCoords[i];
+    }
+#endif
+
+    auto dstMpiRank = communicator->getMPICommRank(nClusterDims, srcCoords);
+    MPI_CHECK(MPI_Recv_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rrecv_init ???
+    
+    // Get to ready state immediately
+    MPI_CHECK(MPI_Start(&request));
     }
 
-    void *getDataPtr() {
+    void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(buf);
       return buf;
     }
 
-    void recv() {
-      assert(false);
+    void recv() { MOLLY_DEBUG_FUNCTION_SCOPE
+       MPI_CHECK(MPI_Start(&request));
     }
 
-    void wait() {
-      assert(false);
+    void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+      MPI_Status status;
+      MPI_CHECK(MPI_Wait(&request, &status));
+
+#ifndef NDEBUG
+      int count = -1;
+      MPI_Get_count(&status, MPI_BYTE, &count);
+      assert(count > 0 && "Nothing received");
+#endif
     }
 
   }; // class MPISendCommunicationBuffer
@@ -569,34 +652,36 @@ namespace {
     MPIRecvCommunicationBuffer *srcBufs;
 
   protected:
-    MPIRecvCommunicationBuffer *getBuffer(uint64_t src) {
+    MPIRecvCommunicationBuffer *getBuffer(uint64_t src) { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(src < srcCount);
       assert(srcBufs);
       return &srcBufs[src];
     }
 
   public:
-    ~MPIRecvCommunication() {
+    ~MPIRecvCommunication() { MOLLY_DEBUG_FUNCTION_SCOPE
       delete[] srcBufs;
     }
 
-    MPIRecvCommunication(uint64_t srcCount, uint64_t eltSize) : srcCount(srcCount), eltSize(eltSize) {
+    MPIRecvCommunication(uint64_t srcCount, uint64_t eltSize) : srcCount(srcCount), eltSize(eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
+      // FIXME: Currently nodes are indexed at a global scale, not in the range [0..srcCount)
+      srcCount = communicator->_world_ranks;
       srcBufs = new MPIRecvCommunicationBuffer[srcCount];
     }
 
-    void initSrc(uint64_t src, uint64_t count) {
-      getBuffer(src)->init(this, count, eltSize, src);
+    void initSrc(uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
+      getBuffer(src)->init(this, count, eltSize, src, nClusterDims, srcCoords, tag);
     }
 
-    void *getDataPtr(uint64_t dst) {
+    void *getDataPtr(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
       return getBuffer(dst)->getDataPtr();
     }
 
-    void recv(uint64_t src) {
+    void recv(uint64_t src) { MOLLY_DEBUG_FUNCTION_SCOPE
       return getBuffer(src)->recv();
     }
 
-    void wait(uint64_t dst) {
+    void wait(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
       return getBuffer(dst)->wait();
     }
 
@@ -620,8 +705,7 @@ extern "C" void __molly_generated_release();
 #pragma region Molly generates calls to these
 
 /// Molly makes the runtime call this instead of the application's main function
-extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClusterDims, uint64_t *clusterShape, bool *clusterPeriodic) {
-  MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClusterDims, uint64_t *clusterShape, bool *clusterPeriodic) { MOLLY_DEBUG_FUNCTION_SCOPE
     assert(&__molly_orig_main && "Must be compiled using mollycc");
 
   //TODO: We could change the communicator dynamically using argc,argv or getenv()
@@ -655,7 +739,7 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
 /// When molly requests what the coordinate of the node this executes is
 /// Intrinsic: int_molly_cluster_current_coordinate (deprecated)
 /// Intrinsic: int_molly_cluster_pos
-extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) {
+extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) { MOLLY_DEBUG_FUNCTION_SCOPE
   return communicator->getSelfCoordinate(d);
 }
 
@@ -666,7 +750,7 @@ extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) {
 
 /// Initialize the local part of a field
 /// The field's array object is used for this
-extern "C" void __molly_local_init(void *localbuf, uint64_t count) {
+extern "C" void __molly_local_init(void *localbuf, uint64_t count) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(localbuf);
   assert(count > 0);
   auto ls = static_cast<LocalStore*>(localbuf); // i.e. LocalStore MUST be first base class
@@ -674,12 +758,12 @@ extern "C" void __molly_local_init(void *localbuf, uint64_t count) {
 }
 
 
-extern "C" void __molly_local_free(void *localbuf) {
+extern "C" void __molly_local_free(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
   // Resources freed in destructor
 }
 
 
-extern "C" void *__molly_local_ptr(void *localbuf) {
+extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
    assert(localbuf);
    auto ls = static_cast<LocalStore*>(localbuf);
    return ls->getDataPtr();
@@ -690,32 +774,32 @@ extern "C" void *__molly_local_ptr(void *localbuf) {
 
 #pragma region Communication buffer to send data
 
-extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize) {
+extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
   return new MPISendCommunication(dstCount, eltSize);
 }
 
 
-extern "C" void __molly_combuf_send_dst_init(MPISendCommunication *sendbuf, uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t count) {
-  sendbuf->initDst(dst, count);
+extern "C" void __molly_combuf_send_dst_init(MPISendCommunication *sendbuf, uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
+  sendbuf->initDst(dst, nClusterDims, dstCoords, count, tag); 
 }
 
 
-extern "C" void *__molly_combuf_send_free(MPISendCommunication *sendbuf) {
+extern "C" void *__molly_combuf_send_free(MPISendCommunication *sendbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
   delete sendbuf;
 }
 
 
-extern "C" void *__molly_combuf_send_ptr(MPISendCommunication *sendbuf, uint64_t dst) {
+extern "C" void *__molly_combuf_send_ptr(MPISendCommunication *sendbuf, uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
  return sendbuf->getDataPtr(dst);
 }
 
 
-extern "C" void __molly_combuf_send(MPISendCommunication *sendbuf, uint64_t dst) {
+extern "C" void __molly_combuf_send(MPISendCommunication *sendbuf, uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
   sendbuf->send(dst);
 }
 
 
-extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t dst) {
+extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
   sendbuf->wait(dst);
 }
 
@@ -726,17 +810,17 @@ extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t
 
 #pragma region Communication buffer to recv data
 
-extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize) {
+extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 
 
-extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t count) {
-  recvbuf->initSrc(src, count);
+extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
+  recvbuf->initSrc(src, nClusterDims, srcCoords, count, tag);
 }
 
 
-extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) {
+extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) { MOLLY_DEBUG_FUNCTION_SCOPE
   recvbuf->recv(src);
 }
 
@@ -746,13 +830,13 @@ extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src)
 #pragma region Load and store of single values
 
 /// Intrinsic: molly.value.load
-extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) {
+extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 
 
 /// Intrinsic: molly.value.store
-extern "C" void __molly_value_store(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) {
+extern "C" void __molly_value_store(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 
