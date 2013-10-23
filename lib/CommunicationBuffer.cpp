@@ -113,6 +113,8 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto &builder = codegen.getIRBuilder();
   auto clusterConf = pm->getClusterConfig();
   auto islctx = getIslContext();
+  //auto intTy = Type::getInt64Ty(llvmContext);
+  auto nClusterDims = clusterConf->getClusterDims();
 
   auto eltTy = fty->getEltType();
   auto eltSize = eltSizeQuery->getTypeAllocSize(eltTy);
@@ -135,7 +137,9 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
   auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal);
   builder.CreateStore(recvobj, getVariableRecv());
-
+  
+  auto coords = builder.CreateAlloca(intTy, ConstantInt::get(intTy, nClusterDims), "coords");
+  auto nClusterDimsVal = ConstantInt::get(intTy, nClusterDims);
 
   auto scopEd = ScopEditor::newScop(islctx, builder.GetInsertPoint(), pass);
   auto scop = scopEd.getScop();
@@ -178,11 +182,17 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
     //sendCodegen.addScalarLoadAccess()
     //auto combufSend = sendCodegen.materialize();
     auto sendDstAff = sendStmtEd.getCurrentIteration(); /* { [domain] -> dstNode[cluster] } */
-    auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff);
-
+    auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff); //TODO: this is a global rank, but we actually need one indexed from (0..maxdst]
     auto sendWhat = rangeProduct(sendSrcAff.castRange(srcRankSpace), sendDstAff.castRange(dstRankSpace));
     auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks
-    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, sendSize);
+
+    // Write the dst node coordinates to the stack such that MollyRT knows who is the target node
+    // sendDstRank just provides a meaningless number
+    for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+      sendCodegen.createArrayStore( sendStmtCtx->getDomainValue(i), coords, i );
+    }
+
+    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, nClusterDimsVal, coords, sendSize);
   }
 
 
@@ -207,7 +217,11 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
 
     auto recvWhat = rangeProduct(recvSrcAff.castRange(dstRankSpace), recvSrcAff.castRange(srcRankSpace));
     auto recvSize = mapping->codegenMaxSize(recvCodegen, recvWhat); // Max over all chunks
-    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvDstRank, recvSize);
+    
+    for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+      recvCodegen.createArrayStore( recvStmtCtx->getDomainValue(i), coords, i );
+    }
+    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvDstRank, nClusterDimsVal, coords, recvSize);
   }
 
   // Now we constructed a SCoP, so tell Polly to generate the code for it...

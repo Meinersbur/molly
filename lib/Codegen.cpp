@@ -347,29 +347,31 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
  }
 
 
- llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *countElts) {
+ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst,  llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts) {
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+   auto intPtrTy = Type::getInt64PtrTy(llvmContext);
 
-   Type *tys[] = { voidPtrTy, intTy, intTy };
+   Type *tys[] = { voidPtrTy, intTy, intTy, intPtrTy, intTy };
    auto funcDecl  = getRuntimeFunc("__molly_combuf_send_dst_init", voidTy, tys);
 
    //auto combufVal = irBuilder.CreatePointerCast(combufSend, voidPtrTy);
-   return irBuilder.CreateCall3(funcDecl, combufSend, dst, countElts);
+   return irBuilder.CreateCall5(funcDecl, combufSend, dst, nClusterDims, dstCoords, countElts);
  }
 
 
- llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *countElts) {
+ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *nClusterDims, llvm::Value *srcCoords, llvm::Value *countElts) {
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+   auto intPtrTy = Type::getInt64PtrTy(llvmContext);
 
-   Type *tys[] = {voidPtrTy,intTy, intTy};
+   Type *tys[] = { voidPtrTy, intTy, intTy, intPtrTy, intTy };
    auto funcDecl  = getRuntimeFunc("__molly_combuf_recv_src_init", voidTy, tys);
-   return irBuilder.CreateCall3(funcDecl, combufSend, src, countElts);
+   return irBuilder.CreateCall5(funcDecl, combufSend, src, nClusterDims, srcCoords, countElts);
  }
 
 
@@ -766,3 +768,15 @@ isl::Ctx *molly::MollyCodeGenerator::getIslContext() {
   return stmtCtx->getIslContext();
 }
 
+
+llvm::StoreInst * molly::MollyCodeGenerator::createArrayStore( llvm::Value *val, llvm::Value *baseptr, int idx )
+{
+  auto &llvmContext = getLLVMContext();
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto islctx = getIslContext();
+
+  auto domainSpace = stmtCtx->getDomainMultiAff().getRangeSpace();
+  auto idxval = ConstantInt::get(intTy, idx);
+  auto idxaff = domainSpace.createConstantAff(idx);
+  return createArrayStore(val, baseptr, idxval, idxaff);
+}

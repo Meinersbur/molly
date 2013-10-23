@@ -695,7 +695,7 @@ extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize) 
 }
 
 
-extern "C" void __molly_combuf_send_dst_init(MPISendCommunication *sendbuf, uint64_t dst, uint64_t count) {
+extern "C" void __molly_combuf_send_dst_init(MPISendCommunication *sendbuf, uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t count) {
   sendbuf->initDst(dst, count);
 }
 
@@ -730,6 +730,12 @@ extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize) 
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 
+
+extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t count) {
+  recvbuf->initSrc(src, count);
+}
+
+
 extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) {
   recvbuf->recv(src);
 }
@@ -742,11 +748,6 @@ extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src)
 /// Intrinsic: molly.value.load
 extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) {
   assert(!"to implement");
-}
-
-
-extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint64_t src, uint64_t count) {
-  recvbuf->initSrc(src, count);
 }
 
 

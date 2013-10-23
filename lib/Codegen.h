@@ -66,8 +66,8 @@ namespace molly {
     llvm::CallInst *callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize);
     llvm::CallInst *callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize);
 
-    llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *countElts);
-    llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *countElts);
+    llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts);
+    llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *nClusterDims, llvm::Value *srcCoords, llvm::Value *countElts);
 
     llvm::CallInst *callRuntimeCombufSendPtr(llvm::Value *combufSend, llvm::Value *dstRank);
     llvm::CallInst *callRuntimeCombufRecvPtr(llvm::Value *combufRecv, llvm::Value *srcRank);
@@ -165,11 +165,18 @@ namespace molly {
       return result;
     }
 
-    llvm::StoreInst *createStore( llvm::Value *val, llvm::Value *ptr) {
+    llvm::StoreInst *createScalarStore( llvm::Value *val, llvm::Value *ptr) {
       auto result = irBuilder.CreateStore(val, ptr);
       addScalarStoreAccess(ptr, result);
       return result;
     }
+     llvm::StoreInst *createArrayStore( llvm::Value *val, llvm::Value *baseptr, llvm::Value *idxVal, isl::PwAff idxAff) {
+      auto ptr = irBuilder.CreateGEP(baseptr, idxVal);
+      auto result = irBuilder.CreateStore(val, ptr);
+      addStoreAccess(baseptr, idxAff.toMap(), result);
+      return result;
+     }
+     llvm::StoreInst *createArrayStore( llvm::Value *val, llvm::Value *baseptr, int idx);
 
   }; // class MollyCodeGenerator
 
