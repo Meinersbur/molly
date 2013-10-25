@@ -134,8 +134,16 @@ static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &B
 }
 
 
+static void registerMollyLastPasses(const llvm::PassManagerBuilder &Builder, llvm::PassManagerBase &PM) {
+  std::string infoDummy;
+  auto OSlast = new raw_fd_ostream("6_last.ll", infoDummy);
+  PM.add(llvm::createPrintModulePass(OSlast, false, "Last\n\n"));
+}
+
+
 static llvm::RegisterStandardPasses OptPassRegister(llvm::PassManagerBuilder::EP_ModuleOptimizerEarly, registerMollyEarlyAsPossiblePasses);
 static llvm::RegisterStandardPasses NoOptPassRegister(llvm::PassManagerBuilder::EP_EnabledOnOptLevel0, registerMollyNoOptPasses);
+static llvm::RegisterStandardPasses LastPassRegister(llvm::PassManagerBuilder::EP_OptimizerLast, registerMollyLastPasses);
 
 namespace molly {
   void forceLinkPassRegistration() {

@@ -662,7 +662,8 @@ extern "C" uint64_t __molly_cluster_myrank();
 #pragma region LocalStore
   class LocalStore {
   public:
-    virtual ~LocalStore() {}
+    LocalStore() { MOLLY_DEBUG_FUNCTION_SCOPE }
+    virtual ~LocalStore() { MOLLY_DEBUG_FUNCTION_SCOPE }
 
     virtual void init(uint64_t countElts) = 0;
     virtual void release() = 0;
@@ -689,26 +690,26 @@ extern "C" uint64_t __molly_cluster_myrank();
     size_t localelts;
     T *localdata;
 
-    void init(uint64_t countElts) LLVM_OVERRIDE {
+    void init(uint64_t countElts) LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
       assert(!localdata && "No double-initialization");
       localdata = new T[countElts];
       localelts = countElts;
     }
 
-    void release() LLVM_OVERRIDE {
+    void release() LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
       delete localdata;
       localdata = nullptr;
     }
 
-    void *getDataPtr() const LLVM_OVERRIDE {
+    void *getDataPtr() const LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
       return localdata;
     }
 
-    size_t getElementSize() const LLVM_OVERRIDE {
+    size_t getElementSize() const LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
       return sizeof(T);
     }
 
-    uint64_t getCountElements() const LLVM_OVERRIDE {
+    uint64_t getCountElements() const LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
       return localelts;
     }
 #pragma endregion
@@ -1003,6 +1004,14 @@ extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf
 //extern "C" LLVM_ATTRIBUTE_USED void __molly_combuf_send(void *combuf, uint64_t dstRank);
 //extern "C" LLVM_ATTRIBUTE_USED void __molly_combuf_recv(void *combuf, uint64_t srcRank);
 extern "C" int __molly_local_coord(int i);
+
+extern "C" LLVM_ATTRIBUTE_USED uint64_t __molly_cluster_current_coordinate(uint64_t d);
+
+#ifndef __MOLLYRT
+void __call() {
+  __molly_cluster_current_coordinate(0);
+}
+#endif
 
 #ifndef __MOLLYRT
 template<typename T, uint64_t... L>

@@ -240,21 +240,22 @@ Function *MollyCodeGenerator::getRuntimeFunc(llvm::StringRef name, llvm::Type *r
   auto module = getModuleOf( irBuilder);
   auto &llvmContext = module->getContext();
 
-  auto initFunc = module->getFunction(name);
-  if (!initFunc) {
-    auto intTy = Type::getInt64Ty(llvmContext);
-    auto initFuncTy = FunctionType::get(retTy, tys, false);
-    initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
-  }
+   auto funcTy = FunctionType::get(retTy, tys, false);
+  auto func = cast<Function> (module->getOrInsertFunction(name, funcTy));
+  //auto initFunc = module->getFunction(name);
+  //if (!initFunc) {
+   // auto initFuncTy = FunctionType::get(retTy, tys, false);
+  //  initFunc = Function::Create(initFuncTy, GlobalValue::ExternalLinkage, name, module);
+ // }
 
   // Check if the function matches
-  assert(initFunc->getReturnType() == retTy);
-  assert(initFunc->getFunctionType()->getNumParams() == tys.size());
+  assert(func->getReturnType() == retTy);
+  assert(func->getFunctionType()->getNumParams() == tys.size());
   auto nParams = tys.size();
   for (auto i = nParams-nParams; i<nParams; i+=1) {
-    assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
+    assert(func->getFunctionType()->getParamType(i) == tys[i]);
   }
-  return initFunc;
+  return func;
 }
 
 

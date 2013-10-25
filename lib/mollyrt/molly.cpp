@@ -740,6 +740,9 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
 /// Intrinsic: int_molly_cluster_current_coordinate (deprecated)
 /// Intrinsic: int_molly_cluster_pos
 extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) { MOLLY_DEBUG_FUNCTION_SCOPE
+  if (!communicator)
+    return 0; // Before initialization
+
   return communicator->getSelfCoordinate(d);
 }
 
@@ -860,7 +863,11 @@ extern "C" uint64_t __molly_cluster_myrank() {
  
  
 extern "C" bool __molly_isMaster() {
-return communicator->isMaster();
+  // Before real initialization, any rank must assume they are master otherwise we get no output at all
+  if (!communicator)
+    return true;
+
+  return communicator->isMaster();
 }
 
 #pragma endregion
