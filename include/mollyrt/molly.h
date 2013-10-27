@@ -225,6 +225,7 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 #endif
 
 #ifndef NDEBUG
+
 class DebugFunctionScope {
   const char *funcname;
 public:
@@ -1007,11 +1008,6 @@ extern "C" int __molly_local_coord(int i);
 
 extern "C" LLVM_ATTRIBUTE_USED uint64_t __molly_cluster_current_coordinate(uint64_t d);
 
-#ifndef __MOLLYRT
-void __call() {
-  __molly_cluster_current_coordinate(0);
-}
-#endif
 
 #ifndef __MOLLYRT
 template<typename T, uint64_t... L>

@@ -5,15 +5,17 @@ namespace llvm {
 }
 
 namespace molly {
-	void forceLinkPassRegistration();
+  void forceLinkPassRegistration();
 }
 
 namespace {
   struct MollyStaticInitializer {
-	MollyStaticInitializer() {
-		molly::forceLinkPassRegistration();
-	}
-  } MollyStaticInitializer;
-}
 
-#endif
+    MollyStaticInitializer() {
+      molly::forceLinkPassRegistration();
+    }
+
+  } MollyStaticInitializer; // MollyStaticInitializer
+} // namespace
+
+#endif /* MOLLY_REGISTER_PASSES_H */

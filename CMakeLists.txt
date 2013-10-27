@@ -1,9 +1,9 @@
 
-set(MOLLY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(MOLLY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(MOLLY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(MOLLY_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-set(POLLY_SOURCE_DIR ${MOLLY_SOURCE_DIR}/../polly CACHE PATH "Path to Polly source") #TODO: Make Polly dir configurable or make molly a subproject
-set(POLLY_BINARY_DIR ${LLVM_BINARY_DIR}/tools/polly) #TODO: Make Polly dir configurable
+set(POLLY_SOURCE_DIR "${MOLLY_SOURCE_DIR}/../polly" CACHE PATH "Path to Polly source") #TODO: Make Polly dir configurable or make molly a subproject
+set(POLLY_BINARY_DIR "${LLVM_BINARY_DIR}/tools/polly") #TODO: Make Polly dir configurable
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MOLLY_SOURCE_DIR}/cmake" "${POLLY_SOURCE_DIR}/cmake")
@@ -80,17 +80,6 @@ endmacro(add_molly_executable)
 
 
 
-macro(clang_compile _outfile)
-  parse_arguments(PARM "FLAGS;DEPS;SOURCES;COMMENT" "" ${ARGN})
-  if (NOT PARM_COMMENT)
-    set(PARM_COMMENT "Generating ${_outfile} using Clang...")
-  endif ()
-  add_custom_command(
-    OUTPUT ${_outfile}
-    COMMAND clang ${PARM_FLAGS} ${PARM_SOURCES} -o ${_outfile} 
-    DEPENDS clang ${PARM_SOURCES}
-    COMMENT "${PARM_COMMENT}")
-endmacro()
 
 
 option(MOLLYCC_DEBUG "Compile Debug version of MollyRT (and anything compiled with mollycc)" ON)
@@ -104,18 +93,228 @@ message("MollyRT Release build")
   set(MOLLYCC_DEBUG_FLAGS -O3 -g0 -DNDEBUG)
 endif ()
 
-#set(MOLLYCC_COMMON_FLAGS -std=c++11 -fms-extensions -fno-exceptions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt)
-set(MOLLYCC_COMMON_FLAGS -std=c++11 -fno-exceptions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt)
+set(MOLLYRT_COMMON_FLAGS -target "i686-pc-mingw32" -std=c++11 -fno-exceptions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt)
+set(MOLLYCC_COMMON_FLAGS -target "i686-pc-mingw32" -std=c++11 -fno-exceptions -D__mollycc__ -I${MOLLY_SOURCE_DIR}/include/mollyrt -mllvm -molly -mllvm -polly-report)
+
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
   list(APPEND MOLLYCC_COMMON_FLAGS "-I${_include}")
+  list(APPEND MOLLYRT_COMMON_FLAGS "-I${_include}")
 endforeach()
-set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
+set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly)
+#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
 #set(MOLLYCC_VERBOSE_FLAGS -v -w -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
 #set(MOLLYCC_VERBOSE_FLAGS)
 set(MOLLYCC_PLATFORM_FLAGS -target "i686-pc-mingw32")
 #set(MOLLYCC_PLATFORM_FLAGS -target "i686-pc-win32" -fno-exceptions)
 
+
+
+
+
+
+# Used to compile MollyRT
+# Needs to be clang in order to match the ABI
+function (clang_compile _outfile)
+message("   clang_compile(${_outfile}, ${ARGN})")
+  cmake_parse_arguments("" "OBJ;LL;BC;ASM;II;EXE" "COMPILER" "COMMENT;SOURCES;FLAGS;LIBS" ${ARGN})
+  get_filename_component(_outfile "${_outfile}" ABSOLUTE)
+
+  if (NOT _COMPILER)
+    set(_COMPILER "clang")
+    #set(_COMPILER "mollycc")
+  endif ()
+  
+  if (NOT _COMMENT)
+    set(_COMMENT "Compiling ${_outfile} using ${_COMPILER}...")
+  endif ()
+  
+  # Make paths absolute
+  set(_realsources)
+  foreach (_rel IN LISTS _SOURCES)
+    get_filename_component(_real "${_rel}" REALPATH)
+    list(APPEND _realsources "${_real}")
+  endforeach ()
+
+  if (_OBJ)
+    set(_kindflags "-c")
+  elseif (_LL)
+    set(_kindflags "-S -emit-llvm")
+  elseif (_BC)
+    set(_kindflags "-c -emit-llvm")
+  elseif (_ASM)
+    set(_kindflags "-S")
+  elseif (_II)
+    set(_kindflags "-E")
+  else () # EXE
+    set(_kindflags)
+  endif ()
+  
+#message("add_custom_command(${_outfile}, ${_COMPILER} ${MOLLYCC_VERBOSE_FLAGS} -o ${_outfile} ${_kindflags} ${_realsources} ${_FLAGS} ${_LIBS})")
+  add_custom_command(
+    OUTPUT "${_outfile}"
+    COMMAND "${_COMPILER}" ${MOLLYCC_VERBOSE_FLAGS} -o "${_outfile}" ${_kindflags} ${_realsources} ${_FLAGS} ${_LIBS}
+    DEPENDS "${_COMPILER}" ${_realsources} ${_LIBS}
+    IMPLICIT_DEPENDS ${_realsources}
+    COMMENT "${_COMMENT}"
+  )
+endfunction ()
+
+
+function (clang_compile_link _outfile)
+message("   clang_compile_link(${_outfile}, ${ARGN})")
+  cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;LDFLAGS;SOURCES;COMMENT;LIBS" ${ARGN})
+  get_filename_component(_outfile "${_outfile}" ABSOLUTE)
+  
+  if (NOT _COMPILER)
+    set(_COMPILER "clang")
+    #set(_COMPILER "mollycc")
+  endif ()
+
+  if (NOT _COMMENT)
+    set(_COMMENT "Linking ${_outfile} using ${_COMPILER}...")
+  endif ()
+
+  if (_OBJ)
+    set(_mode OBJ)
+    set(_suffix ".o")
+  elseif (_LL)
+    set(_mode LL)
+    set(_suffix ".ll")
+  elseif (_BC)
+    set(_mode BC)
+    set(_suffix ".bc")
+  elseif (_AR)
+    set(_mode AR)
+    set(_suffix ".a")
+  else () # EXE;default
+    set(_EXE True)
+    set(_mode EXE)
+    set(_suffix "${CMAKE_EXECUTABLE_SUFFIX}")
+  endif ()
+message("${_AR} ${_suffix} ${_mode}")
+
+  # Make paths absolute
+  set(_realsources)
+  foreach (_rel IN LISTS _SOURCES)
+    get_filename_component(_real "${_rel}" REALPATH)
+    list(APPEND _realsources "${_real}")
+  endforeach ()
+  
+  
+  list(LENGTH _SOURCES _sourceslen)
+  if (_AR)
+  
+    # .a need to compiled separately and then merged into an archive
+    # TODO: Visul C++ .lib files use LINK command
+    set(_intermediates)
+    foreach(_src IN LISTS _realsources)  
+      get_filename_component(_base "${_src}" NAME)
+      set(_intermediatefilename "${CMAKE_CURRENT_BINARY_DIR}/${_base}.o")
+      clang_compile("${_intermediatefilename}" OBJ
+        SOURCES "${_src}"
+        COMPILER "${_COMPILER}"
+        FLAGS ${_FLAGS} ${_CFLAGS}
+      )
+      list(APPEND _intermediates "${_intermediatefilename}")
+    endforeach ()
+    
+    add_custom_command(
+      OUTPUT "${_outfile}"
+#      COMMAND "${CMAKE_COMMAND}" remove "${_outfile}"
+      COMMAND "${CMAKE_AR}" rsc "${_outfile}" ${_intermediates} 
+      DEPENDS ${_intermediates}
+      COMMENT "${_COMMENT}"
+      VERBATIM
+    )
+
+  elseif (_sourceslen EQUAL 1 OR _EXE)
+  
+    # Single file can just be compiled with one command
+    # EXE can also be directly linked by clang driver
+    clang_compile("${_outfile}" "${_mode}"
+      SOURCES ${_SOURCES}
+      COMPILER "${_COMPILER}"
+      FLAGS ${_FLAGS} ${_CFLAGS} ${_LDFLAGS}
+      LIBS ${_LIBS}
+    )
+    
+  else ()
+    
+    set(_intermediates)
+    foreach(_src IN LISTS _realsources)  
+      get_filename_component(_base "${_src}" NAME)
+      set(_intermediatefilename "${CMAKE_CURRENT_BINARY_DIR}/${_base}.bc")
+      clang_compile("${_intermediatefilename}" BC
+        SOURCES ${_SOURCES}
+        COMPILER "${_COMPILER}"
+        FLAGS ${_FLAGS}
+      )
+      list(APPEND _intermediates "${_intermediatefilename}")
+    endforeach ()
+
+    if (_BC)
+      add_custom_command(
+        OUTPUT "${_outfile}"
+        COMMAND llvm-link ${_intermediates} -o "${_outfile}"
+        DEPENDS llvm-link ${_intermediates}
+        COMMENT "${_COMMENT}"
+        VERBATIM
+      )
+    elseif (_LL)
+      add_custom_command(
+        OUTPUT "${_outfile}"
+        COMMAND llvm-link -S ${_intermediates} -o "${_outfile}"
+        DEPENDS llvm-link ${_intermediates}
+        COMMENT "${_COMMENT}"
+        VERBATIM
+       )
+    else ()
+      add_custom_command(
+        OUTPUT "${_outfile}"
+        COMMAND llvm-link -S ${_intermediates} -o "${_outfile}.bc"
+        DEPENDS llvm-link ${_intermediates}
+        VERBATIM
+      )
+
+      clang_compile("${_outfile}" "${_mode}"
+        COMPILER "${_COMPILER}"
+        SOURCES "${_outfile}.bc"
+        COMMENT "${_COMMENT}"
+      )
+    endif ()
+  endif ()
+endfunction ()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 macro(mollycc_compile _outfile)
+message("   mollycc_compile(${_outfile}, ${ARG})")
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "PLAIN" ${ARGN})
   if (NOT PARM_COMMENT)
     set(PARM_COMMENT "Generating ${_outfile} using Mollycc...")
@@ -142,6 +341,7 @@ endmacro()
 
 
 macro(mollycc_compile_link _outfile)
+message("mollycc_compile_link(${_outfile}, ${ARG})")
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "BC;LL;OBJ;AR;PLAIN" ${ARGN})
   get_filename_component(_outfile ${_outfile} ABSOLUTE)
   
@@ -252,7 +452,7 @@ endmacro()
 
 
 
-set(MOLLYCC_LL_LIBS ${LLVM_BINARY_DIR}/lib/molly.ll ${MPI_CXX_LIBRARIES})
+set(MOLLYCC_LL_LIBS "${LLVM_BINARY_DIR}/lib/molly.ll" ${MPI_CXX_LIBRARIES})
 macro(mollycc_ll_compile _outfile)
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "" ${ARGN})
   mollycc_compile(${_outfile}
@@ -278,7 +478,7 @@ endmacro()
 
 
 
-set(MOLLYCC_O_LIBS ${LLVM_BINARY_DIR}/lib/molly.o ${MPI_CXX_LIBRARIES})
+set(MOLLYCC_O_LIBS "${LLVM_BINARY_DIR}/lib/molly.o" ${MPI_CXX_LIBRARIES})
 macro(mollycc_o_compile _outfile)
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "" ${ARGN})
   mollycc_compile(${_outfile}
@@ -291,16 +491,21 @@ endmacro()
 
 
 
-set(MOLLYCC_A_LIBS ${LLVM_BINARY_DIR}/lib/molly.a ${MPI_CXX_LIBRARIES})
-macro(mollycc_a_compile _outfile)
-  parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "" ${ARGN})
-  mollycc_compile(${_outfile}
-    SOURCES ${PARM_SOURCES}
-    FLAGS ${PARM_FLAGS}
+set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" ${MPI_CXX_LIBRARIES})
+function (mollycc_a_compile _outfile)
+message("   mollycc_a_compile(${_outfile}, ${ARGN})")
+  cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
+message("_SOURCES: ${_SOURCES}")
+  clang_compile_link("${_outfile}" EXE
+    COMPILER mollycc
+    SOURCES ${_SOURCES}
+    FLAGS ${MOLLYCC_COMMON_FLAGS} ${_FLAGS} 
+    CFLAGS ${_CFLAGS}
+    LDFLAGS ${_LDFLAGS}
     LIBS ${MOLLYCC_A_LIBS}
-    COMMENT ${PARM_COMMENT}
+    COMMENT "${_COMMENT}"
     )
-endmacro()
+endfunction ()
 
 
 

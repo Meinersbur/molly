@@ -873,7 +873,6 @@ extern "C" bool __molly_isMaster() {
 #pragma endregion
  
 
-
 DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
   if (!__molly_isMaster())
     return;
@@ -884,6 +883,7 @@ DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, i
   _debugindention += 1;
 }
 
+
 DebugFunctionScope::~DebugFunctionScope() {
   if (!__molly_isMaster())
     return;
@@ -893,4 +893,3 @@ DebugFunctionScope::~DebugFunctionScope() {
   }
   std::cerr << "EXIT  " << funcname << std::endl;
 }
-

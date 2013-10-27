@@ -799,20 +799,20 @@ namespace {
 
 
       // Search main function
-      auto origMainFunc = module->getFunction("main");
-      if (!origMainFunc) {
+      //auto origMainFunc = module->getFunction("main");
+      //if (!origMainFunc) {
         //FIXME: This means that either we are compiling modules independently (instead of whole program as intended), or this program as already been optimized 
         // The driver should resolve this
-        llvm_unreachable("No main function found");
-        return;
-      }
+     //   llvm_unreachable("No main function found");
+     //   return;
+     // }
 
       // Rename old main function
-      const char *replMainName = "__molly_orig_main";
-      if (module->getFunction(replMainName)) {
-        llvm_unreachable("main already replaced?");
-      }
-      origMainFunc->setName(replMainName);
+     // const char *replMainName = "__molly_orig_main";
+     // if (module->getFunction(replMainName)) {
+      //  llvm_unreachable("main already replaced?");
+      //}
+      //origMainFunc->setName(replMainName);
 
 
 
