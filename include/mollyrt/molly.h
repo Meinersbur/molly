@@ -112,6 +112,7 @@ static void dbgPrintVars_inner(const char *varnames) {}
 
 template<typename First>
 static void dbgPrintVars_inner(const char *varnames, const First &first) {
+  //fprintf(stderr, " ");
   std::cerr << ' ';
   auto argsnames=varnames;
 
@@ -141,6 +142,7 @@ static void dbgPrintVars_inner(const char *varnames, const First &first) {
     }
     break;
   }
+  //fprintf(stderr, "=");
   std::cerr << '=' << first;
 }
 

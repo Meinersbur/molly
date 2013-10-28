@@ -767,6 +767,7 @@ namespace {
       }
     }
 
+
     void emitMollyRelease() {
       auto &llvmContext=  getLLVMContext();
       auto voidTy = Type::getVoidTy(llvmContext);
@@ -780,10 +781,43 @@ namespace {
       //TODO: Must also executed with a call to exit(), including to exit(0) without error (MPI_Finalize)
     }
 
+
+    void emitGetClusterGeometry() {
+      auto &llvmContext=  getLLVMContext();
+        auto voidTy = Type::getVoidTy(llvmContext);
+          auto intTy = Type::getInt64Ty(llvmContext);
+          auto intPtrTy = Type::getInt64PtrTy(llvmContext);
+          auto boolPtrTy =  Type::getInt8PtrTy(llvmContext);
+
+#if 0
+ auto func =   cast<Function> (  module->getOrInsertFunction("__molly_get_cluster_geometry", voidTy, intPtrTy,intPtrTy,boolPtrTy));
+ auto entryBB = BasicBlock::Create(llvmContext, "entry", func);
+  auto ret = ReturnInst::Create(llvmContext, entryBB);
+  DefaultIRBuilder builder(ret);
+
+  auto argIt = func->arg_begin();
+  auto nClusterDimsPtrVal = &*argIt;
+  ++argIt;
+ auto clusterLengthsPtrVal = &*argIt;
+  ++argIt;
+  auto clusterPeriodicPtrVal = &*argIt;
+  assert(++argIt == func->arg_end());
+#endif
+
+  
+
+  auto nClusterDimsConst = ConstantInt::get(intTy, clusterConf->getClusterDims());
+  auto nClusterDimsVal = new GlobalVariable(*module, intTy, true, GlobalVariable::ExternalLinkage, nClusterDimsConst, "__molly_nClusterDims");
+
+    }
+
+
     void implementGeneratedFunctions() {
       // The alternative is to put these into llvm.global_ctors and llvm.global_dtors
       emitMollyInit();
       emitMollyRelease();
+
+      //emitGetClusterGeometry();
     }
 
     void wrapMain() {

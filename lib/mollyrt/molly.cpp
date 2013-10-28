@@ -5,7 +5,7 @@
  */
 #define __MOLLYRT
 #include "molly.h"
-
+ 
 #include <malloc.h>
 #include <cstdio>
 #include <mpi.h> 
@@ -877,8 +877,10 @@ DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, i
   if (!__molly_isMaster())
     return;
   for (int i = _debugindention; i > 0; i-=1) {
-    std::cerr << "  ";
+    //fprintf(stderr,"  ");
+    std::cerr << ' ' << ' ';
   }
+  //fprintf(stderr,"ENTER %s (%s:%d)\n", funcname, extractFilename(file), line);
   std::cerr << "ENTER " << funcname << " (" << extractFilename(file) << ":" << line << ")" << std::endl;
   _debugindention += 1;
 }
@@ -889,7 +891,9 @@ DebugFunctionScope::~DebugFunctionScope() {
     return;
   _debugindention -= 1;
   for (int i = _debugindention; i > 0; i-=1) {
-    std::cerr << "  ";
+    //fprintf(stderr,"  ");
+    std::cerr << ' ' << ' ';
   }
+  //fprintf(stderr,"EXIT\n");
   std::cerr << "EXIT  " << funcname << std::endl;
 }
