@@ -356,7 +356,7 @@ namespace {
       MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
     }
 
-    int getMPICommRank(uint64_t nClusterDims, uint64_t *coords) {
+    int getMPICommRank(uint64_t nClusterDims, uint64_t *coords) { MOLLY_DEBUG_METHOD_ARGS(nClusterDims, coords)
       assert(this->nClusterDims == nClusterDims);
 
       //TODO: This is a waste; avoid using alloca? Use int right away?
@@ -373,8 +373,8 @@ namespace {
     }
 
   public:
-    MPICommunicator() : initialized(false), _world_self(-1) {}
-    ~MPICommunicator() {
+    MPICommunicator() : initialized(false), _world_self(-1) { MOLLY_DEBUG_FUNCTION_SCOPE }
+    ~MPICommunicator() { MOLLY_DEBUG_FUNCTION_SCOPE
       if (!initialized)
         return;
 
@@ -815,7 +815,7 @@ extern "C" void __molly_local_free(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
 }
 
 
-extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_ARGS(localbuf)
    assert(localbuf);
    auto ls = static_cast<LocalStore*>(localbuf);
    return ls->getDataPtr();
