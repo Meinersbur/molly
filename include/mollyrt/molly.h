@@ -101,11 +101,14 @@ static inline const char *extractFilename(const char *filename) {
 
 
 extern "C" bool __molly_isMaster();
+extern "C" int64_t __molly_cluster_myrank();
+extern "C" int __molly_cluster_mympirank();
 
 #ifndef NDEBUG
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <typeinfo>
 
 // Recursion end
 static void dbgPrintVars_inner(const char *varnames) {}
@@ -188,13 +191,74 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
     return;
 
   for (int i = _debugindention; i > 0; i-=1) {
-    std::cerr << "  ";
+    std::cerr << ' ' << ' ';
   }
   std::cerr << extractFilename(file) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << line << std::resetiosflags(std::ios::left);
 
   dbgPrintVars_inner(varnames, args...);
   std::cerr << std::endl;
 }
+
+
+
+
+#pragma region Implementation of out_parampack
+#ifndef NDEBUG
+  template<typename... Args>
+  struct out_parampack_impl;
+
+template<>
+struct out_parampack_impl<> {
+ public:
+   out_parampack_impl(const char *sep) { }
+   void print(std::ostream &os) const { }
+ };
+
+template<typename Arg>
+struct out_parampack_impl<Arg> : out_parampack_impl<>  {
+   //const char *sep;
+   const Arg &arg;
+ public:
+   out_parampack_impl(const char *sep, const Arg &arg)
+     : out_parampack_impl<>(sep), arg(arg) {}
+
+    void print(std::ostream &os) const {
+      os << arg;
+      //out_parampack_impl<>::print(os);
+    }
+ };
+
+template<typename Arg, typename... Args>
+struct out_parampack_impl<Arg, Args...> : out_parampack_impl<Args...>  {
+   const char *sep;
+   const Arg &arg;
+ public:
+   out_parampack_impl(const char *sep, const Arg &arg, const Args&... args)
+     : out_parampack_impl<Args...>(sep, args...), sep(sep),  arg(arg) {}
+
+    void print(std::ostream &os) const {
+      os << arg;
+      os << sep;
+      out_parampack_impl<Args...>::print(os);
+    }
+ };
+
+template<typename... Args>
+std::ostream &operator<<(std::ostream &stream, const out_parampack_impl<Args...> &ob) {
+  ob.print(stream);
+  return stream;
+}
+
+template<typename... Args>
+static inline out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
+  return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
+}
+#endif
+#pragma endregion
+
+
+
+
 
 //TODO: improve:
 // - Put 2 char tag in front to mark severity
@@ -205,21 +269,42 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 // - Put into its own file
 // - A version MOLLY_DEBUG_FUNCTION_SCOPE to which you can submit the arguments to; and maybe also the return value
 // - redirect to a file for each rank
+
+#if 0
 #define MOLLY_DEBUG(...) \
   do { \
   if (__molly_isMaster()) { \
     for (int i = _debugindention; i > 0; i-=1) { \
-      std::cerr << "  "; \
+      std::cerr << ' ' << ' '; \
     } \
     std::cerr << extractFilename(__FILE__) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << __LINE__ << " " << std::resetiosflags(std::ios::left) << __VA_ARGS__ << std::endl; \
   } \
   } while (0)
-
+#else
+#define MOLLY_DEBUG(...)                             \
+  do {                                               \
+    std::cerr << __molly_cluster_mympirank() << ")"; \
+    for (int i = _debugindention; i > 0; i-=1) {     \
+      std::cerr << ' ' << ' ';                       \
+    }                                                \
+    std::cerr << extractFilename(__FILE__) << ":" << std::setw(3) << std::setiosflags(std::ios::left) << __LINE__ << " " << std::resetiosflags(std::ios::left) << __VA_ARGS__ << std::endl; \
+  } while (0)
+#endif
+  
 #define MOLLY_VAR(...) \
     dbgPrintVars(__FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__)
 
+
+
+
+
+
 //TODO: molly attribute that allows function calls to this in SCoPs
 #define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
+#define MOLLY_DEBUG_FUNCTION_ARGS(...) \
+	DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
+#define MOLLY_DEBUG_METHOD_ARGS(...) \
+	DebugFunctionScope _debugfunctionscopeguard(this, __PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
 #else
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
@@ -228,10 +313,62 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 
 #ifndef NDEBUG
 
+
+
+static std::string extractFuncname(const char *prettyfunc) {
+	std::string prettyFunction = prettyfunc;
+	auto lparen = prettyFunction.find("(");
+if (lparen == std::string::npos)
+	return prettyfunc;
+
+auto space = prettyFunction.substr(0,lparen).rfind(" ");
+auto firstColon = prettyFunction.substr(0,lparen).rfind("::");
+size_t secondColon = std::string::npos;
+if (firstColon!=std::string::npos) {
+	secondColon = prettyFunction.substr(0,firstColon).rfind("::");
+}
+
+size_t start=0;
+if (space != std::string::npos)
+	start = space+1;
+if (secondColon != std::string::npos && secondColon>=start)
+	start = secondColon+2;
+
+return prettyFunction.substr(start,lparen-start);
+}
+
+
 class DebugFunctionScope {
   const char *funcname;
 public:
   DebugFunctionScope(const char *funcname, const char *file, int line);
+
+  template<typename... T>
+  DebugFunctionScope(const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
+    : funcname(funcname) {
+	  std::cerr << __molly_cluster_mympirank() << ")";
+	  for (int i = _debugindention; i > 0; i-=1) {
+	    //fprintf(stderr,"  ");
+	    std::cerr << ' ' << ' ';
+	  }
+	  std::cerr << "ENTER " << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+	  std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
+	  _debugindention += 1;
+  }
+
+  template<typename... T>
+  DebugFunctionScope(void *self, const char *funcname, const char *file, int line,  const char *varnames, const T&... vars)
+    : funcname(funcname) {
+	  std::cerr << __molly_cluster_mympirank() << ")";
+	  for (int i = _debugindention; i > 0; i-=1) {
+	    //fprintf(stderr,"  ");
+	    std::cerr << ' ' << ' ';
+	  }
+	  std::cerr << "ENTER " << self << "->" << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+	  std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
+	  _debugindention += 1;
+  }
+
   ~DebugFunctionScope();
 };
 #endif
@@ -496,61 +633,12 @@ namespace molly {
   };
 
 
-#pragma region Implementation of out_parampack
-#ifndef NDEBUG
-  template<typename... Args>
-  struct out_parampack_impl;
-  
- template<> 
- struct out_parampack_impl<> {
- public:
-   out_parampack_impl(const char *sep) { }
-   void print(std::ostream &os) const { }
- };
-
-   template<typename Arg> 
- struct out_parampack_impl<Arg> : out_parampack_impl<>  {
-   const char *sep;
-   const Arg &arg;
- public:
-   out_parampack_impl(const char *sep, const Arg &arg) : out_parampack_impl<>(sep), sep(sep), arg(arg) {}
-    void print(std::ostream &os) const {
-      os << arg;
-      out_parampack_impl<>::print(os);
-    }
- };
-
-  template<typename Arg, typename... Args> 
- struct out_parampack_impl<Arg, Args...> : out_parampack_impl<Args...>  {
-   const char *sep;
-   const Arg &arg;
- public:
-   out_parampack_impl(const char *sep, const Arg &arg, const Args&... args) : out_parampack_impl<Args...>(sep, args...), sep(sep),  arg(arg) {}
-    void print(std::ostream &os) const {
-      os << ", " << arg;
-      out_parampack_impl<Args...>::print(os);
-    }
- };
-
-template<typename... Args>
-std::ostream &operator<<(std::ostream &stream, const out_parampack_impl<Args...> &ob) {
-  ob.print(stream);
-  return stream;
-}
-
-template<typename... Args>
-static inline out_parampack_impl<Args...> out_parampack(const char *sep, const Args&... args) {
-  return out_parampack_impl<Args...>(sep, args...); //FIXME: perfect forwarding, rvalue-refs
-}
-#endif
-#pragma endregion
 
 
 
 
 
 
-extern "C" uint64_t __molly_cluster_myrank();
 
 
 #pragma region Dummy builtins for other compilers
@@ -586,10 +674,10 @@ extern "C" uint64_t __molly_cluster_myrank();
     return 0;
   }
 
-  void __builtin_molly_global_init() { MOLLY_DEBUG_FUNCTION_SCOPE
+  static void __builtin_molly_global_init() { MOLLY_DEBUG_FUNCTION_SCOPE
   }
 
-  void __builtin_molly_global_free() { MOLLY_DEBUG_FUNCTION_SCOPE
+  static void __builtin_molly_global_free() { MOLLY_DEBUG_FUNCTION_SCOPE
   }
 #endif
 #pragma endregion

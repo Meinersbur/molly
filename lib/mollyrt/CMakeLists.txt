@@ -4,15 +4,15 @@ set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp combuf.cpp)
 
 ### MollyRT, compile using same compiler as we compile mollycc itself
 # Note won't work if ABI is different
-#include_directories("${MOLLY_SOURCE_DIR}/include/mollyrt" ${MPI_CXX_INCLUDE_PATH})
-#add_library(MollyRT STATIC ${MOLLYRT_SOURCES} "${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h")
-#set_target_properties(MollyRT PROPERTIES FOLDER "Molly")
-#target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES}) 
+include_directories("${MOLLY_SOURCE_DIR}/include/mollyrt" ${MPI_CXX_INCLUDE_PATH})
+add_library(MollyRT STATIC ${MOLLYRT_SOURCES} "${MOLLY_SOURCE_DIR}/include/mollyrt/molly.h")
+set_target_properties(MollyRT PROPERTIES FOLDER "Molly")
+target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES}) 
 
-#if (MOLLYCC_DEBUG)
-#  set_property(TARGET MollyRT APPEND_STRING PROPERTY COMPILE_FLAGS " -g")
-#  set_property(TARGET MollyRT APPEND_STRING PROPERTY COMPILE_FLAGS " -O0")
-#endif ()
+foreach (_flag IN LISTS MOLLYRT_DEBUG_FLAGS)
+  set_property(TARGET MollyRT APPEND_STRING PROPERTY COMPILE_FLAGS " ${_flag}")
+endforeach ()
+
 
 
 ### MollyRT-ll
