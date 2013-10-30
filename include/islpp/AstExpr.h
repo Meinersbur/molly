@@ -25,7 +25,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_ast_expr_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_ast_expr_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
   }; // class AstExpr

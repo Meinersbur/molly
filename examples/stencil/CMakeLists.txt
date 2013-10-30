@@ -1,10 +1,10 @@
 
-### Compile using standard compiler
-#get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil.exe" ABSOLUTE)
-#include_directories("${MOLLY_SOURCE_DIR}/include/mollyrt")
-#add_llvm_example(stencil stencil.cpp)
-#set_target_properties(stencil PROPERTIES FOLDER "Molly")
-#target_link_libraries(stencil MollyRT ${MPI_CXX_LIBRARIES})
+### Compile using standard compiler (Will miscompile since this needs mollycc, but adds it to Visual Studio project)
+get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil.exe" ABSOLUTE)
+include_directories("${MOLLY_SOURCE_DIR}/include/mollyrt")
+add_llvm_example(stencil stencil.cpp)
+set_target_properties(stencil PROPERTIES FOLDER "Molly")
+target_link_libraries(stencil MollyRT ${MPI_CXX_LIBRARIES})
 
 
 ### Compile using mollycc, link to MollyRT that has been compiled using CMAKE_CXX_COMPILER

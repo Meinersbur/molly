@@ -26,9 +26,11 @@ namespace molly {
     isl::Map relation;
 
     /// Buffer data layout
-    RectangularMapping *mapping; // Maps from { (chunk[domain], src[cluster], dst[cluster]) }
-    RectangularMapping *sendbufMapping; // Maps from { (chunk[domain], dst[cluster]) }
-    RectangularMapping *recvbufMapping; // Maps from { (chunk[domain], src[cluster]) }
+    RectangularMapping *mapping; // Maps from { (chunk[domain], src[cluster], dst[cluster]) -> field[indexset] } to an index into the transfer buffer
+    RectangularMapping *sendbufMapping; // Maps from { src[cluster] -> dst[cluster] } to the rank of the dst node
+    RectangularMapping *recvbufMapping; // Maps from { dst[cluster] -> src[cluster] } to the rank of the src node
+    //NOTE: sendbufMapping and recvbufMapping are independent of chunk, otherwise we could have a lot more src+dst indices; Because different chunk can have different size to transfer, we currently always transfer an overapproximation
+    //TODO: Add sizt_to_transfer_argument to __molly_combuf_send_wait and __molly_combuf_recv
 
     llvm::GlobalVariable *varsend;
     llvm::GlobalVariable *varrecv;

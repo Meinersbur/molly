@@ -826,7 +826,7 @@ extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_ARGS(l
 
 #pragma region Communication buffer to send data
 
-extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize)
+extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize)
   return new MPISendCommunication(dstCount, eltSize);
 }
 
@@ -851,18 +851,17 @@ extern "C" void __molly_combuf_send(MPISendCommunication *sendbuf, uint64_t dst)
 }
 
 
-extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t dst) { MOLLY_DEBUG_FUNCTION_ARGS(sendbuf, dst)
+extern "C" void *__molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t dst) { MOLLY_DEBUG_FUNCTION_ARGS(sendbuf, dst)
   sendbuf->wait(dst);
+  return sendbuf->getDataPtr(dst);
 }
-
-
 
 #pragma endregion
 
 
 #pragma region Communication buffer to recv data
 
-extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize)
+extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize)
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 
@@ -874,6 +873,12 @@ extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint
 
 extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) { MOLLY_DEBUG_FUNCTION_ARGS(recvbuf, src)
   recvbuf->recv(src);
+}
+
+
+extern "C" void *__molly_combuf_recv_wait(MPIRecvCommunication *recvbuf, uint64_t src) { MOLLY_DEBUG_FUNCTION_ARGS(recvbuf, src)
+  recvbuf->wait(src);
+  return recvbuf->getDataPtr(src);
 }
 
 #pragma endregion

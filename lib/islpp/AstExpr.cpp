@@ -9,3 +9,8 @@ void AstExpr::print(llvm::raw_ostream &out) const {
   printer.print(*this);
   printer.print(out);
 }
+
+
+void isl::AstExpr::dump() const {
+  isl_ast_expr_dump(keep());
+}
