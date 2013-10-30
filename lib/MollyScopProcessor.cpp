@@ -30,7 +30,6 @@
 #include "MollyRegionProcessor.h"
 #include <llvm/Analysis/LoopInfo.h>
 #include "islpp/DimRange.h"
-//#include <clang/CodeGen/MollyRuntimeMetadata.h>
 #include "islpp/MultiAff.h"
 
 using namespace molly;
@@ -1025,7 +1024,7 @@ namespace {
       auto writeWhere = writeStmt->getWhere().intersectDomain(writeDomain); // { writeRead[domain] -> node[cluster] }
       auto writeEditor = writeStmt->getEditor();
 
-      // A statment is either reading or writing, but not both
+      // A statement is either reading or writing, but not both
       assert(readStmt != writeStmt);
 
       // flow is data transfer from a writing statement to a reading statement of the same location, i.e. also same field

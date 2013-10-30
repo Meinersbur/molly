@@ -119,6 +119,7 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto eltTy = fty->getEltType();
   auto eltSize = eltSizeQuery->getTypeAllocSize(eltTy);
   auto eltSizeVal = ConstantInt::get(intTy, eltSize);
+  auto tagVal = ConstantInt::get(intTy, this->tag);
 
   auto srcRankSpace = getSrcNodeSpace();
   auto dstRankSpace = getDstNodeSpace();
@@ -130,17 +131,22 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto srcSelfRank = selfCoord.castRange(srcRankSpace);
   auto dstSelfRank = selfCoord.castRange(dstRankSpace);
 
-  auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
-  auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal);
-  builder.CreateStore(sendobj, getVariableSend());
-
-  auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
-  auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal);
-  builder.CreateStore(recvobj, getVariableRecv());
-  
   auto coords = builder.CreateAlloca(intTy, ConstantInt::get(intTy, nClusterDims), "coords");
   auto nClusterDimsVal = ConstantInt::get(intTy, nClusterDims);
 
+  auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
+  auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal, tagVal);
+  builder.CreateStore(sendobj, getVariableSend());
+
+
+
+
+  auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
+  auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal, tagVal);
+  builder.CreateStore(recvobj, getVariableRecv());
+  
+
+  //TODO: Create a different scop for send and recv => less complexity
   auto scopEd = ScopEditor::newScop(islctx, builder.GetInsertPoint(), pass);
   auto scop = scopEd.getScop();
   auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx

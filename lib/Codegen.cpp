@@ -325,26 +325,26 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeClusterCurrentCoord(llvm::Value *
 }
 
 
- llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize) {
+ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize,  llvm::Value *tag) {
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
-   Type *tys[] = {intTy,intTy};
+   Type *tys[] = {intTy,intTy, intTy};
    auto funcDecl  = getRuntimeFunc("__molly_combuf_send_alloc", voidPtrTy, tys);
-   return irBuilder.CreateCall2(funcDecl, nDst, eltSize);
+   return irBuilder.CreateCall3(funcDecl, nDst, eltSize, tag);
  }
 
- llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize) {
+ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize,  llvm::Value *tag) {
    auto &llvmContext = getLLVMContext();
    auto intTy = Type::getInt64Ty(llvmContext);
    auto voidTy = Type::getVoidTy(llvmContext);
    auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
-   Type *tys[] = {intTy,intTy};
+   Type *tys[] = {intTy,intTy,intTy};
    auto funcDecl  = getRuntimeFunc("__molly_combuf_recv_alloc", voidPtrTy, tys);
-   return irBuilder.CreateCall2(funcDecl, nDst, eltSize);
+   return irBuilder.CreateCall3(funcDecl, nDst, eltSize, tag);
  }
 
 

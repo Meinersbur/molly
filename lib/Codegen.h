@@ -63,8 +63,8 @@ namespace molly {
       return callRuntimeClusterCurrentCoord(llvm::ConstantInt::get(intTy, d)); 
     }
 
-    llvm::CallInst *callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize);
-    llvm::CallInst *callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize);
+    llvm::CallInst *callRuntimeCombufSendAlloc(llvm::Value *nDst, llvm::Value *eltSize, llvm::Value *tag);
+    llvm::CallInst *callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize, llvm::Value *tag);
 
     llvm::CallInst *callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts, llvm::Value *tag);
     llvm::CallInst *callRuntimeCombufRecvSrcInit(llvm::Value *combufSend, llvm::Value *src, llvm::Value *nClusterDims, llvm::Value *srcCoords, llvm::Value *countElts, llvm::Value *tag);

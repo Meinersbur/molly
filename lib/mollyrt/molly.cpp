@@ -777,7 +777,7 @@ extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
 
 #pragma region Communication buffer to send data
 
-extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
   return new MPISendCommunication(dstCount, eltSize);
 }
 
@@ -806,14 +806,12 @@ extern "C" void __molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_t
   sendbuf->wait(dst);
 }
 
-
-
 #pragma endregion
 
 
 #pragma region Communication buffer to recv data
 
-extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_SCOPE
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 

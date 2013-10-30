@@ -47,9 +47,7 @@ extern "C" void test() {
 #endif
 
 
-extern "C" void test() {
-  MOLLY_DEBUG_FUNCTION_SCOPE
-
+extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
   auto len = FieldDst.length();
   for (int i = 0; i < len-1; i+=1) {
     FieldSrc[i] = i+3;
@@ -68,7 +66,7 @@ extern "C" void sink() {
 }
 #endif
 
-extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]) {
+int main(int argc, char *argv[], char *envp[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
 
   test();
@@ -77,5 +75,5 @@ extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]) {
   //test();
   //sink();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
