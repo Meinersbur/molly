@@ -108,7 +108,7 @@ set(MOLLYCC_DEBUG_LDFLAGS )
 
 set(MOLLYCC_TARGET "x86_64-unknown-linux-gnu" CACHE STRING "Mollycc compiles to this target")
 
-#set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32"}" -fno-exceptions)
+#set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
 set(MOLLY_PLATFORM_FLAGS -target "${MOLLYCC_TARGET}" -fno-exceptions)
 set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
