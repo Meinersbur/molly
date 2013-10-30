@@ -66,6 +66,8 @@ extern "C" void sink() {
 }
 #endif
 
+//extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]) {
+//int main(int argc, char *argv[]) {
 int main(int argc, char *argv[], char *envp[]) {
   MOLLY_DEBUG_FUNCTION_SCOPE
 

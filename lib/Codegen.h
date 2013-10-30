@@ -75,6 +75,9 @@ namespace molly {
     llvm::CallInst *callRuntimeCombufSend(llvm::Value *combufSend, llvm::Value *dstRank);
     llvm::CallInst *callRuntimeCombufRecv(llvm::Value *combufRecv, llvm::Value *srcRank);
 
+    llvm::CallInst *callRuntimeCombufSendWait(llvm::Value *combufSend, llvm::Value *dstRank);
+    llvm::CallInst *callRuntimeCombufRecvWait(llvm::Value *combufRecv, llvm::Value *srcRank);
+
     llvm::CallInst *callRuntimeLocalPtr(llvm::Value *localobj);
 
 

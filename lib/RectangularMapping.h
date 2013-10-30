@@ -12,11 +12,12 @@
 
 namespace molly {
 
+  /// RectangularMapping maps each point of a rectangular-shaped integer vector space to non-negative integer
   /// Row-major order
   class RectangularMapping {
   private:
-    isl::MultiPwAff lengths;
-    isl::MultiPwAff offsets;
+    isl::MultiPwAff lengths; // { [] -> lengths[nDims] }
+    isl::MultiPwAff offsets; // { [] -> offset[nDims] }
 
     //llvm::SmallVector<unsigned,4> lengths;
     //llvm::SmallVector<unsigned,4> offsets;
