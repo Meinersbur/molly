@@ -106,7 +106,8 @@ set(MOLLYCC_DEBUG_CFLAGS )
 set(MOLLYCC_DEBUG_LDFLAGS )
 
 
-set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
+#set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
+set(MOLLY_PLATFORM_FLAGS -target "x86_64-unknown-linux-gnu")
 set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
@@ -357,7 +358,7 @@ endfunction ()
 
 
 
-macro(mollycc_compile _outfile)
+macro(mollycc_compile2 _outfile)
 message("   mollycc_compile(${_outfile}, ${ARG})")
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT;LIBS" "PLAIN" ${ARGN})
   if (NOT PARM_COMMENT)
@@ -534,12 +535,28 @@ macro(mollycc_o_compile _outfile)
 endmacro()
 
 
+# Compile and link to MollyRT that CMake is responsible to compile
+function (mollycc_compile _outfile)
+message("   mollycc_compile(${_outfile}, ${ARGN})")
+  cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
+  get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
+  clang_compile_link("${_outfile}" EXE
+    COMPILER mollycc
+    SOURCES ${_SOURCES}
+    FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
+    CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
+    LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
+    LIBS ${_MollyRT_location} ${MPI_CXX_LIBRARIES} ${_LIBS}
+    COMMENT "${_COMMENT}"
+    )
+endfunction ()
 
+
+# Compile and link to molly.a
 set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" ${MPI_CXX_LIBRARIES})
 function (mollycc_a_compile _outfile)
 message("   mollycc_a_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
-message("_SOURCES: ${_SOURCES}")
   clang_compile_link("${_outfile}" EXE
     COMPILER mollycc
     SOURCES ${_SOURCES}

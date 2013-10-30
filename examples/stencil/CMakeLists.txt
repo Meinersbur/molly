@@ -7,21 +7,21 @@
 #target_link_libraries(stencil MollyRT ${MPI_CXX_LIBRARIES})
 
 
-### Compile using mollycc, link to MollyRT
-#get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}stencil-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
-#get_target_property(MollyRT_LOCATION MollyRT LOCATION)
-#mollycc_compile("${stencil_path}"
-#  SOURCES stencil.cpp
-#  FLAGS -mllvm -shape=4
+### Compile using mollycc, link to MollyRT that has been compiled using CMAKE_CXX_COMPILER
+get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}stencil-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
+get_target_property(MollyRT_LOCATION MollyRT LOCATION)
+mollycc_compile("${stencil_path}"
+  SOURCES stencil.cpp
+  CFLAGS -mllvm -shape=4
 #  LIBS "${MollyRT_LOCATION}" ${MPI_CXX_LIBRARIES}
-#  COMMENT "mollycc MollyRT stencil.cpp...")
+  COMMENT "mollycc MollyRT stencil.cpp...")
 
-#add_custom_target(stencil-mollycc
-#  DEPENDS "${stencil_path}"
-#  COMMENT "Built stencil using mollycc"
-#  VERBATIM)
-#add_dependencies(stencil-mollycc MollyRT)
-#set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
+add_custom_target(stencil-mollycc
+  DEPENDS "${stencil_path}"
+  COMMENT "Built stencil using mollycc"
+  VERBATIM)
+add_dependencies(stencil-mollycc MollyRT)
+set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
 
 
 
@@ -71,13 +71,13 @@
 
 
 ### Compile using mollycc, link to MollyRT-a
-get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/stencil-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
+get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}stencil-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${stencil_path}"
   SOURCES "stencil.cpp"
   FLAGS -mllvm -shape=4
   COMMENT "mollycc molly.a stencil.cpp...")
 
-message("   CUSTOM Target: stencil-mollycc-a")
+#message("   CUSTOM Target: stencil-mollycc-a")
 add_custom_target(stencil-mollycc-a ALL
   DEPENDS "${stencil_path}"
   COMMENT "Compiling stencil using mollycc-a"
