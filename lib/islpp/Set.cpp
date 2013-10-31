@@ -18,6 +18,7 @@
 #include "islpp/PwQPolynomialFold.h"
 #include "islpp/Dim.h"
 #include "islpp/DimRange.h"
+#include "islpp/UnionSet.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -1102,10 +1103,18 @@ std::string isl::Set::toStringExplicit( int maxElts /*= 8*/ )
   return str; // NRVO
 }
 
+
 std::string isl::Set::toString() const
 {
   return ObjBaseTy::toString();
 }
+
+
+void isl::Set::intersect_inplace( UnionSet that ) ISLPP_INPLACE_FUNCTION
+{
+  intersect_inplace(that.extractSet(getSpace()));
+}
+
 
 
 

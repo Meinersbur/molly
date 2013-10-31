@@ -81,9 +81,12 @@ namespace isl {
     UnionSet addSet(const Set &set) const { return UnionSet::enwrap(isl_union_set_add_set(takeCopy(), set.takeCopy())); }
     void addSet_inplace(const Set &set) ISLPP_INPLACE_FUNCTION { give(isl_union_set_add_set(take(), set.takeCopy())); }
 
-    UnionSet unite(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_union(takeCopy(), uset2.takeCopy())); }
+    ISLPP_EXSITU_ATTRS UnionSet unite(UnionSet uset2) ISLPP_EXSITU_FUNCTION { return UnionSet::enwrap(isl_union_set_union(takeCopy(), uset2.take())); }
+    ISLPP_INPLACE_ATTRS void unite_inplace(UnionSet uset2) ISLPP_INPLACE_FUNCTION { give(isl_union_set_union(take(), uset2.take())); }
 
-    UnionSet substract(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_subtract(takeCopy(), uset2.takeCopy())); }
+   ISLPP_EXSITU_ATTRS UnionSet substract(UnionSet uset2) ISLPP_EXSITU_FUNCTION { return UnionSet::enwrap(isl_union_set_subtract(takeCopy(), uset2.take())); }
+   ISLPP_INPLACE_ATTRS void substract_inplace(UnionSet uset2) ISLPP_INPLACE_FUNCTION { give(isl_union_set_subtract(take(), uset2.take())); }
+
     UnionSet intersect(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_intersect(takeCopy(), uset2.takeCopy())); }
     UnionSet intersectParams(const Set &set) const { return UnionSet::enwrap(isl_union_set_intersect_params(takeCopy(), set.takeCopy())); }
     UnionSet product(const UnionSet &uset2) const { return UnionSet::enwrap(isl_union_set_product(takeCopy(), uset2.takeCopy())); }
@@ -121,6 +124,17 @@ namespace isl {
     UnionSet coefficients() const { return UnionSet::enwrap(isl_union_set_coefficients(takeCopy())); }
     UnionSet solutions() const { return UnionSet::enwrap(isl_union_set_coefficients(takeCopy())); }
   }; // class UnionSet
+
+
+  static inline UnionSet enwrap(isl_union_set *obj) { return UnionSet::enwrap(obj); }
+  static inline UnionSet enwrapCopy(isl_union_set *obj) { return UnionSet::enwrapCopy(obj); }
+
+
+  static inline UnionSet unite(UnionSet lhs, UnionSet rhs) { return UnionSet ::enwrap(isl_union_set_union(lhs.take(), rhs.take())); }
+
+  static inline UnionSet operator+(UnionSet lhs, UnionSet rhs) { return UnionSet ::enwrap(isl_union_set_union(lhs.take(), rhs.take())); }
+  static inline UnionSet operator-(UnionSet lhs, UnionSet rhs) { return UnionSet ::enwrap(isl_union_set_subtract(lhs.take(), rhs.take())); }
+ 
 
 } // namespace isl
 #endif /* ISLPP_UNIONSET_H */

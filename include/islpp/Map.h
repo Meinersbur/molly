@@ -61,8 +61,15 @@ namespace isl {
   };
   enum class Approximation {
     Exact,
+
+    /// The result is larger/contains more elements than the exact result; all elements of the exact result are also contained in the overapproximated result (no false negative)
     Over,
+
+    /// The result is smaller/contains fewer elements than the exact result; the underapproximated result does not contain elements that are not in the exact result (no false positive)
     Under,
+
+    /// No strict relationship between the approximated result and the exact result can be made
+    /// However, the result tries to be close to the exact result.
     Rough
   };
 
@@ -365,11 +372,20 @@ namespace isl {
     void complement_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_complement(take())); }
     Map complement() const { return Map::enwrap(isl_map_complement(takeCopy())); }
 
-    Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
+   ISLPP_EXSITU_ATTRS Set domain() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_domain(takeCopy())); }
+    ISLPP_CONSUME_ATTRS Set domain_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() const { return Set::enwrap(isl_map_domain(takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Set getRange() && { return Set::enwrap(isl_map_range(take())); }
+      Set domain() && { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() && { return Set::enwrap(isl_map_domain(take())); }
+#endif
+
+    ISLPP_EXSITU_ATTRS Set range() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_range(takeCopy())); }
+    ISLPP_CONSUME_ATTRS Set range_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_range(take())); }
+    Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+       Set range() && { return Set::enwrap(isl_map_range(take())); }
+    Set getRange() && { return Set::enwrap(isl_map_range(take())); }
 #endif
 
 

@@ -274,7 +274,8 @@ namespace isl {
     Map unwrapSubspace(const Space &subspace) const;
 
     Set intersect(const Set &that) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
-    void intersect_inplace(const Set &that) ISLPP_INPLACE_FUNCTION { give(isl_set_intersect(take(), that.takeCopy())); }
+    void intersect_inplace( Set that) ISLPP_INPLACE_FUNCTION { give(isl_set_intersect(take(), that.take())); }
+    void intersect_inplace( UnionSet that) ISLPP_INPLACE_FUNCTION;
 
     /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
     /// { (A, B, C) }.subspspaceMap({ B }) = { (A, B, C) -> B }

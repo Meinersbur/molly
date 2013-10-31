@@ -65,6 +65,8 @@ namespace molly {
 
     // { stmt[domain] -> node[cluster] }
     virtual isl::Map getWhere() const = 0;
+    virtual void setWhere(isl::Map instances) = 0;
+    virtual void addWhere(isl::Map newInstances) = 0;
     virtual isl::Map getInstances() const = 0; // Like getWhere(), but domain is exact
 
     // { stmt[domain] -> field[index] }

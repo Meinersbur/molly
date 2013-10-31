@@ -135,6 +135,17 @@ namespace {
     isl::Map getWhere() const LLVM_OVERRIDE {
       return enwrap(stmt->getWhereMap());
     } 
+
+     void setWhere(isl::Map instances) {
+       assert( matchesSpace(getDomainSpace(), instances.getDomainSpace()  ) );
+       stmt->setWhereMap(instances.take());
+     }
+     void addWhere(isl::Map newInstances) {
+       assert(hasWhere());
+       setWhere( unite( getWhere(), newInstances) );
+     }
+
+
     isl::Map getInstances() const LLVM_OVERRIDE {
       return enwrap(stmt->getWhereMap()).intersectDomain(getDomain());
     }

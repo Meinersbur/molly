@@ -202,6 +202,8 @@ namespace isl {
    std::string toStringExplicit() const;
 
    std::string toString()  const;
+
+     ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION {    return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take()));     }
   }; // class Pw<MultiAff>
 
 

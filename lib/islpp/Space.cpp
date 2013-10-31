@@ -1233,6 +1233,12 @@ void isl::Space::dump() const
   isl_space_dump(keep());
 }
 
+isl::UnionSet isl::Space::createEmptyUnionSet() const
+{
+  return UnionSet::enwrap(isl_union_set_empty(takeCopy()));
+}
+
+
 
 
 bool isl::isEqual(const Space &space1, const Space &space2){

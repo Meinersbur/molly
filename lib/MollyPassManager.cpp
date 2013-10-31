@@ -1443,8 +1443,6 @@ namespace {
       // Generate access functions
       generateAccessFuncs();
 
-      //wrapMain();
-
       for (auto &f : *module) {
         auto func = &f;
         if (func->isDeclaration())
@@ -1467,9 +1465,9 @@ namespace {
         scopCtx->validate();
 
         // Decide on which node(s) a ScopStmt should execute 
-        scopCtx->computeScopDistibution();
-        scopCtx->validate();
-        verifyFunction(*scopCtx->getParentFunction());
+        //scopCtx->computeScopDistibution();
+        //scopCtx->validate();
+        //verifyFunction(*scopCtx->getParentFunction());
 
         // Insert communication between ScopStmt
         // Implementation note: This modifies the original IR;

@@ -359,6 +359,7 @@ namespace {
       modifiedScop();
     }
 
+
   public:
     void computeScopDistibution() {
       SE = pm->findOrRunAnalysis<ScalarEvolution>(&scop->getRegion());
@@ -450,6 +451,21 @@ namespace {
     isl::Set beforeScopScatterRange; // deprecated; use beforeScopScatter
     isl::Set afterBeforeScatterRange;  // deprecated
 
+
+    MollyScopStmtProcessor *getScopStmtContext(const isl::Id &domainTupleId) { 
+      auto stmt = tupleToStmt[domainTupleId.keep()]; //TODO: id.getUser() contains this
+      assert(stmt);
+      return getScopStmtContext(stmt);
+    }
+
+    MollyScopStmtProcessor *getScopStmtContext(const isl::Space &space)  {
+      return getScopStmtContext(space.getSetTupleId());
+    }
+
+    MollyScopStmtProcessor *getScopStmtContext(const isl::Set &set)  {
+      return getScopStmtContext(set.getTupleId());
+    }
+
   public:
     void genCommunication() {
       auto funcName = func->getName();
@@ -486,18 +502,21 @@ namespace {
 
       auto paramSpace = isl::enwrap(scop->getParamSpace());
 
-      auto readAccesses = paramSpace.createEmptyUnionMap(); /* { stmt[iteration] -> access[indexset] } */
-      auto writeAccesses = readAccesses.copy(); /* { stmt[iteration] -> access[indexset] } */
-      auto schedule = readAccesses.copy(); /* { stmt[iteration] -> scattering[scatter] } */
+      auto emptyMap = paramSpace.createEmptyUnionMap();
+      auto emptySet = paramSpace.createEmptyUnionSet();
+      auto readAccesses = emptyMap; /* { stmt[iteration] -> access[indexset] } */
+      auto writeAccesses = emptyMap; /* { stmt[iteration] -> access[indexset] } */
+      auto schedule = emptyMap; /* { stmt[iteration] -> scattering[scatter] } */
 
+      //auto fieldReadAccesses = emptyMap; // { stmt[domain] -> field[indexset] }
+      //auto fieldWriteAccesses = emptyMap; // { stmt[domain] -> field[indexset] }
+      auto nonfieldReadAccesses = emptyMap; // { stmt[domain] -> variable[] }
+      auto nonfieldWriteAccesses = emptyMap; // { stmt[domain] -> variable[] }
 
+      // Collect accesses
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
         auto stmt = *itStmt;
         auto stmtCtx = getScopStmtContext(stmt);
-
-        auto facc = getFieldAccess(stmt);
-        if (!facc.isValid())
-          continue; // Does not contain a field access
 
         auto domainTuple = getDomainTuple(stmt);
         auto domain = getIterationDomain(stmt); /* { stmt[domain] } */
@@ -506,6 +525,34 @@ namespace {
         auto scattering = getScattering(stmt); /* { stmt[domain] -> scattering[scatter] }  */
         assert(scattering.getSpace().matchesMapSpace(domainTuple, scatterTuple));
         scattering.intersectDomain_inplace(domain);
+        schedule.addMap_inplace(scattering);
+
+        // Non-field accesses
+        for (auto accIt = stmt->memacc_begin(), accEnd = stmt->memacc_end(); accIt!=accEnd; accIt+=1) {
+          auto memacc = *accIt;
+          auto instr = const_cast<Instruction *>(memacc->getAccessInstruction());
+          auto facc = FieldAccess::fromAccessInstruction(instr);
+          if (facc.isValid())
+            continue; // Will be handled later
+
+          auto rel = enwrap(memacc->getAccessRelation()); // { [domain] -> [indexset] }
+          auto indexsetSpace = rel.getRangeSpace();
+          auto indexsetTupleId = indexsetSpace.getSetTupleId(); // TODO: Check uniqueness
+          if (auto loadInstr = dyn_cast<LoadInst>(instr)) {
+            auto ptr = loadInstr->getPointerOperand();
+            nonfieldReadAccesses.unite_inplace(rel);
+          } else if (auto storeInstr = dyn_cast<StoreInst>(instr)) {
+            auto ptr = storeInstr->getPointerOperand();
+            nonfieldWriteAccesses.unite_inplace(rel);
+          } else {
+            llvm_unreachable("What other type of memory access are there?");
+          }
+        }
+
+        // Field accesses
+        auto facc = getFieldAccess(stmt);
+        if (!facc.isValid())
+          continue; // Does not contain a field access
 
         auto fvar = stmtCtx->getFieldVariable();
         auto accessTuple = fvar->getTupleId();
@@ -534,7 +581,6 @@ namespace {
         if (facc.isWrite()) {
           writeAccesses.addMap_inplace(accessRel);
         }
-        schedule.addMap_inplace(scattering);
       }
 
       // To find the data that needs to be written back after the scop has been executed, we add an artificial stmt that reads all the data after everything has been executed
@@ -609,7 +655,7 @@ namespace {
 #if 0
       isl::simpleFlow(readAccesses, writeAccesses, schedule, &mustFlow, &mustNosrc);
 #else
-      isl::computeFlow(readAccesses.copy(), writeAccesses.copy(), islctx->createEmptyUnionMap(), schedule.copy(), &mustFlow, &mayFlow, &mustNosrc, &mayNosrc);
+      isl::computeFlow(readAccesses.copy(), writeAccesses.copy(), emptyMap.copy(), schedule.copy(), &mustFlow, &mayFlow, &mustNosrc, &mayNosrc);
       assert(mayNosrc.isEmpty());
       assert(mayFlow.isEmpty());
       //TODO: verify that computFlow generates direct dependences
@@ -624,9 +670,11 @@ namespace {
       assert(mustNosrc == mustNosrc2);
 #endif
 
-      auto inputFlow = paramSpace.emptyUnionMap();
-      auto dataFlow = paramSpace.emptyUnionMap();
-      auto outputFlow = paramSpace.emptyUnionSet();
+
+
+      auto inputFlow = emptyMap; //TODO: Make set
+      auto dataFlow = emptyMap;
+      auto outputFlow = emptySet;
 
       inputFlow = mustNosrc;
       //for (auto inpMap : mustNosrc.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
@@ -642,6 +690,114 @@ namespace {
           dataFlow.addMap_inplace(dep);
         }
       }
+      isl::Approximation approx2;
+      auto dataFlowClosure = dataFlow.transitiveClosure(approx2);
+
+
+#pragma region Flow for nonfield accesses
+      auto universeAccessEverything = emptyMap; // { epilogue[] -> [indexset] }
+      for (auto access : nonfieldWriteAccesses.getMaps()) {//TODO: Only add those that are read outsidee the SCoP
+        auto indexsetSpace = access.getRangeSpace();
+        auto universe = indexsetSpace.universeBasicSet();
+        auto accessEverything = alltoall(epilogueDomain, universe); // { epilogue[] -> nonfield[indexset] }
+        universeAccessEverything.unite_inplace(accessEverything);
+      }
+      nonfieldReadAccesses.unite_inplace(universeAccessEverything);
+
+      isl::UnionMap nonfieldMustFlow;
+      isl::UnionMap nonfieldMayFlow;
+      isl::UnionMap nonfieldMustNosrc;
+      isl::UnionMap nonfieldMayNosrc;
+      isl::computeFlow(nonfieldReadAccesses.copy(), nonfieldWriteAccesses.copy(), emptyMap.copy(), schedule.copy(), &nonfieldMustFlow, &nonfieldMayFlow, &nonfieldMustNosrc, &nonfieldMayNosrc);
+
+      auto nonfieldInputFlow = nonfieldMustNosrc.domain(); // Remove epilogue from it
+      auto nonfieldDataFlow = emptyMap;
+      auto nonfieldOutputFlow = emptySet;
+
+      for (auto dep : nonfieldMustFlow.getMaps()) {
+        if (dep.getOutTupleId() == epilogueId) {
+          nonfieldOutputFlow.addSet_inplace(dep.getDomain());
+        } else {
+          nonfieldDataFlow.addMap_inplace(dep);
+        }
+      }
+
+      isl::Approximation approx;
+      auto nonfieldDataFlowClosure = nonfieldDataFlow.transitiveClosure(approx); // { [domain] -> [domain] }
+      auto nonfieldDataFlowClosureRev = nonfieldDataFlowClosure.reverse();
+#pragma endregion
+
+      /////////////////////////////////////////////////
+      // Decide where to execute the statements
+
+      /// List of statement instances that are not yet executed on at least one node
+      auto notyetExecuted = emptySet;
+      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+        auto stmtCtx = getScopStmtContext(*itStmt);
+
+        auto domain = stmtCtx->getDomain();
+        stmtCtx->setWhere(  alltoall(domain.getSpace().universeBasicSet(), nodeSpace.emptySet() ) );
+        notyetExecuted.unite_inplace(domain);
+      }
+
+
+      // Stmts producing scalars must be executed everywhere, since every node requires the up-to-date data; TODO: Check if is actually read outside the SCoP
+      for (auto outSet : nonfieldOutputFlow.getSets()) { // { [domain] }
+        auto stmt = getScopStmtContext(outSet);
+
+        stmt->addWhere(alltoall(outSet.getSpace().universeBasicSet(), nodeSpace.universeBasicSet()));
+        notyetExecuted.substract_inplace(outSet);
+      }
+
+
+
+      // Apply owner computes until everything gets computed
+      while (true) {
+
+        // When a stmt reads a value from a nonfield, the producing stmt must also be executed on the same node; communication between nodes is possible with fields only
+        for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+          auto stmtCtx = getScopStmtContext(*itStmt);
+          auto where = stmtCtx->getWhere();// { [domain] -> [cluster] }
+          auto whereTrans = nonfieldDataFlowClosure.applyRange(where); // Require all non-field value producers to execute on the same node
+
+          for (auto prodWhere : whereTrans.getMaps()) { // { [domain] -> [cluster] }
+            auto prodTuple = prodWhere.getInTupleId();
+            auto prodStmt = tupleToStmt[prodTuple.keep()];
+            auto prodStmtCtx = getScopStmtContext(prodStmt);
+            prodStmtCtx->addWhere(prodWhere);
+            notyetExecuted.substract_inplace(prodWhere.getDomain());
+          }
+        }
+
+        if (notyetExecuted.isEmpty())
+          break;
+
+
+        // Execute statements of the output flow at the owner (owner computes) 
+        // TODO: What about non-output-flow stmts that cannot be omitted, like containing printf
+        //auto outputOnly = outputFlow - dataFlow.domain(); // results that are required by other nodes will be schedules anyway (self-recursive-only dependencies never leak and thus can be ignored)
+        //TODO: Find some senseful ordering
+
+        // All the stuff that we do not know where to execute it, we need a location for; Yoda, I'm with you.
+        isl::Set next; // { [domain] }
+        notyetExecuted.foreachSet([&next](isl::Set set) -> bool {
+          next= set;
+          return false;
+        });
+
+        next.intersect_inplace(notyetExecuted);
+        auto writeStmtCtx = getScopStmtContext(next);
+        auto writeAccessed = writeStmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
+        auto out = writeAccessed.intersectDomain(next); // { writeStmt[domain] -> field[indexset] }
+        auto fty = writeStmtCtx->getFieldType();
+        auto fvar = writeStmtCtx->getFieldVariable();
+        auto fieldHome = fvar->getHomeAff(); // { [domain] -> [cluster] }
+        auto homeAcc = out.applyRange(fieldHome);
+        writeStmtCtx->addWhere(homeAcc);
+        notyetExecuted.substract_inplace(next);
+      }
+
+      /////////////////////////////////////////////////
 
 
       for (auto inp : inputFlow.getMaps()) { 
@@ -866,11 +1022,6 @@ namespace {
     }
 
 
-    MollyScopStmtProcessor *getScopStmtContext(const isl::Id &id) {
-      auto stmt = tupleToStmt[id.keep()]; //TODO: id.getUser() contains this
-      assert(stmt);
-      return getScopStmtContext(stmt);
-    }
 
 
   private:
@@ -1176,17 +1327,17 @@ namespace {
       ScopEditor editor(scop, asPass());
 
       // send_wait
-     auto sendwaitWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> readNodeShape.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId);  // { (recv[domain], dstNode[cluster]) -> srcNode[cluster] }
-     auto sendwaitScatter = relativeScatter(chunks.reorganizeSubspaces(sendwaitWhere.getDomainSpace(), writeDomain.getSpace()), writeScatter, -1); // { (recv[domain], dstNode[cluster]) -> scatter[scattering] }
-     auto sendwaitEditor = editor.createStmt(sendwaitWhere.getDomain() /* { recv[domain], dstNode[cluster] } */, sendwaitScatter.copy(), sendwaitWhere.copy(), "send_wait");
+      auto sendwaitWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> readNodeShape.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId);  // { (recv[domain], dstNode[cluster]) -> srcNode[cluster] }
+      auto sendwaitScatter = relativeScatter(chunks.reorganizeSubspaces(sendwaitWhere.getDomainSpace(), writeDomain.getSpace()), writeScatter, -1); // { (recv[domain], dstNode[cluster]) -> scatter[scattering] }
+      auto sendwaitEditor = editor.createStmt(sendwaitWhere.getDomain() /* { recv[domain], dstNode[cluster] } */, sendwaitScatter.copy(), sendwaitWhere.copy(), "send_wait");
       auto sendwaitStmt = getScopStmtContext(sendwaitEditor.getStmt());
-       auto sendwaitCodegen = sendwaitStmt->makeCodegen();
+      auto sendwaitCodegen = sendwaitStmt->makeCodegen();
 
-       auto sendwaitCurrentIteration = sendwaitEditor.getCurrentIteration(); // { [] -> (recv[domain], dstNode[cluster]) }
-       auto sendwaitCurrentChunk = sendwaitCurrentIteration.sublist(readChunkAff.getRangeSpace()); // { [] -> recv[domain] }
-       auto sendwaitCurrentDst = sendwaitCurrentIteration.sublist(readNodeShape.getSpace()); // { [] -> dstNode[cluster] }
-       auto sendwaitCurrentNode = sendwaitStmt->getClusterMultiAff().setOutTupleId(writeNodeId); // { [] -> srcNode[cluster] }
-       combuf->codegenSendWait(sendwaitCodegen, sendwaitCurrentChunk, sendwaitCurrentNode, sendwaitCurrentDst);
+      auto sendwaitCurrentIteration = sendwaitEditor.getCurrentIteration(); // { [] -> (recv[domain], dstNode[cluster]) }
+      auto sendwaitCurrentChunk = sendwaitCurrentIteration.sublist(readChunkAff.getRangeSpace()); // { [] -> recv[domain] }
+      auto sendwaitCurrentDst = sendwaitCurrentIteration.sublist(readNodeShape.getSpace()); // { [] -> dstNode[cluster] }
+      auto sendwaitCurrentNode = sendwaitStmt->getClusterMultiAff().setOutTupleId(writeNodeId); // { [] -> srcNode[cluster] }
+      combuf->codegenSendWait(sendwaitCodegen, sendwaitCurrentChunk, sendwaitCurrentNode, sendwaitCurrentDst);
 
 
       // write
@@ -1735,7 +1886,6 @@ namespace {
       prepareCurrentNodeCoordinate();
       return currentNodeCoord;
     }
-
 
   }; // class MollyScopContextImpl
 } // namespace
