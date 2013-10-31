@@ -1275,7 +1275,7 @@ namespace {
         combuf->codegenRecv(recvCodegen, recvCurrentChunk, recvCurrentSrc, recvCurrentNode);
       }
 
-    }
+    } // void genFlowCommunication(const isl::Map &dep) 
 
 
     void genOutputCommunication(const isl::Set &outSet/* { writeStmt[domain] } */) {
@@ -1552,7 +1552,7 @@ namespace {
       writebackLocalStmtEditor.getTerminator();
 #pragma endregion
 #endif
-    }
+    } //  void genOutputCommunication(const isl::Set &outSet/*)
 
 
 #pragma endregion

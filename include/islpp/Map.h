@@ -634,6 +634,15 @@ namespace isl {
     void pullback_inplace(const Map &that) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(that.takeCopy(), this->take())); }
 
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
+
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8)const;
+    void dumpExplicit(int maxElts)const;
+    void dumpExplicit()const; // In order do be callable without arguments from debugger
+    std::string toStringExplicit(int maxElts = 8);
+
+#ifndef NDEBUG
+    std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise
+#endif
   }; // class Map
 
 

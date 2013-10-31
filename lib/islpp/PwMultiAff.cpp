@@ -221,3 +221,41 @@ ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange( Map map ) ISLPP_EXSITU_FUN
 {
   return toMap().applyRange(map);
 }
+
+
+
+
+void isl::Pw<MultiAff>::dumpExplicit( int maxElts ) const
+{
+  toMap().dumpExplicit(maxElts);
+}
+
+
+void isl::Pw<MultiAff>::dumpExplicit() const
+{
+  toMap().dumpExplicit();
+}
+
+
+void isl::Pw<MultiAff>::printExplicit( llvm::raw_ostream &os, int maxElts /*= 8*/ ) const
+{
+  toMap().printExplicit(os, maxElts);
+}
+
+
+std::string isl::Pw<MultiAff>::toStringExplicit( int maxElts ) const
+{
+  return toMap().toStringExplicit(maxElts);
+}
+
+
+std::string isl::Pw<MultiAff>::toStringExplicit() const
+{
+  return toStringExplicit(8);
+}
+
+
+std::string isl::Pw<MultiAff>::toString() const
+{
+  return ObjBaseTy::toString();
+}

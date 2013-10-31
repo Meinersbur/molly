@@ -300,6 +300,14 @@ namespace isl {
      ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
      ISLPP_INPLACE_ATTRS void resetSpace_inplace(Space dim) ISLPP_INPLACE_FUNCTION { give(isl_set_reset_space(take(), dim.take())); }
      ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION { return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
+
+
+     void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+     void dumpExplicit(int maxElts) const;
+     void dumpExplicit() const; // In order do be callable without arguments from debugger
+     std::string toStringExplicit(int maxElts = 8);
+
+     std::string toString()  const;
   }; // class Set
 
 
