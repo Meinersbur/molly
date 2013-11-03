@@ -109,7 +109,7 @@ namespace isl {
 
     bool contains(const Space &space) const { return isl_union_set_contains(keep(), space.keep()); } 
 
-    Set extractSet(const Space &space) const { return Set::enwrap(isl_union_set_extract_set(keep(), space.takeCopy())); }
+    Set extractSet( Space space) const { return Set::enwrap(isl_union_set_extract_set(keep(), space.take())); }
 
     bool foreachPoint(const std::function<bool(isl::Point)> &func) const;
 
@@ -135,6 +135,11 @@ namespace isl {
   static inline UnionSet operator+(UnionSet lhs, UnionSet rhs) { return UnionSet ::enwrap(isl_union_set_union(lhs.take(), rhs.take())); }
   static inline UnionSet operator-(UnionSet lhs, UnionSet rhs) { return UnionSet ::enwrap(isl_union_set_subtract(lhs.take(), rhs.take())); }
  
+
+  static inline Set intersect(Set lhs, UnionSet rhs) {
+  auto rhsSet = rhs.extractSet(lhs.getSpace());
+  return Set::enwrap(isl_set_intersect(lhs.take(), rhsSet.take()));
+  }
 
 } // namespace isl
 #endif /* ISLPP_UNIONSET_H */

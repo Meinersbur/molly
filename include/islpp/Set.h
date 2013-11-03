@@ -295,7 +295,7 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
 
-    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION {      return cast(getSpace().untyped());    }
+    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); }
 
     //FIXME: Not part of public isl interface
      ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }

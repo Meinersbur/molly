@@ -338,23 +338,21 @@ namespace isl {
     Map intersect(const Map &that) && { return Map::enwrap(isl_map_intersect(take(), that.takeCopy())); }
 #endif
 
-    void intersectDomain_inplace(Set &&set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.take())); }
-    void intersectDomain_inplace(const Set &set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.takeCopy())); }
-    Map intersectDomain(Set &&set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.take())); }
-    Map intersectDomain(const Set &set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.takeCopy())); }
+    void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.take())); }
+    Map intersectDomain(Set set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map intersectDomain(Set &&set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
-    Map intersectDomain(const Set &set) &&{ return Map::enwrap(isl_map_intersect_domain(take(), set.takeCopy())); }
+    Map intersectDomain(Set set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
 #endif
 
-    void intersectRange_inplace(Set &&set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.take())); }
-    void intersectRange_inplace(const Set &set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.takeCopy())); }
-    Map intersectRange(Set &&set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
-    Map intersectRange(const Set &set) { return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
+  ISLPP_EXSITU_ATTRS  Map intersectDomain(UnionSet uset) ISLPP_EXSITU_FUNCTION;
+
+    void intersectRange_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.take())); }
+    Map intersectRange(Set set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map intersectRange(Set &&set)&& { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
-    Map intersectRange(const Set &set) &&{ return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
+    Map intersectRange(Set set) && { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
 #endif
+
+   ISLPP_EXSITU_ATTRS Map intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION;
 
     void intersectParams(Set params) { give(isl_map_intersect_params(take(), params.take())); }
 

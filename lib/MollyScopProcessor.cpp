@@ -213,7 +213,7 @@ namespace {
 
   public:
     static char ID;
-    MollyScopContextImpl(MollyPassManager *pm, Scop *scop) : ScopPass(ID), pm(pm), scop(scop), changedScop(false), scevCodegen(*pm->findOrRunAnalysis<ScalarEvolution>(nullptr, &scop->getRegion()), "scopprocessor") {
+    MollyScopContextImpl(MollyPassManager *pm, Scop *scop) : SE(nullptr), ScopPass(ID), pm(pm), scop(scop), changedScop(false), scevCodegen(*pm->findOrRunAnalysis<ScalarEvolution>(nullptr, &scop->getRegion()), "scopprocessor") {
       func = molly::getFunctionOf(scop);
       islctx = pm->getIslContext();
 
@@ -466,6 +466,10 @@ namespace {
       return getScopStmtContext(set.getTupleId());
     }
 
+    bool contains(Instruction *instr) {
+      return getRegion()->contains(instr);
+    }
+
   public:
     void genCommunication() {
       auto funcName = func->getName();
@@ -512,6 +516,10 @@ namespace {
       //auto fieldWriteAccesses = emptyMap; // { stmt[domain] -> field[indexset] }
       auto nonfieldReadAccesses = emptyMap; // { stmt[domain] -> variable[] }
       auto nonfieldWriteAccesses = emptyMap; // { stmt[domain] -> variable[] }
+      auto nonfieldUsedOutside = emptySet; // { variable[indexset] }
+
+      auto readFieldDomains = emptySet; // { [domain] }
+      auto writeFieldDomain = emptySet; // { [domain] }
 
       // Collect accesses
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
@@ -535,17 +543,37 @@ namespace {
           if (facc.isValid())
             continue; // Will be handled later
 
+          llvm::Value *ptr;
           auto rel = enwrap(memacc->getAccessRelation()); // { [domain] -> [indexset] }
           auto indexsetSpace = rel.getRangeSpace();
           auto indexsetTupleId = indexsetSpace.getSetTupleId(); // TODO: Check uniqueness
           if (auto loadInstr = dyn_cast<LoadInst>(instr)) {
-            auto ptr = loadInstr->getPointerOperand();
+            ptr = loadInstr->getPointerOperand();
             nonfieldReadAccesses.unite_inplace(rel);
           } else if (auto storeInstr = dyn_cast<StoreInst>(instr)) {
-            auto ptr = storeInstr->getPointerOperand();
+            ptr = storeInstr->getPointerOperand();
             nonfieldWriteAccesses.unite_inplace(rel);
           } else {
             llvm_unreachable("What other type of memory access are there?");
+          }
+
+          // See if it is still used after leaving the scop
+          bool usedOutside = false;
+          for (auto use = ptr->use_begin(), end=ptr->use_end(); use!=end; ++use) {
+            auto user =  cast<Instruction>(*use);
+            auto userBB = user->getParent();
+
+            if (this->contains(user))
+              continue;
+
+            // TODO: Used before or after the scop?
+            // TOOD: LoadInst or StoreInst or pointer arithmetic? TODO: Check if is actually read outside the SCoP
+            usedOutside = true;
+            break;
+          }
+
+          if (usedOutside) {
+            nonfieldUsedOutside.unite_inplace(rel.range());
           }
         }
 
@@ -577,9 +605,11 @@ namespace {
 
         if (facc.isRead()) {
           readAccesses.addMap_inplace(accessRel);
+          readFieldDomains.unite_inplace(accessRel.domain());
         }
         if (facc.isWrite()) {
           writeAccesses.addMap_inplace(accessRel);
+          writeFieldDomain.unite_inplace(accessRel.domain());
         }
       }
 
@@ -702,6 +732,7 @@ namespace {
         auto accessEverything = alltoall(epilogueDomain, universe); // { epilogue[] -> nonfield[indexset] }
         universeAccessEverything.unite_inplace(accessEverything);
       }
+      universeAccessEverything = alltoall(epilogueDomain, nonfieldUsedOutside);
       nonfieldReadAccesses.unite_inplace(universeAccessEverything);
 
       isl::UnionMap nonfieldMustFlow;
@@ -710,7 +741,7 @@ namespace {
       isl::UnionMap nonfieldMayNosrc;
       isl::computeFlow(nonfieldReadAccesses.copy(), nonfieldWriteAccesses.copy(), emptyMap.copy(), schedule.copy(), &nonfieldMustFlow, &nonfieldMayFlow, &nonfieldMustNosrc, &nonfieldMayNosrc);
 
-      auto nonfieldInputFlow = nonfieldMustNosrc.domain(); // Remove epilogue from it
+      auto nonfieldInputFlow = nonfieldMustNosrc.domain(); // TODO: Remove epilogue from it
       auto nonfieldDataFlow = emptyMap;
       auto nonfieldOutputFlow = emptySet;
 
@@ -736,38 +767,74 @@ namespace {
         auto stmtCtx = getScopStmtContext(*itStmt);
 
         auto domain = stmtCtx->getDomain();
-        stmtCtx->setWhere(  alltoall(domain.getSpace().universeBasicSet(), nodeSpace.emptySet() ) );
+        stmtCtx->setWhere(alltoall(domain.getSpace().universeBasicSet(), nodeSpace.emptySet())); // Reset to execute nowhere
         notyetExecuted.unite_inplace(domain);
       }
 
 
-      // Stmts producing scalars must be executed everywhere, since every node requires the up-to-date data; TODO: Check if is actually read outside the SCoP
+      // Stmts producing scalars must be executed everywhere, since every node requires the up-to-date data; 
       for (auto outSet : nonfieldOutputFlow.getSets()) { // { [domain] }
         auto stmt = getScopStmtContext(outSet);
 
         stmt->addWhere(alltoall(outSet.getSpace().universeBasicSet(), nodeSpace.universeBasicSet()));
         notyetExecuted.substract_inplace(outSet);
       }
+      //localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
 
 
+      // "owner computes": execute statements that a valid after the exit of the SCoP at the value's home locations 
+      for (auto output : outputFlow.getSets()) {
+        //auto  outputnotyet =  intersect(output, notyetExecuted);
+        auto stmtCtx = getScopStmtContext(output); 
+        auto accessed = stmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
+        auto accessedButNotyetExecuted = accessed.intersectDomain(notyetExecuted); // { stmt[domain] -> field[indexset] }
+        auto fvar = stmtCtx->getFieldVariable();
+        auto fieldHome = fvar->getHomeAff(); // { [domain] -> [cluster] }
+        auto homeAcc = accessedButNotyetExecuted.applyRange(fieldHome); // { stmt[domain] -> [cluster] }
+        stmtCtx->addWhere(homeAcc);
 
+        notyetExecuted.substract_inplace(accessedButNotyetExecuted.domain());
+        localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+      }
+
+      while (true) {
+        bool changed = false;
+
+        // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
+        for (auto flow : dataFlow.getMaps()) {
+          auto producerSpace = flow.getDomainSpace();
+          auto consumerSpace = flow.getRangeSpace();
+
+          auto producerStmt = getScopStmtContext(producerSpace);
+          auto consumerStmt = getScopStmtContext(consumerSpace);
+
+          auto flowNotyetExecuted = flow.intersectRange(notyetExecuted); // { producer[domain] -> cosumer[domain] }
+          auto flowProducerWhere = flowNotyetExecuted.wrap().chainSubspace(producerStmt->getInstances()); // { (producer[domain] -> consumer[domain]) -> consumer[cluster] }
+          auto producerSuggestedWhere = flowNotyetExecuted.applyDomain(producerStmt->getInstances()).reverse(); // { producer[domain] -> [cluster] }
+
+          if (!producerSuggestedWhere.isEmpty()) {
+            producerStmt->addWhere(producerSuggestedWhere);
+            notyetExecuted.substract_inplace(producerSuggestedWhere.domain());
+            localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+            changed = true;
+          }
+        }
+
+        //TODO: This fixpoint computation should be done on a higher level; on unbounded domains, this method might not even finished
+        // See UnionMap::transitiveClosure for how it should work
+        if (changed) {
+          //localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+        } else {
+          break;
+        }
+      }
+
+#if 0
       // Apply owner computes until everything gets computed
       while (true) {
 
-        // When a stmt reads a value from a nonfield, the producing stmt must also be executed on the same node; communication between nodes is possible with fields only
-        for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
-          auto stmtCtx = getScopStmtContext(*itStmt);
-          auto where = stmtCtx->getWhere();// { [domain] -> [cluster] }
-          auto whereTrans = nonfieldDataFlowClosure.applyRange(where); // Require all non-field value producers to execute on the same node
+        localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
 
-          for (auto prodWhere : whereTrans.getMaps()) { // { [domain] -> [cluster] }
-            auto prodTuple = prodWhere.getInTupleId();
-            auto prodStmt = tupleToStmt[prodTuple.keep()];
-            auto prodStmtCtx = getScopStmtContext(prodStmt);
-            prodStmtCtx->addWhere(prodWhere);
-            notyetExecuted.substract_inplace(prodWhere.getDomain());
-          }
-        }
 
         if (notyetExecuted.isEmpty())
           break;
@@ -786,7 +853,7 @@ namespace {
         });
 
         next.intersect_inplace(notyetExecuted);
-        auto writeStmtCtx = getScopStmtContext(next);
+        auto writeStmtCtx = getScopStmtContext(next); //TODO: Not all the ScopStmts are field accesses
         auto writeAccessed = writeStmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
         auto out = writeAccessed.intersectDomain(next); // { writeStmt[domain] -> field[indexset] }
         auto fty = writeStmtCtx->getFieldType();
@@ -796,7 +863,7 @@ namespace {
         writeStmtCtx->addWhere(homeAcc);
         notyetExecuted.substract_inplace(next);
       }
-
+#endif
       /////////////////////////////////////////////////
 
 
@@ -821,11 +888,26 @@ namespace {
       // i.e. treat ever may write as, write original value if not written
     }
 
+    /// Make the data that is required to compute a ScopStmt (also) execute the value-computing ScopStmt
+    void localizeNonfieldFlowDeps(isl::UnionSet &notyetExecuted, isl::UnionMap nonfieldDataFlowClosure)    {
+      // When a stmt reads a value from a nonfield, the producing stmt must also be executed on the same node; communication between nodes is possible with fields only
+      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+        auto stmtCtx = getScopStmtContext(*itStmt);
+        auto where = stmtCtx->getWhere();// { [domain] -> [cluster] }
+        auto whereTrans = nonfieldDataFlowClosure.applyRange(where); // Require all non-field value producers to execute on the same node
+
+        for (auto prodWhere : whereTrans.getMaps()) { // { [domain] -> [cluster] }
+          auto prodTuple = prodWhere.getInTupleId();
+          //auto prodStmt = tupleToStmt[prodTuple.keep()];
+          auto prodStmtCtx = getScopStmtContext(prodTuple);
+          prodStmtCtx->addWhere(prodWhere);
+          notyetExecuted.substract_inplace(prodWhere.getDomain());
+        }
+      }
+    }
 
 
   private:
-
-
     isl::Space getStmtNodeSpace(MollyScopStmtProcessor *stmtCtx) {
       auto domainSpace = stmtCtx->getDomainSpace();
       auto domainTupleId = domainSpace.getSetTupleId();

@@ -332,9 +332,20 @@ std::string isl::Map::toStringExplicit( int maxElts /*= 8*/ )
   return str; // NRVO
 }
 
+
 #ifndef NDEBUG
-std::string isl::Map::toString() const
-{
+std::string isl::Map::toString() const {
   return ObjBaseTy::toString();
 }
 #endif
+
+
+ISLPP_EXSITU_ATTRS Map isl::Map::intersectDomain( UnionSet uset ) ISLPP_EXSITU_FUNCTION {
+  return intersectDomain(uset.extractSet(getDomainSpace()));
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::Map::intersectRange( UnionSet uset ) ISLPP_EXSITU_FUNCTION {
+  auto set = uset.extractSet(getRangeSpace());
+  return Map::enwrap(isl_map_intersect_range(takeCopy(), set.take()));
+}
