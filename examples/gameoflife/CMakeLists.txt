@@ -1,0 +1,50 @@
+
+### Compile using standard compiler (Will miscompile since this needs mollycc, but adds it to Visual Studio project)
+include_directories("${MOLLY_SOURCE_DIR}/include/mollyrt")
+add_llvm_example(gameoflife gameoflife.cpp)
+set_target_properties(gameoflife PROPERTIES FOLDER "Molly")
+target_link_libraries(gameoflife MollyRT ${MPI_CXX_LIBRARIES})
+
+
+
+### Compile using mollycc, link to MollyRT that has been compiled using CMAKE_CXX_COMPILER
+get_filename_component(gameoflife_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}gameoflife-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
+get_target_property(MollyRT_LOCATION MollyRT LOCATION)
+mollycc_compile("${gameoflife_path}"
+  SOURCES gameoflife.cpp
+  CFLAGS -mllvm -shape=4
+  COMMENT "mollycc MollyRT gameoflife.cpp..."
+)
+
+add_custom_target(gameoflife-mollycc
+  DEPENDS "${gameoflife_path}"
+  COMMENT "Built stencil using mollycc"
+  VERBATIM
+)
+add_dependencies(gameoflife-mollycc MollyRT)
+set_target_properties(gameoflife-mollycc PROPERTIES FOLDER "Molly")
+
+
+
+
+
+### Compile using mollycc, link to MollyRT-a
+get_filename_component(gameoflife_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}gameoflife-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
+mollycc_a_compile("${gameoflife_path}"
+  SOURCES "stencil.cpp"
+  FLAGS -mllvm -shape=4
+  COMMENT "mollycc molly.a gameoflife.cpp..."
+)
+
+add_custom_target(gameoflife-mollycc-a ALL
+  DEPENDS "${gameoflife_path}"
+  COMMENT "Compiling gameoflife using mollycc-a"
+  VERBATIM
+)
+set_target_properties(gameoflife-mollycc-a PROPERTIES FOLDER "Molly")
+add_dependencies(gameoflife-mollycc-a MollyRT-a)
+
+
+
+
+

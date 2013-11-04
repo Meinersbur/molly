@@ -33,6 +33,7 @@ namespace isl {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
+    //typedef isl::Obj<ObjTy, StructTy> ObjTy;
   protected:
     void release() { isl_pw_multi_aff_free(takeOrNull()); }
     StructTy *addref() const { return isl_pw_multi_aff_copy(keepOrNull()); }
@@ -193,6 +194,16 @@ namespace isl {
    ISLPP_EXSITU_ATTRS PwMultiAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;
 
     //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
+
+   void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+   void dumpExplicit(int maxElts) const;
+   void dumpExplicit() const; // In order do be callable without arguments from debugger
+   std::string toStringExplicit(int maxElts) const;
+   std::string toStringExplicit() const;
+
+   std::string toString()  const;
+
+     ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION {    return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take()));     }
   }; // class Pw<MultiAff>
 
 

@@ -8,6 +8,7 @@
 
 #include <isl/map.h>
 #include <llvm/Support/raw_ostream.h>
+#include "islpp/Point.h"
 
 using namespace isl;
 using namespace llvm;
@@ -261,4 +262,90 @@ Map isl::naturalJoin(const Set &domain, const Set &range) {
   }
 
   return cartesian;
+}
+
+
+void isl::Map::dumpExplicit( int maxElts /*= 8*/ )const{
+  printExplicit(llvm::dbgs(), maxElts);
+  llvm::dbgs() << "\n";
+}
+
+
+void isl::Map::dumpExplicit()const{
+  dumpExplicit(8);
+}
+
+
+void isl::Map::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/) const{
+  auto wrapped = this->wrap();
+  auto nInDims = getInDimCount();
+   auto nOutDims = getOutDimCount();
+
+  os << "{ ";
+  int count=0;
+  auto omittedsome = wrapped.foreachPoint([&count,maxElts,&os,nInDims,nOutDims](Point p) -> bool {
+    if (count >= maxElts)
+      return true;
+
+    if (count>0) {
+      os << ", ";
+    }
+    if (nInDims != 1) 
+      os << "[";
+    for (auto i = nInDims-nInDims;i<nInDims;i+=1) {
+      if (i>0)
+        os << ",";
+      os << p.getCoordinate(isl_dim_set, i);
+    }
+    if (nInDims != 1) 
+      os << "]";
+
+    os << " -> ";
+
+    if (nOutDims != 1) 
+      os << "[";
+    for (auto i = nOutDims-nOutDims;i<nOutDims;i+=1) {
+      if (i>0)
+        os << ",";
+      os << p.getCoordinate(isl_dim_set, nInDims+i);
+    }
+    if (nOutDims != 1) 
+      os << "]";
+
+    count+=1;
+    return false;
+  });
+
+  if (omittedsome) {
+    os << ", ...";
+  }
+  os << " }";
+}
+
+
+std::string isl::Map::toStringExplicit( int maxElts /*= 8*/ )
+{
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  printExplicit(os, maxElts);
+  os.flush();
+  return str; // NRVO
+}
+
+
+#ifndef NDEBUG
+std::string isl::Map::toString() const {
+  return ObjBaseTy::toString();
+}
+#endif
+
+
+ISLPP_EXSITU_ATTRS Map isl::Map::intersectDomain( UnionSet uset ) ISLPP_EXSITU_FUNCTION {
+  return intersectDomain(uset.extractSet(getDomainSpace()));
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::Map::intersectRange( UnionSet uset ) ISLPP_EXSITU_FUNCTION {
+  auto set = uset.extractSet(getRangeSpace());
+  return Map::enwrap(isl_map_intersect_range(takeCopy(), set.take()));
 }

@@ -274,7 +274,8 @@ namespace isl {
     Map unwrapSubspace(const Space &subspace) const;
 
     Set intersect(const Set &that) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_intersect(takeCopy(), that.takeCopy())); }
-    void intersect_inplace(const Set &that) ISLPP_INPLACE_FUNCTION { give(isl_set_intersect(take(), that.takeCopy())); }
+    void intersect_inplace( Set that) ISLPP_INPLACE_FUNCTION { give(isl_set_intersect(take(), that.take())); }
+    void intersect_inplace( UnionSet that) ISLPP_INPLACE_FUNCTION;
 
     /// Similar to Map.rangeMap() and Map.domainMap(), but allow to select the subspace to map to 
     /// { (A, B, C) }.subspspaceMap({ B }) = { (A, B, C) -> B }
@@ -294,12 +295,20 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
 
-    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION {      return cast(getSpace().untyped());    }
+    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); }
 
     //FIXME: Not part of public isl interface
      ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
      ISLPP_INPLACE_ATTRS void resetSpace_inplace(Space dim) ISLPP_INPLACE_FUNCTION { give(isl_set_reset_space(take(), dim.take())); }
      ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION { return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
+
+
+     void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+     void dumpExplicit(int maxElts) const;
+     void dumpExplicit() const; // In order do be callable without arguments from debugger
+     std::string toStringExplicit(int maxElts = 8);
+
+     std::string toString()  const;
   }; // class Set
 
 

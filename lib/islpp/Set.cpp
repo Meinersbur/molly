@@ -18,6 +18,7 @@
 #include "islpp/PwQPolynomialFold.h"
 #include "islpp/Dim.h"
 #include "islpp/DimRange.h"
+#include "islpp/UnionSet.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -1057,6 +1058,67 @@ ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces( const Space &domainSpace, con
 {
   return reorganizeSubspaces(std::move(domainSpace), std::move(rangeSpace), true);
 }
+
+
+void isl::Set::dumpExplicit( int maxElts /*= 8*/ )const{
+  printExplicit(llvm::dbgs(), maxElts);
+  llvm::dbgs() << "\n";
+}
+
+void isl::Set::dumpExplicit()const
+{
+  dumpExplicit(8);
+}
+
+
+
+void isl::Set::printExplicit( llvm::raw_ostream &os, int maxElts /*= 8*/ )const {
+  os << "{ ";
+  int count=0;
+ auto omittedsome = this->foreachPoint([&count,maxElts,&os](Point p) -> bool {
+   if (count >= maxElts)
+     return true;
+
+   if (count>0) {
+     os << ", ";
+   }
+   os << p;
+
+    count+=1;
+    return false;
+  });
+
+ if (omittedsome) {
+   os << ", ...";
+ }
+ os << " }";
+}
+
+std::string isl::Set::toStringExplicit( int maxElts /*= 8*/ )
+{
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  printExplicit(os, maxElts);
+  os.flush();
+  return str; // NRVO
+}
+
+
+std::string isl::Set::toString() const
+{
+  return ObjBaseTy::toString();
+}
+
+
+void isl::Set::intersect_inplace( UnionSet that ) ISLPP_INPLACE_FUNCTION
+{
+  intersect_inplace(that.extractSet(getSpace()));
+}
+
+
+
+
+
 
 
 

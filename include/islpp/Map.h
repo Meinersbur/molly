@@ -61,8 +61,15 @@ namespace isl {
   };
   enum class Approximation {
     Exact,
+
+    /// The result is larger/contains more elements than the exact result; all elements of the exact result are also contained in the overapproximated result (no false negative)
     Over,
+
+    /// The result is smaller/contains fewer elements than the exact result; the underapproximated result does not contain elements that are not in the exact result (no false positive)
     Under,
+
+    /// No strict relationship between the approximated result and the exact result can be made
+    /// However, the result tries to be close to the exact result.
     Rough
   };
 
@@ -331,23 +338,21 @@ namespace isl {
     Map intersect(const Map &that) && { return Map::enwrap(isl_map_intersect(take(), that.takeCopy())); }
 #endif
 
-    void intersectDomain_inplace(Set &&set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.take())); }
-    void intersectDomain_inplace(const Set &set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.takeCopy())); }
-    Map intersectDomain(Set &&set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.take())); }
-    Map intersectDomain(const Set &set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.takeCopy())); }
+    void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_domain(take(), set.take())); }
+    Map intersectDomain(Set set) const { return Map::enwrap(isl_map_intersect_domain(takeCopy(), set.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map intersectDomain(Set &&set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
-    Map intersectDomain(const Set &set) &&{ return Map::enwrap(isl_map_intersect_domain(take(), set.takeCopy())); }
+    Map intersectDomain(Set set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
 #endif
 
-    void intersectRange_inplace(Set &&set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.take())); }
-    void intersectRange_inplace(const Set &set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.takeCopy())); }
-    Map intersectRange(Set &&set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
-    Map intersectRange(const Set &set) { return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
+  ISLPP_EXSITU_ATTRS  Map intersectDomain(UnionSet uset) ISLPP_EXSITU_FUNCTION;
+
+    void intersectRange_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.take())); }
+    Map intersectRange(Set set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map intersectRange(Set &&set)&& { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
-    Map intersectRange(const Set &set) &&{ return Map::enwrap(isl_map_intersect_range(take(), set.takeCopy())); }
+    Map intersectRange(Set set) && { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
 #endif
+
+   ISLPP_EXSITU_ATTRS Map intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION;
 
     void intersectParams(Set params) { give(isl_map_intersect_params(take(), params.take())); }
 
@@ -365,11 +370,20 @@ namespace isl {
     void complement_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_complement(take())); }
     Map complement() const { return Map::enwrap(isl_map_complement(takeCopy())); }
 
-    Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
+   ISLPP_EXSITU_ATTRS Set domain() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_domain(takeCopy())); }
+    ISLPP_CONSUME_ATTRS Set domain_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() const { return Set::enwrap(isl_map_domain(takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Set getRange() && { return Set::enwrap(isl_map_range(take())); }
+      Set domain() && { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() && { return Set::enwrap(isl_map_domain(take())); }
+#endif
+
+    ISLPP_EXSITU_ATTRS Set range() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_range(takeCopy())); }
+    ISLPP_CONSUME_ATTRS Set range_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_range(take())); }
+    Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+       Set range() && { return Set::enwrap(isl_map_range(take())); }
+    Set getRange() && { return Set::enwrap(isl_map_range(take())); }
 #endif
 
 
@@ -634,6 +648,15 @@ namespace isl {
     void pullback_inplace(const Map &that) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(that.takeCopy(), this->take())); }
 
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
+
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8)const;
+    void dumpExplicit(int maxElts)const;
+    void dumpExplicit()const; // In order do be callable without arguments from debugger
+    std::string toStringExplicit(int maxElts = 8);
+
+#ifndef NDEBUG
+    std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise
+#endif
   }; // class Map
 
 

@@ -35,6 +35,9 @@ namespace isl {
   // Curiously recursive template pattern to avoid virtual function calls
   template<typename D, typename S>
   class Obj {
+  protected:
+    typedef Obj<D, S> ObjBaseTy;
+
 #ifndef NDEBUG
   public:
     std::string _printed; // A cached toString() output to allow readable value inspection during debugging
@@ -294,7 +297,7 @@ namespace isl {
     bool isNull() const { return !obj; }
     //LLVM_EXPLICIT operator bool() { return isValid(); }
 
-    std::string toString() {
+    std::string toString() const {
       std::string buf;
       if (obj) {
         llvm::raw_string_ostream stream(buf);

@@ -879,6 +879,11 @@ extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint
 }
 
 
+extern "C" void *__molly_combuf_recv_ptr(MPIRecvCommunication *recvbuf, uint64_t src) { MOLLY_DEBUG_FUNCTION_ARGS(recvbuf, src)
+  return recvbuf->getDataPtr(src);
+}
+
+
 extern "C" void __molly_combuf_recv(MPIRecvCommunication *recvbuf, uint64_t src) { MOLLY_DEBUG_FUNCTION_ARGS(recvbuf, src)
   recvbuf->recv(src);
 }

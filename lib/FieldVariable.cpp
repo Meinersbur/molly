@@ -8,6 +8,7 @@
 #include "FieldType.h"
 #include <llvm/ADT/SmallString.h>
 #include "islpp/Space.h"
+#include "islpp/PwMultiAff.h"
 
 using namespace llvm;
 using namespace molly;
@@ -15,8 +16,8 @@ using namespace molly;
 
 FieldVariable::FieldVariable(llvm::GlobalVariable *variable, FieldType *fieldTy) 
   : variable(variable), fieldTy(fieldTy) {
-  assert(variable);
-  assert(fieldTy);
+    assert(variable);
+    assert(fieldTy);
 }
 
 
@@ -32,39 +33,43 @@ void FieldVariable::dump() {
 
 isl::Id FieldVariable::getTupleId() {
 #if 0
-    llvm::SmallString<255> sstr;
-    llvm::raw_svector_ostream os(sstr);
+  llvm::SmallString<255> sstr;
+  llvm::raw_svector_ostream os(sstr);
 
-    os << "fvar_";
-    auto varname = variable->getName();
-    if (varname.size() > 0) {
-      os << varname << "_";
-    }
-    os << variable;
+  os << "fvar_";
+  auto varname = variable->getName();
+  if (varname.size() > 0) {
+    os << varname << "_";
+  }
+  os << variable;
 #endif
-    //TODO: Check for invalid characters
-    return getIslContext()->createId(Twine("fvar_") + variable->getName(), variable);
+  //TODO: Check for invalid characters
+  return getIslContext()->createId(Twine("fvar_") + variable->getName(), variable);
 }
 
 
- isl::Space FieldVariable::getAccessSpace() {
-   return getFieldType()->getIndexsetSpace().setSetTupleId(getTupleId());
- }
+isl::Space FieldVariable::getAccessSpace() {
+  return getFieldType()->getIndexsetSpace().setSetTupleId(getTupleId());
+}
 
 
- FieldLayout * molly::FieldVariable::getLayout()
- {
-   // Currently there is a layout per type
-   // Future version may have a layout per variable or even dynamic at runtime with automatic conversion between them
-   return fieldTy->getLayout();
- }
+FieldLayout * molly::FieldVariable::getLayout() {
+  // Currently there is a layout per type
+  // Future version may have a layout per variable or even dynamic at runtime with automatic conversion between them
+  return fieldTy->getLayout();
+}
 
- llvm::Type * molly::FieldVariable::getEltType()
- {
-   return fieldTy->getEltType();
- }
 
- llvm::Type * molly::FieldVariable::getEltPtrType()
- {
-   return fieldTy->getEltPtrType();
- }
+llvm::Type * molly::FieldVariable::getEltType() {
+  return fieldTy->getEltType();
+}
+
+
+llvm::Type * molly::FieldVariable::getEltPtrType() {
+  return fieldTy->getEltPtrType();
+}
+
+
+isl::PwMultiAff molly::FieldVariable::getHomeAff() {
+  return fieldTy->getHomeAff().setInTupleId(getTupleId());
+}

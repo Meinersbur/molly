@@ -38,6 +38,8 @@ namespace molly {
     llvm::Type *getEltType();
       llvm::Type *getEltPtrType();
 
+      isl::PwMultiAff getHomeAff();
+
   }; // class FieldVariable
 
 } /* namespace molly */

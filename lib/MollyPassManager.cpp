@@ -51,6 +51,7 @@
 #include "llvm/Analysis/Verifier.h"
 #include "molly/Mollyfwd.h"
 #include "Codegen.h"
+#include "llvm/Assembly/PrintModulePass.h"
 
 using namespace molly;
 using namespace polly;
@@ -287,11 +288,13 @@ namespace {
       // Register pass 
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
-      auto &intfs = passInfo->getInterfacesImplemented();
-      for (auto it = intfs.begin(), end = intfs.end(); it!=end; ++it) {
-        auto intf = *it;
-        auto intfPassID = intf->getTypeInfo();
-        currentModuleAnalyses[intfPassID] = pass;
+      if (passInfo) {
+        auto &intfs = passInfo->getInterfacesImplemented();
+        for (auto it = intfs.begin(), end = intfs.end(); it!=end; ++it) {
+          auto intf = *it;
+          auto intfPassID = intf->getTypeInfo();
+          currentModuleAnalyses[intfPassID] = pass;
+        }
       }
       currentModuleAnalyses[passID] = pass;
     }
@@ -458,7 +461,7 @@ namespace {
 
 
     void registerEvaluatedAnalysis(llvm::RegionPass *pass, llvm::Region *region) LLVM_OVERRIDE {
-       auto passID = pass->getPassID();
+      auto passID = pass->getPassID();
 
       auto passRegistry = PassRegistry::getPassRegistry();
       auto passInfo = passRegistry->getPassInfo(passID);
@@ -784,30 +787,30 @@ namespace {
 
     void emitGetClusterGeometry() {
       auto &llvmContext=  getLLVMContext();
-        auto voidTy = Type::getVoidTy(llvmContext);
-          auto intTy = Type::getInt64Ty(llvmContext);
-          auto intPtrTy = Type::getInt64PtrTy(llvmContext);
-          auto boolPtrTy =  Type::getInt8PtrTy(llvmContext);
+      auto voidTy = Type::getVoidTy(llvmContext);
+      auto intTy = Type::getInt64Ty(llvmContext);
+      auto intPtrTy = Type::getInt64PtrTy(llvmContext);
+      auto boolPtrTy =  Type::getInt8PtrTy(llvmContext);
 
 #if 0
- auto func =   cast<Function> (  module->getOrInsertFunction("__molly_get_cluster_geometry", voidTy, intPtrTy,intPtrTy,boolPtrTy));
- auto entryBB = BasicBlock::Create(llvmContext, "entry", func);
-  auto ret = ReturnInst::Create(llvmContext, entryBB);
-  DefaultIRBuilder builder(ret);
+      auto func =   cast<Function> (  module->getOrInsertFunction("__molly_get_cluster_geometry", voidTy, intPtrTy,intPtrTy,boolPtrTy));
+      auto entryBB = BasicBlock::Create(llvmContext, "entry", func);
+      auto ret = ReturnInst::Create(llvmContext, entryBB);
+      DefaultIRBuilder builder(ret);
 
-  auto argIt = func->arg_begin();
-  auto nClusterDimsPtrVal = &*argIt;
-  ++argIt;
- auto clusterLengthsPtrVal = &*argIt;
-  ++argIt;
-  auto clusterPeriodicPtrVal = &*argIt;
-  assert(++argIt == func->arg_end());
+      auto argIt = func->arg_begin();
+      auto nClusterDimsPtrVal = &*argIt;
+      ++argIt;
+      auto clusterLengthsPtrVal = &*argIt;
+      ++argIt;
+      auto clusterPeriodicPtrVal = &*argIt;
+      assert(++argIt == func->arg_end());
 #endif
 
-  
 
-  auto nClusterDimsConst = ConstantInt::get(intTy, clusterConf->getClusterDims());
-  auto nClusterDimsVal = new GlobalVariable(*module, intTy, true, GlobalVariable::ExternalLinkage, nClusterDimsConst, "__molly_nClusterDims");
+
+      auto nClusterDimsConst = ConstantInt::get(intTy, clusterConf->getClusterDims());
+      auto nClusterDimsVal = new GlobalVariable(*module, intTy, true, GlobalVariable::ExternalLinkage, nClusterDimsConst, "__molly_nClusterDims");
     }
 
 
@@ -838,7 +841,7 @@ namespace {
         // The driver should resolve this
         llvm_unreachable("No main function found");
         return;
-     }
+      }
 
       // Rename old main function
       const char *replMainName = "__molly_orig_main";
@@ -1069,6 +1072,7 @@ namespace {
 
   public :
     CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
+
       auto &llvmContext = getLLVMContext();
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
@@ -1442,8 +1446,6 @@ namespace {
       // Generate access functions
       generateAccessFuncs();
 
-      //wrapMain();
-
       for (auto &f : *module) {
         auto func = &f;
         if (func->isDeclaration())
@@ -1453,6 +1455,10 @@ namespace {
         funcCtx->isolateFieldAccesses();
         verifyFunction(f);
       }
+
+      std::string infoDummy;
+      auto OSisolated = new raw_fd_ostream("4_isolated.ll", infoDummy);
+      runModulePass(llvm::createPrintModulePass(OSisolated, false, "After isolation\n\n"));
 
       // Find all scops
       runScopDetection();
@@ -1466,9 +1472,9 @@ namespace {
         scopCtx->validate();
 
         // Decide on which node(s) a ScopStmt should execute 
-        scopCtx->computeScopDistibution();
-        scopCtx->validate();
-        verifyFunction(*scopCtx->getParentFunction());
+        //scopCtx->computeScopDistibution();
+        //scopCtx->validate();
+        //verifyFunction(*scopCtx->getParentFunction());
 
         // Insert communication between ScopStmt
         // Implementation note: This modifies the original IR;

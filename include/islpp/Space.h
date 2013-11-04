@@ -361,6 +361,7 @@ namespace isl {
     BasicMap createUniverseBasicMap() const;
 
     UnionMap createEmptyUnionMap() const;
+    UnionSet createEmptyUnionSet() const; 
 
     AstBuild createAstBuild() const;
 #pragma endregion

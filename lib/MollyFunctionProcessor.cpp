@@ -385,7 +385,7 @@ namespace {
       auto src = call->getOperand(1);
 
       auto codegen = makeCodegen(call);
-      auto ptr = codegen.callRuntimeCombufSendPtr(combuf, src);
+      auto ptr = codegen.callRuntimeCombufRecvPtr(combuf, src);
       auto casted = codegen.getIRBuilder().CreatePointerCast(ptr, call->getType());
       call->replaceAllUsesWith(casted);
       call->eraseFromParent();

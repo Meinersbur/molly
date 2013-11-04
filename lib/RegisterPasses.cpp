@@ -82,16 +82,14 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
 
   auto OScanonicalized = new raw_fd_ostream("3_canonicalized.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OScanonicalized, false, "After canonicalization\n\n"));
-
   PM.add(llvm::createVerifierPass());
 
   // Do the Molly thing
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
 
-  auto OSaftermolly = new raw_fd_ostream("4_mollied.ll", infoDummy);
+  auto OSaftermolly = new raw_fd_ostream("5_mollied.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OSaftermolly, false, "After Molly did its work\n\n"));
-
   PM.add(llvm::createVerifierPass());
 
 #ifndef NDEBUG
@@ -116,7 +114,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createGlobalDCEPass());        
   PM.add(llvm::createConstantMergePass());     
 
-  auto OSaftercleanup = new raw_fd_ostream("5_cleaned.ll", infoDummy);
+  auto OSaftercleanup = new raw_fd_ostream("6_cleaned.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OSaftercleanup, false, "After cleanup\n\n"));
 #endif
 }
