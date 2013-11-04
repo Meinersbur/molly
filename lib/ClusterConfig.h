@@ -40,11 +40,11 @@ namespace molly {
     const isl::Id &getClusterTuple() const { return nodecoord; }
     isl::Space getClusterSpace() const;
     isl::Space getClusterParamSpace() const { return getClusterSpace().moveDims(isl_dim_param, clusterShape.getParamDimCount(), isl_dim_set, 0,clusterShape.getDimCount()).params(); }
-    
+
     void setClusterLengths(llvm::ArrayRef<unsigned> lengths) {
       clusterLengths.clear();
       clusterLengths.append(lengths.begin(), lengths.end());
-       auto nDims = lengths.size();
+      auto nDims = lengths.size();
 
       auto space = islctx->createSetSpace(0, nDims);
       space.setSetTupleId_inplace(getClusterTuple());
@@ -53,7 +53,7 @@ namespace molly {
         space.setSetDimId_inplace(d, id.move());
       }
 
-     this-> clusterShape = islctx->createRectangularSet(clusterLengths);
+      this->clusterShape = islctx->createRectangularSet(clusterLengths);
       clusterShape.cast_inplace(space);
     }
 

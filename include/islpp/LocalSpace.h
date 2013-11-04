@@ -75,14 +75,9 @@ namespace isl {
 #pragma endregion
 
 
-
-
 #pragma region Conversion from isl::Space
-    /* implicit */ LocalSpace(Space &&);
-    /* implicit */ LocalSpace(const Space &);
-
-    const LocalSpace &operator=(Space &&);
-    const LocalSpace &operator=(const Space &that);
+    /* implicit */ LocalSpace(Space);
+    const LocalSpace &operator=(Space);
 #pragma endregion
 
 

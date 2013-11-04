@@ -3,7 +3,9 @@
 
 using namespace molly;
 
+#ifndef NDEBUG
 int _debugindention;
+
 
 DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
   //if (!__molly_isMaster())
@@ -31,3 +33,4 @@ DebugFunctionScope::~DebugFunctionScope() {
   //fprintf(stderr,"EXIT\n");
   std::cerr << "EXIT  " << funcname << std::endl;
 }
+#endif

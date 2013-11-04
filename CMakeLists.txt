@@ -114,11 +114,11 @@ set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -std=c++11  -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt")
+set(MOLLYRT_COMMON_CFLAGS -std=gnu++11  -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=c++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -mllvm -molly)
+set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -mllvm -molly)
 set(MOLLYCC_COMMON_LDLAGS )
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
@@ -130,13 +130,10 @@ set(MOLLYRT_VERBOSE_FLAGS )
 set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
-set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly)
+#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly)
+set(MOLLYCC_VERBOSE_FLAGS -v -mllvm -debug -mllvm -debug-only=polly)
 set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report)
 set(MOLLYCC_VERBOSE_LDFLAGS )
-
-#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
-#set(MOLLYCC_VERBOSE_FLAGS -v -w -mllvm -debug -mllvm -debug-only=molly -mllvm -polly-report)
-#set(MOLLYCC_VERBOSE_FLAGS )
 
 
 

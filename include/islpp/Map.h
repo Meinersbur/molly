@@ -647,7 +647,7 @@ namespace isl {
     Map pullback(const Map &that) ISLPP_EXSITU_FUNCTION { return Map::enwrap( isl_map_apply_range(that.takeCopy(), this->takeCopy()) ); }
     void pullback_inplace(const Map &that) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_range(that.takeCopy(), this->take())); }
 
-    ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
 
     void printExplicit(llvm::raw_ostream &os, int maxElts = 8)const;
     void dumpExplicit(int maxElts)const;

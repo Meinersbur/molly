@@ -36,26 +36,14 @@ LocalSpace::~LocalSpace() {
 #endif
 
 
-const LocalSpace &LocalSpace::operator=(const Space &that) {
-  give(isl_local_space_from_space(that.takeCopy())); 
-  return *this;
+LocalSpace::LocalSpace(Space that) 
+  : Obj(isl_local_space_from_space(that.take())) {
 }
 
 
-LocalSpace::LocalSpace(Space &&that) : Obj(isl_local_space_from_space(that.take())) {
-}
-
-
-const LocalSpace &LocalSpace::operator=(Space &&that) {
+const LocalSpace &LocalSpace::operator=(Space that) {
   give(isl_local_space_from_space(that.take()));
   return *this;
-}
-
-
-void LocalSpace::print(llvm::raw_ostream &out) const {
-  Printer printer = Printer::createToStr(getCtx());
-  printer.print(*this);
-  printer.print(out);
 }
 
 
@@ -125,6 +113,7 @@ const char *LocalSpace::getDimName(isl_dim_type type, unsigned pos) const{
   return isl_local_space_get_dim_name(keep(), type, pos);
 }
 #endif
+
 void LocalSpace::setDimName(isl_dim_type type, unsigned pos, const char *s){
   give(isl_local_space_set_dim_name(take(), type, pos, s));
 }
@@ -158,6 +147,13 @@ void LocalSpace::insertDims(isl_dim_type type, unsigned first, unsigned n) {
 }
 void LocalSpace::dropDims(isl_dim_type type, unsigned first, unsigned n) {
   give(isl_local_space_drop_dims(take(), type, first, n));
+}
+
+
+void isl::LocalSpace::print( llvm::raw_ostream &out ) const {
+  auto printer = isl::Printer::createToStr(getCtx());
+  printer.print(*this);
+  printer.print(out);
 }
 
 

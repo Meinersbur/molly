@@ -696,14 +696,16 @@ namespace {
     Function *emitLocalLength(FieldType *fty) {
       auto &context = module->getContext();
       auto llvmTy = fty->getType();
+      auto llvmPtrTy =  PointerType::getUnqual(llvmTy);
       auto nDims = fty->getNumDimensions();
       auto intTy = Type::getInt64Ty(context);
       auto lengths = fty->getLengths();
       //auto molly = &getAnalysis<MollyContextPass>();
 
-      SmallVector<Type*, 5> argTys;
-      argTys.push_back(PointerType::getUnqual(llvmTy));
-      argTys.append(nDims, intTy);
+      //SmallVector<Type*, 5> argTys;
+      //argTys.push_back(PointerType::getUnqual(llvmTy));
+      //argTys.append(nDims, intTy);
+      Type *argTys[] = { llvmPtrTy,  intTy };
       auto localLengthFuncTy = FunctionType::get(intTy, argTys, false);
 
       auto localLengthFunc = Function::Create(localLengthFuncTy, GlobalValue::InternalLinkage, "molly_locallength", module);
@@ -1043,7 +1045,8 @@ namespace {
     MollyFieldAccess getFieldAccess(llvm::Instruction *instr) {
       assert(instr);
       auto result = MollyFieldAccess::fromAccessInstruction(instr);
-      augmentFieldVariable(result); 
+      if (result.isValid())
+        augmentFieldVariable(result); 
       return result;
     }
 

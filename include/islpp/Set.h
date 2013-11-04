@@ -293,7 +293,7 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set reorderSubspaces(const Space &setSpace) ISLPP_EXSITU_FUNCTION { return reorganizeSubspaces(std::move(setSpace), true); }
 
     ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
-    ISLPP_EXSITU_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
 
     ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); }
 

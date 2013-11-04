@@ -12,8 +12,8 @@
 
 //#pragma molly transform("{ [i,j] -> [j,i] }", 0)
 //#pragma molly transform("{ [i] -> [node, j] : node = [i/32], i = node*32 + j }", 1)
-molly::array<int, 128> FieldSrc;
-molly::array<int, 128> FieldDst;
+molly::array<int, 16> FieldSrc;
+molly::array<int, 16> FieldDst;
 
 //molly::array<int, 44> MySecondField;
 

@@ -49,7 +49,7 @@ InlineCost MollyInlinePrepa::getInlineCost(CallSite CS) {
   // that are viable for inlining. FIXME: We shouldn't even get here for
   // declarations.
   if (Callee && !Callee->isDeclaration() &&
-      Callee->getAttributes().hasAttribute(AttributeSet::FunctionIndex, "molly_inline") /*&&
+      Callee->hasFnAttribute( "molly_inline") /*&&
       ICA->isInlineViable(*Callee)*/)
     return InlineCost::getAlways();
 
@@ -79,5 +79,5 @@ char &molly::MollyInlinePassID = MollyInlinePrepa::ID;
 static RegisterPass<MollyInlinePrepa> ScopStmtSplitPassRegistration("molly-inline", "Molly - Inliner");
 
 llvm::Pass *molly::createMollyInlinePass() {
-return new MollyInlinePrepa(false);
+  return new MollyInlinePrepa(false);
 }

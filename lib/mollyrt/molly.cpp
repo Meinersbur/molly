@@ -303,16 +303,19 @@ public:
 namespace {
 
   void DebugWait(int rank) {
-    char	a;
+//#ifndef NDEBUG
+    char a;
 
     if(rank == 0) {
-        std::cout << "Rank " << rank << " is waiting for signal..." << std::endl;
+      printf("Rank %d is waiting for signal...\n", rank);
+        //std::cout << "Rank " << rank << " is waiting for signal..." << std::endl;
     	scanf("%c", &a);
     	printf("%d: Starting now\n", rank);
     } 
 
     MPI_Bcast(&a, 1, MPI_BYTE, 0, MPI_COMM_WORLD);
     printf("%d: Starting now\n", rank);
+//#endif
 }
 
 

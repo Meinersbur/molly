@@ -56,8 +56,8 @@ namespace isl {
 
 
 #pragma region Creational
-    static Constraint createEquality(LocalSpace &&);
-    static Constraint createInequality(LocalSpace &&);
+    static Constraint createEquality(LocalSpace );
+    static Constraint createInequality(LocalSpace );
 
     static Constraint createEqualityFromAff(Aff &&aff) { return enwrap(isl_equality_from_aff(aff.take())); }
     static Constraint createInequalityFromAff(Aff &&aff) { return enwrap(isl_inequality_from_aff(aff.take())); }

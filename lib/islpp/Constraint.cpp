@@ -35,12 +35,12 @@ Constraint::~Constraint() {
 }
 #endif
 
-Constraint Constraint::createEquality(LocalSpace &&space) {
+Constraint Constraint::createEquality(LocalSpace space) {
   return Constraint::enwrap(isl_equality_alloc(space.take()));
 }
 
 
-Constraint Constraint::createInequality(LocalSpace &&space) {
+Constraint Constraint::createInequality(LocalSpace space) {
   return Constraint::enwrap(isl_inequality_alloc(space.take()));
 }
 

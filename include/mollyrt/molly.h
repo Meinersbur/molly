@@ -8,11 +8,11 @@
 // TODO: Modes:
 // - Single: There is just one rank
 // - Broadcast: Every rank executes everything, but only the results of master are saved //TODO: for complete emulation of single-rank execution, we should also replace calls to output functions, such as printf, fwrite, etc...
-// - Master: The master executes everything, only parallizable work is delegate to other ranks
+// - Master: The master executes everything, only parallelizable work is delegate to other ranks
 
 
 #ifdef __clang__
-typedef struct { long double x, y; } __float128;
+//typedef struct { long double x, y; } __float128;
 #endif
 
 #include <type_traits>
@@ -309,6 +309,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
 #define MOLLY_DEBUG_FUNCTION_SCOPE
+#define MOLLY_DEBUG_FUNCTION_ARGS(...)
+#define MOLLY_DEBUG_METHOD_ARGS(...)
 #endif
 
 #ifndef NDEBUG
@@ -542,7 +544,7 @@ namespace molly {
   //struct make_indices : make_indices_impl<0, index_tuple<>, Types...>
   //{};
   template<typename... Types>
-  //struct _make_index_sequence : _index_sequence<0, _indices<>, Types...> {}; // Using inheritancle becasue there are no templated typedefs (outside of classes)
+  //struct _make_index_sequence : _index_sequence<0, _indices<>, Types...> {}; // Using inheritance because there are no templated typedefs (outside of classes)
   using _make_index_sequence = _index_sequence<0, _indices<>, Types...>;
   // TODO: Also a version that converts constants parameter packs (instead of type parameter pack)
 #pragma endregion
@@ -555,6 +557,7 @@ namespace molly {
 #pragma region _array_partial_subscript
   template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
   class _array_partial_subscript; // Never instantiate, use specializations only 
+
 
   template<typename T, int... Stored, int... Togo> 
   class _array_partial_subscript<T, _dimlengths<Stored...>, _dimlengths<Togo...>> {
@@ -570,7 +573,7 @@ namespace molly {
     fieldty *owner;
     int coords[nStored]; 
   public:
-    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) MOLLYATTR(inline)  
+    MOLLYATTR(inline) _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords)  
       : owner(owner), coords({coords...})   {
         assert(owner);
         //TODO: assertion that all stored are in range
@@ -578,14 +581,12 @@ namespace molly {
 
   private:
     template<size_t... Indices>
-    MOLLYATTR(inline)
-    subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)   {
+    MOLLYATTR(inline) subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)   {
       return subty(owner, coords[Indices]..., appendCoord);
     }
 
   public:
-    MOLLYATTR(inline)
-    subty operator[](int i) /*TODO: const*/ {
+    MOLLYATTR(inline) subty operator[](int i) /*TODO: const*/ {
       //assert(0 <= i);
       //assert(i < _unqueue<Togo...>::value);
       return buildSubtyHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
@@ -602,27 +603,27 @@ namespace molly {
     typedef array<T, Stored..., Togo> fieldty;
 
     fieldty *owner;
-    int coords[nStored]; 
+    uint64_t coords[nStored]; 
   public:
-    MOLLYATTR(inline)
-    _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) 
+    MOLLYATTR(inline) _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) 
       : owner(owner), coords({coords...}) {
+        //uint64_t tmp[] = {coords...};
+        //std::copy(&tmp[0], &tmp[sizeof...(coords)], this->coords);
         assert(owner);
     }
 
   private:
     template<size_t... Indices>
-    MOLLYATTR(inline)
-    T &getPtrHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int last)  {
+    MOLLYATTR(inline) T &getPtrHelper(_indices<Indices...>/*unused*/, uint64_t coords[sizeof...(Indices)], int last)  {
       return *owner->ptr(coords[Indices]..., last);
     }
 
   public:
-    MOLLYATTR(inline)
-    T &operator[](int i)  /*TODO: const*/{
-      assert(0 <= i); // Check lower bound of coordinate
-      assert(i < Togo); // Check upper bound of coordinate
-      return getPtrHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
+    MOLLYATTR(inline) T &operator[](uint64_t i)  /*TODO: const*/{
+      //assert(0 <= i); // Check lower bound of coordinate
+      //assert(i < Togo); // Check upper bound of coordinate
+      return getPtrHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), this->coords, i);
+      //return *owner->ptr(coords[_indices<Stored>]..., i);
     }
   }; // class _array_partial_subscript
 #pragma endregion
@@ -995,7 +996,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLYATTR(fieldmember) MOLLYATTR(inline) operator[](int i)  { //MOLLY_DEBUG_FUNCTION_SCOPE
         //assert(0 <= i);
         //assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -1005,7 +1006,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      operator[](int i) MOLLYATTR(fieldmember) MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLYATTR(fieldmember) MOLLYATTR(inline)  operator[](int i) { //MOLLY_DEBUG_FUNCTION_SCOPE
         //assert(0 <= i);
         //assert(i < _unqueue<L...>::value);
         return subty(this, i);
@@ -1101,7 +1102,7 @@ extern "C" LLVM_ATTRIBUTE_USED uint64_t __molly_cluster_current_coordinate(uint6
 
 #ifndef __MOLLYRT
 template<typename T, uint64_t... L>
-LLVM_ATTRIBUTE_USED void molly::array<T, L...>::__get_broadcast(T &val, typename _inttype<L>::type... coords) const MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) { MOLLY_DEBUG_FUNCTION_SCOPE
+LLVM_ATTRIBUTE_USED MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) void molly::array<T, L...>::__get_broadcast(T &val, typename _inttype<L>::type... coords) const { MOLLY_DEBUG_FUNCTION_SCOPE
   if (isLocal(coords...)) {
     __get_local(val, coords...);
     broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result

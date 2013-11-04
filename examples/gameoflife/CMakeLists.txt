@@ -12,13 +12,13 @@ get_filename_component(gameoflife_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXEC
 get_target_property(MollyRT_LOCATION MollyRT LOCATION)
 mollycc_compile("${gameoflife_path}"
   SOURCES gameoflife.cpp
-  CFLAGS -mllvm -shape=4
+  CFLAGS -mllvm -shape=2x2
   COMMENT "mollycc MollyRT gameoflife.cpp..."
 )
 
 add_custom_target(gameoflife-mollycc
   DEPENDS "${gameoflife_path}"
-  COMMENT "Built stencil using mollycc"
+  COMMENT "Built gameoflife using mollycc"
   VERBATIM
 )
 add_dependencies(gameoflife-mollycc MollyRT)
@@ -31,12 +31,12 @@ set_target_properties(gameoflife-mollycc PROPERTIES FOLDER "Molly")
 ### Compile using mollycc, link to MollyRT-a
 get_filename_component(gameoflife_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}gameoflife-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${gameoflife_path}"
-  SOURCES "stencil.cpp"
-  FLAGS -mllvm -shape=4
+  SOURCES "gameoflife.cpp"
+  FLAGS -mllvm -shape=2x2
   COMMENT "mollycc molly.a gameoflife.cpp..."
 )
 
-add_custom_target(gameoflife-mollycc-a ALL
+add_custom_target(gameoflife-mollycc-a
   DEPENDS "${gameoflife_path}"
   COMMENT "Compiling gameoflife using mollycc-a"
   VERBATIM
