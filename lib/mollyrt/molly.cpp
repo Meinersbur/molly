@@ -773,6 +773,8 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   // Molly puts combuf and local storage initialization here
   //TODO: Molly could also put these into .ctor
   //__builtin_molly_global_init();
+  
+  std::cerr << "###############################################################################";
 
   //FIXME: Exception-handling, but currently we do not support exceptions
   auto retval = __molly_orig_main(argc, argv, envp);
@@ -834,7 +836,7 @@ extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_ARGS(l
 
 #pragma region Communication buffer to send data
 
-extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize)
+extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize, tag)
   return new MPISendCommunication(dstCount, eltSize);
 }
 
@@ -869,7 +871,7 @@ extern "C" void *__molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_
 
 #pragma region Communication buffer to recv data
 
-extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize)
+extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize, tag)
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 
