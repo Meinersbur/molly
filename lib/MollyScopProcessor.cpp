@@ -1226,7 +1226,7 @@ namespace {
       // recv_wait
       auto recvwaitWhere = chunks.reorganizeSubspaces(readChunkAff.getRangeSpace() >> writeNodeShape.getSpace(), readNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { (readStmt[domain], srcNode[cluster]) -> dstNode[cluster] } 
       {
-        auto recvwaitScatter = relativeScatter(chunks.reorganizeSubspaces(recvwaitWhere.getDomainSpace(), readDomain.getSpace()), readScatter, +1);
+        auto recvwaitScatter = relativeScatter(chunks.reorganizeSubspaces(recvwaitWhere.getDomainSpace(), readDomain.getSpace()), readScatter, -1);
         auto recvwaitEditor = editor.createStmt(recvwaitWhere.getDomain(), recvwaitScatter.copy(), recvwaitWhere.copy(), "recv");
         auto recvwaitStmt = getScopStmtContext(recvwaitEditor.getStmt());
         auto recvwaitCodegen = recvwaitStmt->makeCodegen();
@@ -1263,7 +1263,7 @@ namespace {
       // recv
       {
         auto recvWhere = recvwaitWhere; // { (readStmt[domain], srcNode[cluster]) -> dstNode[cluster] } 
-        auto recvScatter = relativeScatter(chunks.reorganizeSubspaces(recvWhere.getDomainSpace(), readDomain.getSpace()), readScatter, -1);
+        auto recvScatter = relativeScatter(chunks.reorganizeSubspaces(recvWhere.getDomainSpace(), readDomain.getSpace()), readScatter, +1);
         auto recvEditor = editor.createStmt(recvWhere.getDomain(), recvScatter.copy(), recvWhere.copy(), "recv");
         auto recvStmt = getScopStmtContext(recvEditor.getStmt());
         auto recvCodegen = recvStmt->makeCodegen();

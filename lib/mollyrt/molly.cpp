@@ -488,7 +488,7 @@ namespace {
 
   class MPISendCommunicationBuffer {
   private:
-	  bool initialized;
+    bool initialized;
 
     MPISendCommunication *parent;
     size_t elts;
@@ -497,6 +497,7 @@ namespace {
     uint64_t tag;
 
     void *buf;
+    bool sending;
     MPI_Request request;
 
 #ifndef NDEBUG
@@ -541,6 +542,7 @@ namespace {
       }
 #endif
 
+      this->sending = false;
       auto dstMpiRank = communicator->getMPICommRank(nClusterDims, dstCoords);
       MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
 
@@ -553,12 +555,18 @@ namespace {
     }
 
     void send() { MOLLY_DEBUG_FUNCTION_SCOPE
+      assert(!sending);
       MPI_CHECK(MPI_Start(&request));
+      this->sending = true;
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+      if (!sending)
+	return; // May happen before the very first send; Molly always waits before sending the next chunk
+      
       MPI_Status status;
       MPI_CHECK(MPI_Wait(&request, &status));
+      this->sending = false;
 
 #ifndef NDEBUG
       int count = -1;
