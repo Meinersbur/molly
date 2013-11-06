@@ -707,14 +707,14 @@ namespace {
 
 
 
-      auto inputFlow = emptyMap; //TODO: Make set
+      auto inputFlow = emptySet; //TODO: Make set
       auto dataFlow = emptyMap;
       auto outputFlow = emptySet;
 
-      inputFlow = mustNosrc;
-      //for (auto inpMap : mustNosrc.getMaps()) { /* dep: { stmtRead[domain] -> field[indexset] } */
-      //  inputFlow.addMap_inplace(inpMap);
-      //}
+      //inputFlow = mustNosrc;
+      for (auto inpMap : mustNosrc.getMaps()) { /* mustNosrc: { stmtRead[domain] -> field[indexset] } */
+        inputFlow.addSet_inplace(inpMap.domain());
+      }
 
       for (auto dep : mustFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
         auto readTuple = dep.getOutTupleId();
@@ -872,7 +872,7 @@ namespace {
       /////////////////////////////////////////////////
 
 
-      for (auto inp : inputFlow.getMaps()) { 
+      for (auto inp : inputFlow.getSets()) { 
         // Value source is outside this scop 
         // Value must be read from home location
         genInputCommunication(inp);
@@ -948,26 +948,41 @@ namespace {
     isl::MultiAff afterScopScatter; // { epilogue[] -> scattering[scatter] }
 
 
-    void genInputCommunication(isl::Map inp/* { readStmt[domain] -> field[indexset] } */) {
-#if 0
-      auto prologueDomain = beforeScopScatter.getDomain();
+    void genInputCommunication(isl::Set inp/* { readStmt[domain] } */) {
+      auto scatterTupleId = getScatterTuple(scop);
+      auto clusterConf = getClusterConfig();
+      auto clusterShape = clusterConf->getClusterShape();
+      auto clusterSpace = clusterConf->getClusterSpace();
+      auto clusterTupleId = clusterShape.getTupleId();
+      auto srcNodeId = islctx->createId("srcNode");
+      auto srcNodeSpace = clusterSpace.setSetTupleId(srcNodeId);
+      auto dstNodeId = islctx->createId("dstNode");
+      auto dstNodeSpace = clusterSpace.setSetTupleId(dstNodeId);
 
-      auto combuf = pm->newCommunicationBuffer(fty, comRelation); 
-      ScopEditor editor(scop, asPass());
+      auto readStmt = getScopStmtContext(inp);
+      assert(readStmt->isReadAccess());
+      auto readDomain = readStmt->getDomain(); // { readStmt[domain] }
+      auto readTupleId = readDomain.getTupleId();
+      assert(readStmt->isFieldAccess());
+      auto readFvar = readStmt->getFieldVariable();
+      auto readAccRel = readStmt->getAccessRelation().intersectDomain(readDomain); // { readStmt[domain] -> fvar[index] }
+      assert(readAccRel.matchesMapSpace(readDomain.getSpace(), readFvar->getAccessSpace()));
+      auto readScatter = readStmt->getScattering().intersectDomain(readDomain); //  { readStmt[domain] -> scattering[scatter] }
+      assert(readScatter.matchesMapSpace(readDomain.getSpace(), scatterTupleId));
+      auto readWhere = readStmt->getWhere().intersectDomain(readDomain).setOutTupleId(dstNodeId); // { stmtRead[domain] -> dstNode[cluster] }
+      auto readEditor = readStmt->getEditor();
 
-      // { [] }: send_wait
-      auto sendWaitScatter = beforeScopScatter; // { [] -> scattering[scatter] }
-      auto sendWaitWhere = 
-        editor.createStmt(sendWaitWhere.getDomain(), sendWaitScatter.copy(), sendWaitWhere.copy(), "sendwait");
+      auto fvar = readFvar;
+      auto homeAff = fvar->getHomeAff().setOutDimId(srcNodeId); // { fvar[indexset] -> srcNode[cluster] }
+      auto indexsetSpace = homeAff.getDomainSpace(); // { fvar[indexset] }
 
-      // { field[indexset] }: write
-      // { [] }: send
-      // { [] }: recv_wait
-      // { readStmt[] }: readFlow
-      // { [] }: recv
-#endif
+      auto transfer = readAccRel.chain(homeAff).wrap().chainSubspace(readWhere).wrap(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
+      auto local = intersect(transfer, transfer.getSpace().equalBasicSet(dstNodeSpace, srcNodeSpace));
+      auto remoteTransfer = transfer-local; // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
+      auto localTransfer = local.reorganizeSubspaces()
 
-      auto instances = inp.getDomain(); /* { readStmt[domain] } */
+
+      auto instances = inp; /* { readStmt[domain] } */
       auto clusterConf = pm->getClusterConfig();
       auto clusterTuple = clusterConf->getClusterTuple();
       auto nClusterDims = clusterConf->getClusterDims();
@@ -1241,9 +1256,9 @@ namespace {
       auto readDomain = readStmt->getDomain();
       auto readTupleId = readDomain.getTupleId();
       assert(readStmt->isFieldAccess());
-      auto readFVar = readStmt->getFieldVariable();
+      auto readFvar = readStmt->getFieldVariable();
       auto readAccRel = readStmt->getAccessRelation().intersectDomain(readDomain); /* { readStmt[domain] -> field[index] } */
-      assert(readAccRel.matchesMapSpace(readDomain.getSpace(), readFVar->getAccessSpace()));
+      assert(readAccRel.matchesMapSpace(readDomain.getSpace(), readFvar->getAccessSpace()));
       auto readScatter = readStmt->getScattering().intersectDomain(readDomain); //  { readStmt[domain] -> scattering[scatter] }
       assert(readScatter.matchesMapSpace(readDomain.getSpace(), scatterTupleId));
       auto readWhere = readStmt->getWhere().intersectDomain(readDomain); // { stmtRead[domain] -> node[cluster] }
@@ -1266,8 +1281,8 @@ namespace {
       assert(readStmt != writeStmt);
 
       // flow is data transfer from a writing statement to a reading statement of the same location, i.e. also same field
-      assert(readFVar == writeFVar);
-      auto fvar = readFVar;
+      assert(readFvar == writeFVar);
+      auto fvar = readFvar;
       auto fty = fvar->getFieldType();
       auto indexsetSpace = fvar->getAccessSpace();
 
@@ -1518,8 +1533,8 @@ namespace {
 
     void genOutputCommunication(const isl::Set &outSet/* { writeStmt[domain] } */) {
       auto writeDomainTuple = outSet.getTupleId();
-      auto writeStmt = tupleToStmt[writeDomainTuple.keep()];
-      auto writeStmtCtx = getScopStmtContext(writeStmt);
+      //auto writeStmt = tupleToStmt[writeDomainTuple.keep()];
+      auto writeStmtCtx = getScopStmtContext(outSet);
       auto writeEditor = writeStmtCtx->getEditor();
       auto srcNodeId = islctx->createId("srcNode");
       auto dstNodeId = islctx->createId("dstNode");

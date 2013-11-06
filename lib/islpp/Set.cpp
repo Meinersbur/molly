@@ -778,7 +778,7 @@ Set isl::moveDims(Set &&set, isl_dim_type dst_type, unsigned dst_pos, isl_dim_ty
 Set isl::intersectParams(Set &&set, Set &&params){
   return Set::enwrap(isl_set_intersect_params(set.take(), params.take()));
 }
-Set isl::intersect(Set &&set1, Set &&set2){
+Set isl::intersect(Set set1, Set set2){
   return Set::enwrap(isl_set_intersect(set1.take(), set2.take()));
 }
 Set isl::subtract(Set &&set1, Set &&set2){

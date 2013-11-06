@@ -358,7 +358,7 @@ namespace isl {
   Set moveDims(Set &&set, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos,  unsigned n);
 
   Set intersectParams(Set &&set, Set &&params);
-  Set intersect(Set &&set1, Set &&set2);
+  Set intersect(Set set1, Set set2);
 
   static inline Set unite(Set &&set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.take(), set2.take())); }
   static inline Set unite(Set &&set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.take(), set2.takeCopy())); }

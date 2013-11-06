@@ -354,10 +354,10 @@ namespace isl {
     SpaceTy setSetDimId(Id id) && { assert(getDerived()->isSet()); getDerived()->setDimId_internal(isl_dim_set, std::move(id)); return std::move(*this); }
 #endif
 
-    SpaceTy setParamDimId(pos_t pos, const Id &id) const { return setDimId(isl_dim_param, pos, id); }
-    SpaceTy setInDimId(pos_t pos, const Id &id) const { assert(isMap()); return setDimId(isl_dim_in, pos, id); }
-    SpaceTy setOutDimId(pos_t pos, const Id &id) const { assert(isMap()); return setDimId(isl_dim_out, pos, id); }
-    SpaceTy setSetDimId(pos_t pos, const Id &id) const { assert(isSet()); return setDimId(isl_dim_set, pos, id); }
+    SpaceTy setParamDimId(pos_t pos, Id id) const { return setDimId(isl_dim_param, pos, std::move(id)); }
+    SpaceTy setInDimId(pos_t pos, Id id) const { assert(isMap()); return setDimId(isl_dim_in, pos, std::move(id)); }
+    SpaceTy setOutDimId(pos_t pos, Id id) const { assert(isMap()); return setDimId(isl_dim_out, pos, std::move(id)); }
+    SpaceTy setSetDimId(pos_t pos, Id id) const { assert(isSet()); return setDimId(isl_dim_set, pos, std::move(id)); }
 
     SpaceTy setDimName(isl_dim_type type,  pos_t pos, const char *s) { auto result = getDerived()->copy(); result.setDimName_inplace(type, pos, s); return result; }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
