@@ -291,6 +291,10 @@ namespace isl {
     Id getOutTupleId() const { return getDerived()->getTupleId(isl_dim_out); }
     Id getSetTupleId() const { return getDerived()->getTupleId(isl_dim_set); }
 
+    Id getInTupleIdOrNull() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_in) ? getDerived()->getTupleId(isl_dim_in) : Id(); }
+    Id getOutTupleIdOrNull() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_out) ? getDerived()->getTupleId(isl_dim_out) : Id(); }
+    Id getSetTupleIdOrNull() const { assert(getDerived()->isSet()); return getDerived()->hasTupleId(isl_dim_set) ? getDerived()->getTupleId(isl_dim_set) : Id(); }
+
     Id getParamDimId(pos_t pos) const { return getDerived()->getDimId(isl_dim_param, pos); }
 
     SpaceTy setTupleId(isl_dim_type type, Id id) const { auto result = getDerived()->copy(); result.setTupleId_inplace(type, std::move(id)); return result; }

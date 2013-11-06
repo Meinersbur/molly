@@ -945,15 +945,67 @@ namespace {
     }
 
 
+    bool splitFieldAccessed(BasicBlock *bb) {
+      auto name = bb->getName();
+      bool changed = false;
+
+      auto instr = &bb->front();
+      auto term = bb->getTerminator();
+      auto cnt = 0;
+      BasicBlock *last = bb;
+      while (instr && instr!=term) {
+        auto facc = getFieldAccess(instr);
+        if (!facc.isValid()) { // Nothing to do
+          instr = instr->getNextNode();
+          continue;
+        }
+
+        auto gep = facc.getFieldCall();
+        auto acc = facc.getAccessor();
+        gep->moveBefore(acc);
+
+        auto splitPt1 = gep;
+        auto splitPt2 = acc->getNextNode();
+
+        BasicBlock *before;
+        BasicBlock *middle;
+        BasicBlock *after;
+        auto new1 = splitBlockIfNecessary(last, splitPt1, false, before, middle, this);
+        auto new2 = splitBlockIfNecessary(middle, splitPt2, false, middle, after, this);
+        changed = changed || new1 || new2;
+
+        middle->setName(name + Twine(".facc") + Twine(cnt));
+        if (new2) {
+          after->setName(name + Twine(".inter") + Twine(cnt));
+        }
+
+        cnt+=1;
+        instr = splitPt2;
+        last = after;
+      }
+
+      return changed;
+    }
+
+
     void isolateFieldAccesses() {
       // "Normalize" existing BasicBlocks
       auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
       removePass(ib);
+      
+      // Because splitFieldAccessed add more BasicBlock that we do not want to enumerate
+      SmallVector<BasicBlock*,8> bbList;
+      for (auto &b : *func) {
+        bbList.push_back(&b);
+      }
 
-      //for (auto &b : *func) {
-      // auto bb = &b;
+      bool changed = false;
+      for (auto bb : bbList) {
+        if (splitFieldAccessed(bb))
+          changed = true;
+      }
 
-      bool changed =false;
+#if 0
       SmallVector<Instruction*, 16> instrs;
       collectInstructionList(func, instrs);
       for (auto instr : instrs){
@@ -961,12 +1013,13 @@ namespace {
         if (!facc.isValid())
           continue;
         // Create a distinct BB for this access
-        // polly::IndependentBlocks will then it independent from the other BBs and
+        // polly::IndependentBlocks will then make it independent from the other BBs and
         // polly::ScopInfo create a ScopStmt for it
         isolateInBB(facc);
         changed = true;
       }
-      //}
+#endif
+
 
       if (changed) {
         // Also make new BBs independent

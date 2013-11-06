@@ -83,7 +83,7 @@ namespace isl {
     static UnionMap readFromFile(Ctx *ctx, 	FILE *input) { return UnionMap::enwrap(isl_union_map_read_from_file(ctx->keep(), input)); }
     static UnionMap readFromStr(Ctx *ctx, const char *str) { return UnionMap::enwrap(isl_union_map_read_from_str(ctx->keep(), str)); }
 
-    UnionMap copy() { return UnionMap::enwrap(takeCopy()); }
+    //UnionMap copy() { return UnionMap::enwrap(takeCopy()); }
 #pragma endregion
 
 
@@ -132,9 +132,9 @@ namespace isl {
     void substractDomain(UnionSet &&uset) { give(isl_union_map_subtract_domain(take(), uset.take())); } 
     void substractRange(UnionSet &&uset) { give(isl_union_map_subtract_range(take(), uset.take())); } 
 
-   ISLPP_EXSITU_ATTRS UnionMap reverse() ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_reverse(takeCopy())); }
-  ISLPP_INPLACE_ATTRS void reverse_inplace() ISLPP_INPLACE_FUNCTION { give(isl_union_map_reverse(take())); }
-   ISLPP_CONSUME_ATTRS UnionMap reverse_consume() ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_reverse(take())); }
+    ISLPP_EXSITU_ATTRS UnionMap reverse() ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_reverse(takeCopy())); }
+    ISLPP_INPLACE_ATTRS void reverse_inplace() ISLPP_INPLACE_FUNCTION { give(isl_union_map_reverse(take())); }
+    ISLPP_CONSUME_ATTRS UnionMap reverse_consume() ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_reverse(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     UnionMap reverse() && { return UnionMap::enwrap(isl_union_map_reverse(take())); }
 #endif
@@ -151,6 +151,10 @@ namespace isl {
     unsigned getNumMaps() const { return isl_union_map_n_map(keep()); }
     //bool foreachMap(int (*fn)(__isl_take isl_map *map, void *user), void *user) const { return isl_union_map_foreach_map(keep(), fn, user); }
     bool foreachMap(const std::function<bool(isl::Map)> &/*return true to break enumeration*/) const;
+
+    //bool foreachMap(const std::function<void(Map)> &) const;
+    //bool foreachMap(const std::function<void(Map, bool&)> &) const;
+
     std::vector<Map> getMaps() const;
 
     bool contains(const Space &space) const { return checkBool(isl_union_map_contains(keep(), space.keep())); }
@@ -197,23 +201,31 @@ namespace isl {
     Map extractMap(const Space &mapSpace) const { assert(mapSpace.isMapSpace()); return Map::enwrap(isl_union_map_extract_map(keep(), mapSpace.takeCopy())); }
     Map operator[](const Space &mapSpace) const { assert(mapSpace.isMapSpace()); return Map::enwrap(isl_union_map_extract_map(keep(), mapSpace.takeCopy())); } 
 
-   ISLPP_EXSITU_ATTRS UnionSet domain() ISLPP_EXSITU_FUNCTION { return UnionSet::enwrap(isl_union_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS UnionSet domain() ISLPP_EXSITU_FUNCTION { return UnionSet::enwrap(isl_union_map_domain(takeCopy())); }
     ISLPP_EXSITU_ATTRS UnionSet range() ISLPP_EXSITU_FUNCTION { return UnionSet::enwrap(isl_union_map_range(takeCopy())); }
 
     ISLPP_EXSITU_ATTRS UnionMap applyDomain(UnionMap umap2) ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_domain(takeCopy(), umap2.take())); }
     ISLPP_INPLACE_ATTRS void applyDomain_inplace(UnionMap umap2) ISLPP_INPLACE_FUNCTION { give(isl_union_map_apply_domain(take(), umap2.take())); }
-     ISLPP_CONSUME_ATTRS UnionMap applyDomain_consume(UnionMap umap2) ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_domain(take(), umap2.take())); }
+    ISLPP_CONSUME_ATTRS UnionMap applyDomain_consume(UnionMap umap2) ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_domain(take(), umap2.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-          UnionMap applyDomain_consume(UnionMap umap2) && { return UnionMap::enwrap(isl_union_map_apply_domain(take(), umap2.take())); }
+    UnionMap applyDomain_consume(UnionMap umap2) && { return UnionMap::enwrap(isl_union_map_apply_domain(take(), umap2.take())); }
 #endif
 
-          ISLPP_EXSITU_ATTRS UnionMap applyRange(UnionMap umap2) ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_range(takeCopy(), umap2.take())); }
-          ISLPP_INPLACE_ATTRS void applyRange_inplace(UnionMap umap2) ISLPP_INPLACE_FUNCTION { give(isl_union_map_apply_range(take(), umap2.take())); }
-          ISLPP_CONSUME_ATTRS UnionMap applyRange_consume(UnionMap umap2) ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_range(take(), umap2.take())); }
+    ISLPP_EXSITU_ATTRS UnionMap applyRange(UnionMap umap2) ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_range(takeCopy(), umap2.take())); }
+    ISLPP_INPLACE_ATTRS void applyRange_inplace(UnionMap umap2) ISLPP_INPLACE_FUNCTION { give(isl_union_map_apply_range(take(), umap2.take())); }
+    ISLPP_CONSUME_ATTRS UnionMap applyRange_consume(UnionMap umap2) ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_apply_range(take(), umap2.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-          UnionMap applyRange_consume(UnionMap umap2) && { return UnionMap::enwrap(isl_union_map_apply_range(take(), umap2.take())); }
+    UnionMap applyRange_consume(UnionMap umap2) && { return UnionMap::enwrap(isl_union_map_apply_range(take(), umap2.take())); }
 #endif
 
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+    void dumpExplicit(int maxElts) const;
+    void dumpExplicit()const; // In order do be callable without arguments from debugger
+    std::string toStringExplicit(int maxElts = 8);
+
+#ifndef NDEBUG
+    std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise
+#endif
   }; // class UnionMap
 
 
@@ -271,17 +283,17 @@ namespace isl {
   static inline bool operator>=(const UnionMap &lhs, const UnionMap &rhs) { return isSubset(rhs, lhs); } 
 
 
-  static inline void computeFlow(UnionMap &&sink, UnionMap &&mustSource, UnionMap &&maySource, UnionMap &&schedule, UnionMap *mustDep, UnionMap *mayDep, UnionMap *mustNoSource, UnionMap *mayNoSource) {
+  static inline void computeFlow(UnionMap sink, UnionMap mustSource, UnionMap maySource, UnionMap schedule, /*out*/UnionMap &mustDep, /*out*/UnionMap &mayDep, /*out*/UnionMap &mustNoSource, /*out*/UnionMap &mayNoSource) {
     isl_union_map *mustDepObj = nullptr;
     isl_union_map *mayDepObj = nullptr;
     isl_union_map *mustNoSourceObj = nullptr;
     isl_union_map *mayNoSourceObj = nullptr;
-    auto retval = isl_union_map_compute_flow(sink.take(), mustSource.take(), maySource.take(), schedule.take(), mustDep ? &mustDepObj : nullptr, mayDep ? &mayDepObj : nullptr, mustDep ? &mustNoSourceObj : nullptr, mayNoSource ? &mayNoSourceObj : nullptr);
+    auto retval = isl_union_map_compute_flow(sink.take(), mustSource.take(), maySource.take(), schedule.take(), &mustDepObj , &mayDepObj , &mustNoSourceObj ,  &mayNoSourceObj);
     assert(retval == 0);
-    if (mustDep) *mustDep = UnionMap::enwrap(mustDepObj);
-    if (mayDep) *mayDep = UnionMap::enwrap(mayDepObj);
-    if (mustNoSource) *mustNoSource = UnionMap::enwrap(mustNoSourceObj);
-    if (mayNoSource) *mayNoSource = UnionMap::enwrap(mayNoSourceObj);
+    mustDep = UnionMap::enwrap(mustDepObj);
+    mayDep = UnionMap::enwrap(mayDepObj);
+    mustNoSource = UnionMap::enwrap(mustNoSourceObj);
+    mayNoSource = UnionMap::enwrap(mayNoSourceObj);
   }
 
 

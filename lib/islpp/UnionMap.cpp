@@ -3,6 +3,7 @@
 #include "islpp/Printer.h"
 #include <isl/union_map.h>
 #include <llvm/ADT/DenseMap.h>
+#include "islpp/Point.h"
 
 using namespace llvm;
 using namespace isl;
@@ -140,3 +141,94 @@ void isl::simpleFlow(const UnionMap &sinks, const UnionMap &sources, const Union
     }
   }
 }
+
+
+
+void UnionMap::dumpExplicit( int maxElts /*= 8*/ )const{
+  printExplicit(llvm::dbgs(), maxElts);
+  llvm::dbgs() << "\n";
+}
+
+
+void UnionMap::dumpExplicit()const{
+  dumpExplicit(8);
+}
+
+
+void UnionMap::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/) const {
+  os << "{ ";
+  int count=0;
+
+ auto omittedsome = foreachMap([&count,maxElts,&os](Map map) -> bool {
+    if (count >= maxElts)
+      return true;
+
+    auto wrapped = map.wrap();
+    auto nInDims =map. getInDimCount();
+    auto nOutDims = map.getOutDimCount();
+    isl::Id inTupleId = map.getInTupleIdOrNull();
+    isl::Id outTupleId = map.getOutTupleIdOrNull();
+   auto omittedsome = wrapped.foreachPoint([&count,maxElts,&os,nInDims,nOutDims,inTupleId,outTupleId](Point p) -> bool {
+     if (count >= maxElts)
+       return true;
+
+     if (count>0) {
+       os << ", ";
+     }
+     if (inTupleId.isValid()) {
+       os << inTupleId.getName();
+     }
+     if (nInDims != 1 || inTupleId.isValid()) 
+       os << "[";
+     for (auto i = nInDims-nInDims;i<nInDims;i+=1) {
+       if (i>0)
+         os << ",";
+       os << p.getCoordinate(isl_dim_set, i);
+     }
+     if (nInDims != 1 || inTupleId.isValid()) 
+       os << "]";
+
+     os << " -> ";
+
+     if (outTupleId.isValid()) {
+       os << outTupleId.getName();
+     }
+     if (nOutDims != 1 || outTupleId.isValid()) 
+       os << "[";
+     for (auto i = nOutDims-nOutDims;i<nOutDims;i+=1) {
+       if (i>0)
+         os << ",";
+       os << p.getCoordinate(isl_dim_set, nInDims+i);
+     }
+     if (nOutDims != 1 || outTupleId.isValid()) 
+       os << "]";
+
+     count+=1;
+     return false;
+    });
+
+    return !omittedsome;
+  });
+
+
+ if (omittedsome) {
+   os << ", ...";
+ }
+ os << " }";
+}
+
+
+std::string UnionMap::toStringExplicit( int maxElts /*= 8*/ ) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  printExplicit(os, maxElts);
+  os.flush();
+  return str; // NRVO
+}
+
+
+#ifndef NDEBUG
+std::string UnionMap::toString() const {
+  return ObjBaseTy::toString();
+}
+#endif

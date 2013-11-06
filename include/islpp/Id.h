@@ -3,6 +3,7 @@
 
 #include "islpp_common.h"
 #include "Obj.h" // baseclass of Id
+#include "llvm\Support\raw_ostream.h"
 
 #pragma region Forward declarations
 struct isl_id;
@@ -82,6 +83,12 @@ namespace isl {
   static inline bool operator!=(const Id &lhs, const Id &rhs) { return lhs.keepOrNull()!=rhs.keepOrNull(); }
 
   static inline void swap(Id &lhs, Id &rhs) { isl::Id::swap(lhs, lhs); }
+
+  static inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Id &id) {
+    id.print(os);
+    return os;
+  }
+
 } // namespace isl
 
 

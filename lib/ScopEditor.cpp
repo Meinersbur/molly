@@ -22,7 +22,6 @@ using namespace std;
 using isl::enwrap;
 
 static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, Pass *pass, const Twine &dedicatedPostfix = ".dedicated", const Twine &contPostfix = ".cont");
-static bool splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, BasicBlock* &before, BasicBlock* &after, Pass *pass);
 
 
 static BasicBlock *SplitBlockWithName(BasicBlock *Old, Instruction *SplitPt, Pass *P, const Twine &postfix) {
@@ -293,9 +292,10 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
 
 // The two output BB will be connected by an unconditional jump 
 // If uniqueIncoming, the second BB will also have the first BB a predecessor
-static bool splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, BasicBlock* &before, BasicBlock* &after, Pass *pass) {
+bool molly::splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, BasicBlock* &before, BasicBlock* &after, Pass *pass) {
   if (!into)
     into = insertBefore->getParent();
+  assert(!insertBefore || insertBefore->getParent() == into);
   auto func = getFunctionOf(into);
 
   auto term = into->getTerminator();

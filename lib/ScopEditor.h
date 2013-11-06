@@ -17,6 +17,9 @@ namespace molly {
   class ScopEditor;
   class StmtEditor;
 
+  bool splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, BasicBlock* &before, BasicBlock* &after, Pass *pass);
+
+
   /// Somehow analogous to IRBuilder, but also deletes stuff
   class ScopEditor {
   private:

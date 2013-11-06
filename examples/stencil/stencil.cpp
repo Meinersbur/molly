@@ -11,9 +11,10 @@
 //#pragma layout interchange(0,1)
 
 //#pragma molly transform("{ [i,j] -> [j,i] }", 0)
-//#pragma molly transform("{ [i] -> [node, j] : node = [i/32], i = node*32 + j }", 1)
-molly::array<int, 16> FieldSrc;
-molly::array<int, 16> FieldDst;
+#pragma molly transform("{ [i] -> [node, j] : node = [i/32], i = node*32 + j }", 1)
+//#pragma molly transform block(32)
+molly::array<int, 128> FieldSrc;
+molly::array<int, 128> FieldDst;
 
 //molly::array<int, 44> MySecondField;
 

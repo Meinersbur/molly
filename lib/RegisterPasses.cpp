@@ -53,7 +53,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   auto  OSorig = new raw_fd_ostream("0_orig.ll", infoDummy);
   PM.add(llvm::createPrintModulePass(OSorig, false, "Before any Molly-specific passes\n\n"));
 
-  // Unconditional inlining for field member function to make llvm.molly intrinsics visisble
+  // Unconditional inlining for field member function to make llvm.molly intrinsics visible
   PM.add(molly::createMollyInlinePass()); 
 
   auto OSafterinline = new raw_fd_ostream("1_inlined.ll", infoDummy);
