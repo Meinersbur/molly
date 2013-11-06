@@ -515,7 +515,7 @@ llvm::CallInst *MollyCodeGenerator::callCombufSendWait(molly::CommunicationBuffe
 
 
 llvm::CallInst *MollyCodeGenerator::callCombufRecvWait(molly::CommunicationBuffer *combuf, llvm::Value *srcRank) {
-  Value *args[] = {combuf->codegenPtrToRecvbufObj(*this), srcRank };
+  Value *args[] = { combuf->codegenPtrToRecvbufObj(*this), srcRank };
   Type *tys[] = { combuf->getEltPtrType(), args[0]->getType() };
   auto recvWaitFunc = Intrinsic::getDeclaration(getModule(), Intrinsic::molly_combuf_recv_wait, tys);
   return irBuilder.CreateCall(recvWaitFunc, args);

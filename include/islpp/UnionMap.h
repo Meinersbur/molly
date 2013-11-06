@@ -104,7 +104,13 @@ namespace isl {
     void affineHull() { give(isl_union_map_affine_hull(take())); }
     void polyhedralHull()  { give(isl_union_map_polyhedral_hull(take())); }
     void simpleHull()  { give(isl_union_map_simple_hull(take())); }
-    void coalesce()  { give(isl_union_map_coalesce(take())); }
+
+    ISLPP_EXSITU_ATTRS UnionMap coalesce() ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_coalesce(takeCopy())); }
+ ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_union_map_coalesce(take())); }
+ ISLPP_CONSUME_ATTRS UnionMap coalesce_consume() ISLPP_CONSUME_FUNCTION { return UnionMap::enwrap(isl_union_map_coalesce(take())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+   UnionMap coalesce_consume() && { return UnionMap::enwrap(isl_union_map_coalesce(take())); }
+#endif
 
     void computeDivs() { give(isl_union_map_compute_divs(take())); }
     void lexmin() { give(isl_union_map_lexmin(take())); }

@@ -268,11 +268,11 @@ void CommunicationBuffer::codegenStoreInSendbuf(MollyCodeGenerator &codegen, con
   auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
   auto ptr = irBuilder.CreateGEP(sendbufPtr, indexIdx, "sendbufelt");
 
+
   auto myval = codegen.materialize(val);
   auto store = irBuilder.CreateStore(myval, ptr);
-
   // We symbolically write to the buffer object at the given coordinate
-  codegen.addStoreAccess(this->getVariableSend(), rangeProduct(dstCoord, index), store);
+  codegen.addStoreAccess(sendbufPtr, index, store);
 }
 
 
@@ -303,8 +303,8 @@ llvm::Value *CommunicationBuffer::codegenLoadFromRecvBuf(MollyCodeGenerator &cod
   auto ptr = irBuilder.CreateGEP(recvbufPtr, indexIdx, "recvbufelt");
 
   auto result = irBuilder.CreateLoad(ptr, "recvelt");
-  auto allIndices = getIndexsetSpace().universeBasicSet();
-  codegen.addLoadAccess(this->getVariableSend(), rangeProduct(srcCoord, alltoall(buftranslator.getDomain(), allIndices)), result);
+  //auto allIndices = getIndexsetSpace().universeBasicSet();
+  codegen.addLoadAccess(recvbufPtr, index/*symbolic, not the real offset*/, result);
   return result;
 }
 
@@ -386,15 +386,17 @@ isl::Space molly::CommunicationBuffer::getSrcNamedDims()
 
 llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &codegen) {
   auto var = getVariableSend();
-  auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
-  codegen.addScalarLoadAccess(var, result);
-  return result;
+  return codegen.materialize(var);
+  //auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
+  //codegen.addScalarLoadAccess(var, result);
+  //return result;
 }
 
 
 llvm::Value *CommunicationBuffer::codegenPtrToRecvbufObj(MollyCodeGenerator &codegen) {
   auto var = getVariableRecv();
-  auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
-  codegen.addScalarLoadAccess(var, result);
-  return result;
+  return codegen.materialize(var);
+  //auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
+  //codegen.addScalarLoadAccess(var, result);
+  //return result;
 }

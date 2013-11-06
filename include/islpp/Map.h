@@ -247,7 +247,13 @@ namespace isl {
       }
     }
 
-    void removeRedundancies() { give (isl_map_remove_redundancies(take())); } 
+    ISLPP_EXSITU_ATTRS Map removeRedundancies()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(takeCopy())); }
+    ISLPP_INPLACE_ATTRS void removeRedundancies_inplace()  ISLPP_INPLACE_FUNCTION { give(isl_map_remove_redundancies(take())); } 
+    ISLPP_CONSUME_ATTRS Map removeRedundancies_consume()  ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(take())); }
+#if ISLPP_HAS_RVALUE_REFERENCE_THIS
+      Map removeRedundancies()  && { return Map::enwrap(isl_map_remove_redundancies(take())); }
+#endif
+
     void neg() { give(isl_map_neg(take())); }
     //void floordiv(const Int &d) { give(isl_map_floordiv(take(), d.keep())); }
 
@@ -344,7 +350,7 @@ namespace isl {
     Map intersectDomain(Set set)&& { return Map::enwrap(isl_map_intersect_domain(take(), set.take())); }
 #endif
 
-  ISLPP_EXSITU_ATTRS  Map intersectDomain(UnionSet uset) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS  Map intersectDomain(UnionSet uset) ISLPP_EXSITU_FUNCTION;
 
     void intersectRange_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_range(take(), set.take())); }
     Map intersectRange(Set set) { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
@@ -352,7 +358,7 @@ namespace isl {
     Map intersectRange(Set set) && { return Map::enwrap(isl_map_intersect_range(take(), set.take())); }
 #endif
 
-   ISLPP_EXSITU_ATTRS Map intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS Map intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION;
 
     void intersectParams(Set params) { give(isl_map_intersect_params(take(), params.take())); }
 
@@ -370,11 +376,11 @@ namespace isl {
     void complement_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_complement(take())); }
     Map complement() const { return Map::enwrap(isl_map_complement(takeCopy())); }
 
-   ISLPP_EXSITU_ATTRS Set domain() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS Set domain() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_map_domain(takeCopy())); }
     ISLPP_CONSUME_ATTRS Set domain_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() const { return Set::enwrap(isl_map_domain(takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-      Set domain() && { return Set::enwrap(isl_map_domain(take())); }
+    Set domain() && { return Set::enwrap(isl_map_domain(take())); }
     Set getDomain() && { return Set::enwrap(isl_map_domain(take())); }
 #endif
 
@@ -382,7 +388,7 @@ namespace isl {
     ISLPP_CONSUME_ATTRS Set range_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_map_range(take())); }
     Set getRange() const { return Set::enwrap(isl_map_range(takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-       Set range() && { return Set::enwrap(isl_map_range(take())); }
+    Set range() && { return Set::enwrap(isl_map_range(take())); }
     Set getRange() && { return Set::enwrap(isl_map_range(take())); }
 #endif
 
@@ -474,9 +480,9 @@ namespace isl {
     void uncurry_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_uncurry(take()));}
     Map uncurry() const { return Map::enwrap(isl_map_uncurry(takeCopy()));  }
 
-    Map makeDisjoint() const { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
-    void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_make_disjoint(take()));}
-    Map makeDisjoint_consume() { return Map::enwrap(isl_map_make_disjoint(take()));}
+  ISLPP_EXSITU_ATTRS  Map makeDisjoint() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
+   ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_make_disjoint(take()));}
+  ISLPP_CONSUME_ATTRS  Map makeDisjoint_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_make_disjoint(take()));}
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
 #endif
@@ -508,9 +514,9 @@ namespace isl {
     Map gistParams(const Set &context) const { return Map::enwrap(isl_map_gist_params(takeCopy(), context.takeCopy())); }
     void gistParams_inplace(Set &&context) ISLPP_INPLACE_FUNCTION { give(isl_map_gist_params(take(), context.take())); }
 
-    Map coalesce() const { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
-    void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_coalesce(take())); } 
-    Map coalesce_consume() { return Map::enwrap(isl_map_coalesce(take())); } 
+   ISLPP_EXSITU_ATTRS Map coalesce() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
+  ISLPP_INPLACE_ATTRS  void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_coalesce(take())); } 
+  ISLPP_CONSUME_ATTRS  Map coalesce_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_coalesce(take())); } 
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map coalesce() && { return Map::enwrap(isl_map_coalesce(take())); } 
 #endif
@@ -623,17 +629,17 @@ namespace isl {
     }
     ISLPP_EXSITU_ATTRS Map cast(Space space) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.cast_inplace(space.move()); return result; }
 
-  ISLPP_INPLACE_ATTRS  void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
-         auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), domainSpace).equalBasicMap();
-          applyDomain_inplace(std::move(domainMap));
+    ISLPP_INPLACE_ATTRS  void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
+      auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), domainSpace).equalBasicMap();
+      applyDomain_inplace(std::move(domainMap));
     }
-  ISLPP_EXSITU_ATTRS Map castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(std::move(domainSpace)); return result; }
+    ISLPP_EXSITU_ATTRS Map castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(std::move(domainSpace)); return result; }
 
-  ISLPP_INPLACE_ATTRS  void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION {
-    auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), rangeSpace).equalBasicMap();
-    applyRange_inplace(std::move(rangeMap));
-  }
-  ISLPP_EXSITU_ATTRS Map castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castRange_inplace(std::move(rangeSpace)); return result; }
+    ISLPP_INPLACE_ATTRS  void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION {
+      auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), rangeSpace).equalBasicMap();
+      applyRange_inplace(std::move(rangeMap));
+    }
+    ISLPP_EXSITU_ATTRS Map castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castRange_inplace(std::move(rangeSpace)); return result; }
 
     /// Search for the subspace and the project out its dimensions
     /// example:
@@ -689,10 +695,7 @@ namespace isl {
   static inline PwMultiAff lexmaxPwMultiAff(Map &&map) { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(map.take())); } 
 
   // "union" is a reserved word
-  static inline Map unite(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_union(map1.take(), map2.take())); }
-  static inline Map unite(Map &&map1, const Map &map2) { return Map::enwrap(isl_map_union(map1.take(), map2.takeCopy())); }
-  static inline Map unite(const Map &map1, Map &&map2) { return Map::enwrap(isl_map_union(map1.takeCopy(), map2.take())); }
-  static inline Map unite(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_union(map1.takeCopy(), map2.takeCopy())); }
+  static inline Map unite(Map map1, Map map2) { return Map::enwrap(isl_map_union(map1.take(), map2.take())); }
 
   static inline Map applyDomain(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_domain(map1.take(), map2.take())); }
   static inline Map applyRange(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_range(map1.take(), map2.take())); }
