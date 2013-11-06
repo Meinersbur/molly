@@ -623,6 +623,18 @@ namespace isl {
     }
     ISLPP_EXSITU_ATTRS Map cast(Space space) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.cast_inplace(space.move()); return result; }
 
+  ISLPP_INPLACE_ATTRS  void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
+         auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), domainSpace).equalBasicMap();
+          applyDomain_inplace(std::move(domainMap));
+    }
+  ISLPP_EXSITU_ATTRS Map castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(std::move(domainSpace)); return result; }
+
+  ISLPP_INPLACE_ATTRS  void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION {
+    auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), rangeSpace).equalBasicMap();
+    applyRange_inplace(std::move(rangeMap));
+  }
+  ISLPP_EXSITU_ATTRS Map castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castRange_inplace(std::move(rangeSpace)); return result; }
+
     /// Search for the subspace and the project out its dimensions
     /// example:
     /// { (A, B, C) -> D }.projectOutSubspace(isl_dim_in, { B }) = { (A, C) -> D }

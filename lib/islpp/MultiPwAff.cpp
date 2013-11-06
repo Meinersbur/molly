@@ -110,6 +110,28 @@ void Multi<PwAff>::push_back(PwAff &&aff) {
 }
 
 
+ISLPP_EXSITU_ATTRS MultiPwAff isl::Multi<PwAff>::pullback( MultiAff ma ) ISLPP_EXSITU_FUNCTION
+{
+  return MultiPwAff::enwrap(isl_multi_pw_aff_pullback_multi_aff(takeCopy(), ma.take()));
+}
+
+
+ISLPP_INPLACE_ATTRS void isl::Multi<PwAff>::pullback_inplace( MultiAff ma ) ISLPP_INPLACE_FUNCTION
+{
+  give(isl_multi_pw_aff_pullback_multi_aff(take(), ma.take()));
+}
+
+
+ISLPP_INPLACE_ATTRS void isl::Multi<PwAff>::castDomain_inplace( Space domainSpace ) ISLPP_INPLACE_FUNCTION
+{
+  auto domainMap = Space::createMapFromDomainAndRange(domainSpace, getDomainSpace()).createIdentityMultiAff();
+  pullback_inplace(std::move(domainMap));
+}
+
+
+
+
+
 ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoDomainSpace( Space framespace ) ISLPP_EXSITU_FUNCTION
 {
   assert(framespace.isSet());
@@ -242,8 +264,8 @@ Map MultiPwAff::reverse() ISLPP_EXSITU_FUNCTION {
   return toMap().reverse();
 }
 
-
-MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
+#if 0
+ISLPP_EXSITU_ATTRS MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   auto nOutDims = getOutDimCount();
   auto resultSpace = Space::createMapFromDomainAndRange(pma.getDomainSpace(), getRangeSpace());
   auto result = resultSpace.createZeroMultiPwAff();
@@ -256,9 +278,9 @@ MultiPwAff MultiPwAff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
 
   return result;
 }
+#endif
 
-
-MultiPwAff MultiPwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS MultiPwAff MultiPwAff::castRange(Space space) ISLPP_EXSITU_FUNCTION {
   assert(getOutDimCount() == space.getOutDimCount());
   assert(getInDimCount() == space.getInDimCount());
 

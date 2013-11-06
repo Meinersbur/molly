@@ -259,3 +259,15 @@ std::string isl::Pw<MultiAff>::toString() const
 {
   return ObjBaseTy::toString();
 }
+
+
+isl::Pw<MultiAff>::Pw( MultiPwAff that ) : Obj(that.isValid() ? that.toPwMultiAff() : PwMultiAff())
+{
+
+}
+
+
+const PwMultiAff & isl::Pw<MultiAff>::operator=( MultiPwAff that )
+{
+  obj_give(that.isValid() ? that.toPwMultiAff() : PwMultiAff()); return *this;
+}

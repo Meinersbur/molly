@@ -113,6 +113,11 @@ namespace isl {
     /* implicit */ Pw(MultiAff maff) : Obj(maff.isValid() ? maff.toPwMultiAff() : PwMultiAff()) {}
     const PwMultiAff &operator=(MultiAff maff) { obj_give(maff.isValid() ? maff.toPwMultiAff() : PwMultiAff()); return *this; }
 
+    /// WARNING: This has exponential runtime; consider not having a automatic conversion
+    /* implicit */ Pw(MultiPwAff that);
+    const PwMultiAff &operator=(MultiPwAff that);
+
+
     Map toMap() const;
     //operator Map() const { return toMap(); }
 

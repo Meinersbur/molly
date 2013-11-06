@@ -601,6 +601,19 @@ void MollyCodeGenerator::codegenStoreLocal(llvm::Value *val, FieldVariable *fvar
   addStoreAccess(fvar->getVariable(), index, store);
 }
 
+llvm::Value * MollyCodeGenerator::codegenLoadLocal(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */) {
+  auto bufptr = callLocalPtr(fvar);
+
+  auto layout = fvar->getLayout();
+  assert(layout);
+  auto idx = layout->codegenLocalIndex(*this, where, index);
+  auto ptr = irBuilder.CreateGEP(bufptr, idx, "localbufeltptr");
+
+  auto load = irBuilder.CreateLoad(ptr, "localval");
+  addLoadAccess(fvar->getVariable(), index, load);
+  return load;
+}
+
 
 llvm::CallInst *MollyCodeGenerator::callFieldRankof(FieldVariable *fvar, llvm::ArrayRef<llvm::Value *> coords) {
   auto nDims = coords.size();
@@ -788,11 +801,11 @@ void MollyCodeGenerator::updateScalar(llvm::Value *toupdate, llvm::Value *val) {
   assert(!isDependent(val));
   auto ptr = getScalarAlloca(toupdate);
 
-  if (ptr) { // if !ptr this should mean that val is not used outside the current ScopStmt
+  if (ptr) { // !ptr should mean that val is not used outside the current ScopStmt
     auto store = irBuilder.CreateStore(val, ptr);
     addScalarStoreAccess(ptr, store);
   }
-  //TODO: If necessary, iterator through all uses and replace those in this BasicBlock
+  //TODO: If necessary, iterate through all uses and replace those in this BasicBlock
   //toupdate->replaceAllUsesWith(val);
 }
 

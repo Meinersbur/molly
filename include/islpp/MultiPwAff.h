@@ -147,18 +147,26 @@ namespace isl {
     //{ auto result = copy(); result.sublist_inplace(subspace); return result; }
     //void sublist_inplace(const Space &subspace) ISLPP_INPLACE_QUALIFIER;
   
-   //MultiPwAff pullback(const MultiPwAff &that) ISLPP_EXSITU_QUALIFIER;
+   ISLPP_EXSITU_ATTRS MultiPwAff pullback(MultiPwAff that) ISLPP_EXSITU_FUNCTION { return MultiPwAff::enwrap(isl_multi_pw_aff_pullback_multi_pw_aff(takeCopy(), that.take())); }
+   ISLPP_INPLACE_ATTRS void pullback_inplace(MultiPwAff that) ISLPP_INPLACE_FUNCTION { give(isl_multi_pw_aff_pullback_multi_pw_aff(take(), that.take())); }
+
+   ISLPP_EXSITU_ATTRS MultiPwAff pullback(MultiAff ma) ISLPP_EXSITU_FUNCTION;
+   ISLPP_INPLACE_ATTRS void pullback_inplace(MultiAff ma) ISLPP_INPLACE_FUNCTION;
+
 
     Map reverse() ISLPP_EXSITU_FUNCTION;
     //MultiPwAff applyRange(const PwMultiAff &) ISLPP_EXSITU_QUALIFIER;
 
-    MultiPwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION;
-
+  
     MultiPwAff alignParams(Space space) ISLPP_EXSITU_FUNCTION { return MultiPwAff::enwrap(isl_multi_pw_aff_align_params(takeCopy(), space.take())); }
-    void alignParams_inplace(Space space) ISLPP_INPLACE_FUNCTION { give(isl_multi_pw_aff_align_params(take(), space.take())); }
+    ISLPP_INPLACE_ATTRS void alignParams_inplace(Space space) ISLPP_INPLACE_FUNCTION { give(isl_multi_pw_aff_align_params(take(), space.take())); }
 
-    MultiPwAff cast(Space space) ISLPP_EXSITU_FUNCTION;
-    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { give(cast(space.move()).take()); }
+  ISLPP_EXSITU_ATTRS  MultiPwAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;
+  ISLPP_INPLACE_ATTRS  void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION { give(castRange(std::move(rangeSpace)).take()); }
+
+   ISLPP_INPLACE_ATTRS  void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION;
+   ISLPP_EXSITU_ATTRS MultiPwAff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(std::move(domainSpace)); return result; }
+
 
     /// { B' -> B }.embedInRangeSpace({ [A, B, C] }) = { [A, B', C] -> [A, B, C] }
     /// TODO: Rename to something like applySubspace

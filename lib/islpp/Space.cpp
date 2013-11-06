@@ -1198,7 +1198,7 @@ ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( isl_dim_type type1, unsig
 }
 
 
-ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( Space subspace1, Space subspace2 )
+ISLPP_EXSITU_ATTRS BasicSet isl::Space::equalBasicSet( Space subspace1, Space subspace2 ) ISLPP_EXSITU_FUNCTION
 {
   assert(isSetSpace());
   auto range1 = this->findSubspace(isl_dim_set, subspace1);
