@@ -68,17 +68,17 @@ isl::BasicSet FieldType::getLogicalIndexset() {
   auto dims = getNumDimensions();
   auto space = ctx->createSetSpace(0, dims); //TODO: Assign an id to the tuple
   space.setSetTupleId_inplace(getIndexsetTuple());
-  auto set = isl::BasicSet::createUniverse(space.copy());
+  auto set = isl::BasicSet::createUniverse(space);
 
   for (auto d = dims-dims; d < dims; d+=1) {
-    auto ge = isl::Constraint::createInequality(space.copy());
+    auto ge = isl::Constraint::createInequality(space);
     ge.setConstant_inplace(0);
-    ge.setCoefficient_inplace(isl_dim_set, 0, 1);
+    ge.setCoefficient_inplace(isl_dim_set, d, 1);
     set.addConstraint_inplace(move(ge));
 
-    auto lt = isl::Constraint::createInequality(move(space));
+    auto lt = isl::Constraint::createInequality(space);
     lt.setConstant_inplace(getLengths()[d]);
-    lt.setCoefficient_inplace(isl_dim_set, 0, -1);
+    lt.setCoefficient_inplace(isl_dim_set, d, -1);
     set.addConstraint_inplace(move(lt));
   }
 

@@ -696,13 +696,13 @@ namespace {
       isl::UnionMap mustNosrc2;
 
       isl::simpleFlow(readAccesses, writeAccesses, schedule, &mustFlow2, &mustNosrc2);
-      //assert(mustFlow == mustFlow2);
+      assert(mustFlow == mustFlow2);
       assert(mustNosrc == mustNosrc2);
 
       // isl::simpleFlow seems to be more correct
       // FIXME: Find bug in isl::computeFlow
-      mustFlow == mustFlow2;
-      mustNosrc == mustNosrc2;
+      //mustFlow == mustFlow2;
+      //mustNosrc == mustNosrc2;
 #endif
 
 
@@ -744,7 +744,7 @@ namespace {
       isl::UnionMap nonfieldMayFlow;
       isl::UnionMap nonfieldMustNosrc;
       isl::UnionMap nonfieldMayNosrc;
-      isl::computeFlow(nonfieldReadAccesses.copy(), nonfieldWriteAccesses.copy(), emptyMap.copy(), schedule.copy(), &nonfieldMustFlow, &nonfieldMayFlow, &nonfieldMustNosrc, &nonfieldMayNosrc);
+      isl::computeFlow(nonfieldReadAccesses, nonfieldWriteAccesses, emptyMap, schedule, /*out*/nonfieldMustFlow, /*out*/nonfieldMayFlow, /*out*/nonfieldMustNosrc, /*out*/nonfieldMayNosrc);
 
       auto nonfieldInputFlow = nonfieldMustNosrc.domain(); // TODO: Remove epilogue from it
       auto nonfieldDataFlow = emptyMap;
@@ -787,7 +787,7 @@ namespace {
       //localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
 
 
-      // "owner computes": execute statements that a valid after the exit of the SCoP at the value's home locations 
+      // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations 
       for (auto output : outputFlow.getSets()) {
         //auto  outputnotyet =  intersect(output, notyetExecuted);
         auto stmtCtx = getScopStmtContext(output); 
@@ -804,7 +804,7 @@ namespace {
 
       while (true) {
         bool changed = false;
-
+        if (notyetExecuted.isEmpty()) break;
         // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
         for (auto flow : dataFlow.getMaps()) {
           auto producerSpace = flow.getDomainSpace();

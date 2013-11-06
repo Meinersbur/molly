@@ -961,6 +961,7 @@ namespace {
         }
 
         auto gep = facc.getFieldCall();
+        assert(gep->hasNUses(1));
         auto acc = facc.getAccessor();
         gep->moveBefore(acc);
 
