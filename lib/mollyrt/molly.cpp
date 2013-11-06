@@ -359,7 +359,7 @@ namespace {
       MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
     }
 
-    int getMPICommRank(uint64_t nClusterDims, uint64_t *coords) {
+    int getMPICommRank(uint64_t nClusterDims, uint64_t *coords) { MOLLY_DEBUG_METHOD_ARGS(nClusterDims, coords)
       assert(this->nClusterDims == nClusterDims);
 
       //TODO: This is a waste; avoid using alloca? Use int right away?
@@ -376,8 +376,8 @@ namespace {
     }
 
   public:
-    MPICommunicator() : initialized(false), _world_self(-1) {}
-    ~MPICommunicator() {
+    MPICommunicator() : initialized(false), _world_self(-1) { MOLLY_DEBUG_FUNCTION_SCOPE }
+    ~MPICommunicator() { MOLLY_DEBUG_FUNCTION_SCOPE
       if (!initialized)
         return;
 
@@ -491,7 +491,7 @@ namespace {
 
   class MPISendCommunicationBuffer {
   private:
-	  bool initialized;
+    bool initialized;
 
     MPISendCommunication *parent;
     size_t elts;
@@ -500,6 +500,7 @@ namespace {
     uint64_t tag;
 
     void *buf;
+    bool sending;
     MPI_Request request;
 
 #ifndef NDEBUG
@@ -544,6 +545,7 @@ namespace {
       }
 #endif
 
+      this->sending = false;
       auto dstMpiRank = communicator->getMPICommRank(nClusterDims, dstCoords);
       MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
 
@@ -556,12 +558,18 @@ namespace {
     }
 
     void send() { MOLLY_DEBUG_FUNCTION_SCOPE
+      assert(!sending);
       MPI_CHECK(MPI_Start(&request));
+      this->sending = true;
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+      if (!sending)
+	return; // May happen before the very first send; Molly always waits before sending the next chunk
+      
       MPI_Status status;
       MPI_CHECK(MPI_Wait(&request, &status));
+      this->sending = false;
 
 #ifndef NDEBUG
       int count = -1;
@@ -768,6 +776,8 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   // Molly puts combuf and local storage initialization here
   //TODO: Molly could also put these into .ctor
   //__builtin_molly_global_init();
+  
+  std::cerr << "###############################################################################";
 
   //FIXME: Exception-handling, but currently we do not support exceptions
   auto retval = __molly_orig_main(argc, argv, envp);
@@ -818,7 +828,7 @@ extern "C" void __molly_local_free(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
 }
 
 
-extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_ARGS(localbuf)
    assert(localbuf);
    auto ls = static_cast<LocalStore*>(localbuf);
    return ls->getDataPtr();
@@ -829,7 +839,7 @@ extern "C" void *__molly_local_ptr(void *localbuf) { MOLLY_DEBUG_FUNCTION_SCOPE
 
 #pragma region Communication buffer to send data
 
-extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize)
+extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(dstCount, eltSize, tag)
   return new MPISendCommunication(dstCount, eltSize);
 }
 
@@ -864,7 +874,7 @@ extern "C" void *__molly_combuf_send_wait(MPISendCommunication *sendbuf, uint64_
 
 #pragma region Communication buffer to recv data
 
-extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize)
+extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(srcCount, eltSize, tag)
   return new MPIRecvCommunication(srcCount, eltSize);
 }
 

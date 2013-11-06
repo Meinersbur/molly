@@ -53,6 +53,7 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
   for (int i = 0; i < len-1; i+=1) {
     FieldSrc[i] = i+3;
     FieldDst[i+1] = 2*FieldSrc[i];
+    //FieldDst[127-i] = 2*FieldSrc[i];
   }
 }
 
