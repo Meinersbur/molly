@@ -1446,9 +1446,6 @@ namespace {
       // Decide where fields should have their home location
       fieldDistribution();
 
-      // Generate access functions
-      generateAccessFuncs();
-
       for (auto &f : *module) {
         auto func = &f;
         if (func->isDeclaration())
@@ -1514,6 +1511,9 @@ namespace {
         verifyFunction(*scopCtx->getParentFunction());
       }
 
+
+      // Generate access functions
+      generateAccessFuncs();
 
       // As the method name says
       implementGeneratedFunctions();
