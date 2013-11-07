@@ -2023,6 +2023,11 @@ namespace {
       return currentNodeCoord;
     }
 
+
+     polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) LLVM_OVERRIDE {
+      return scop->getScopStmtFor(bb);
+     }
+
   }; // class MollyScopContextImpl
 } // namespace
 

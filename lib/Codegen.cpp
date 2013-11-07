@@ -681,9 +681,9 @@ void MollyCodeGenerator::addScalarLoadAccess(llvm::Value *base, llvm::Instructio
   addLoadAccess(base, accessFirstElement, instr);
 }
 
-void molly::MollyCodeGenerator::addLoadAccess( llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
+void molly::MollyCodeGenerator::addLoadAccess(llvm::Value *base, isl::Map accessRelation, llvm::Instruction *instr )
 {
-  stmtCtx->addMemoryAccess(polly::MemoryAccess::READ,base, accessRelation, instr);
+  stmtCtx->addMemoryAccess(polly::MemoryAccess::READ, base, accessRelation, instr);
 }
 
 
@@ -777,6 +777,21 @@ llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
 
   // If the value is stored somewhere, load it from the same location
   if (!target) {
+    // Maybe the value is stored already
+    for (auto useIt = instr->use_begin(), useEnd = instr->use_end(); useIt!=useEnd; ++useIt ) {
+      auto user = *useIt;
+      if (auto storeUse = dyn_cast<StoreInst>(user)) {
+        auto ptr = storeUse->getPointerOperand();
+        if (isa<AllocaInst>(ptr)) {
+          target = ptr;
+          break;
+        }
+      }
+    }
+  }
+
+  // No store location found, add a new one
+  if (!target) {
     target = getScalarAlloca(val);
   }
 
@@ -784,7 +799,12 @@ llvm::Value * molly::MollyCodeGenerator::materialize(llvm::Value *val){
   if (!target) {
     target = allocStackSpace(val->getType());
     auto store = new StoreInst(val, target, instr->getNextNode());
-    addScalarStoreAccess(target, store);
+    auto producerBB = instr->getParent();
+    auto producerStmt = scopCtx->getStmtForBlock(producerBB);
+
+    // Add a store MemoryAccess to THE OTHER stmt
+    auto accessFirstElement = enwrap(producerStmt->getDomain()).getSpace().mapsTo(0/*1*/).createZeroMultiAff();
+    producerStmt->addAccess(polly::MemoryAccess::MUST_WRITE, target, accessFirstElement.toMap().take(), store);
   }
 
   // TODO: Could also search all LoadInsts to see if this value has already been loaded

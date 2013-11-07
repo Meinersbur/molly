@@ -777,7 +777,9 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   //TODO: Molly could also put these into .ctor
   //__builtin_molly_global_init();
   
+#ifndef NDEBUG
   std::cerr << "###############################################################################";
+#endif
 
   //FIXME: Exception-handling, but currently we do not support exceptions
   auto retval = __molly_orig_main(argc, argv, envp);

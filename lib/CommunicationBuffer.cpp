@@ -147,7 +147,8 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
 
 
   //TODO: Create a different scop for send and recv => less complexity
-  auto scopEd = ScopEditor::newScop(islctx, builder.GetInsertPoint(), pass);
+  auto instrAfterScop = &*builder.GetInsertPoint();
+  auto scopEd = ScopEditor::newScop(islctx, instrAfterScop, pass);
   auto scop = scopEd.getScop();
   auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx
   scopInfo->setScop(scop); // Force to take this scop without trying to detect it
@@ -236,7 +237,10 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   }
 
   // Now we constructed a SCoP, so tell Polly to generate the code for it...
+  // Do not forget that this command will change a lot of BasicBlocks
   scopCtx->pollyCodegen();
+
+  builder.SetInsertPoint(instrAfterScop);
 }
 
 
@@ -386,8 +390,12 @@ isl::Space molly::CommunicationBuffer::getSrcNamedDims()
 
 llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &codegen) {
   auto var = getVariableSend();
-  return codegen.materialize(var);
-  //auto result = codegen.getIRBuilder().CreateLoad(var, "sendbufobj");
+  auto func = codegen.getParentFunction();
+  auto entry = &func->getEntryBlock();
+ auto ptr = new LoadInst(var, "sendbufobj", entry->getFirstInsertionPt());
+
+  return codegen.materialize(ptr);
+  //auto result = codegen.getIRBuilder().CreateLoad(ptr, "sendbufobj");
   //codegen.addScalarLoadAccess(var, result);
   //return result;
 }
@@ -395,7 +403,11 @@ llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &cod
 
 llvm::Value *CommunicationBuffer::codegenPtrToRecvbufObj(MollyCodeGenerator &codegen) {
   auto var = getVariableRecv();
-  return codegen.materialize(var);
+  auto func = codegen.getParentFunction();
+  auto entry = &func->getEntryBlock();
+  auto ptr = new LoadInst(var, "recvbufobj", entry->getFirstInsertionPt());
+
+  return codegen.materialize(ptr);
   //auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
   //codegen.addScalarLoadAccess(var, result);
   //return result;

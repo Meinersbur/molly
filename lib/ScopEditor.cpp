@@ -328,8 +328,63 @@ bool molly::splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, b
 }
 
 
+static BasicBlock * insertNewBlockBefore(const Twine & name, BasicBlock * after, Pass * pass) {
+  // Insert the new BB between p.first && p.second
+  // We cannot use SplitBlock, this would create a new block after after and move all instructions there; existing references to after would therefore refer the empty dedicated BasicBlock instead
+  auto &llvmContext = after->getContext();
+  auto dedicated = BasicBlock::Create(llvmContext, name, after->getParent());
+  BranchInst::Create(after, dedicated);
+
+  // Change everything pointing to after to point to dedicated
+  SmallVector<TerminatorInst *, 4>  preds;
+  SmallVector<int, 4>  predsOpNo;
+  //SmallVector<Use, 4>  predUses;
+  for (auto pred = pred_begin(after), end = pred_end(after); pred!=end; ++pred) {
+    auto &use = pred.getUse();
+    //predUses.push_back(use);
+    auto user = &*use;
+    auto term = cast<TerminatorInst>(use.getUser());
+    if (term->getParent()== dedicated)
+      continue;
+
+    preds.push_back(term);
+    predsOpNo.push_back(pred.getOperandNo());
+  }
+  auto nUses = preds.size();
+  for (auto i = nUses-nUses;i<nUses;i+=1) {
+    auto opno = predsOpNo[i];
+    auto term = preds[i];
+    term->setOperand(opno, dedicated);
+  }
+
+  // Fixup the analyses.
+  if (LoopInfo *LI = pass->getAnalysisIfAvailable<LoopInfo>()) {
+    if (Loop *L = LI->getLoopFor(after))
+      L->addBasicBlockToLoop(dedicated, LI->getBase());
+  }
+
+  if (auto RI = pass->getAnalysisIfAvailable<RegionInfo>()) {
+    if (auto OldRegion = RI->getRegionFor(after)) 
+      RI->setRegionFor(dedicated, OldRegion);
+  }
+
+  if (DominatorTree *DT = pass->getAnalysisIfAvailable<DominatorTree>()) {
+    // dedicated dominates after
+    if (DomTreeNode *afterNode = DT->getNode(after)) {
+      DomTreeNode *dedicatedNode = DT->addNewBlock(dedicated, afterNode->getIDom()->getBlock());
+      DT->changeImmediateDominator(after, dedicated);
+    }
+
+    DT->verifyAnalysis();
+  }
+
+  return dedicated;
+}
+
+
+
 /// Insert a new BB at the given location; guaranteed to be empty except with an unconditional jump terminator
-static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming, Pass *pass, const Twine &dedicatedPostfix, const Twine &contPostfix) {
+static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore, bool uniqueIncoming/*currently ignored*/, Pass *pass, const Twine &dedicatedPostfix, const Twine &contPostfix) {
   if (!into)
     into = insertBefore->getParent();
 
@@ -342,7 +397,7 @@ static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore
   auto name = into->getName();
   BasicBlock *before;
   BasicBlock *after;
-  auto p = splitBlockIfNecessary(into, insertBefore, false, before,after, pass);
+  auto p = splitBlockIfNecessary(into, insertBefore, false, before, after, pass);
   assert(getUnconditionalJumpTarget(before->getTerminator()));
 
   // Does the first already fulfill the condition?
@@ -358,10 +413,13 @@ static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore
   if (after->size()==1 && getUnconditionalJumpTarget(after->getTerminator()))
     return after;
 
-  // Insert the new BB between p.first && p.second
-  auto last = SplitBlock(after, &after->front(), pass);
-  last->setName(Twine(name) + contPostfix);
-  return after;
+  auto dedicated = insertNewBlockBefore(Twine(name) + dedicatedPostfix, after, pass);
+  return dedicated;
+
+
+  //auto last = SplitBlock(after, &after->front(), pass);
+  //last->setName(Twine(name) + contPostfix);
+  //return after;
 }
 
 

@@ -53,6 +53,8 @@ namespace molly {
     virtual isl::Id idForSCEV(const llvm::SCEV *scev) = 0;
     virtual isl::Id getIdForLoop(const llvm::Loop *loop) = 0;
 
+    virtual polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) = 0;
+
   public:
     static MollyScopProcessor *create(MollyPassManager *pm, polly::Scop *scop);
   }; // class MollyScopProcessor

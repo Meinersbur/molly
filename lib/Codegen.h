@@ -183,6 +183,10 @@ namespace molly {
     }
     llvm::StoreInst *createArrayStore(llvm::Value *val, llvm::Value *baseptr, int idx);
 
+
+    llvm::Function *getParentFunction() const {
+      return irBuilder.GetInsertBlock()->getParent();
+    }
   }; // class MollyCodeGenerator
 
 } // namespace molly
