@@ -308,9 +308,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
-#define MOLLY_DEBUG_FUNCTION_SCOPE
-#define MOLLY_DEBUG_FUNCTION_ARGS(...)
-#define MOLLY_DEBUG_METHOD_ARGS(...)
+#define MOLLY_DEBUG_FUNCTION_SCOPE ((void)0)
+#define MOLLY_DEBUG_FUNCTION_ARGS(...) ((void)0)
+#define MOLLY_DEBUG_METHOD_ARGS(...) ((void)0)
 #endif
 
 #ifndef NDEBUG
