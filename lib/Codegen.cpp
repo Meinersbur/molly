@@ -339,7 +339,8 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendAlloc(llvm::Value *nDst
   return irBuilder.CreateCall3(funcDecl, nDst, eltSize, tag);
 }
 
-llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize,  llvm::Value *tag) {
+
+llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvAlloc(llvm::Value *nDst, llvm::Value *eltSize, llvm::Value *tag) {
   auto &llvmContext = getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
   auto voidTy = Type::getVoidTy(llvmContext);
@@ -351,7 +352,7 @@ llvm::CallInst *MollyCodeGenerator::callRuntimeCombufRecvAlloc(llvm::Value *nDst
 }
 
 
-llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst,  llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts, llvm::Value *tag) {
+llvm::CallInst *MollyCodeGenerator::callRuntimeCombufSendDstInit(llvm::Value *combufSend, llvm::Value *dst, llvm::Value *nClusterDims, llvm::Value *dstCoords, llvm::Value *countElts, llvm::Value *tag) {
   auto &llvmContext = getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
   auto voidTy = Type::getVoidTy(llvmContext);
