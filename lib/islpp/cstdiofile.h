@@ -6,18 +6,30 @@
 
 namespace llvm {
   class raw_ostream;
-} // namepspace llvm
+} // namespace llvm
 
 
 #if defined(__MINGW32__)
 // Neither open_memstream nor fopen_s (with "TD" options) available
-#define CSTDIOFILE_TMPFILE
+//#define CSTDIOFILE_TMPFILE 1
+//#define CSTDIOFILE_FOPEN 1
+//#define CSTDIOFILE_FOPEN_S 1
+//#define CSTDIOFILE_OPEN_MEMSTREAM 1
+#define CSTDIOFILE_LLVM_CREATETEMPORARYFILE 1
 #elif defined(_WIN32)
 // open_memstream not available, use temporary file that is not written to disk instead
 #define CSTDIOFILE_FOPEN_S 1
+//#define CSTDIOFILE_LLVM_CREATETEMPORARYFILE 1
 #else
+// POSIX
 #define CSTDIOFILE_OPEN_MEMSTREAM 1
 #endif
+
+
+#ifdef CSTDIOFILE_FOPEN
+#include <cstdio> // L_tmpnam
+#endif
+
 
 namespace molly {
 
@@ -33,7 +45,7 @@ namespace molly {
 #endif
 
 #ifdef CSTDIOFILE_FOPEN
-    char *tmpfilename;
+    char tmpfilename[L_tmpnam];
 #endif
 
     CstdioFile(CstdioFile &&that) {
@@ -51,14 +63,7 @@ namespace molly {
 
   public:
     CstdioFile();
-
-    ~CstdioFile() {
-      close();
-
-#ifdef CSTDIOFILE_OPEN_MEMSTREAM
-      free(buf); buf = nullptr;
-#endif
-    }
+    ~CstdioFile();
 
     static CstdioFile create() {
       return CstdioFile();
@@ -69,7 +74,7 @@ namespace molly {
       return fd;
     }
 
-    void close() ;
+    void close();
 
     std::string readAsStringAndClose(); // Deprecated; use operator<<
   }; // class TmpFile

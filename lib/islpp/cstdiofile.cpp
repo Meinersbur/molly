@@ -15,9 +15,13 @@
 #include <cerrno>
 #include <cstdio>
 #include <fstream>
-#include <stdio.h>
+//#include <stdio.h>
 #include <string>
 
+#ifdef CSTDIOFILE_LLVM_CREATETEMPORARYFILE
+//#include <llvm/ADT/Twine.h>
+#include <llvm/Support/FileSystem.h>
+#endif
 
 
 using namespace molly;
@@ -29,6 +33,11 @@ CstdioFile::CstdioFile() {
   buf = nullptr;
   writtensize = 0;
   fd = open_memstream(&buf, &writtensize);
+  if (!fd) {
+    llvm::errs() << "ERROR open_memstream: writtensize=" << writtensize << " &buf=" << &buf << " errno=" << errno << "\n";
+    llvm::errs().flush();
+  }
+  assert(fd);
 #endif
 
 #ifdef CSTDIOFILE_FOPEN_S
@@ -43,19 +52,46 @@ CstdioFile::CstdioFile() {
 #endif
 
 #ifdef CSTDIOFILE_FOPEN
-  tmpfilename = tmpnam("tmp");
-  assert(tmpfilename);
-  fd = fopen(tmpfilename, "w+");
+  errno=0;
+  auto fname = tmpnam(this->tmpfilename);
+  assert(fname);
+  fd = fopen(fname, "w+");
+  if (!fd) {
+    llvm::errs() << "ERROR fopen: fname=" << fname << " fd=" << fd << " errno=" << errno << "\n";
+    llvm::errs().flush();
+  }
+  assert(fd);
 #endif
 
 #ifdef CSTDIOFILE_TMPFILE
   // Deleted on fclose
+  errno=0;
   fd = tmpfile();
+  if (!fd) {
+    llvm::errs() << "ERROR tmpfile: fd=" << fd << " errno=" << errno << "\n";
+    llvm::errs().flush();
+  }
+  assert(fd);
 #endif
 
-#ifdef CSTDIOFILE_CREATETEMPORARYFILEONDISK
-  // LLVM platform-dependent implementation
-  llvm::Path::createTemporaryFileOnDisk();
+#ifdef CSTDIOFILE_LLVM_CREATETEMPORARYFILE
+  // LLVM per-platform implementation
+  llvm::SmallString<128> tmppath;
+  int fdno=-1;
+  llvm::sys::fs::createTemporaryFile("tmp", "", fdno, tmppath);
+  assert(fdno!=-1);
+  fd = fdopen(fdno, "w+b");
+  assert(fd);
+#endif
+}
+
+
+CstdioFile::~CstdioFile() {
+  close();
+
+#ifdef CSTDIOFILE_OPEN_MEMSTREAM
+  free(buf); 
+  buf = nullptr;
 #endif
 }
 
@@ -68,7 +104,7 @@ void CstdioFile::close() {
 #ifdef CSTDIOFILE_FOPEN
   unlink(tmpfilename);
   free(tmpfilename);
-  tmpfilename = NULL;
+  tmpfilename[0] = '\0';
 #endif
 }
 
@@ -97,13 +133,17 @@ llvm::raw_ostream &molly::operator<<(llvm::raw_ostream &OS, CstdioFile &tmp) {
 #else
   fpos_t savepos;
   auto retval = fgetpos(tmp.fd, &savepos);
+  if (retval) {
+      llvm::errs() << "ERROR fgetpos: retval=" << retval << " tmp.td=" << tmp.fd << " errno=" << errno << "\n";
+      llvm::errs().flush();
+  }
   assert(retval==0);
   rewind(tmp.fd);
 
   while (!feof(tmp.fd)) {
     char buf[1024];
     auto readSize = fread(&buf[0], sizeof(buf[0]), sizeof(buf)/sizeof(buf[0]), tmp.fd);
-    if ( ferror(tmp.fd) ) {
+    if (ferror(tmp.fd)) {
       llvm::errs() << "Error reading temporary file";
     }
 
