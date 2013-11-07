@@ -847,6 +847,16 @@ extern "C" void *__molly_combuf_send_alloc(uint64_t dstCount, uint64_t eltSize, 
 
 
 extern "C" void __molly_combuf_send_dst_init(MPISendCommunication *sendbuf, uint64_t dst, uint64_t nClusterDims, uint64_t *dstCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(sendbuf, dst, nClusterDims, dstCoords, count, tag)
+#ifndef NDEBUG
+  std::ostringstream os;
+  for (auto i = 0; i < nClusterDims; i+=1) {
+    if (i!=0)
+      os << ", ";
+    os << dstCoords[i];
+  }
+  MOLLY_DEBUG("Dst coord: (" << os.str() << ")");
+#endif
+  
   sendbuf->initDst(dst, nClusterDims, dstCoords, count, tag); 
 }
 

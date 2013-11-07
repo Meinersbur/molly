@@ -3,7 +3,7 @@
 
 #include "islpp_common.h"
 #include "Obj.h" // baseclass of Id
-#include "llvm\Support\raw_ostream.h"
+#include <llvm/Support/raw_ostream.h>
 
 #pragma region Forward declarations
 struct isl_id;
