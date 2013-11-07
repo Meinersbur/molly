@@ -134,113 +134,132 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto coords = builder.CreateAlloca(intTy, ConstantInt::get(intTy, nClusterDims), "coords");
   auto nClusterDimsVal = ConstantInt::get(intTy, nClusterDims);
 
-  auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
-  auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal, tagVal);
-  builder.CreateStore(sendobj, getVariableSend());
-
-
-
-
-  auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
-  auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal, tagVal);
-  builder.CreateStore(recvobj, getVariableRecv());
-
-
-  //TODO: Create a different scop for send and recv => less complexity
-  auto instrAfterScop = &*builder.GetInsertPoint();
-  auto scopEd = ScopEditor::newScop(islctx, instrAfterScop, pass);
-  auto scop = scopEd.getScop();
-  auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx
-  scopInfo->setScop(scop); // Force to take this scop without trying to detect it
-  pm->registerEvaluatedAnalysis(scopInfo, &scop->getRegion());
-  auto scopCtx = pm->getScopContext(scop);
-
-
-  selfCoord = scopCtx->getCurrentNodeCoordinate(); // Required; will add coordinates of the current node to the context
-  srcSelfRank = selfCoord.castRange(srcRankSpace);
-  dstSelfRank = selfCoord.castRange(dstRankSpace);
-
-  //scopCtx->getCurrentNodeCoordinate();
-  //auto nClusterDims = clusterConf->getClusterDims();
-  //for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
-  // auto value = funcCtx ->getClusterCoordinate(i);
-  // auto id = selfCoord.getOutDimId(i);
-  // scopEd
-  //}
-
-  auto scatterId = scopEd.getScatterTupleId();
-  auto voidSpace = islctx->createSetSpace(0, 0);
-  auto scatterSpace = voidSpace.setSetTupleId(scatterId);
-
   {
-    auto sendDomainSpace = dstRankSpace;
-    auto sendDomain = srcSelfRank.getRange().apply(srcDstRelation); // { dstNode[cluster] }
-    auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { dstNode[cluster] -> scattering[] }
-    auto sendWhere = dstSrcRelation; // { dstNode[cluster] -> srcNode[cluster] }
-    auto sendStmtEd = scopEd.createStmt(sendDomain, sendScattering, sendWhere, "send_dst_init");
-    auto sendStmt = sendStmtEd.getStmt();
-    auto sendBB = sendStmt->getBasicBlock();
-    auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
-    auto sendCodegen = sendStmtCtx->makeCodegen();
-    auto &sendBuilder = sendCodegen.getIRBuilder();
+    auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
+    auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal, tagVal);
+    builder.CreateStore(sendobj, getVariableSend());
 
-    auto sendSrcAff = sendStmtCtx->getClusterMultiAff().castRange(srcRankSpace);
-    auto combufSend = sendCodegen.createScalarLoad(getVariableSend(), "combuf_send");
-    //sendCodegen.addScalarLoadAccess()
-    //auto combufSend = sendCodegen.materialize();
-    auto sendDstAff = sendStmtEd.getCurrentIteration().castRange(dstRankSpace); /* { [domain] -> dstNode[cluster] } */
-    //auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff); //TODO: this is a global rank, but we actually need one indexed from (0..maxdst]
-    auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
-    auto sendWhat = rangeProduct(sendSrcAff, sendDstAff);
-    auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks
 
-    // Write the dst node coordinates to the stack such that MollyRT knows who is the target node
-    // sendDstRank just provides a meaningless number
-    for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
-      sendCodegen.createArrayStore(sendStmtCtx->getDomainValue(i), coords, i);
+    auto instrAfterScop = &*builder.GetInsertPoint();
+    auto scopEd = ScopEditor::newScop(islctx, instrAfterScop, pass);
+    auto scop = scopEd.getScop();
+    auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx
+    scopInfo->setScop(scop); // Force to take this scop without trying to detect it
+    pm->registerEvaluatedAnalysis(scopInfo, &scop->getRegion());
+    auto scopCtx = pm->getScopContext(scop);
+
+
+    auto sendSelfCoord = scopCtx->getCurrentNodeCoordinate(); // Required; will add coordinates of the current node to the context
+    auto sendSrcSelfRank = sendSelfCoord.castRange(srcRankSpace);
+    auto sendDstSelfRank = sendSelfCoord.castRange(dstRankSpace);
+
+
+    auto scatterId = scopEd.getScatterTupleId();
+    auto voidSpace = islctx->createSetSpace(0, 0);
+    auto scatterSpace = voidSpace.setSetTupleId(scatterId);
+
+    {
+      auto sendDomainSpace = dstRankSpace;
+      auto sendDomain = sendSrcSelfRank.getRange().apply(srcDstRelation); // { dstNode[cluster] }
+      auto sendScattering = sendDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { dstNode[cluster] -> scattering[] }
+      auto sendWhere = dstSrcRelation; // { dstNode[cluster] -> srcNode[cluster] }
+      auto sendStmtEd = scopEd.createStmt(sendDomain, sendScattering, sendWhere, "send_dst_init");
+      auto sendStmt = sendStmtEd.getStmt();
+      auto sendBB = sendStmt->getBasicBlock();
+      auto sendStmtCtx = pm->getScopStmtContext(sendStmt);
+      auto sendCodegen = sendStmtCtx->makeCodegen();
+      auto &sendBuilder = sendCodegen.getIRBuilder();
+
+      auto sendSrcAff = sendStmtCtx->getClusterMultiAff().castRange(srcRankSpace);
+      auto combufSend = sendCodegen.createScalarLoad(getVariableSend(), "combuf_send");
+      //sendCodegen.addScalarLoadAccess()
+      //auto combufSend = sendCodegen.materialize();
+      auto sendDstAff = sendStmtEd.getCurrentIteration().castRange(dstRankSpace); /* { [domain] -> dstNode[cluster] } */
+      //auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff); //TODO: this is a global rank, but we actually need one indexed from (0..maxdst]
+      auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
+      auto sendWhat = rangeProduct(sendSrcAff, sendDstAff);
+      auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks
+
+      // Write the dst node coordinates to the stack such that MollyRT knows who is the target node
+      // sendDstRank just provides a meaningless number
+      for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+        sendCodegen.createArrayStore(sendStmtCtx->getDomainValue(i), coords, i);
+      }
+
+      auto tagVal = ConstantInt::get(intTy, tag);
+      sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, nClusterDimsVal, coords, sendSize, tagVal);
     }
 
-    auto tagVal = ConstantInt::get(intTy, tag);
-    sendCodegen.callRuntimeCombufSendDstInit(combufSend, sendDstRank, nClusterDimsVal, coords, sendSize, tagVal);
+    // Now we constructed a SCoP, so tell Polly to generate the code for it...
+    // Do not forget that this command will change a lot of BasicBlocks
+    scopCtx->pollyCodegen();
+    builder.SetInsertPoint(instrAfterScop);
   }
 
 
 
+
   {
-    auto recvDomainSpace = srcRankSpace;
-    auto recvDomain = dstSelfRank.getRange().apply(dstSrcRelation); // { srcNode[cluster] }
-    auto recvScattering = recvDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { srcNode[cluster] -> scattering[] }
-    auto recvWhere = srcDstRelation; // { dstNode[cluster] -> srcNode[cluster] }
-    auto recvStmtEd = scopEd.createStmt(recvDomain, recvScattering, recvWhere, "send_dst_init");
-    auto recvStmt = recvStmtEd.getStmt();
-    auto recvBB = recvStmt->getBasicBlock();
-    auto recvStmtCtx = pm->getScopStmtContext(recvStmt);
-    auto recvCodegen = recvStmtCtx->makeCodegen();
-    auto &recvBuilder = recvCodegen.getIRBuilder();
 
-    auto recvDstAff = recvStmtCtx->getClusterMultiAff().castRange(dstRankSpace);
-    auto combufRecv = recvCodegen.createScalarLoad(getVariableRecv(), "combuf_recv");
-    //auto combufRecv = recvCodegen.materialize(getVariableRecv());
-    auto recvSrcAff = recvStmtEd.getCurrentIteration().castRange(srcRankSpace); /* { [domain] -> srcNode[cluster] } */
-    //auto recvDstRank = clusterConf->codegenRank(recvCodegen, recvSrcAff);
-    auto recvSrcRank = recvbufMapping->codegenIndex(recvCodegen, recvDstAff, recvSrcAff);
+    auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
+    auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal, tagVal);
+    builder.CreateStore(recvobj, getVariableRecv());
 
-    auto recvWhat = rangeProduct(recvDstAff, recvSrcAff);
-    auto recvSize = mapping->codegenMaxSize(recvCodegen, recvWhat); // Max over all chunks
+    auto instrAfterScop = &*builder.GetInsertPoint();
+    auto scopEd = ScopEditor::newScop(islctx, instrAfterScop, pass);
+    auto scop = scopEd.getScop();
+    auto scopInfo = new polly::ScopInfo(islctx->keep()); // Create it ourselfves; no need to actually run it, but need to give it out islctx
+    scopInfo->setScop(scop); // Force to take this scop without trying to detect it
+    pm->registerEvaluatedAnalysis(scopInfo, &scop->getRegion());
+    auto scopCtx = pm->getScopContext(scop);
 
-    for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
-      recvCodegen.createArrayStore(recvStmtCtx->getDomainValue(i), coords, i);
+
+    auto recvSelfCoord = scopCtx->getCurrentNodeCoordinate(); // Required; will add coordinates of the current node to the context
+    auto  recvSrcSelfRank = recvSelfCoord.castRange(srcRankSpace);
+    auto recvDstSelfRank = recvSelfCoord.castRange(dstRankSpace);
+
+
+    auto scatterId = scopEd.getScatterTupleId();
+    auto voidSpace = islctx->createSetSpace(0, 0);
+    auto scatterSpace = voidSpace.setSetTupleId(scatterId);
+
+
+    {
+      auto recvDomainSpace = srcRankSpace;
+      auto recvDomain = recvDstSelfRank.getRange().apply(dstSrcRelation); // { srcNode[cluster] }
+      auto recvScattering = recvDomain.getSpace().mapsTo(scatterSpace).createZeroMultiAff(); // { srcNode[cluster] -> scattering[] }
+      auto recvWhere = srcDstRelation; // { dstNode[cluster] -> srcNode[cluster] }
+      auto recvStmtEd = scopEd.createStmt(recvDomain, recvScattering, recvWhere, "recv_src_init");
+      auto recvStmt = recvStmtEd.getStmt();
+      auto recvBB = recvStmt->getBasicBlock();
+      auto recvStmtCtx = pm->getScopStmtContext(recvStmt);
+      auto recvCodegen = recvStmtCtx->makeCodegen();
+      auto &recvBuilder = recvCodegen.getIRBuilder();
+
+      auto recvDstAff = recvStmtCtx->getClusterMultiAff().castRange(dstRankSpace);
+      auto combufRecv = recvCodegen.createScalarLoad(getVariableRecv(), "combuf_recv");
+      //auto combufRecv = recvCodegen.materialize(getVariableRecv());
+      auto recvSrcAff = recvStmtEd.getCurrentIteration().castRange(srcRankSpace); /* { [domain] -> srcNode[cluster] } */
+      //auto recvDstRank = clusterConf->codegenRank(recvCodegen, recvSrcAff);
+      auto recvSrcRank = recvbufMapping->codegenIndex(recvCodegen, recvDstAff, recvSrcAff);
+
+      auto recvWhat = rangeProduct(recvDstAff, recvSrcAff);
+      auto recvSize = mapping->codegenMaxSize(recvCodegen, recvWhat); // Max over all chunks
+
+      for (auto i = nClusterDims-nClusterDims;i<nClusterDims;i+=1) {
+        recvCodegen.createArrayStore(recvStmtCtx->getDomainValue(i), coords, i);
+      }
+
+      auto tagVal = ConstantInt::get(intTy, tag);
+      recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvSrcRank, nClusterDimsVal, coords, recvSize, tagVal);
     }
 
-    auto tagVal = ConstantInt::get(intTy, tag);
-    recvCodegen.callRuntimeCombufRecvSrcInit(combufRecv, recvSrcRank, nClusterDimsVal, coords, recvSize, tagVal);
+    // Now we constructed a SCoP, so tell Polly to generate the code for it...
+    // Do not forget that this command will change a lot of BasicBlocks
+    scopCtx->pollyCodegen();
+    builder.SetInsertPoint(instrAfterScop);
   }
 
-  // Now we constructed a SCoP, so tell Polly to generate the code for it...
-  // Do not forget that this command will change a lot of BasicBlocks
-  scopCtx->pollyCodegen();
-
-  builder.SetInsertPoint(instrAfterScop);
 }
 
 
@@ -392,7 +411,7 @@ llvm::Value *CommunicationBuffer::codegenPtrToSendbufObj(MollyCodeGenerator &cod
   auto var = getVariableSend();
   auto func = codegen.getParentFunction();
   auto entry = &func->getEntryBlock();
- auto ptr = new LoadInst(var, "sendbufobj", entry->getFirstInsertionPt());
+  auto ptr = new LoadInst(var, "sendbufobj", entry->getFirstInsertionPt());
 
   return codegen.materialize(ptr);
   //auto result = codegen.getIRBuilder().CreateLoad(ptr, "sendbufobj");
