@@ -52,14 +52,15 @@ std::vector<Map> UnionMap::getMaps() const {
 }
 
 
-void isl::simpleFlow(const UnionMap &sinks, const UnionMap &sources, const UnionMap &schedule, UnionMap *depPtr, UnionMap *nosrcPtr) {
+void isl::simpleFlow(const UnionMap &sinks, const UnionMap &sources, const UnionMap &schedule, /*out*/UnionMap &depPtr, /*out*/UnionMap &nosrcPtr) {
+   //FIXME: simpleFlow does not consider self-output (WAW) dependences 
   auto sourcesMaps = sources.getMaps();
   auto islctx = schedule.getCtx();
 
-  if (depPtr)
-    *depPtr = islctx->createEmptyUnionMap();
-  if (nosrcPtr)
-    *nosrcPtr = islctx->createEmptyUnionMap();
+ 
+    depPtr = islctx->createEmptyUnionMap();
+  
+    nosrcPtr = islctx->createEmptyUnionMap();
 
   // Unfortunately, UnionMap requires us to know the complete space to query it 
   llvm::DenseMap<const isl_id*, isl::Map> idToScatter;
@@ -131,14 +132,14 @@ void isl::simpleFlow(const UnionMap &sinks, const UnionMap &sources, const Union
       depMaps = newDepMaps.move();
     }
 
-    if (depPtr) {
+    //if (depPtr) {
       for (auto dep : depMaps.getMaps()) {
-        depPtr->addMap_inplace(dep.getDomain().unwrap().reverse());
+        depPtr.addMap_inplace(dep.getDomain().unwrap().reverse());
       }
-    }
-    if (nosrcPtr) {
-      nosrcPtr->addMap_inplace(notYetAccessed);
-    }
+    //}
+    //if (nosrcPtr) {
+      nosrcPtr.addMap_inplace(notYetAccessed);
+    //}
   }
 }
 

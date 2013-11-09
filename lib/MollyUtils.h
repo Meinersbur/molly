@@ -99,4 +99,10 @@ llvm::Function *createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> a
 llvm::Function *createFunction( llvm::Type *rtnTy, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
 
 } // namespace molly
+
+void viewRegion(const llvm::Function *f);
+void viewRegion(llvm::RegionInfo *RI);
+void viewRegionOnly(const llvm::Function *f);
+void viewRegionOnly(llvm::RegionInfo *RI);
+
 #endif /* MOLLY_MOLLYUTILS_H */

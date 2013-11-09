@@ -67,5 +67,7 @@ add_molly_library(LLVMMolly
     #${NTL_LIBRARY}
 )
 
+add_dependencies(LLVMMolly intrinsics_gen)
+
 add_subdirectory(mollyrt)
 add_subdirectory(islpp)

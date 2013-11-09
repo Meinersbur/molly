@@ -691,11 +691,11 @@ namespace {
       //TODO: verify that computFlow generates direct dependences
 #endif
 
-#ifndef NDEBUG
+#if 0
       isl::UnionMap mustFlow2;
       isl::UnionMap mustNosrc2;
 
-      isl::simpleFlow(readAccesses, writeAccesses, schedule, &mustFlow2, &mustNosrc2);
+      isl::simpleFlow(readAccesses, writeAccesses, schedule, /*out*/mustFlow2, /*out*/mustNosrc2);
       assert(mustFlow == mustFlow2);
       assert(mustNosrc == mustNosrc2);
 
@@ -1476,7 +1476,10 @@ namespace {
 
 
       // write
-      auto writeFlowEditor = writeEditor.createStmt(writeFlowDomain /* { (writeStmt[domain], dstNode[cluster], recv[domain]) } */, writeFlowScatter, writeFlowWhere.setOutTupleId(clusterTupleId) /* { (writeStmt[domain], dstNode[cluster], recv[domain]) -> srcNode[cluster] } */, "writeFlow");
+      auto writeflowWhere = chunks.reorganizeSubspaces(writeDomain.getSpace() >> readNodeShape.getSpace() >> readChunkAff.getRangeSpace(), writeNodeShape.getSpace()).castRange(clusterSpace); // { (writeStmt[domain], dstNode[cluster], recv[domain]) -> rank[cluster] } 
+      auto writeflowDomain = writeflowWhere.domain();
+      auto writeflowScatter = writeflowDomain.chainSubspace(writeScatter); 
+      auto writeFlowEditor = writeEditor.createStmt(writeflowDomain, writeFlowScatter, writeflowWhere, "writeflow");
       writeEditor.removeInstances(writeFlowWhere.wrap().reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId));
       auto writeFlowStmt = getScopStmtContext(writeFlowEditor.getStmt());
       auto writeFlowCodegen = writeFlowStmt->makeCodegen();

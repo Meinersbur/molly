@@ -308,9 +308,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
-#define MOLLY_DEBUG_FUNCTION_SCOPE ((void)0)
-#define MOLLY_DEBUG_FUNCTION_ARGS(...) ((void)0)
-#define MOLLY_DEBUG_METHOD_ARGS(...) ((void)0)
+#define MOLLY_DEBUG_FUNCTION_SCOPE
+#define MOLLY_DEBUG_FUNCTION_ARGS(...)
+#define MOLLY_DEBUG_METHOD_ARGS(...)
 #endif
 
 #ifndef NDEBUG
@@ -975,7 +975,7 @@ namespace molly {
     }
 
 
-    int length(int d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { //MOLLY_DEBUG_FUNCTION_SCOPE
+    int length(uint64_t d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { //MOLLY_DEBUG_FUNCTION_SCOPE
       //assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
@@ -983,7 +983,7 @@ namespace molly {
     /// Overload for length(int) for !D
     template<typename Dummy = void>
     typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, int, Dummy>::type >::type
-      length() MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+    length() MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
         return length(0);
     }
 

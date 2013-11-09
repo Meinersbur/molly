@@ -3,25 +3,27 @@
 
 #include "molly/LinkAllPasses.h"
 #include "InlinePrepa.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Analysis/Passes.h"
-#include "llvm/Analysis/CFGPrinter.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/PassManager.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Analysis/RegionPass.h"
-#include <polly/LinkAllPasses.h>
-#include <llvm/Transforms/Scalar.h>
+#include "MollyUtils.h"
+#include "MollyPassManager.h"
+
 #include <polly/ScopPass.h>
 #include <polly/RegisterPasses.h>
 #include <polly/ScopInfo.h>
-#include "MollyUtils.h"
-#include "llvm/Assembly/PrintModulePass.h"
-#include "MollyPassManager.h"
+#include <polly/LinkAllPasses.h>
 #include <polly/CodeGen/BlockGenerators.h>
+
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/IPO.h>
-#include "llvm/Analysis/Verifier.h"
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Analysis/Verifier.h>
+#include <llvm/Analysis/RegionPass.h>
+#include <llvm/Analysis/Passes.h>
+#include <llvm/Analysis/CFGPrinter.h>
+#include <llvm/Assembly/PrintModulePass.h>
+#include <llvm/PassManager.h>
+#include <llvm/PassRegistry.h>
+#include <llvm/InitializePasses.h>
+#include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
 using namespace std;
