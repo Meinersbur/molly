@@ -21,9 +21,10 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl:
   for (auto i = nDims-nDims; i < nDims; i+=1) {
     auto min = map.dimMin(i);
     auto max = map.dimMax(i);
-    auto length = max - max + 1;
+    auto length = max - min + 1;
 
-    lengths.setPwAff_inplace(i, length);
+    auto zeroLen = lengths[i];
+    lengths.setPwAff_inplace(i, unionMax(zeroLen, length));
     offsets.setPwAff_inplace(i, min);
   }
 

@@ -135,7 +135,7 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
   auto nClusterDimsVal = ConstantInt::get(intTy, nClusterDims);
 
   {
-    auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks
+    auto nDst = sendbufMapping->codegenMaxSize(codegen, srcSelfRank); // Max over all chunks; TODO: Skip everything if nDst is zero (at runtime)
     auto sendobj = codegen.callRuntimeCombufSendAlloc(nDst, eltSizeVal, tagVal);
     builder.CreateStore(sendobj, getVariableSend());
 
@@ -201,7 +201,7 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
 
   {
 
-    auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks
+    auto nSrc = recvbufMapping->codegenMaxSize(codegen, dstSelfRank); // Max over all chunks; TODO: Skip at runtime if zero
     auto recvobj = codegen.callRuntimeCombufRecvAlloc(nSrc, eltSizeVal, tagVal);
     builder.CreateStore(recvobj, getVariableRecv());
 
@@ -215,7 +215,7 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
 
 
     auto recvSelfCoord = scopCtx->getCurrentNodeCoordinate(); // Required; will add coordinates of the current node to the context
-    auto  recvSrcSelfRank = recvSelfCoord.castRange(srcRankSpace);
+    auto recvSrcSelfRank = recvSelfCoord.castRange(srcRankSpace);
     auto recvDstSelfRank = recvSelfCoord.castRange(dstRankSpace);
 
 
