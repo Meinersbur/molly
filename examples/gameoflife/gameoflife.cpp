@@ -44,7 +44,7 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
 
         auto r = hasLife(n, n1+n2+n3+n4);
 
-        *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y)) = r;
+        *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x), (uint64_t)(y)) = r;
 
       }
     }

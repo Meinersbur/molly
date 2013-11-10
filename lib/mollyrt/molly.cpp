@@ -588,7 +588,7 @@ private:
 
 protected:
   MPISendCommunicationBuffer *getBuffer(uint64_t dst) {
-    //assert(dst < dstCount);
+    assert(0 <= dst && dst < dstCount);
     assert(0 <= dst && dst < communicator->_world_ranks);
     assert(dstBufs);
     return &dstBufs[dst];
@@ -601,7 +601,7 @@ public:
 
   MPISendCommunication(uint64_t dstCount, uint64_t eltSize) : dstCount(dstCount), eltSize(eltSize) { MOLLY_DEBUG_METHOD_ARGS(dstCount, eltSize)
     // FIXME: Currently nodes are indexed at a global scale, not in the range [0..dstCount)
-    dstCount = communicator->_world_ranks; 
+    //dstCount = communicator->_world_ranks; 
     dstBufs = new MPISendCommunicationBuffer[dstCount];
   }
 
@@ -709,7 +709,7 @@ namespace {
 
   protected:
     MPIRecvCommunicationBuffer *getBuffer(uint64_t src) { MOLLY_DEBUG_METHOD_ARGS(src)
-      //assert(src < srcCount);
+      assert(0 <= src && src < srcCount);
       assert(0 <= src && src < communicator->_world_ranks);
       assert(srcBufs);
       return &srcBufs[src];
@@ -722,7 +722,7 @@ namespace {
 
     MPIRecvCommunication(uint64_t srcCount, uint64_t eltSize) : srcCount(srcCount), eltSize(eltSize) { MOLLY_DEBUG_FUNCTION_SCOPE
       // FIXME: Currently nodes are indexed at a global scale, not in the range [0..srcCount)
-      srcCount = communicator->_world_ranks;
+      //srcCount = communicator->_world_ranks;
       srcBufs = new MPIRecvCommunicationBuffer[srcCount];
     }
 
