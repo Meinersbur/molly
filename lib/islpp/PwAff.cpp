@@ -211,13 +211,13 @@ ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
   return result;
 }
 
-PwAff isl::unionMin(PwAff &&pwaff1, PwAff &&pwaff2) {
+PwAff isl::unionMin(PwAff pwaff1, PwAff pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_min(pwaff1.take(), pwaff2.take()));
 }
-PwAff isl::unionMax(PwAff &&pwaff1, PwAff &&pwaff2){
+PwAff isl::unionMax(PwAff pwaff1, PwAff pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_max(pwaff1.take(), pwaff2.take()));
 }
-PwAff isl::unionAdd(PwAff &&pwaff1, PwAff &&pwaff2){
+PwAff isl::unionAdd(PwAff pwaff1, PwAff pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_add(pwaff1.take(), pwaff2.take()));
 }
 

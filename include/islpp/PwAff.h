@@ -210,9 +210,9 @@ namespace isl {
 
   static inline bool plainIsEqual(const PwAff &pwaff1, const PwAff &pwaff2) { return checkBool(isl_pw_aff_plain_is_equal(pwaff1.keep(), pwaff2.keep())); }
 
-  PwAff unionMin(PwAff &&pwaff1, PwAff &&pwaff2);
-  PwAff unionMax(PwAff &&pwaff1, PwAff &&pwaff2);
-  PwAff unionAdd(PwAff &&pwaff1, PwAff &&pwaff2);
+  PwAff unionMin(PwAff pwaff1, PwAff pwaff2);
+  PwAff unionMax(PwAff pwaff1, PwAff pwaff2);
+  PwAff unionAdd(PwAff pwaff1, PwAff pwaff2);
 
   Set domain(PwAff &&pwaff);
 
