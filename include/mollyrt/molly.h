@@ -646,7 +646,7 @@ namespace molly {
 #ifndef __mollycc__
   template<typename F, typename... Args>
   void *__builtin_molly_ptr(F field, Args... coords) { MOLLY_DEBUG_FUNCTION_SCOPE
-    return field->__ptr_local(coords...);
+    return NULL;
   }
 
 #if 0
