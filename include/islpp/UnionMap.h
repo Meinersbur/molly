@@ -310,7 +310,7 @@ namespace isl {
   /// Output:
   ///   dep =   { writeStmt[domain] -> stmtRead[domain] }
   ///   nosrc = {  readStmt[domain] -> array[index] }
-  void simpleFlow(const UnionMap &sink, const UnionMap &source, const UnionMap &schedule, UnionMap *dep, UnionMap *nosrc); 
+  void simpleFlow(const UnionMap &sink, const UnionMap &source, const UnionMap &schedule, /*out*/UnionMap &dep, /*out*/UnionMap &nosrc); 
 
   static inline UnionMap alltoall(UnionSet domain, UnionSet range) {
     return UnionMap::enwrap(isl_union_set_unwrap( isl_union_set_product(domain.take(), range.take())));

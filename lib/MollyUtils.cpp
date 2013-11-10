@@ -8,6 +8,8 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
 #include "llvm/IR/Module.h"
+#include "llvm/PassManager.h"
+#include "llvm/Analysis/RegionPrinter.h"
 
 using namespace llvm;
 using namespace polly;
@@ -128,7 +130,9 @@ llvm::Region *molly::getRegionOf(polly::Scop *scop) {
   return &scop->getRegion();
 }
 llvm::Region *molly::getRegionOf(polly::ScopStmt *scopStmt) {
-  return getRegionOf(scopStmt->getParent());
+  auto result = scopStmt->getRegion();
+  assert(result->contains(scopStmt->getBasicBlock()));
+  return const_cast<Region*>(result);
 }
 
 
@@ -142,6 +146,7 @@ llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::T
  return Function::Create(funcTy, linkage, name, module);
 }
 
+
 llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
   if (!rtnTy) {
     auto &llvmContext = module->getContext();
@@ -150,4 +155,48 @@ llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, 
 
   auto funcTy = FunctionType::get(rtnTy, false);
  return Function::Create(funcTy, linkage, name, module);
+}
+
+
+void viewRegion(const Function *f) {
+  auto F = const_cast<Function*>(f);
+  assert(!F->isDeclaration());
+
+  FunctionPassManager FPM(F->getParent());
+  auto V = createRegionViewerPass();
+  FPM.add(V);
+  FPM.doInitialization();
+  FPM.run(*F);
+  FPM.doFinalization();
+}
+
+
+void viewRegion(RegionInfo *RI) {
+ auto F = RI->getTopLevelRegion()->getEntry()->getParent();
+  auto viewer = createRegionViewerPass();
+  viewer->setResolver(RI->getResolver());
+  viewer->runOnFunction(*F);
+  delete viewer;
+}
+
+
+void viewRegionOnly(const Function *f) {
+  auto F = const_cast<Function*>(f);
+  assert(!F->isDeclaration());
+
+  FunctionPassManager FPM(F->getParent());
+  auto V = createRegionOnlyViewerPass();
+  FPM.add(V);
+  FPM.doInitialization();
+  FPM.run(*F);
+  FPM.doFinalization();
+}
+
+
+void viewRegionOnly(RegionInfo *RI) {
+  auto F = RI->getTopLevelRegion()->getEntry()->getParent();
+  auto viewer = createRegionOnlyViewerPass();
+  viewer->setResolver(RI->getResolver());
+  viewer->runOnFunction(*F);
+  delete viewer;
 }

@@ -248,10 +248,10 @@ namespace isl {
     }
 
     ISLPP_EXSITU_ATTRS Map removeRedundancies()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(takeCopy())); }
-    ISLPP_INPLACE_ATTRS void removeRedundancies_inplace()  ISLPP_INPLACE_FUNCTION { give(isl_map_remove_redundancies(take())); } 
-    ISLPP_CONSUME_ATTRS Map removeRedundancies_consume()  ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(take())); }
+    ISLPP_INPLACE_ATTRS void removeRedundancies_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_remove_redundancies(take())); } 
+    ISLPP_CONSUME_ATTRS Map removeRedundancies_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-      Map removeRedundancies()  && { return Map::enwrap(isl_map_remove_redundancies(take())); }
+    Map removeRedundancies() && { return Map::enwrap(isl_map_remove_redundancies(take())); }
 #endif
 
     void neg() { give(isl_map_neg(take())); }
@@ -367,8 +367,9 @@ namespace isl {
     Map subtractDomain(Set dom) && { return Map::wrap(isl_map_subtract_domain(take(), dom.take())); }
 #endif
 
-    void subtract_inplace(const Map &map) ISLPP_INPLACE_FUNCTION { return give(isl_map_subtract(take(), map.takeCopy())); }
-    Map subtract(const Map &map) const { return Map::enwrap(isl_map_subtract(takeCopy(), map.takeCopy())); }
+    ISLPP_INPLACE_ATTRS void subtract_inplace(Map map) ISLPP_INPLACE_FUNCTION { give(isl_map_subtract(take(), map.take())); }
+    ISLPP_EXSITU_ATTRS Map subtract(Map map) ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_subtract(takeCopy(), map.take())); }
+    ISLPP_CONSUME_ATTRS Map subtract_consume(Map map) ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_subtract(take(), map.take())); }
 
     void subtractRange_inplace(const Set &dom) ISLPP_INPLACE_FUNCTION { give(isl_map_subtract_range(take(), dom.takeCopy())); }
     Map subtractRange(const Set &dom) const { return Map::enwrap(isl_map_subtract_range(takeCopy(), dom.takeCopy())); }
@@ -480,9 +481,9 @@ namespace isl {
     void uncurry_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_uncurry(take()));}
     Map uncurry() const { return Map::enwrap(isl_map_uncurry(takeCopy()));  }
 
-  ISLPP_EXSITU_ATTRS  Map makeDisjoint() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
-   ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_make_disjoint(take()));}
-  ISLPP_CONSUME_ATTRS  Map makeDisjoint_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_make_disjoint(take()));}
+    ISLPP_EXSITU_ATTRS  Map makeDisjoint() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_make_disjoint(takeCopy()));}
+    ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_make_disjoint(take()));}
+    ISLPP_CONSUME_ATTRS  Map makeDisjoint_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_make_disjoint(take()));}
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
 #endif
@@ -514,9 +515,9 @@ namespace isl {
     Map gistParams(const Set &context) const { return Map::enwrap(isl_map_gist_params(takeCopy(), context.takeCopy())); }
     void gistParams_inplace(Set &&context) ISLPP_INPLACE_FUNCTION { give(isl_map_gist_params(take(), context.take())); }
 
-   ISLPP_EXSITU_ATTRS Map coalesce() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
-  ISLPP_INPLACE_ATTRS  void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_coalesce(take())); } 
-  ISLPP_CONSUME_ATTRS  Map coalesce_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_coalesce(take())); } 
+    ISLPP_EXSITU_ATTRS Map coalesce() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_coalesce(takeCopy())); } 
+    ISLPP_INPLACE_ATTRS  void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_coalesce(take())); } 
+    ISLPP_CONSUME_ATTRS  Map coalesce_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_coalesce(take())); } 
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map coalesce() && { return Map::enwrap(isl_map_coalesce(take())); } 
 #endif

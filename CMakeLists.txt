@@ -131,8 +131,8 @@ set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
 #set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly)
-set(MOLLYCC_VERBOSE_FLAGS -v -mllvm -debug -mllvm -debug-only=polly)
-set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report)
+set(MOLLYCC_VERBOSE_FLAGS -v -debug -mllvm -debug-only=molly)
+set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 
 
@@ -143,7 +143,7 @@ set(MOLLYCC_VERBOSE_LDFLAGS )
 # Used to compile MollyRT
 # Needs to be clang in order to match the ABI
 function (clang_compile _outfile)
-message("   clang_compile(${_outfile}, ${ARGN})")
+#message("   clang_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "OBJ;LL;BC;ASM;II;EXE" "COMPILER" "COMMENT;SOURCES;FLAGS;CFLAGS;LDFLAGS;LIBS" ${ARGN})
   get_filename_component(_outfile "${_outfile}" ABSOLUTE)
 
@@ -197,7 +197,7 @@ endfunction ()
 
 
 function (clang_compile_link _outfile)
-message("   clang_compile_link(${_outfile}, ${ARGN})")
+#message("   clang_compile_link(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;LDFLAGS;SOURCES;COMMENT;LIBS" ${ARGN})
   get_filename_component(_outfile "${_outfile}" ABSOLUTE)
   
@@ -227,7 +227,7 @@ message("   clang_compile_link(${_outfile}, ${ARGN})")
     set(_mode EXE)
     set(_suffix "${CMAKE_EXECUTABLE_SUFFIX}")
   endif ()
-message("${_AR} ${_suffix} ${_mode}")
+#message("${_AR} ${_suffix} ${_mode}")
 
   # Make paths absolute
   set(_realsources)
@@ -385,7 +385,7 @@ endmacro()
 
 
 macro(mollycc_compile_link _outfile)
-message("mollycc_compile_link(${_outfile}, ${ARG})")
+#message("mollycc_compile_link(${_outfile}, ${ARG})")
   parse_arguments(PARM "FLAGS;SOURCES;COMMENT" "BC;LL;OBJ;AR;PLAIN" ${ARGN})
   get_filename_component(_outfile ${_outfile} ABSOLUTE)
   
@@ -536,7 +536,7 @@ endmacro()
 
 # Compile and link to MollyRT that CMake is responsible to compile
 function (mollycc_compile _outfile)
-message("   mollycc_compile(${_outfile}, ${ARGN})")
+#message("   mollycc_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
   get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
   clang_compile_link("${_outfile}" EXE
@@ -554,7 +554,7 @@ endfunction ()
 # Compile and link to molly.a
 set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" ${MPI_CXX_LIBRARIES})
 function (mollycc_a_compile _outfile)
-message("   mollycc_a_compile(${_outfile}, ${ARGN})")
+#message("   mollycc_a_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
   clang_compile_link("${_outfile}" EXE
     COMPILER mollycc

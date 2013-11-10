@@ -59,7 +59,7 @@ ScopEditor ScopEditor::newScop(isl::Ctx *ctx, llvm::Instruction *insertBefore, l
   ri->setRegionFor(scopBB, region);
   //ri->setRegionFor(exitBB, region);
 
- // TODO: Do not forget to make ScopInfo detect this
+  // TODO: Do not forget to make ScopInfo detect this
   // Currently the caller must do this
 
   auto SE = &p->getAnalysis<ScalarEvolution>();
@@ -329,6 +329,8 @@ bool molly::splitBlockIfNecessary(BasicBlock *into, Instruction *insertBefore, b
 
 
 static BasicBlock * insertNewBlockBefore(const Twine & name, BasicBlock * after, Pass * pass) {
+  //FIXME: Need to change PHINodes as in BasicBlock::splitBasicBlock
+
   // Insert the new BB between p.first && p.second
   // We cannot use SplitBlock, this would create a new block after after and move all instructions there; existing references to after would therefore refer the empty dedicated BasicBlock instead
   auto &llvmContext = after->getContext();
@@ -358,24 +360,26 @@ static BasicBlock * insertNewBlockBefore(const Twine & name, BasicBlock * after,
   }
 
   // Fixup the analyses.
-  if (LoopInfo *LI = pass->getAnalysisIfAvailable<LoopInfo>()) {
-    if (Loop *L = LI->getLoopFor(after))
-      L->addBasicBlockToLoop(dedicated, LI->getBase());
-  }
-
-  if (auto RI = pass->getAnalysisIfAvailable<RegionInfo>()) {
-    if (auto OldRegion = RI->getRegionFor(after)) 
-      RI->setRegionFor(dedicated, OldRegion);
-  }
-
-  if (DominatorTree *DT = pass->getAnalysisIfAvailable<DominatorTree>()) {
-    // dedicated dominates after
-    if (DomTreeNode *afterNode = DT->getNode(after)) {
-      DomTreeNode *dedicatedNode = DT->addNewBlock(dedicated, afterNode->getIDom()->getBlock());
-      DT->changeImmediateDominator(after, dedicated);
+  if (pass) {
+    if (LoopInfo *LI = pass->getAnalysisIfAvailable<LoopInfo>()) {
+      if (Loop *L = LI->getLoopFor(after))
+        L->addBasicBlockToLoop(dedicated, LI->getBase());
     }
 
-    DT->verifyAnalysis();
+    if (auto RI = pass->getAnalysisIfAvailable<RegionInfo>()) {
+      if (auto OldRegion = RI->getRegionFor(after)) 
+        RI->setRegionFor(dedicated, OldRegion);
+    }
+
+    if (DominatorTree *DT = pass->getAnalysisIfAvailable<DominatorTree>()) {
+      // dedicated dominates after
+      if (DomTreeNode *afterNode = DT->getNode(after)) {
+        DomTreeNode *dedicatedNode = DT->addNewBlock(dedicated, afterNode->getIDom()->getBlock());
+        DT->changeImmediateDominator(after, dedicated);
+      }
+
+      DT->verifyAnalysis();
+    }
   }
 
   return dedicated;
@@ -425,6 +429,7 @@ static BasicBlock *insertDedicatedBB(BasicBlock *into, Instruction *insertBefore
 
 static BasicBlock* insertLoop(BasicBlock *into, Instruction *insertBefore, Value *nIterations, Pass *pass,Loop *parentLoop, /*out*/Loop *&loop, Region *parentRegion, /*out*/Region *&region) {
   auto func = getFunctionOf(into);
+  //viewRegionOnly(func);
 
   BasicBlock *entryBB;
   BasicBlock *exitBB;
@@ -613,7 +618,7 @@ static isl::Map relativeScatter(const isl::Map &modelScatter,  unsigned atLevel,
 
 StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &subscatter_, const isl::Map &where, const std::string &name) {
   auto &llvmContext = getLLVMContext();
-  auto function = getParentFunction();
+  auto func = getParentFunction();
   auto modelLoopNests = stmt->getLoopNests();
   auto scop = getParentScop();
   auto parentRegion = getRegionOf(this->stmt);
@@ -647,7 +652,7 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   for (auto i = nModelDims; i < nNewDims; i+=1) {
     Loop *loop = nullptr;
     Region *newRegion = nullptr;
-    innermostBody = insertLoop(innermostBody, nullptr, ConstantInt::get(intTy, 3), pass, innermostLoop, loop, innermostRegion, newRegion);
+    innermostBody = insertLoop(innermostBody, nullptr, ConstantInt::get(intTy, 3), pass, innermostLoop, /*out*/loop, innermostRegion, /*out*/newRegion);
     newStmtBB = innermostBody;
     innermostRegion = newRegion;
     innermostLoop = loop;
