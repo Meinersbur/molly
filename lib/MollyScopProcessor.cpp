@@ -474,7 +474,7 @@ namespace {
     void genCommunication() {
       auto funcName = func->getName();
       DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << funcName << "\n");
-      if (funcName == "sink") {
+      if (funcName == "test") {
         int a = 0;
       }
 
@@ -1004,7 +1004,7 @@ namespace {
       auto homeAff = fvar->getHomeAff().setOutTupleId(srcNodeId); // { fvar[indexset] -> srcNode[cluster] }
       auto indexsetSpace = homeAff.getDomainSpace(); // { fvar[indexset] }
 
-      auto transfer = readAccRel.chain(homeAff).wrap().chainSubspace(readWhere).wrap(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
+      auto transfer = readAccRel.intersectDomain(inp).chain(homeAff).wrap().chainSubspace(readWhere).wrap(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
       auto local = intersect(transfer, transfer.getSpace().equalBasicSet(dstNodeSpace, srcNodeSpace));
       auto remoteTransfer = transfer-local; // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
       auto localTransfer = local.reorganizeSubspaces(indexsetSpace >> (readDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (readDomainSpace >> clusterSpace)).wrap()); // { fvar[indexset], readStmt[domain], [cluster] }
@@ -1152,10 +1152,7 @@ namespace {
           combuf->codegenRecv(recvCodegen, recvChunk, recvSrc, recvDst);
         }
       }
-
-      assert(readEditor.getInstances().isEmpty());
-    }
-
+    } // genInputCommunication
 
 
 
@@ -1295,6 +1292,7 @@ namespace {
       auto readScatter = readStmt->getScattering().intersectDomain(readDomain); //  { readStmt[domain] -> scattering[scatter] }
       assert(readScatter.matchesMapSpace(readDomain.getSpace(), scatterTupleId));
       auto readWhere = readStmt->getWhere().intersectDomain(readDomain); // { stmtRead[domain] -> node[cluster] }
+      assert(!readWhere.isEmpty());
       auto readEditor = readStmt->getEditor();
 
       auto writeStmt = getScopStmtContext(dep.getInTupleId());
@@ -1308,6 +1306,7 @@ namespace {
       auto writeScatter = writeStmt->getScattering().intersectDomain(writeDomain); // { writeStmt[domain] -> scattering[scatter] }
       assert(writeScatter.matchesMapSpace(writeDomain.getSpace(), scatterTupleId));
       auto writeWhere = writeStmt->getWhere().intersectDomain(writeDomain); // { writeRead[domain] -> node[cluster] }
+      assert(!writeWhere.isEmpty());
       auto writeEditor = writeStmt->getEditor();
 
       // A statement is either reading or writing, but not both
@@ -1388,7 +1387,7 @@ namespace {
       depInstLoc.intersect_inplace(eqField);
       depInstLoc.projectOutSubspace_inplace(isl_dim_in, indexsetSpace);
 
-      auto depInstLocChunks = depInstLoc.reverse().wrap().chainSubspace(readChunkAff).reverse(); // { recv[domain] -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
+      //auto depInstLocChunks = depInstLoc.reverse().wrap().chainSubspace(readChunkAff).reverse(); // { recv[domain] -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
 
       // For every read, we need to select one write instance. It will decide from which node we will receive the data
       // TODO: This selection is arbitrary; preferable select data from local node and nodes we have to send data from anyways

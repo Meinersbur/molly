@@ -975,7 +975,8 @@ namespace {
         auto new2 = splitBlockIfNecessary(middle, splitPt2, false, middle, after, this);
         changed = changed || new1 || new2;
 
-        middle->setName(name + Twine(".facc") + Twine(cnt));
+        auto postfix = facc.isRead() ? ".fload" : ".fstore";
+        middle->setName(name + Twine(postfix) + Twine(cnt));
         if (new2) {
           after->setName(name + Twine(".inter") + Twine(cnt));
         }

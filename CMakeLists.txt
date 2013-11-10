@@ -131,7 +131,7 @@ set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
 #set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly)
-set(MOLLYCC_VERBOSE_FLAGS -v)
+set(MOLLYCC_VERBOSE_FLAGS -v -debug -mllvm -debug-only=molly)
 set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 

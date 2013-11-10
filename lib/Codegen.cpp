@@ -179,12 +179,14 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
   // 2. Create a ad-hoc function that contains the case distinction; meant to be inlined later by llvm optimization passes
   // 3. Create new ScopStmts for each peace, let Polly generate code to distinguish them
 
+auto &llvmContext = getLLVMContext();
+auto intTy = Type::getInt64Ty(llvmContext);
 
   auto expr = initAstBuild().exprFromPwAff(aff); //aff.resetDimIds(isl_dim_all)
   // auto pass = stmtCtx->asPass();
   auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), idtovalue, pass);
   //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
-  return result;
+  return irBuilder.CreateIntCast(result, intTy, false/*???*/);
 }
 
 
