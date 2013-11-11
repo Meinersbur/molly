@@ -437,11 +437,23 @@ static BasicBlock* insertLoop(BasicBlock *into, Instruction *insertBefore, Value
   if (!insertBefore)
     insertBefore = into->getTerminator();
 
+  RegionInfo *RI = nullptr;
+  if (pass) {
+    RI = pass->getAnalysisIfAvailable<RegionInfo>();
+  }
+
+  if (RI) {
+    auto intoRegion = RI->getRegionFor(into);
+    //assert(intoRegion == parentRegion);
+    parentRegion = intoRegion;
+  }
+
   entryBB = into;
   exitBB = SplitBlock(into, insertBefore, pass);
   //auto p = splitBlockIfNecessary(into, insertBefore, false, entryBB, exitBB,  pass);
   exitBB->setName(Twine(into->getName()) + ".loopexit");
-
+  assert(!RI || RI->getRegionFor(into)==parentRegion);
+  assert(!RI || RI->getRegionFor(exitBB)==parentRegion);
 
 #if 0
   if (insertBefore) {

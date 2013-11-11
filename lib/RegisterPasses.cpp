@@ -72,13 +72,15 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // Partially copied from Polly's registerCanonicalicationPasses
   PM.add(llvm::createPromoteMemoryToRegisterPass());
   PM.add(llvm::createSROAPass());// Enhanced version of mem2reg; clang::CodeGen buts some temporaries into AllocaInsts
-  PM.add(llvm::createInstructionCombiningPass());
+  //PM.add(llvm::createInstructionCombiningPass()); // FIXME: converts ZExt to ashr, which is not recognized by ScalarEvolution
+  PM.add(llvm::createInstructionSimplifierPass());
   PM.add(llvm::createCFGSimplificationPass());
   PM.add(llvm::createTailCallEliminationPass());
   PM.add(llvm::createCFGSimplificationPass());
   PM.add(llvm::createReassociatePass());
   PM.add(llvm::createLoopRotatePass());
-  PM.add(llvm::createInstructionCombiningPass());
+  //PM.add(llvm::createInstructionCombiningPass());
+  PM.add(llvm::createInstructionSimplifierPass());
   if (!SCEVCodegen)
     PM.add(polly::createIndVarSimplifyPass());
   PM.add(polly::createCodePreparationPass());
