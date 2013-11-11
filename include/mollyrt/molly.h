@@ -726,14 +726,14 @@ namespace molly {
   template<typename FirstType, typename... Types>
   MOLLYATTR(inline)
   static inline int _select(int i, FirstType first, Types... list)  {
-    assert(i < (int)(1/*first*/+sizeof...(list)));
+    assert(i < (int)(1/*first*/+sizeof...(list))); // Interferes with natural loop detection
     if (i == 0)
       return first;
     return _select(i-1, list...); // This is no recursion, every _select has a different signature
   }
 
   MOLLYATTR(inline)
-  static inline int _select(int i) { // overload for compiler-tim termination, should never be called
+  static inline int _select(int i) { // overload for compiler-time termination, should never be called
 #ifdef _MSC_VER
     __assume(false);
 #else

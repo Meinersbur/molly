@@ -27,7 +27,7 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
 }
 #endif
 
-extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE 
   for (auto i = 0; i < 3; i+=1) {
     for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
       for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
@@ -45,16 +45,15 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
         auto r = hasLife(n, n1+n2+n3+n4);
 
         *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y+1)) = r;
-
       }
     }
-    for (int x = 0, width = habitat1.length(0); x < width-2; x+=1)
+    for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
       for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
 
         auto r = *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y+1));
 
         *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y+1)) = r;
-
+      }
     }
   }
 }

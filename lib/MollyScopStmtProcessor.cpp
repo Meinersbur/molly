@@ -498,7 +498,7 @@ namespace {
         assert(where.isValid());
         auto clusterSpace = clusterConf->getClusterSpace();
         assert(where.getSpace().matchesMapSpace(domainSpace, clusterSpace));
-        assert(where.getDomain().isSupersetOf(domain));
+        //assert(where.domain().isSupersetOf(domain)); // TODO: Where.domain()  may include additional restrictions of some isl_dim_param which renders them not-equal
       }
 
       for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
