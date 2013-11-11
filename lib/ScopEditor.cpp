@@ -250,7 +250,7 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
       commonRegion = RI->getRegionFor(exitBB);
     else
       commonRegion = RI->getTopLevelRegion();
-    assert(!parentRegion || parentRegion  == commonRegion);
+    assert(!parentRegion || parentRegion == commonRegion);
     if (!parentRegion)
       parentRegion = commonRegion;
 
@@ -478,7 +478,7 @@ StmtEditor ScopEditor::createStmt(isl::Set domain, isl::Map scattering, isl::Map
 
   auto innermostRegion = &scop->getRegion();
   auto innermostBody = innermostRegion->getEntry();
-  auto innermostInsertion  = innermostBody->getTerminator();
+  auto innermostInsertion = innermostBody->getTerminator();
   Loop *innermostLoop = nullptr;
   for (auto i = nDomainDims-nDomainDims; i < nDomainDims; i+=1) {
     Loop *theLoop = nullptr;
