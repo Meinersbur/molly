@@ -54,6 +54,11 @@ namespace molly {
 
   public:
     static CommunicationBuffer *create(llvm::GlobalVariable *varsend, llvm::GlobalVariable *varrecv, FieldType *fty, isl::Map relation, uint64_t tag) {
+      assert(varsend);
+      assert(varrecv);
+      assert(fty);
+      assert(!relation.isEmpty() && "A combuf doesn't make much sense when there is nothing to communicate");
+
       auto result = new CommunicationBuffer();
       result->varsend = varsend;
       result->varrecv = varrecv;
@@ -115,6 +120,9 @@ namespace molly {
 
     llvm::Value *codegenPtrToSendbufObj(MollyCodeGenerator &codegen);
     llvm::Value *codegenPtrToRecvbufObj(MollyCodeGenerator &codegen);
+
+    llvm::Value *codegenSendbufDstIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domain, isl::MultiPwAff dstCoord); 
+    llvm::Value *codegenRecvbufSrcIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domain, isl::MultiPwAff srcCoord); 
 
   }; // class CommunicationBuffer
 } // namespace molly

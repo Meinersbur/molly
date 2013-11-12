@@ -176,7 +176,8 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
       //auto combufSend = sendCodegen.materialize();
       auto sendDstAff = sendStmtEd.getCurrentIteration().castRange(dstRankSpace); /* { [domain] -> dstNode[cluster] } */
       //auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff); //TODO: this is a global rank, but we actually need one indexed from (0..maxdst]
-      auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
+     // auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
+       auto sendDstRank = codegenSendbufDstIndex(sendCodegen, sendSrcAff, sendDstAff);
       auto sendWhat = rangeProduct(sendSrcAff, sendDstAff);
       auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks
 
@@ -241,7 +242,8 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
       //auto combufRecv = recvCodegen.materialize(getVariableRecv());
       auto recvSrcAff = recvStmtEd.getCurrentIteration().castRange(srcRankSpace); /* { [domain] -> srcNode[cluster] } */
       //auto recvDstRank = clusterConf->codegenRank(recvCodegen, recvSrcAff);
-      auto recvSrcRank = recvbufMapping->codegenIndex(recvCodegen, recvDstAff, recvSrcAff);
+     // auto recvSrcRank = recvbufMapping->codegenIndex(recvCodegen, recvDstAff, recvSrcAff);
+          auto recvSrcRank = codegenRecvbufSrcIndex(recvCodegen, recvDstAff, recvSrcAff);
 
       auto recvWhat = rangeProduct(recvDstAff, recvSrcAff);
       auto recvSize = mapping->codegenMaxSize(recvCodegen, recvWhat); // Max over all chunks
@@ -284,7 +286,7 @@ void CommunicationBuffer::codegenStoreInSendbuf(MollyCodeGenerator &codegen, con
 
   //auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
   auto buftranslator = srcCoord.toPwMultiAff();
-  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  auto sendbufIdx = codegenSendbufDstIndex(codegen, buftranslator, dstCoord);
   auto sendbufPtr = codegen.callCombufSendbufPtr(this, sendbufIdx);
 
   auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
@@ -335,7 +337,7 @@ llvm::Value *CommunicationBuffer::codegenLoadFromRecvBuf(MollyCodeGenerator &cod
 llvm::Value *CommunicationBuffer::codegenSendWait(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
   //auto buftranslator = rangeProduct(chunk, srcCoord).toPwMultiAff();
   auto buftranslator = srcCoord.toPwMultiAff();
-  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord);
+  auto sendbufIdx =  codegenSendbufDstIndex(codegen, buftranslator, dstCoord);
   return codegen.callCombufSendWait(this, sendbufIdx);
 }
 
@@ -343,7 +345,7 @@ llvm::Value *CommunicationBuffer::codegenSendWait(MollyCodeGenerator &codegen, i
 void CommunicationBuffer::codegenSend(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord) {
   // auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff(); // { [domain] -> (chunk[domain], srcNode[cluster]) }
   auto buftranslator =  srcCoord.toPwMultiAff();
-  auto sendbufIdx = sendbufMapping->codegenIndex(codegen, buftranslator, dstCoord/* { [domain] -> dstNode[cluster] } */);
+  auto sendbufIdx = codegenSendbufDstIndex(codegen, buftranslator, dstCoord/* { [domain] -> dstNode[cluster] } */);
   auto call = codegen.callCombufSend(this, sendbufIdx);
 
   // Add artificial accesses to the buffer, the runtime will access it. This is to inhibit other accesses from moving cross it
@@ -430,4 +432,16 @@ llvm::Value *CommunicationBuffer::codegenPtrToRecvbufObj(MollyCodeGenerator &cod
   //auto result = codegen.getIRBuilder().CreateLoad(var, "recvbufobj");
   //codegen.addScalarLoadAccess(var, result);
   //return result;
+}
+
+
+llvm::Value *CommunicationBuffer::codegenSendbufDstIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domain, isl::MultiPwAff dstCoord) {
+  auto result =  sendbufMapping->codegenIndex(codegen, domain, dstCoord);
+  return result;
+}
+
+
+llvm::Value *CommunicationBuffer::codegenRecvbufSrcIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domain, isl::MultiPwAff srcCoord) {
+  auto result =  recvbufMapping->codegenIndex(codegen, domain, srcCoord);
+  return result;
 }

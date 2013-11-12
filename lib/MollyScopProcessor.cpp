@@ -906,6 +906,14 @@ namespace {
       }
 
 
+      // Disable all write accesses; all of them have been replaced by communication-writes (or even by multiple if there are multiple statement that read them)
+      for (auto const & writeAcc : writeAccesses.getMaps() ) {
+        auto writeStmt =   getScopStmtContext(writeAcc.getInTupleId() );
+        auto emptyWhere = writeStmt->getDomainSpace().mapsTo(nodeSpace).emptyMap();
+        writeStmt->setWhere( emptyWhere );
+      }
+
+
       //TODO: For every may-write, copy the original value into that the target memory (unless they are the same), so we copy the correct values into the buffers
       // i.e. treat ever may write as, write original value if not written
     }
@@ -1083,7 +1091,7 @@ namespace {
         {
           auto sendWhere = remoteTransfer.reorderSubspaces(dstNodeSpace, srcNodeSpace).castRange(clusterSpace); // { src[cluster] -> dst[cluster] }
           auto sendScatter = constantScatter(dstNodeSpace.mapsTo(prologueDomain.getSpace()).createZeroMultiAff(), beforeScopScatter, -1); // { srcNode[cluster] -> scattering[scatter] }
-          auto sendEditor = editor.createStmt(sendWhere.domain(), sendScatter, sendWhere, "sendwait");
+          auto sendEditor = editor.createStmt(sendWhere.domain(), sendScatter, sendWhere, "send");
           auto sendStmt = sendEditor.getStmt();
           auto sendStmtCtx = getScopStmtContext(sendStmt);
 
@@ -1131,7 +1139,7 @@ namespace {
 
           //auto readflowBufptr = combuf->codegenPtrToRecvBuf(readflowCodegen, readflowChunk, readflowSrc, readflowDst, readflowIndex);
           //auto readflowVal = readflowCodegen.getIRBuilder().CreateLoad(readflowBufptr, "readflowval");
-         auto readflowVal = combuf->codegenLoadFromRecvBuf(readflowCodegen, readflowChunk, readflowSrc, readflowDst, readflowIndex);
+          auto readflowVal = combuf->codegenLoadFromRecvBuf(readflowCodegen, readflowChunk, readflowSrc, readflowDst, readflowIndex);
           readflowCodegen.updateScalar(readVal->getPointerOperand(), readflowVal);
         }
 
@@ -1159,10 +1167,10 @@ namespace {
   private:
     /// return the first dimension from which on all dependencies are always lexicographically positive
     /// examples:
-    /// { (1,0,0) -> (0,1,0) } returns 1
-    /// { (0,i,0) -> (0,i+1,-1) } returns 1
-    /// { (0,0) -> (0,0) } returns 2, these are never lexicographically positive
-    unsigned computeLevelOfDependence(const isl::Map &depScatter) {  /* dep: { scattering[scatter] -> scattering[scatter] } */
+    /// { (1,0,0) -> (0,1,0) } returns ?
+    /// { (0,i,0) -> (0,i+1,-1) } returns ?
+    /// { (0,0) -> (0,0) } returns ?
+    unsigned computeLevelOfDependence(isl::Map depScatter) {  /* dep: { scattering[scatter] -> scattering[scatter] } */
       auto depMap = depScatter.getSpace();
       auto dependsVector = depMap.emptyMap(); /* { read[scatter] -> (read[scatter] - write[scatter]) } */
       auto nParam = depScatter.getParamDimCount();
@@ -1178,14 +1186,17 @@ namespace {
         auto orderMap = depMap.universeBasicMap().orderLt(isl_dim_in, i, isl_dim_out, i);
         // auto fulfilledDeps = depScatter.intersect(orderMap);
         if (orderMap >= depScatter) {
-          // All dependences are fullfilled from here
+          // All dependences are fulfilled from here
           // i.e. we can shuffle stuff as we want in lower dimensions
-          return i;
+          return i+1;
         }
+
+        // Remaining deps to be fulfilled
+        depScatter -= orderMap;
       }
 
       // No always-positive dependence, therefore return the first out-of-range
-      return std::max(nIn, nOut);
+      return std::max(nIn, nOut)+1;
     }
 
 
@@ -1341,7 +1352,7 @@ namespace {
       auto recvId = islctx->createId("recv");
       auto readPartitioning = partitionDomain(readScatter, levelOfDep).setOutTupleId(recvId); // { readStmt[domain] -> recv[domain] }
       auto sendId = islctx->createId("send");
-      auto writePartitioning = partitionDomain(writeScatter, levelOfDep).setOutTupleId(sendId); // { writeStmt[domain] -> send[domain] }
+      //auto writePartitioning = partitionDomain(writeScatter, levelOfDep).setOutTupleId(sendId); // { writeStmt[domain] -> send[domain] }
 
       auto depPartitioning = readPartitioning.reverse().chainNested(isl_dim_out, dep.reverse()); // { recv[domain] -> (readStmt[domain], writeStmt[domain]) }
       auto readChunks_ = chunkDomain(readScatter, levelOfDep, false).setInTupleId(recvId); // { recv[domain] -> readStmt[domain] }
@@ -1349,7 +1360,7 @@ namespace {
       auto readChunkAff = chunkDomainPwAff(readScatter.toPwMultiAff(), levelOfDep, false).setOutTupleId(recvId); // { readStmt[domain] -> recv[domain] }
       auto readChunks = readChunkAff.reverse();
 
-      auto sendDomain = writePartitioning.getRange();
+      //auto sendDomain = writePartitioning.getRange();
       auto recvDomain = readChunks.getDomain();
       auto chunkSpace = recvDomain.getSpace();
 
@@ -1377,6 +1388,7 @@ namespace {
       auto writeInstAccess = writeInstDomain.chainSubspace(writeAccRel);         // { (writeStmt[domain], node[cluster]) -> field[index] }
 
       auto depInst = dep.applyDomain(writeInstMap).applyRange(readInstMap);       // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
+      assert(!depInst.isEmpty());
       //auto depSubInst = depSub.applyDomain(writeInstMap).applyRange(readInstMap); // { (writeStmt[domain], node[cluster]) -> (readStmt[domain], node[cluster]) }
 
 
@@ -1412,7 +1424,8 @@ namespace {
 
 
       // { (recv[domain], readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
-      auto chunks = recvChunksWrapped.intersect(firstWritePerChunk.wrap().reorganizeSubspaces(recvChunksWrapped.getSpace()));
+      //auto chunks = recvChunksWrapped.intersect(firstWritePerChunk.wrap().reorganizeSubspaces(recvChunksWrapped.getSpace()));
+      auto chunks = recvChunksWrapped;
       writeInstDomain = chunks.reorganizeSubspaces(writeInstDomain.getSpace()); // { (writeStmt[domain], node[cluster]) }
       writeInstScatter = writeInstDomain.chainSubspace(writeScatter);  // { (writeStmt[domain], node[cluster]) -> scattering[scatter] }
       auto writeInstWhere = writeInstDomain.reorganizeSubspaces(writeInstDomain.getSpace(), writeInstDomain.getSpace().unwrap().getRangeSpace()); // { (writeStmt[domain], node[cluster]) -> scattering[scatter] }
@@ -1442,14 +1455,14 @@ namespace {
       auto comRelation = chunks.reorganizeSubspaces(chunkSpace, (writeNodeShape.getSpace() >> readNodeShape.getSpace()) >> indexsetSpace); // { recv[] -> (writeNode[cluster], readNode[cluster], field[indexset]) }
 
       // We may need to send to/recv from any node in the cluster
-      auto sendDstDomain = depInst.getDomain().unwrap().setInTupleId(sendDomain.getTupleId()).intersectDomain(sendDomain).wrap(); // { (writeStmt[domain], nodeDst[cluster]) }
+      //auto sendDstDomain = depInst.getDomain().unwrap().setInTupleId(sendDomain.getTupleId()).intersectDomain(sendDomain).wrap(); // { (writeStmt[domain], nodeDst[cluster]) }
       auto recvSrcDomain = depInst.getRange().unwrap().setInTupleId(recvDomain.getTupleId()).intersectDomain(recvDomain).wrap(); // { (readStmt[domain], nodeDst[cluster]) }
 
       // Execute all send/recv statement in parallel, i.e. same scatter point
-      auto sendDstScatter = sendDstDomain.chainSubspace(writeScatter.setInTupleId(sendDomain.getTupleId())); // { (writeStmt[domain], nodeDst[cluster]) -> scattering[scatter] }
+      //auto sendDstScatter = sendDstDomain.chainSubspace(writeScatter.setInTupleId(sendDomain.getTupleId())); // { (writeStmt[domain], nodeDst[cluster]) -> scattering[scatter] }
       auto recvSrcScatter = recvSrcDomain.chainSubspace(readScatter.setInTupleId(recvDomain.getTupleId())); // { (writeStmt[domain], nodeDst[cluster]) -> scattering[scatter] }
 
-      auto sendDstWhere = sendDstDomain.unwrap().rangeMap(); // { (writeStmt[domain], nodeDst[cluster]) -> nodeDst[cluster] }
+      //auto sendDstWhere = sendDstDomain.unwrap().rangeMap(); // { (writeStmt[domain], nodeDst[cluster]) -> nodeDst[cluster] }
       auto recvSrcWhere = recvSrcDomain.unwrap().rangeMap(); // { (readStmt[domain], nodeSrc[cluster]) -> nodeSrc[cluster] }
 
 
@@ -1479,7 +1492,7 @@ namespace {
       auto writeflowDomain = writeflowWhere.domain();
       auto writeflowScatter = writeflowDomain.chainSubspace(writeScatter); 
       auto writeFlowEditor = writeEditor.createStmt(writeflowDomain, writeFlowScatter, writeflowWhere, "writeflow");
-      writeEditor.removeInstances(writeFlowWhere.wrap().reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId));
+      //writeEditor.removeInstances(writeFlowWhere.wrap().reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId));
       auto writeFlowStmt = getScopStmtContext(writeFlowEditor.getStmt());
       auto writeFlowCodegen = writeFlowStmt->makeCodegen();
 
@@ -1619,7 +1632,7 @@ namespace {
         auto writelocalWhere = localTransfers.reorderSubspaces(writeDomainSpace, clusterSpace);
         auto writelocalScatter = writeScatter;
         auto writelocalEditor = writeEditor.createStmt(writelocalWhere.domain(), writelocalScatter, writelocalWhere, "writeback_local");
-        writeEditor.removeInstances(writelocalWhere);
+        //writeEditor.removeInstances(writelocalWhere);
         auto writelocalStmt = writelocalEditor.getStmt();
         auto writelocalStmtCtx = getScopStmtContext(writelocalStmt);
         auto writelocalCodegen = writelocalStmtCtx->makeCodegen();
@@ -1668,7 +1681,7 @@ namespace {
         auto writeflowWhere = remoteTransfers.reorderSubspaces(writeDomainSpace, srcNodeSpace);
         auto writeflowScatter = writeScatter;
         auto writeflowEditor = writeEditor.createStmt(writeflowWhere.getDomain(), writeflowScatter.copy(), writeflowWhere, "writeflow");
-        writeEditor.removeInstances(writeflowWhere);
+        //writeEditor.removeInstances(writeflowWhere);
         auto writeflowStmt = writeflowEditor.getStmt();
         auto writeflowStmtCtx = getScopStmtContext(writeflowStmt);
         auto writeflowCodegen = writeflowStmtCtx->makeCodegen();
@@ -2026,9 +2039,9 @@ namespace {
     }
 
 
-     polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) LLVM_OVERRIDE {
+    polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) LLVM_OVERRIDE {
       return scop->getScopStmtFor(bb);
-     }
+    }
 
   }; // class MollyScopContextImpl
 } // namespace
