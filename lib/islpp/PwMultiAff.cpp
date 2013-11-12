@@ -271,3 +271,9 @@ const PwMultiAff & isl::Pw<MultiAff>::operator=( MultiPwAff that )
 {
   obj_give(that.isValid() ? that.toPwMultiAff() : PwMultiAff()); return *this;
 }
+
+
+void isl::Pw<MultiAff>::dump() const
+{
+  isl_pw_multi_aff_dump(keep());
+}

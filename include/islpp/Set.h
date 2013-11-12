@@ -365,7 +365,8 @@ namespace isl {
   static inline Set unite(const Set &set1, Set &&set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.take())); }
   static inline Set unite(const Set &set1, const Set &set2) { return Set::enwrap(isl_set_union(set1.takeCopy(), set2.takeCopy())); }
 
-  Set subtract(Set &&set1, Set &&set2);
+ static inline Set subtract(Set set1, Set set2) { return Set::enwrap(isl_set_subtract(set1.take(), set2.take())); }
+ static inline Set operator-(Set set1, Set set2) { return Set::enwrap(isl_set_subtract(set1.take(), set2.take())); }
 
   Set apply(Set &&set, Map &&map);
   Set apply(const Set &set, Map &&map);
@@ -432,8 +433,6 @@ namespace isl {
   static inline bool operator<(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map1.keep(), map2.keep())); }
   static inline bool operator>=(const Set &map1, const Set &map2) { return checkBool(isl_set_is_subset(map2.keep(), map1.keep())); }
   static inline bool operator>(const Set &map1, const Set &map2) { return checkBool(isl_set_is_strict_subset(map2.keep(), map1.keep())); }
-
-  static inline Set operator-(Set lhs, Set rhs) { return Set::enwrap(isl_set_subtract(lhs.take(), rhs.take())); }
 
 } // namespace isl
 #endif /* ISLPP_SET_H */

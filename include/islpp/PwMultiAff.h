@@ -48,7 +48,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_pw_multi_aff_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_pw_multi_aff_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 

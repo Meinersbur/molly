@@ -676,6 +676,8 @@ namespace isl {
 #ifndef NDEBUG
     std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise
 #endif
+
+    const Map &operator-=(Map that) ISLPP_INPLACE_FUNCTION { give(isl_map_subtract(take(), that.take())); return *this; }
   }; // class Map
 
 
@@ -711,7 +713,8 @@ namespace isl {
   static inline Map intersect(const Map &map1, Map &&map2) { return Map::enwrap(isl_map_intersect(map1.takeCopy(), map2.take())); }
   static inline Map intersect(const Map &map1, const Map &map2) { return Map::enwrap(isl_map_intersect(map1.takeCopy(), map2.takeCopy())); }
 
-  static inline Map substract(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_subtract(map1.take(), map2.take())); }
+  static inline Map subtract(Map map1, Map map2) { return Map::enwrap(isl_map_subtract(map1.take(), map2.take())); }
+  static inline Map operator-(Map map1, Map map2) { return Map::enwrap(isl_map_subtract(map1.take(), map2.take())); }
 
   static inline Set deltas(Map &&map) { return Set::enwrap(isl_map_deltas(map.take())); }
   static inline BasicMap affineHull(Map &&map) { return BasicMap::enwrap(isl_map_affine_hull(map.take()));}  
