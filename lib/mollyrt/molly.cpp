@@ -512,6 +512,21 @@ namespace {
     	return buf!=nullptr;
     }
 
+    void dump() {
+#ifndef NDEBUG
+  std::ostringstream os;
+  os << "(";
+  for (auto i = 0; i < dstCoords.size(); i+=1) {
+    if (i!=0)
+      os << ", ";
+    os << dstCoords[i];
+  }
+  os << ")";
+  std::string dstCoordinates = os.str();
+	MOLLY_VAR(tag, dstCoordinates);
+#endif
+    }
+
   public:
     ~MPISendCommunicationBuffer() { MOLLY_DEBUG_FUNCTION_SCOPE
       if (buf) {
@@ -558,12 +573,16 @@ namespace {
     }
 
     void send() { MOLLY_DEBUG_FUNCTION_SCOPE
+    	dump();
+
       assert(!sending);
       MPI_CHECK(MPI_Start(&request));
       this->sending = true;
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+    	dump();
+
       if (!sending)
 	return; // May happen before the very first send; Molly always waits before sending the next chunk
       
@@ -778,7 +797,7 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   //__builtin_molly_global_init();
   
 #ifndef NDEBUG
-  std::cerr << "###############################################################################";
+  std::cerr << "###############################################################################\n";
 #endif
 
   //FIXME: Exception-handling, but currently we do not support exceptions
@@ -807,7 +826,9 @@ extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) { MOLLY_DEBUG
     return 0; // Before initialization
   assert(communicator->isInitialized());
 
-  return communicator->getSelfCoordinate(d);
+  auto result = communicator->getSelfCoordinate(d);
+  MOLLY_DEBUG("result=" << result);
+  return result;
 }
 
 #pragma endregion
@@ -892,7 +913,16 @@ extern "C" void *__molly_combuf_recv_alloc(uint64_t srcCount, uint64_t eltSize, 
 
 
 extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint64_t src, uint64_t nClusterDims, uint64_t *srcCoords, uint64_t count, uint64_t tag) { MOLLY_DEBUG_FUNCTION_ARGS(recvbuf, src, nClusterDims, srcCoords, count, tag)
-  recvbuf->initSrc(src, nClusterDims, srcCoords, count, tag);
+#ifndef NDEBUG
+  std::ostringstream os;
+  for (auto i = 0; i < nClusterDims; i+=1) {
+    if (i!=0)
+      os << ", ";
+    os << srcCoords[i];
+  }
+  MOLLY_DEBUG("Src coord: (" << os.str() << ")");
+#endif
+	recvbuf->initSrc(src, nClusterDims, srcCoords, count, tag);
 }
 
 
