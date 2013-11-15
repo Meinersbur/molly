@@ -187,9 +187,10 @@ static void dbgPrintVars_inner(const char *varnames, const First &first, const A
 
 template<typename... Args>
 static void dbgPrintVars(const char *file, int line, const char *varnames, const Args&... args) {
-  if (!__molly_isMaster())
-    return;
+  //if (!__molly_isMaster())
+  //  return;
 
+  std::cerr << __molly_cluster_mympirank() << ")";
   for (int i = _debugindention; i > 0; i-=1) {
     std::cerr << ' ' << ' ';
   }
