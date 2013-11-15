@@ -63,7 +63,7 @@ namespace molly {
   do {                                                          \
     MOLLY_DEBUG(#CALL);                                         \
     auto retval = (CALL);                                       \
-	if (retval!=MPI_SUCCESS) {                                  \
+    if (retval!=MPI_SUCCESS) {                                  \
       ERROREXIT("MPI fail: %s\nReturned: %d\n", #CALL, retval); \
     }                                                           \
   } while (0)
@@ -523,7 +523,7 @@ namespace {
   }
   os << ")";
   std::string dstCoordinates = os.str();
-	MOLLY_VAR(tag, dstCoordinates);
+  MOLLY_VAR(tag, dst, dstCoordinates, elts, sending);
 #endif
     }
 
@@ -568,12 +568,13 @@ namespace {
     }
 
     void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE
+      dump();
       assert(buf);
       return buf;
     }
 
     void send() { MOLLY_DEBUG_FUNCTION_SCOPE
-    	dump();
+      dump();
 
       assert(!sending);
       MPI_CHECK(MPI_Start(&request));
@@ -581,7 +582,7 @@ namespace {
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
-    	dump();
+      dump();
 
       if (!sending)
 	return; // May happen before the very first send; Molly always waits before sending the next chunk
@@ -593,7 +594,7 @@ namespace {
 #ifndef NDEBUG
       int count = -1;
       MPI_Get_count(&status, MPI_BYTE, &count);
-       assert(count > 0 && "Nothing received");
+      assert(count > 0 && "Nothing received");
 #endif
     }
   }; // class MPISendCommunicationBuffer
@@ -632,11 +633,11 @@ public:
     return getBuffer(dst)->getDataPtr();
   }
 
-  void send(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
+  void send(uint64_t dst) { MOLLY_DEBUG_METHOD_ARGS(dst)
     return getBuffer(dst)->send();
   }
 
-  void wait(uint64_t dst) { MOLLY_DEBUG_FUNCTION_SCOPE
+  void wait(uint64_t dst) { MOLLY_DEBUG_METHOD_ARGS(dst)
     return getBuffer(dst)->wait();
   }
 
@@ -664,6 +665,22 @@ namespace {
         std::vector<int> srcCoords;
 #endif
 
+  protected:
+    void dump() {
+#ifndef NDEBUG
+  std::ostringstream os;
+  os << "(";
+  for (auto i = 0; i < srcCoords.size(); i+=1) {
+    if (i!=0)
+      os << ", ";
+    os << srcCoords[i];
+  }
+  os << ")";
+  std::string srcCoordinates = os.str();
+  MOLLY_VAR(tag, src, srcCoordinates, elts);
+#endif
+    }
+	
   public:
     ~MPIRecvCommunicationBuffer() {
       if (buf) {
@@ -699,15 +716,21 @@ namespace {
     }
 
     void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE
+      dump();
+      
       assert(buf);
       return buf;
     }
 
     void recv() { MOLLY_DEBUG_FUNCTION_SCOPE
-       MPI_CHECK(MPI_Start(&request));
+      dump();
+      
+      MPI_CHECK(MPI_Start(&request));
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
+      dump();
+      
       MPI_Status status;
       MPI_CHECK(MPI_Wait(&request, &status));
 
@@ -947,13 +970,13 @@ extern "C" void *__molly_combuf_recv_wait(MPIRecvCommunication *recvbuf, uint64_
 #pragma region Load and store of single values
 
 /// Intrinsic: molly.value.load
-extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void __molly_value_load_disabled(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 
 
 /// Intrinsic: molly.value.store
-extern "C" void __molly_value_store(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void __molly_value_store_disabled(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 
