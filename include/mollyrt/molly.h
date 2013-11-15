@@ -283,6 +283,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
 #define MOLLY_DEBUG(...)                             \
   do {                                               \
+    if (__molly_cluster_mympirank()!=0) \
+      break; \
     std::cerr << __molly_cluster_mympirank() << ")"; \
     for (int i = _debugindention; i > 0; i-=1) {     \
       std::cerr << ' ' << ' ';                       \
@@ -348,6 +350,8 @@ public:
   template<typename... T>
   DebugFunctionScope(const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
+        if (__molly_cluster_mympirank()!=0)
+    return;
 	  std::cerr << __molly_cluster_mympirank() << ")";
 	  for (int i = _debugindention; i > 0; i-=1) {
 	    //fprintf(stderr,"  ");
@@ -361,6 +365,8 @@ public:
   template<typename... T>
   DebugFunctionScope(void *self, const char *funcname, const char *file, int line,  const char *varnames, const T&... vars)
     : funcname(funcname) {
+        if (__molly_cluster_mympirank()!=0)
+    return;
 	  std::cerr << __molly_cluster_mympirank() << ")";
 	  for (int i = _debugindention; i > 0; i-=1) {
 	    //fprintf(stderr,"  ");

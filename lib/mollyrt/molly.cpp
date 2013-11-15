@@ -487,6 +487,13 @@ MPICommunicator *communicator;
 
 #pragma region SendCommunicationBuffer
 namespace {
+   int get_MPI_count(MPI_Status *status) {
+	int count;
+	MPI_CHECK(MPI_Get_count(status, MPI_BYTE, &count));
+	return count;
+   }
+  
+  
   class MPISendCommunication;
 
   class MPISendCommunicationBuffer {
@@ -591,9 +598,9 @@ namespace {
       this->sending = false;
 
 #ifndef NDEBUG
-      int count = -1;
-      MPI_Get_count(&status, MPI_BYTE, &count);
-       assert(count > 0 && "Nothing received");
+      auto count = get_MPI_count(&status);
+      MOLLY_VAR(count,sending);
+      assert(count > 0 && "must receive something");
 #endif
     }
   }; // class MPISendCommunicationBuffer
@@ -947,13 +954,13 @@ extern "C" void *__molly_combuf_recv_wait(MPIRecvCommunication *recvbuf, uint64_
 #pragma region Load and store of single values
 
 /// Intrinsic: molly.value.load
-extern "C" void __molly_value_load(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void __molly_value_load_disabled(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 
 
 /// Intrinsic: molly.value.store
-extern "C" void __molly_value_store(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void __molly_value_store_disabled(LocalStore *buf, void *val, uint64_t rank, uint64_t idx) { MOLLY_DEBUG_FUNCTION_SCOPE
   assert(!"to implement");
 }
 

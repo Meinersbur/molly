@@ -25,7 +25,8 @@ namespace llvm {
 
 
 
-#if __has_extension(cxx_reference_qualified_functions) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 8) || (_GNUC__ == 4 && __GNUC_MINOR__ == 8 && __GNUC_PATCHLEVEL__ >= 1)
+//#if __has_extension(cxx_reference_qualified_functions) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 8) || (_GNUC__ == 4 && __GNUC_MINOR__ == 8 && __GNUC_PATCHLEVEL__ >= 1)
+#if 0
 // Supported since clang 3.1 (http://clang.llvm.org/docs/LanguageExtensions.html)
 // Supported since GCC 8.4.1 (http://gcc.gnu.org/projects/cxx0x.html)
 // Not supported in VC++ before Post-RTM OOB CTP (http://blogs.msdn.com/b/somasegar/archive/2013/06/28/cpp-conformance-roadmap.aspx)
