@@ -787,9 +787,10 @@ namespace {
       localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
 
 
-      // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations 
-
+      // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations; but just fits at this moment
       for (auto output : outputFlow.getSets()) {
+        //FIXME: Serious mistake; only make those instances "ownber computes", that are in output
+
         //auto  outputnotyet =  intersect(output, notyetExecuted);
         auto stmtCtx = getScopStmtContext(output); 
         auto accessed = stmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
@@ -802,6 +803,8 @@ namespace {
         notyetExecuted.substract_inplace(accessedButNotyetExecuted.domain());
         localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
       }
+
+      //auto tmp = overviewWhere();
 
       // "source computes": execute statements that read data from before the SCoP at the home location of that data
 
@@ -818,10 +821,12 @@ namespace {
         localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
       }
 
+      //tmp = overviewWhere();
 
       while (true) {
         bool changed = false;
         if (notyetExecuted.isEmpty()) break;
+
         // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
         for (auto flow : dataFlow.getMaps()) {
           auto producerSpace = flow.getDomainSpace();
@@ -841,6 +846,8 @@ namespace {
             changed = true;
           }
         }
+
+        //tmp = overviewWhere();
 
         //TODO: This fixpoint computation should be done on a higher level; on unbounded domains, this method might not even finished
         // See UnionMap::transitiveClosure for how it should work
@@ -917,6 +924,9 @@ namespace {
       //TODO: For every may-write, copy the original value into that the target memory (unless they are the same), so we copy the correct values into the buffers
       // i.e. treat ever may write as, write original value if not written
     }
+
+    isl::UnionMap overviewWhere();
+
 
     /// Make the data that is required to compute a ScopStmt (also) execute the value-computing ScopStmt
     void localizeNonfieldFlowDeps(isl::UnionSet &notyetExecuted, isl::UnionMap nonfieldDataFlowClosure)    {
@@ -1344,7 +1354,7 @@ namespace {
       // Find where the communication can be inserted without violating any dependencies
       auto scatterDep = dep.applyDomain(writeScatter); /* { scatteringWrite[scatter] -> scatteringRead[scatter] } */
       scatterDep.applyRange_inplace(readScatter);
-      auto levelOfDep = computeLevelOfDependence(scatterDep);
+      auto levelOfDep = computeLevelOfDependence(scatterDep); //TODO: Also check for tansitive dependency violation; e.g. within a chunk one statement requires data from an instance executed before
       auto levelOfIndep = scatterSpace.getSetDimCount() - levelOfDep;
 
       // partition into subdomains such that all elements of a subdomain can be arbitrarily ordered
@@ -2044,6 +2054,20 @@ namespace {
     }
 
   }; // class MollyScopContextImpl
+
+  isl::UnionMap MollyScopContextImpl::overviewWhere()
+  {
+    isl::UnionMap result = islctx->createEmptyUnionMap();
+
+    for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+      auto stmtCtx = getScopStmtContext(*itStmt);
+      auto where = stmtCtx->getWhere();
+      result.unite_inplace(where);
+    }
+
+    return result;
+  }
+
 } // namespace
 
 

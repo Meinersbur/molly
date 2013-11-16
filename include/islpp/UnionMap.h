@@ -195,13 +195,10 @@ namespace isl {
 
     void alignParams(Space &&model) { give(isl_union_map_align_params(take(), model.take())); }
 
-    void unite_inplace(UnionMap &&that) ISLPP_INPLACE_FUNCTION { give(isl_union_map_union(take(), that.take())); }
-    void unite_inplace(const UnionMap &that) ISLPP_INPLACE_FUNCTION { give(isl_union_map_union(take(), that.takeCopy())); }
-    UnionMap unite(UnionMap &&that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.take())); }
-    UnionMap unite(const UnionMap &that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.takeCopy())); }
+    void unite_inplace(UnionMap that) ISLPP_INPLACE_FUNCTION { give(isl_union_map_union(take(), that.take())); }
+    UnionMap unite(UnionMap that) const { return UnionMap::enwrap(isl_union_map_union(takeCopy(), that.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    UnionMap unite(UnionMap &&that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.take())); }
-    UnionMap unite(const UnionMap &that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.takeCopy())); }
+    UnionMap unite(UnionMap that) && { return UnionMap::enwrap(isl_union_map_union(take(), that.take())); }
 #endif
 
     Map extractMap(const Space &mapSpace) const { assert(mapSpace.isMapSpace()); return Map::enwrap(isl_union_map_extract_map(keep(), mapSpace.takeCopy())); }

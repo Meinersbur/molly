@@ -1,5 +1,6 @@
 #include <molly.h>
 
+
 molly::array<bool,6,6> habitat1;
 molly::array<bool,6,6> habitat2;
 
