@@ -8,8 +8,8 @@ int _debugindention;
 
 
 DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, int line) : funcname(funcname) {
-  //if (!__molly_isMaster())
-  //  return;
+  if (__molly_cluster_mympirank()!=0)
+    return;
   std::cerr << __molly_cluster_mympirank() << ")";
   for (int i = _debugindention; i > 0; i-=1) {
     //fprintf(stderr,"  ");
@@ -22,8 +22,8 @@ DebugFunctionScope::DebugFunctionScope(const char *funcname, const char *file, i
 
 
 DebugFunctionScope::~DebugFunctionScope() {
-  //if (!__molly_isMaster())
-  //  return;
+  if (__molly_cluster_mympirank()!=0)
+    return;
   _debugindention -= 1;
   std::cerr << __molly_cluster_mympirank() << ")";
   for (int i = _debugindention; i > 0; i-=1) {

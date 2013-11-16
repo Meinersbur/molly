@@ -5,7 +5,7 @@ molly::array<bool,6,6> habitat1;
 molly::array<bool,6,6> habitat2;
 
 
-[[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_SCOPE
+[[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_ARGS(prevHasLife, neighbors)
   if (prevHasLife)
     return 2 <= neighbors && neighbors <= 3;
   return neighbors == 3;
