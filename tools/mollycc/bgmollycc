@@ -1,0 +1,196 @@
+#!/bin/sh
+
+CLANG=/work/hch02/hch02d/build/molly/molly_ninja_gcc_debug/bin/mollycc
+SLEEF=/home/projects/llvm/r000000-00000000/sleef
+OMP=/home/projects/llvm/r000000-00000000/omp
+BINUTILS=/home/projects/llvm/r000000-00000000/binutils
+BGSYS_FLOOR=$(readlink /bgsys/drivers/ppcfloor)
+BGSYS_TOOLCHAIN_HOME=$BGSYS_FLOOR/gnu-linux
+BGSYS_CRT_LIB=${BGSYS_TOOLCHAIN_HOME}/powerpc64-bgq-linux/lib
+BGCLANG_TARGET_FLAGS="-target powerpc64-bgq-linux -gcc-toolchain $BGSYS_TOOLCHAIN_HOME -B${BINUTILS}/bin -B${BGSYS_CRT_LIB} -mcpu=a2q -ffp-contract=fast -fno-math-errno"
+BGCLANG_SCHED_OPTS="-mllvm -optimize-regalloc -mllvm -fast-isel=0"
+BGCLANG_UNROLL_OPTS=
+BGCLANG_VECTOR_OPTS=
+if [ "x$BGCLANG_VECTORIZE" = xno ]; then
+	BGCLANG_VECTOR_OPTS="-fno-vectorize -fno-slp-vectorize"
+fi
+
+link_static=0
+if [ "x$BGCLANG_STATIC_LINKING" != xno ]; then
+	link_static=1
+fi
+
+BGCLANG_TARGET_INC=
+if [ -d $SLEEF ]; then
+	BGCLANG_TARGET_INC="$BGCLANG_TARGET_INC -I$SLEEF/include"
+fi
+#if basename $0 | grep -q '[+]\{2\}\(11\)\?$'; then
+#	CLANG="$CLANG++"
+	BGCLANG_TARGET_INC="$BGCLANG_TARGET_INC -Xclang -isystem -Xclang /homea/hch02/hch02d/src/molly/clang/include/libstdc++fixup/include -Xclang -isystem -Xclang $BGSYS_FLOOR/gnu-linux/powerpc64-bgq-linux/include/c++/4.4.6 -Xclang -isystem -Xclang $BGSYS_FLOOR/gnu-linux/powerpc64-bgq-linux/include/c++/4.4.6/powerpc64-bgq-linux"
+#fi
+
+BGCLANG_TARGET_INC="$BGCLANG_TARGET_INC -Xclang -isystem -Xclang $BGSYS_FLOOR/gnu-linux/powerpc64-bgq-linux/sys-include"
+
+user_params="$@"
+will_compile=0
+will_pp=0
+will_link=1
+will_asm=1
+is_O3=0
+use_lto=0
+use_libcxx=0
+stdlib_given=0
+std_given=0
+use_openmp=0
+
+next_is_output=0
+next_is_lang=0
+for arg in $user_params; do
+	if [ $next_is_output = 1 ]; then
+		next_is_output=0
+		continue
+	fi
+
+	if [ $next_is_lang = 1 ]; then
+		next_is_lang=0
+
+		will_compile=1
+		will_pp=1
+
+		case "$arg" in
+		assembler|f95|ir|bc|lto-ir|lto-bc|ast)
+			will_pp=0
+		;;
+		*)
+			:
+		;;
+		esac
+
+		continue
+	fi
+
+	case "$arg" in
+	-shared|-dynamic|-fpic|-fPIC|-fsanitize=address)
+		link_static=0
+	;;
+	-S|-E|-M)
+		will_asm=0
+		will_link=0
+	;;
+	-c)
+		will_link=0
+	;;
+	-fopenmp)
+		use_openmp=1
+	;;
+	-fno-openmp)
+		use_openmp=0
+	;;
+	-O3|-Ofast)
+		is_O3=1
+	;;
+        -stdlib=libc++)
+		use_libcxx=1
+		stdlib_given=1
+	;;
+	-stdlib=*)
+		stdlib_given=1
+	;;
+	-std=*)
+		std_given=1
+	;;
+	-flto)
+		use_lto=1
+	;;
+	-o)
+		next_is_output=1
+	;;
+	-x)
+		next_is_lang=1
+	;;
+	-*)
+		:
+	;;
+	# file extension list from lib/Driver/Types.cpp
+	*.c|*.m|*.M|*.h|*.C|*.H|*.F|*.S|*.mm|*.cc|*.CC|*.cl|*.cp|*.cu|*.hh|*.hpp|*.ads|*.adb|*.c++|*.C++|*.cxx|*.cpp|*.CPP|*.CXX|*.fpp|*.FPP|*.F90|*.F95)
+		will_compile=1
+		will_pp=1
+	;;
+	*.i|*.f|*.s|*.ii|*.mi|*.bc|*.ll|*.ast|*.for|*.FOR|*.f90|*.f95|*.mii)
+		will_compile=1
+	;;
+	*)
+		:
+	;;
+	esac
+done
+
+if [ $use_openmp = 1 -a -d $OMP ]; then
+	BGCLANG_TARGET_INC="$BGCLANG_TARGET_INC -I$OMP/include"
+fi
+
+#if basename $0 | grep -q '[+]\{2\}11$'; then
+	if [ $std_given = 0 ]; then
+		BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -std=gnu++11"
+	fi
+
+	if [ $stdlib_given = 0 ]; then
+		BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -stdlib=libc++"
+		use_libcxx=1
+	fi
+#fi
+
+if [ $link_static = 1 ]; then
+	BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -static"
+fi
+
+if [ $use_libcxx = 1 ]; then
+	BGCLANG_TARGET_INC="-Xclang -isystem -Xclang /homea/hch02/hch02d/src/molly/libcxx/include $BGCLANG_TARGET_INC"
+	if [ $will_link = 1 ]; then
+		BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -L/homea/hch02/hch02d/src/molly/libcxx/lib"
+		if [ $link_static = 0 ]; then
+			BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -Wl,-rpath -Wl,/homea/hch02/hch02d/src/molly/libcxx/lib"
+		fi
+	fi
+fi
+
+post_libs=
+if [ $will_link = 1 ]; then
+	BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -L$BGSYS_FLOOR/gnu-linux/powerpc64-bgq-linux/lib"
+	if [ $link_static = 0 ]; then
+		BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_FLAGS -Wl,-rpath -Wl,$BGSYS_FLOOR/gnu-linux/powerpc64-bgq-linux/lib"
+	fi
+
+	if [ -d $SLEEF ]; then
+		post_libs="$post_libs -L$SLEEF/lib"
+		if [ $link_static = 0 ]; then
+			post_libs="$post_libs -Wl,-rpath -Wl,$SLEEF/lib"
+		fi
+		post_libs="$post_libs -Wl,--as-needed -lsleef -Wl,--no-as-needed"
+	fi
+	if [ $use_openmp = 1 -a -d $OMP ]; then
+		post_libs="$post_libs -L$OMP/lib"
+		if [ $link_static = 0 ]; then
+			post_libs="$post_libs -Wl,-rpath -Wl,$OMP/lib"
+		fi
+		post_libs="$post_libs -liomp5 -Wl,--as-needed -lstdc++ -Wl,--no-as-needed"
+	fi
+fi
+
+if [ $will_pp = 1 ]; then
+	BGCLANG_TARGET_FLAGS="$BGCLANG_TARGET_INC $BGCLANG_TARGET_FLAGS -D__bgclang__=1 -D__bgclang_version__=\"r000000-00000000\""
+fi
+
+script_params=
+if [ $is_O3 = 1 -a $will_compile = 1 ]; then
+	script_params="$BGCLANG_UNROLL_OPTS $BGCLANG_VECTOR_OPTS"
+fi
+if [ $will_asm = 1 -a $will_compile = 1 -a $use_lto = 0 ]; then
+	script_params="-Xassembler -ma2q $script_params"
+fi
+if [ $will_compile = 1 ]; then
+	script_params="$script_params $BGCLANG_SCHED_OPTS"
+fi
+
+exec $CLANG $BGCLANG_TARGET_FLAGS $script_params "$@" $post_libs
+exit 1
