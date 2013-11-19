@@ -1,6 +1,12 @@
+
+#pragma pack(16)
+typedef struct { int y; } S;
+int x;
+
+
 #include <molly.h>
 
-
+#pragma molly transform ("[x,y] -> [px, py, lx, ly] : px=[x/3],py=[y/3], 3px+lx=x, 3py+ly+y", 2)
 molly::array<bool,6,6> habitat1;
 molly::array<bool,6,6> habitat2;
 

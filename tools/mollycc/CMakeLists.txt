@@ -78,5 +78,6 @@ add_molly_executable(mollycc
 #    selectiondag
   LINK_LIBS 
     LLVMMolly
-    PollyAnalysis # PollyAnalysis references symbols from LLVMPolly
+    LLVMPollyAnalysis # PollyAnalysis references symbols from LLVMPolly
+    LLVMPollyExchange
 )
