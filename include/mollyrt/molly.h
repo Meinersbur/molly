@@ -3,6 +3,7 @@
 
 #include "molly_debug.h"
 
+#define PRINTRANK 3
 
 
 // TODO: Modes:
@@ -187,10 +188,10 @@ static void dbgPrintVars_inner(const char *varnames, const First &first, const A
 
 template<typename... Args>
 static void dbgPrintVars(const char *file, int line, const char *varnames, const Args&... args) {
-  //if (!__molly_isMaster())
-  //  return;
-
+  if (__molly_cluster_mympirank()!=PRINTRANK)
+    return;
   std::cerr << __molly_cluster_mympirank() << ")";
+
   for (int i = _debugindention; i > 0; i-=1) {
     std::cerr << ' ' << ' ';
   }
@@ -284,7 +285,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
 #define MOLLY_DEBUG(...)                             \
   do {                                               \
-    if (__molly_cluster_mympirank()!=0) \
+    if (__molly_cluster_mympirank()!=PRINTRANK) \
       break; \
     std::cerr << __molly_cluster_mympirank() << ")"; \
     for (int i = _debugindention; i > 0; i-=1) {     \
@@ -351,7 +352,7 @@ public:
   template<typename... T>
   DebugFunctionScope(const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
-        if (__molly_cluster_mympirank()!=0)
+        if (__molly_cluster_mympirank()!=PRINTRANK)
     return;
 	  std::cerr << __molly_cluster_mympirank() << ")";
 	  for (int i = _debugindention; i > 0; i-=1) {
@@ -366,7 +367,7 @@ public:
   template<typename... T>
   DebugFunctionScope(void *self, const char *funcname, const char *file, int line,  const char *varnames, const T&... vars)
     : funcname(funcname) {
-        if (__molly_cluster_mympirank()!=0)
+        if (__molly_cluster_mympirank()!=PRINTRANK)
     return;
 	  std::cerr << __molly_cluster_mympirank() << ")";
 	  for (int i = _debugindention; i > 0; i-=1) {

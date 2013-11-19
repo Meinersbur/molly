@@ -12,6 +12,8 @@
 #include <assert.h>
 #include <vector>
  
+#include <iostream>
+ 
 using namespace molly;
 
 
@@ -396,7 +398,7 @@ namespace {
       this->nClusterDims = nClusterDims;
       this->nRanks = 1;
       this->shape = new int[nClusterDims];
-       this->periods = new int[nClusterDims];
+      this->periods = new int[nClusterDims];
       for (auto i = nClusterDims-nClusterDims; i<nClusterDims;i+=1) {
         this->nRanks *= clusterShape[i];
         this->shape[i] = clusterShape[i];
@@ -409,14 +411,28 @@ namespace {
       //DebugWait(_world_self);
       MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &_world_ranks));
       //std::cout << _world_ranks << std::endl;
+      MOLLY_VAR(_world_ranks, nRanks);
+      if (__molly_cluster_mympirank()==PRINTRANK) {
+	 std::cerr << "Expected ranks = " << nRanks << "\n";
+	 std::cerr << "MPI ranks      = " << _world_ranks << "\n";
+      }
+      
       RTASSERT(_world_ranks == nRanks, "Have to mpirun with exact shape that was used when compiling");
 
 #ifndef NDEBUG
       barrier(); // Wait for all ranks to avoid mixing messages with non-master ranks
-      if (isMaster()) {
-        std::cerr << "###############################################################################\n";
-      }
 #endif
+      if (__molly_cluster_mympirank()==PRINTRANK) {
+	std::cerr << "Geometry = (";
+	for (auto i = 0; i < nClusterDims; i+=1) {
+	   if (i!=0) 
+	     std::cerr << ",";
+	   std::cerr << clusterShape[i];
+	}
+	std::cerr << ")\n";
+	std::cerr << "###############################################################################\n";
+      }
+
 
       MOLLY_DEBUG("__molly_cluster_dims="<<nClusterDims << " __molly_cluster_size="<<nRanks);
       for (auto d = nClusterDims-nClusterDims; d < nClusterDims; d+=1) {
@@ -600,8 +616,8 @@ namespace {
 
 #ifndef NDEBUG
       auto count = get_MPI_count(&status);
-      MOLLY_VAR(count,sending);
-      assert(count > 0 && "must receive something");
+      MOLLY_VAR(count,sending,status.count,status.cancelled,status.MPI_SOURCE,status.MPI_TAG,status.MPI_ERROR);
+      //assert(count > 0 && "must receive something");
 #endif
     }
   }; // class MPISendCommunicationBuffer
@@ -827,7 +843,9 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   //__builtin_molly_global_init();
   
 #ifndef NDEBUG
-  std::cerr << "###############################################################################\n";
+  if (__molly_cluster_mympirank()==PRINTRANK) {
+    std::cerr << "###############################################################################\n";
+  }
 #endif
 
   //FIXME: Exception-handling, but currently we do not support exceptions
