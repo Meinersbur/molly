@@ -175,6 +175,16 @@ Map Ctx::createAlltoallMap(Set &&domain, const Set &range) { return createAlltoa
 Map Ctx::createAlltoallMap(const Set &domain, const Set &range) { return createAlltoallMap(domain.copy(), range.copy()); }
 
 
+Map Ctx::readMap(const char *str) {
+  return Map::enwrap(isl_map_read_from_str(keep(), str));
+}
+
+
+isl::Map isl::Ctx::readMap( const std::string &str ) {
+  return readMap(str.c_str());
+}
+
+
 Map Ctx::createEmptyMap(Space &&space) {
   assert(isl_space_get_ctx(space.keep()) == keep());
   return Map::enwrap(isl_map_empty(space.take()));

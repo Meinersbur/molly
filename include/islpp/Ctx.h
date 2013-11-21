@@ -114,10 +114,13 @@ namespace isl {
     Map createEmptyMap(Set &&domain, Set &&range);
     Map createUniverseMap(Space &&space);
     Map createAlltoallMap(Set &&domain, Set &&range);
-    Map createAlltoallMap(const Set &domain, Set &&range) ;
+    Map createAlltoallMap(const Set &domain, Set &&range);
     Map createAlltoallMap(Set &&domain, const Set &range);
     Map createAlltoallMap(const Set &domain, const Set &range);
     //Map createAlltoallMap(const Set &domain, const MultiPwAff &range);
+
+    Map readMap(const char *str);
+    Map readMap(const std::string &str);
 #pragma endregion
 
 

@@ -31,6 +31,7 @@
 #include <llvm/Analysis/LoopInfo.h>
 #include "islpp/DimRange.h"
 #include "islpp/MultiAff.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace molly;
 using namespace polly;
@@ -777,6 +778,32 @@ namespace {
       }
 
 
+      // Apply #pragma molly where metadata if it exists
+      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
+        auto stmtCtx = getScopStmtContext(*itStmt);
+
+        auto bb = stmtCtx->getBasicBlock();
+        StringRef islWhere;
+        for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
+          auto instr = &*itInstr;
+          auto where = itInstr->getMetadata("where");
+          if (!where)
+            continue;
+
+          clang::CodeGen::InstructionWhereMetadata mdReader;
+          mdReader.readMetadata(getModuleOf(bb), where);
+
+          //FIXME: A lot can go wrong here
+          // - islstr cannot be parsed
+          // - result map is incompatible
+          auto whereMap = islctx->readMap(mdReader.islstr);
+          whereMap.cast_inplace(stmtCtx->getDomainSpace(), nodeSpace);
+          stmtCtx->addWhere(whereMap);
+          notyetExecuted.substract_inplace(whereMap.domain());
+        }
+      }
+
+
       // Stmts producing scalars that are used after the SCoP must be executed everywhere, since every node requires the up-to-date data; 
       for (auto outSet : nonfieldOutputFlow.getSets()) { // { [domain] }
         auto stmt = getScopStmtContext(outSet);
@@ -858,41 +885,6 @@ namespace {
         }
       }
 
-#if 0
-      // Apply owner computes until everything gets computed
-      while (true) {
-
-        localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
-
-
-        if (notyetExecuted.isEmpty())
-          break;
-
-
-        // Execute statements of the output flow at the owner (owner computes) 
-        // TODO: What about non-output-flow stmts that cannot be omitted, like containing printf
-        //auto outputOnly = outputFlow - dataFlow.domain(); // results that are required by other nodes will be schedules anyway (self-recursive-only dependencies never leak and thus can be ignored)
-        //TODO: Find some senseful ordering
-
-        // All the stuff that we do not know where to execute it, we need a location for; Yoda, I'm with you.
-        isl::Set next; // { [domain] }
-        notyetExecuted.foreachSet([&next](isl::Set set) -> bool {
-          next= set;
-          return false;
-        });
-
-        next.intersect_inplace(notyetExecuted);
-        auto writeStmtCtx = getScopStmtContext(next); //TODO: Not all the ScopStmts are field accesses
-        auto writeAccessed = writeStmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
-        auto out = writeAccessed.intersectDomain(next); // { writeStmt[domain] -> field[indexset] }
-        auto fty = writeStmtCtx->getFieldType();
-        auto fvar = writeStmtCtx->getFieldVariable();
-        auto fieldHome = fvar->getHomeAff(); // { [domain] -> [cluster] }
-        auto homeAcc = out.applyRange(fieldHome);
-        writeStmtCtx->addWhere(homeAcc);
-        notyetExecuted.substract_inplace(next);
-      }
-#endif
       /////////////////////////////////////////////////
 
 
@@ -967,23 +959,6 @@ namespace {
     }
 
 
-
-#if 0
-    void genFlowRead(MollyScopStmtProcessor *readStmtCtx, isl::Set chunks) {
-      // chunks: { (recv[domain], readStmt[domain], dstNode[cluster], field[index], writeStmt[domain], srcNode[cluster]) }
-
-      auto readDomain = readStmtCtx->getDomain();
-      auto readDomainSpace = readStmtCtx->getDomainSpace();
-      auto readNodeSpace = getStmtNodeSpace(readStmtCtx);
-
-      auto readFlowWhere = chunks.reorganizeSubspaces(readDomainSpace, readNodeSpace);
-      auto readFlowDomain = readFlowWhere.getDomain();
-      auto readFlowScatter = readWhere;
-
-      auto readEditor = readStmtCtx->getEditor();
-      auto readFlowEditor = readEditor.createStmt(readFlowWhere.getDomain(), readFlowScatter, readFlowWhere, "readFlow");
-    }
-#endif
 
   private:
     isl::MultiAff beforeScopScatter; // { prologue[] -> scattering[scatter] }
@@ -1768,102 +1743,6 @@ namespace {
         auto recvCurrentNode = recvStmtCtx->getClusterMultiAff().setOutTupleId(dstNodeId);
         combuf->codegenRecv(writebackCodegen, recvCurrentSrc, recvCurrentSrc, recvCurrentNode);
       }
-
-#if 0
-      auto instances = out.getDomain();
-      auto itDomainWrite = instances; //dep.getDomain(); /* write_acc[domain] */
-      auto stmtWrite = tupleToStmt[itDomainWrite.getTupleId().keep()];
-      assert(stmtWrite);
-      //auto memaccWrite = tupleToAccess[itDomainWrite.getTupleId().keep()];
-      //assert(memaccWrite);
-      auto faccWrite = getFieldAccess(stmtWrite); 
-      assert(faccWrite.isValid());
-      auto memaccWrite = faccWrite.getPollyMemoryAccess();
-      //auto stmtWrite = faccWrite.getPollyScopStmt();
-      auto scatterWrite = getScattering(stmtWrite); /* { write_stmt[domain] -> scattering[scatter] } */
-      auto relWrite = faccWrite.getAccessRelation(); /* { write_stmt[domain] -> field[indexset] } */
-      auto domainWrite = itDomainWrite.setTupleId(isl::Id::enwrap(stmtWrite->getTupleId())); /* write_stmt[domain] */
-      auto fvar = faccWrite.getFieldVariable();
-      auto fty = fvar->getFieldType();
-      auto nScatterDims = scatterWrite.getOutDimCount();
-      auto scatterSpace = scatterWrite.getRangeSpace();
-
-      // What is written here?
-      auto indexset = domainWrite.apply(relWrite); /* { field[indexset] } */
-
-      // Where is it written?
-      auto writtenLoc = getWhereMap(stmtWrite); /* { write_stmt[domain] -> [nodecoord] } */
-      writtenLoc.intersectDomain_inplace(domainWrite);
-      auto valueLoc = writtenLoc.applyDomain(relWrite); /* { field[indexset] -> [nodecoord] } */
-
-      // Get the subset that is already home
-      auto homeAff = fty->getHomeAff(); /* { field[indexset] -> [nodecoord] } */
-      homeAff = faccWrite.getHomeAff();
-      auto affectedNodes = indexset.apply(homeAff); /* { [nodecoord] } */
-      auto homeRel = homeAff.toMap().reverse().intersectRange(indexset); /* { [nodecoord] -> field[indexset] } */
-      auto alreadyHome = intersect(valueLoc.reverse(), homeRel).getRange(); /* { field[indexset] } */
-      auto writeAlreadyHomeDomain = alreadyHome.apply(relWrite.reverse()); /* { write_stmt[domain] } */
-
-      // For all others, where do they are to be transported?
-      writtenLoc;
-
-#pragma region CodeGen
-      auto store = faccWrite.getStoreInst();
-      auto val = store->getValueOperand();
-
-      IRBuilder<> prologueBuilder(func->getEntryBlock().getFirstNonPHI());
-      auto stackMem = prologueBuilder.CreateAlloca(val->getType());
-
-
-      // Add writes to local storage for already-home writes
-      auto leastmostOne = scatterSpace.mapsTo(nScatterDims).createZeroMultiAff().setAff(nScatterDims-1, scatterSpace.createConstantAff(1));
-      auto afterWrite = scatterWrite.sum(scatterWrite.applyRange(leastmostOne).setOutTupleId(scatterWrite.getOutTupleId())).intersectDomain(writeAlreadyHomeDomain);
-      auto wbWhere = homeRel.applyRange(relWrite.reverse()).reverse();
-
-      ScopEditor editor(scop);
-      auto writebackLocalStmtEditor = editor.replaceStmt(stmtWrite, wbWhere.copy(), "writeback_local");
-      //createStmt(writeAlreadyHomeDomain.copy(), afterWrite.copy(), wbWhere.copy(),  "writeback_local"); //createScopStmt(scop, bb, stmtWrite->getRegion(), "writeback_local", stmtWrite->getLoopNests(), writeAlreadyHomeDomain.copy(), afterWrite.move());
-      auto writebackLocalStmt = writebackLocalStmtEditor.getStmt();
-      auto writebackLocalStmtCtx = getScopStmtContext(writebackLocalStmt);
-
-      auto bb = writebackLocalStmtEditor.getBasicBlock();
-      //BasicBlock *bb = BasicBlock::Create(llvmContext, "OutputWrite", func);
-      DefaultIRBuilder builder(bb);
-
-      auto codegen = writebackLocalStmtCtx->makeCodegen();
-      codegen.codegenStoreLocal(val, fvar, faccWrite.getCoordinates(), faccWrite.getAccessRelation());
-
-
-
-      //writebackLocalStmt->setWhereMap(homeRel.applyRange(relWrite.reverse()).reverse().take());
-      //writebackLocalStmt->addAccess(MemoryAccess::READ, 
-      //writebackLocalStmt->addAccess(MemoryAccess::MUST_WRITE, 
-
-      //scop->addScopStmt(writebackLocalStmt);
-      modifiedScop();
-
-      // Do not execute the stmt this is ought to replace anymore
-      auto oldDomain = getIterationDomain(stmtWrite) ; /* { write_stmt[domain] } */
-      faccWrite.getPollyScopStmt()->setDomain(oldDomain.subtract(writeAlreadyHomeDomain).take());
-
-      auto stmtWriteCtx = getScopStmtContext(stmtWrite);
-      stmtWriteCtx->validate();
-      writebackLocalStmtCtx->validate();
-
-      modifiedScop();
-
-
-      // CodeGen to transfer data to their home location
-
-      // 1. Create a buffer
-      // 2. Write the data into that buffer
-      // 3. Send buffer
-      // 4. Receive buffer
-      // 5. Writeback buffer data to home location
-
-      writebackLocalStmtEditor.getTerminator();
-#pragma endregion
-#endif
     } //  void genOutputCommunication(const isl::Set &outSet/*)
 
 
@@ -1940,11 +1819,6 @@ namespace {
     llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) LLVM_OVERRIDE {
       return scevCodegen.expandCodeFor(scev, nullptr, insertBefore);
     }
-
-
-    //llvm::Value *allocStackSpace(llvm::Type *ty) LLVM_OVERRIDE {
-
-    // }
 
 
     /// ScalarEvolution remembers its SCEVs

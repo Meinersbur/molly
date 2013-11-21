@@ -935,7 +935,8 @@ namespace molly {
       MOLLY_DEBUG("array dimension is (" << out_parampack(", ", L...) << ")");
 
     //TODO: Do not call here, Molly should generate a call to __molly_field_init for every field it found
-    __builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
+    //__builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
+    //EDIT: Now inserted by compiler magic
 
 #if 0
       localelts = 1;

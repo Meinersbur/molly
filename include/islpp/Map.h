@@ -623,12 +623,14 @@ namespace isl {
     /// Overwrite the space information (tuple ids, dim ids, space nesting); Number of dimensions must be the same, separately for isl_dim_in and isl_dim_out
     /// param dimensions are not changes, these are aligned automatically.
     ISLPP_INPLACE_ATTRS void cast_inplace(const Space &space) ISLPP_INPLACE_FUNCTION {
-      auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), space.domain()).equalBasicMap();
-      auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), space.range()).equalBasicMap();
-      applyDomain_inplace(domainMap.move());
-      applyRange_inplace(rangeMap.move());
+      cast_inplace(space.domain(), space.range());
+    }
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space domainSpace, Space rangeSpace) ISLPP_INPLACE_FUNCTION {
+      castDomain_inplace(std::move(domainSpace));
+      castRange_inplace(std::move(rangeSpace));
     }
     ISLPP_EXSITU_ATTRS Map cast(Space space) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.cast_inplace(space.move()); return result; }
+    ISLPP_EXSITU_ATTRS Map cast(Space domainSpace, Space rangeSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.cast_inplace(std::move(domainSpace), std::move(rangeSpace)); return result; }
 
     ISLPP_INPLACE_ATTRS  void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
       auto domainMap = Space::createMapFromDomainAndRange(getDomainSpace(), domainSpace).equalBasicMap();

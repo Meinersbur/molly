@@ -1,21 +1,28 @@
 
-#pragma pack(16)
-typedef struct { int y; } S;
-int x;
+//int y;
 
+//#pragma pack(16)
+//typedef struct { int y; } S;
+//int x;
+
+void testme() {
+  for (auto i = 0; i < 3; i+=1) {
+    i;
+  }
+}
 
 #include <molly.h>
-#include <iostream>
-
-#include <mpi.h>
-#pragma molly transform ("[x,y] -> [px, py, lx, ly] : px=[x/3],py=[y/3], 3px+lx=x, 3py+ly+y", 2)
 
 #define LENGTH (64*8)
 #define ITERATIONS 100
 #define TESTS 3
-
+#pragma molly transform ("{ [x,y] -> [px, py, lx, ly] : px=[x/3],py=[y/3], 3px+lx=x, 3py+ly+y }", 2)
 molly::array<bool,LENGTH,LENGTH> habitat1;
 molly::array<bool,LENGTH,LENGTH> habitat2;
+
+#include <iostream>
+#include <mpi.h>
+
 
 
 [[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_SCOPE
@@ -45,7 +52,9 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
   for (auto i = 0; i < ITERATIONS; i+=1) {
     for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
       for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
-
+      
+#pragma molly where("{ [i,x,y] -> [px,py] : px=[x/3],py=[y/3] }")
+      //{
         auto n1 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x), (uint64_t)(y+1));
 
         auto n2 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y+2));
@@ -59,6 +68,7 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
         auto r = hasLife(n, n1+n2+n3+n4);
 
         *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y+1)) = r;
+      //}
       }
     }
     for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {

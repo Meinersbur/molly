@@ -2,7 +2,7 @@
 #define MOLLY_FIELDTYPE_H
 
 //#include <llvm/ADT/SmallVector.h> // SmallVector member of FieldType
-#include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType)
+#include <clang/CodeGen/MollyFieldMetadata.h> // FieldTypeMetadata (member of FieldType); TODO: There shouldn't be any reference to clang, i.e. move the XYZMetadata classes to LLVM, although they are not used there (like DIBuilder)
 #include <llvm/ADT/ArrayRef.h>
 #include "LLVMfwd.h"
 #include "molly/Mollyfwd.h"

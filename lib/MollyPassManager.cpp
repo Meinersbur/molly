@@ -1075,7 +1075,6 @@ namespace {
 
   public :
     CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
-
       auto &llvmContext = getLLVMContext();
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
