@@ -518,22 +518,6 @@ void Set::equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) {
   give(isl_set_equate(take(), type1, pos1, type2, pos2));
 }
 
-void Set::coalesce() {
-  give(isl_set_coalesce(take()));
-}
-
-void Set::detectEqualities() {
-  give(isl_set_detect_equalities(take()));
-}
-
-
-
-
-
-void Set::removeRedundancies() {
-  give(isl_set_remove_redundancies(take()));
-}
-
 
 BasicSet isl::convexHull(Set&&set) {
   return BasicSet::wrap(isl_set_convex_hull(set.take()));

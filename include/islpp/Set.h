@@ -204,13 +204,24 @@ namespace isl {
     void equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2);
 
     /// Simplify the representation of a set or relation by trying to combine pairs of basic sets or relations into a single basic set or relation.
-    void coalesce();
+   ISLPP_EXSITU_ATTRS Set coalesce() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_coalesce(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_coalesce(take())); }
+   ISLPP_CONSUME_ATTRS Set coalesce_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_coalesce(take())); }
 
     /// Simplify the representation of a set or relation by detecting implicit equalities.
-    void detectEqualities();
+   ISLPP_EXSITU_ATTRS Set detectEqualities() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_detect_equalities(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void detectEqualities_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_detect_equalities(take())); }
+   ISLPP_CONSUME_ATTRS Set detectEqualities_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_detect_equalities(take())); }
 
     /// Removing redundant constraints
-    void removeRedundancies();
+   ISLPP_EXSITU_ATTRS Set removeRedundancies() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_remove_redundancies(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void removeRedundancies_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_remove_redundancies(take())); }
+   ISLPP_CONSUME_ATTRS Set removeRedundancies_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_remove_redundancies(take())); }
+
+   ISLPP_EXSITU_ATTRS Set makeDisjoint() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_make_disjoint(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_make_disjoint(take())); }
+   ISLPP_CONSUME_ATTRS Set makeDisjoint_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_make_disjoint(take())); }
+
 
     /// These functions drop any constraints (not) involving the specified dimensions. Note that the result depends on the representation of the input.
     void dropContraintsInvolvingDims(isl_dim_type type,  unsigned first, unsigned n);

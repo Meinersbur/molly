@@ -142,7 +142,7 @@ namespace {
      }
      void addWhere(isl::Map newInstances) {
        assert(hasWhere());
-       setWhere(unite(getWhere(), newInstances));
+       setWhere(unite(getWhere(), newInstances).coalesce());
      }
 
 

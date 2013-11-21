@@ -315,7 +315,7 @@ llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codege
 }
 
 
-llvm::Value *CommunicationBuffer::codegenLoadFromRecvBuf(MollyCodeGenerator &codegen,  isl::MultiPwAff chunk,  isl::MultiPwAff srcCoord,  isl::MultiPwAff dstCoord,  isl::MultiPwAff index) {
+llvm::Value *CommunicationBuffer::codegenLoadFromRecvBuf(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord, isl::MultiPwAff index) {
   auto &irBuilder = codegen.getIRBuilder();
 
   //auto buftranslator = isl::rangeProduct(chunk, dstCoord).toPwMultiAff();

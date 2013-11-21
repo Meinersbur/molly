@@ -1,22 +1,9 @@
-
-//int y;
-
-//#pragma pack(16)
-//typedef struct { int y; } S;
-//int x;
-
-void testme() {
-  for (auto i = 0; i < 3; i+=1) {
-    i;
-  }
-}
-
 #include <molly.h>
 
 #define LENGTH (64*8)
 #define ITERATIONS 100
 #define TESTS 3
-#pragma molly transform ("{ [x,y] -> [px, py, lx, ly] : px=[x/3],py=[y/3], 3px+lx=x, 3py+ly+y }", 2)
+#pragma molly transform ("{ [x,y] -> [px, py, lx, ly] : px=floor(x/3) and py=floor(y/3) and 3px+lx=x and 3py+ly+y }", 2)
 molly::array<bool,LENGTH,LENGTH> habitat1;
 molly::array<bool,LENGTH,LENGTH> habitat2;
 
@@ -53,7 +40,9 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
     for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
       for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
       
-#pragma molly where("{ [i,x,y] -> [px,py] : px=[x/3],py=[y/3] }")
+        // TODO: This is user-unfriendly, it refers to the normalized, step 1, 0-based loops! How is the user supposed to know?
+        // We need to store what the expressions i,x,y mean. In metadata? As intrinsic?
+#pragma molly where("{ [i,x,y] -> [px,py] : px=[(x+1)/256] and py=[(y+1)/256] }")
       //{
         auto n1 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x), (uint64_t)(y+1));
 

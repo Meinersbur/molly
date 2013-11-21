@@ -247,6 +247,10 @@ namespace isl {
       }
     }
 
+    ISLPP_EXSITU_ATTRS Map detectEqualities()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_detect_equalities(takeCopy())); }
+    ISLPP_INPLACE_ATTRS void detectEqualities_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_detect_equalities(take())); } 
+    ISLPP_CONSUME_ATTRS Map detectEqualities_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_detect_equalities(take())); }
+
     ISLPP_EXSITU_ATTRS Map removeRedundancies()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(takeCopy())); }
     ISLPP_INPLACE_ATTRS void removeRedundancies_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_remove_redundancies(take())); } 
     ISLPP_CONSUME_ATTRS Map removeRedundancies_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(take())); }

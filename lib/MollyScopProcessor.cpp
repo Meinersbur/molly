@@ -60,8 +60,8 @@ namespace {
 
     auto isBefore = scatterSpace.lexLtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
     auto isAfter = scatterSpace.lexGtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
-    auto naturallyBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain <_scatter model }
-    auto naturallyAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain >_scatter model }
+    //auto naturallyBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain <_scatter model }
+    //auto naturallyAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain >_scatter model }
 
 
     isl::PwMultiAff extreme; // { subdomain[domain] -> model[scatter]  }
@@ -76,8 +76,8 @@ namespace {
 
     auto lastDim = nScatterDims-1;
     auto referenceScatter = extreme.setPwAff(lastDim, extreme.getPwAff(lastDim) + relative); // { subdomain[domain] -> model[scatter] }
-    auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
-    auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    //auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    //auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
 
 #if 0
     // Try to find another scatter that has the same ordering as referenceScatter
@@ -133,8 +133,8 @@ namespace {
 
     auto isBefore = scatterSpace.lexLtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
     auto isAfter = scatterSpace.lexGtMap().applyDomain(modelScatter.reverse()).applyRange(modelScatter.reverse()); // { [domain] -> [domain] } 
-    auto naturallyBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain <_scatter model }
-    auto naturallyAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain >_scatter model }
+    //auto naturallyBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain <_scatter model }
+    //auto naturallyAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(reverseModelScatter); // { subdomain[domain] -> [domain] | subdomain >_scatter model }
 
 
     isl::PwMultiAff extreme; // { subdomain[domain] -> model[scatter]  }
@@ -149,8 +149,8 @@ namespace {
 
     auto lastDim = nScatterDims-1;
     auto referenceScatter = extreme.setPwAff(lastDim, extreme.getPwAff(lastDim) + relative); // { subdomain[domain] -> model[scatter] }
-    auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
-    auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    //auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    //auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
 
 #if 0
     // Try to find another scatter that has the same ordering as referenceScatter
@@ -797,7 +797,8 @@ namespace {
           // - islstr cannot be parsed
           // - result map is incompatible
           auto whereMap = islctx->readMap(mdReader.islstr);
-          whereMap.cast_inplace(stmtCtx->getDomainSpace(), nodeSpace);
+          whereMap.setInTupleId_inplace(stmtCtx->getDomainSpace().getSetTupleId());
+          whereMap.setOutTupleId_inplace(clusterTuple);
           stmtCtx->addWhere(whereMap);
           notyetExecuted.substract_inplace(whereMap.domain());
         }
@@ -836,9 +837,9 @@ namespace {
       // "source computes": execute statements that read data from before the SCoP at the home location of that data
 
       for (auto input : inputFlow.getSets()) {
-        auto stmtCtx = getScopStmtContext(input); 
+        auto stmtCtx = getScopStmtContext(input);
         auto accessed = stmtCtx->getAccessRelation();
-        auto accessedButNotyetExecuted = accessed.intersectDomain(notyetExecuted); 
+        auto accessedButNotyetExecuted = accessed.intersectDomain(notyetExecuted);
         auto fvar = stmtCtx->getFieldVariable();
         auto fieldHome = fvar->getHomeAff();
         auto homeAcc = accessedButNotyetExecuted.applyRange(fieldHome); // { stmt[domain] -> [cluster] }
@@ -999,8 +1000,8 @@ namespace {
 
       auto transfer = readAccRel.intersectDomain(inp).chain(homeAff).wrap().chainSubspace(readWhere).wrap(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
       auto local = intersect(transfer, transfer.getSpace().equalBasicSet(dstNodeSpace, srcNodeSpace));
-      auto remoteTransfer = transfer-local; // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
-      auto localTransfer = local.reorganizeSubspaces(indexsetSpace >> (readDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (readDomainSpace >> clusterSpace)).wrap()); // { fvar[indexset], readStmt[domain], [cluster] }
+      auto remoteTransfer = (transfer-local).coalesce(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
+      auto localTransfer = local.reorganizeSubspaces(indexsetSpace >> (readDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (readDomainSpace >> clusterSpace)).wrap()).coalesce(); // { fvar[indexset], readStmt[domain], [cluster] }
 
 
       ScopEditor editor(scop, asPass());
@@ -1266,8 +1267,24 @@ namespace {
     }
 
 
+    static isl::Set simplify(isl::Set set) {
+      auto result = set.move();
+      //result.makeDisjoint_inplace();
+      //result.detectEqualities_inplace();
+      //result.removeRedundancies_inplace();
+      result.coalesce_inplace();
+      return result;
+    }
 
 
+    static isl::Map simplify(isl::Map map) {
+      auto result = map.move();
+      //result.makeDisjoint_inplace();
+      //result.detectEqualities_inplace();
+      //result.removeRedundancies_inplace();
+      result.coalesce_inplace();
+      return result;
+    }
 
 
     void genFlowCommunication(const isl::Map &dep) { /* dep: { writeStmt[domain] -> readStmt[domain] } */
@@ -1394,6 +1411,9 @@ namespace {
       // Organize in chunks
       // { recv[domain] -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
       auto sourceOfReadChunks = sourceOfRead.wrap().chainSubspace(readChunkAff).reverse();
+
+      sourceOfReadChunks = simplify(sourceOfReadChunks.move());
+
       // { (recv[domain], node[cluster]) -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
       auto recvChunks = sourceOfReadChunks.wrap().reorganizeSubspaces(recvDomain.getSpace() >> readNodeShape.getSpace(), readInstDomain.getSpace() >> indexsetSpace >> writeInstDomain.getSpace());
       auto recvInstDomain = recvChunks.getDomain(); // { (recv[domain], node[cluster]) }
