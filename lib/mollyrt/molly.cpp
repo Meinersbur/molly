@@ -32,9 +32,9 @@ namespace molly {
 
   class CommunicatorCommon {
   private:
-	  // Static classes, do not instantiate
-	    ~CommunicatorCommon() = delete;
-	    CommunicatorCommon() = delete;
+    // Static classes, do not instantiate
+      ~CommunicatorCommon() = delete;
+      CommunicatorCommon() = delete;
   public:
   };
 
@@ -109,52 +109,52 @@ namespace molly {
 
   public:
     static void init(int &argc, char **(&argv)) {
-    	// MPI_Init_thread may look for arguments intended to configure MPI, and then remove these args to avoid processing by the user program
-    	MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE/*TODO: Support OpenMP*/, &providedThreadLevel));
-    	MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &_world_ranks));
-    	MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &_world_self));
-    	RTASSERT(_world_ranks == __molly_cluster_size, "Have to mpirun with exact shape that was used when compiling");
+      // MPI_Init_thread may look for arguments intended to configure MPI, and then remove these args to avoid processing by the user program
+      MPI_CHECK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE/*TODO: Support OpenMP*/, &providedThreadLevel));
+      MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &_world_ranks));
+      MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &_world_self));
+      RTASSERT(_world_ranks == __molly_cluster_size, "Have to mpirun with exact shape that was used when compiling");
 
 #ifndef NDEBUG
-    	MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD)); // Wait for all ranks to avoid mixing messages with non-master ranks
-    	if (__molly_isMaster()) {
-    		std::cerr << "###############################################################################\n";
-    	}
+      MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD)); // Wait for all ranks to avoid mixing messages with non-master ranks
+      if (__molly_isMaster()) {
+        std::cerr << "###############################################################################\n";
+      }
 #endif
 
-    	MOLLY_DEBUG("__molly_cluster_dims="<<__molly_cluster_dims << " __molly_cluster_size="<<__molly_cluster_size);
-    	for (auto d = __molly_cluster_dims-__molly_cluster_dims; d < __molly_cluster_dims; d+=1) {
-    		MOLLY_DEBUG("d="<<d << " __molly_cluster_lengths[d]="<<__molly_cluster_lengths[d] << " __molly_cluster_periodic[d]="<<__molly_cluster_periodic[d]);
-    	}
+      MOLLY_DEBUG("__molly_cluster_dims="<<__molly_cluster_dims << " __molly_cluster_size="<<__molly_cluster_size);
+      for (auto d = __molly_cluster_dims-__molly_cluster_dims; d < __molly_cluster_dims; d+=1) {
+        MOLLY_DEBUG("d="<<d << " __molly_cluster_lengths[d]="<<__molly_cluster_lengths[d] << " __molly_cluster_periodic[d]="<<__molly_cluster_periodic[d]);
+      }
 
-    	_cart_dims = __molly_cluster_dims;
-	   MPI_CHECK(MPI_Cart_create(MPI_COMM_WORLD, _cart_dims, const_cast<int*>(__molly_cluster_lengths), const_cast<int*>(__molly_cluster_periodic), true, &_cart_comm));
-	   MPI_CHECK(MPI_Comm_rank(_cart_comm, &_cart_self));
-	   MOLLY_DEBUG("_cart_self="<<_cart_self);
+      _cart_dims = __molly_cluster_dims;
+     MPI_CHECK(MPI_Cart_create(MPI_COMM_WORLD, _cart_dims, const_cast<int*>(__molly_cluster_lengths), const_cast<int*>(__molly_cluster_periodic), true, &_cart_comm));
+     MPI_CHECK(MPI_Comm_rank(_cart_comm, &_cart_self));
+     MOLLY_DEBUG("_cart_self="<<_cart_self);
 
-	   _cart_self_coords = static_cast<int*>(malloc(sizeof(*_cart_self_coords) * _cart_dims)); // TODO: mollycc could preallocate some space
-	   MPI_CHECK(MPI_Cart_coords(_cart_comm, _cart_self, __molly_cluster_dims, _cart_self_coords));
+     _cart_self_coords = static_cast<int*>(malloc(sizeof(*_cart_self_coords) * _cart_dims)); // TODO: mollycc could preallocate some space
+     MPI_CHECK(MPI_Cart_coords(_cart_comm, _cart_self, __molly_cluster_dims, _cart_self_coords));
 
 #ifndef NDEBUG
-	   std::string cartcoord;
-	   std::stringstream os;
-	   for (auto d=__molly_cluster_dims-__molly_cluster_dims; d<__molly_cluster_dims;d+=1) {
-		   if (d!=0)
-			   os<<",";
-		   os<<_cart_self_coords[d];
-	   }
-	   auto tmp = _world_self;
-	   _world_self = 0;
-	   MOLLY_DEBUG("Here is rank " << tmp << " at cart coord ("<<os.rdbuf()<<")");
-	   _world_self = tmp;
-	   MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+     std::string cartcoord;
+     std::stringstream os;
+     for (auto d=__molly_cluster_dims-__molly_cluster_dims; d<__molly_cluster_dims;d+=1) {
+       if (d!=0)
+         os<<",";
+       os<<_cart_self_coords[d];
+     }
+     auto tmp = _world_self;
+     _world_self = 0;
+     MOLLY_DEBUG("Here is rank " << tmp << " at cart coord ("<<os.rdbuf()<<")");
+     _world_self = tmp;
+     MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 #endif
     }
 
     static void finalize() {
-    	 MPI_CHECK(MPI_Finalize());
-    	 free(_cart_self_coords);
-    	 _cart_self_coords = NULL;
+       MPI_CHECK(MPI_Finalize());
+       free(_cart_self_coords);
+       _cart_self_coords = NULL;
     }
 
 
@@ -186,7 +186,7 @@ namespace molly {
   }
 
   void broadcast_recv(void *recvbuf, size_t size, rank_t sender) { MOLLY_DEBUG_FUNCTION_SCOPE
-	  //TheCommunicator::broadcast_recv(recvbuf, size, sender);
+    //TheCommunicator::broadcast_recv(recvbuf, size, sender);
   }
 
 #if 0
@@ -203,7 +203,7 @@ namespace molly {
   }
 
   rank_t world_self() {
-	  return _world_self;
+    return _world_self;
   }
 
   class MemcpyCommunicator : public CommunicatorCommon {
@@ -227,7 +227,7 @@ bool molly::isMaster() { MOLLY_DEBUG_FUNCTION_SCOPE
 
 
 extern "C" bool __molly_isMaster() {
-	return _world_self==0;
+  return _world_self==0;
 }
 
 
@@ -311,8 +311,8 @@ namespace {
     if(rank == 0) {
       printf("Rank %d is waiting for signal...\n", rank);
         //std::cout << "Rank " << rank << " is waiting for signal..." << std::endl;
-    	scanf("%c", &a);
-    	printf("%d: Starting now\n", rank);
+      scanf("%c", &a);
+      printf("%d: Starting now\n", rank);
     } 
 
     MPI_Bcast(&a, 1, MPI_BYTE, 0, MPI_COMM_WORLD);
@@ -390,7 +390,7 @@ namespace {
 
 
     bool isInitialized() {
-    	return this && this->initialized;
+      return this && this->initialized;
     }
 
 
@@ -413,8 +413,8 @@ namespace {
       //std::cout << _world_ranks << std::endl;
       MOLLY_VAR(_world_ranks, nRanks);
       if (__molly_cluster_mympirank()==PRINTRANK) {
-	 std::cerr << "Expected ranks = " << nRanks << "\n";
-	 std::cerr << "MPI ranks      = " << _world_ranks << "\n";
+        std::cerr << "Expected ranks = " << nRanks << "\n";
+        std::cerr << "MPI ranks      = " << _world_ranks << "\n";
       }
       
       RTASSERT(_world_ranks == nRanks, "Have to mpirun with exact shape that was used when compiling");
@@ -423,14 +423,14 @@ namespace {
       barrier(); // Wait for all ranks to avoid mixing messages with non-master ranks
 #endif
       if (__molly_cluster_mympirank()==PRINTRANK) {
-	std::cerr << "Geometry = (";
-	for (auto i = 0; i < nClusterDims; i+=1) {
-	   if (i!=0) 
-	     std::cerr << ",";
-	   std::cerr << clusterShape[i];
-	}
-	std::cerr << ")\n";
-	std::cerr << "###############################################################################\n";
+  std::cerr << "Geometry = (";
+  for (auto i = 0; i < nClusterDims; i+=1) {
+     if (i!=0) 
+       std::cerr << ",";
+     std::cerr << clusterShape[i];
+  }
+  std::cerr << ")\n";
+  std::cerr << "###############################################################################\n";
       }
 
 
@@ -489,7 +489,7 @@ namespace {
 
 
     int getMPIMyRank() {
-    	return _world_self;
+      return _world_self;
     }
 
   }; // class MPICommunicator
@@ -504,9 +504,9 @@ MPICommunicator *communicator;
 #pragma region SendCommunicationBuffer
 namespace {
    int get_MPI_count(MPI_Status *status) {
-	int count;
-	MPI_CHECK(MPI_Get_count(status, MPI_BYTE, &count));
-	return count;
+  int count;
+  MPI_CHECK(MPI_Get_count(status, MPI_BYTE, &count));
+  return count;
    }
   
   
@@ -532,7 +532,7 @@ namespace {
 
   protected:
     bool isInitialized() {
-    	return buf!=nullptr;
+      return buf!=nullptr;
     }
 
     void dump() {
@@ -608,7 +608,7 @@ namespace {
       dump();
 
       if (!sending)
-	return; // May happen before the very first send; Molly always waits before sending the next chunk
+  return; // May happen before the very first send; Molly always waits before sending the next chunk
       
       MPI_Status status;
       MPI_CHECK(MPI_Wait(&request, &status));
@@ -703,7 +703,7 @@ namespace {
   MOLLY_VAR(tag, src, srcCoordinates, elts);
 #endif
     }
-	
+  
   public:
     ~MPIRecvCommunicationBuffer() {
       if (buf) {
@@ -970,7 +970,7 @@ extern "C" void __molly_combuf_recv_src_init(MPIRecvCommunication *recvbuf, uint
   }
   MOLLY_DEBUG("Src coord: (" << os.str() << ")");
 #endif
-	recvbuf->initSrc(src, nClusterDims, srcCoords, count, tag);
+  recvbuf->initSrc(src, nClusterDims, srcCoords, count, tag);
 }
 
 

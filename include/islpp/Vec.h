@@ -38,33 +38,17 @@ namespace isl {
 #pragma endregion
 
 
-#if 0
-#pragma region Low-level
-    typedef isl_vec StructTy;
-    typedef Obj2<isl_vec> ObjTy;
-    typedef Vec ThisTy;
-
-  protected:
-    void release() { isl_vec_free(take()); }
-
-  public:
-    StructTy *takeCopy() const LLVM_OVERRIDE { return isl_vec_copy(keep()); }
-
-  public:
-    ~Vec() { release(); }
-    static Vec enwrap(StructTy *obj) { ThisTy result; result.give(obj); return result; }
-#pragma endregion
-#endif
-
 
 #pragma region Creational
     static Vec create(Ctx *ctx, unsigned size) { return enwrap(isl_vec_alloc(ctx->keep(), size)); }
 
     static Vec readFromFile(Ctx *ctx, FILE *input) { return enwrap(isl_vec_read_from_file(ctx->keep(), input)); }
-
-    //Vec copy() const { return enwrap(takeCopy()); }
-    //Vec &&move() { return std::move(*this); }
 #pragma endregion Creational
+
+
+#pragma region Conversion
+  BasicSet toBasicSet() const;
+#pragma endregion
 
 
 #pragma region Properties
@@ -74,6 +58,7 @@ namespace isl {
 #pragma endregion
 
     bool getElement(int pos, Int &v) const { isl_int val; auto retval = isl_vec_get_element(keep(), pos, &val); v = Int::wrap(val); return retval==0; }
+    Int getElement(pos_t pos) const { isl_int result; auto retval = isl_vec_get_element(keep(), pos, &result); assert(retval==0); return Int::wrap(result); }
     Val getElementVal(int pos) const { return Val::enwrap(isl_vec_get_element_val(keep(), pos)); }
 
     Vec setElement(int pos, const Int &v) const { return enwrap(isl_vec_set_element(takeCopy(), pos, v.keep())); }
@@ -110,6 +95,9 @@ namespace isl {
     Vec dropEls(unsigned pos, unsigned n) { return enwrap(isl_vec_drop_els(takeCopy(), pos, n)); }
     Vec insertEls(unsigned pos, unsigned n) { return enwrap(isl_vec_insert_els(takeCopy(), pos, n)); }
     Vec insertZeroEls(unsigned pos, unsigned n) { return enwrap(isl_vec_insert_zero_els(takeCopy(), pos, n)); }
+ 
+  
+  
   }; // class Vec
 
 

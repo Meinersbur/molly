@@ -306,9 +306,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 //TODO: molly attribute that allows function calls to this in SCoPs
 #define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
 #define MOLLY_DEBUG_FUNCTION_ARGS(...) \
-	DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
+  DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
 #define MOLLY_DEBUG_METHOD_ARGS(...) \
-	DebugFunctionScope _debugfunctionscopeguard(this, __PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
+  DebugFunctionScope _debugfunctionscopeguard(this, __PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
 #else
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
@@ -322,23 +322,23 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 
 static std::string extractFuncname(const char *prettyfunc) {
-	std::string prettyFunction = prettyfunc;
-	auto lparen = prettyFunction.find("(");
+  std::string prettyFunction = prettyfunc;
+  auto lparen = prettyFunction.find("(");
 if (lparen == std::string::npos)
-	return prettyfunc;
+  return prettyfunc;
 
 auto space = prettyFunction.substr(0,lparen).rfind(" ");
 auto firstColon = prettyFunction.substr(0,lparen).rfind("::");
 size_t secondColon = std::string::npos;
 if (firstColon!=std::string::npos) {
-	secondColon = prettyFunction.substr(0,firstColon).rfind("::");
+  secondColon = prettyFunction.substr(0,firstColon).rfind("::");
 }
 
 size_t start=0;
 if (space != std::string::npos)
-	start = space+1;
+  start = space+1;
 if (secondColon != std::string::npos && secondColon>=start)
-	start = secondColon+2;
+  start = secondColon+2;
 
 return prettyFunction.substr(start,lparen-start);
 }
@@ -354,14 +354,14 @@ public:
     : funcname(funcname) {
         if (__molly_cluster_mympirank()!=PRINTRANK)
     return;
-	  std::cerr << __molly_cluster_mympirank() << ")";
-	  for (int i = _debugindention; i > 0; i-=1) {
-	    //fprintf(stderr,"  ");
-	    std::cerr << ' ' << ' ';
-	  }
-	  std::cerr << "ENTER " << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
-	  std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
-	  _debugindention += 1;
+    std::cerr << __molly_cluster_mympirank() << ")";
+    for (int i = _debugindention; i > 0; i-=1) {
+      //fprintf(stderr,"  ");
+      std::cerr << ' ' << ' ';
+    }
+    std::cerr << "ENTER " << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+    std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
+    _debugindention += 1;
   }
 
   template<typename... T>
@@ -369,14 +369,14 @@ public:
     : funcname(funcname) {
         if (__molly_cluster_mympirank()!=PRINTRANK)
     return;
-	  std::cerr << __molly_cluster_mympirank() << ")";
-	  for (int i = _debugindention; i > 0; i-=1) {
-	    //fprintf(stderr,"  ");
-	    std::cerr << ' ' << ' ';
-	  }
-	  std::cerr << "ENTER " << self << "->" << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
-	  std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
-	  _debugindention += 1;
+    std::cerr << __molly_cluster_mympirank() << ")";
+    for (int i = _debugindention; i > 0; i-=1) {
+      //fprintf(stderr,"  ");
+      std::cerr << ' ' << ' ';
+    }
+    std::cerr << "ENTER " << self << "->" << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+    std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
+    _debugindention += 1;
   }
 
   ~DebugFunctionScope();
@@ -937,6 +937,7 @@ namespace molly {
     //TODO: Do not call here, Molly should generate a call to __molly_field_init for every field it found
     //__builtin_molly_field_init(this); // inlining is crucial since we need the original reference to the field in the first argument
     //EDIT: Now inserted by compiler magic
+    //FIXME: Relooking at the source, only to those that have a #pragma transform????
 
 #if 0
       localelts = 1;
@@ -984,7 +985,7 @@ namespace molly {
     }
 
 
-    int length(uint64_t d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { //MOLLY_DEBUG_FUNCTION_SCOPE
+   /* constexpr */ int length(uint64_t d) const MOLLYATTR(inline)/*So the loop ranges are not hidden from Molly*/ { //MOLLY_DEBUG_FUNCTION_SCOPE
       //assert(0 <= d && d < (int)sizeof...(L));
       return _select(d, L...);
     }
@@ -992,7 +993,7 @@ namespace molly {
     /// Overload for length(int) for !D
     template<typename Dummy = void>
     typename std::enable_if<(sizeof...(L)==1), typename std::conditional<true, int, Dummy>::type >::type
-    length() MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
+      /* constexpr */  length() MOLLYATTR(inline) { //MOLLY_DEBUG_FUNCTION_SCOPE
         return length(0);
     }
 
@@ -1092,6 +1093,12 @@ namespace molly {
 
     int getClusterDims();
     int getClusterLength(int d);
+
+
+    template<typename T> T mod(T divident, T divisor) {
+      return __builtin_molly_mod(divident, divisor);
+    }
+
 } // namespace molly
 
 

@@ -1170,13 +1170,11 @@ int isl::plainCmp(const Set &lhs, const Set &rhs) {
 }
 
 
-isl::Map isl::alltoall( Set domainSet, Set rangeSet )
-{
+isl::Map isl::alltoall( Set domainSet, Set rangeSet ) {
   return product(domainSet, rangeSet).unwrap();
 }
 
 
-isl::Map isl::alltoall( Space domainUniverse, Set rangeSet )
-{
+isl::Map isl::alltoall( Space domainUniverse, Set rangeSet ) {
   return alltoall(domainUniverse.universeBasicSet(), std::move(rangeSet));
 }

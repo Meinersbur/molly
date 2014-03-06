@@ -46,7 +46,7 @@ namespace molly {
       clear();
     }
 
-    void loadFromInstruction(llvm::Instruction *instr) LLVM_OVERRIDE {
+    void loadFromInstruction(llvm::Instruction *instr) override {
       clear();
       FieldAccess::loadFromInstruction(instr);
     }

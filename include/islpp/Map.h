@@ -247,11 +247,11 @@ namespace isl {
       }
     }
 
-    ISLPP_EXSITU_ATTRS Map detectEqualities()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_detect_equalities(takeCopy())); }
+    ISLPP_EXSITU_ATTRS Map detectEqualities() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_detect_equalities(takeCopy())); }
     ISLPP_INPLACE_ATTRS void detectEqualities_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_detect_equalities(take())); } 
     ISLPP_CONSUME_ATTRS Map detectEqualities_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_detect_equalities(take())); }
 
-    ISLPP_EXSITU_ATTRS Map removeRedundancies()  ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(takeCopy())); }
+    ISLPP_EXSITU_ATTRS Map removeRedundancies() ISLPP_EXSITU_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(takeCopy())); }
     ISLPP_INPLACE_ATTRS void removeRedundancies_inplace() ISLPP_INPLACE_FUNCTION { give(isl_map_remove_redundancies(take())); } 
     ISLPP_CONSUME_ATTRS Map removeRedundancies_consume() ISLPP_CONSUME_FUNCTION { return Map::enwrap(isl_map_remove_redundancies(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -364,7 +364,7 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS Map intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION;
 
-    void intersectParams(Set params) { give(isl_map_intersect_params(take(), params.take())); }
+    ISLPP_INPLACE_ATTRS void intersectParams_inplace(Set params) ISLPP_INPLACE_FUNCTION { give(isl_map_intersect_params(take(), params.take())); }
 
     Map subtractDomain(Set dom) const { return Map::enwrap(isl_map_subtract_domain(takeCopy(), dom.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -642,7 +642,7 @@ namespace isl {
     }
     ISLPP_EXSITU_ATTRS Map castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(std::move(domainSpace)); return result; }
 
-    ISLPP_INPLACE_ATTRS  void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION {
+    ISLPP_INPLACE_ATTRS void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION {
       auto rangeMap = Space::createMapFromDomainAndRange(getRangeSpace(), rangeSpace).equalBasicMap();
       applyRange_inplace(std::move(rangeMap));
     }
@@ -674,7 +674,7 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
 
-    void printExplicit(llvm::raw_ostream &os, int maxElts = 8)const;
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
     void dumpExplicit(int maxElts)const;
     void dumpExplicit()const; // In order do be callable without arguments from debugger
     std::string toStringExplicit(int maxElts = 8);
@@ -684,6 +684,15 @@ namespace isl {
 #endif
 
     const Map &operator-=(Map that) ISLPP_INPLACE_FUNCTION { give(isl_map_subtract(take(), that.take())); return *this; }
+
+    /// Apply this map on things
+    Set map(Set set)  const;
+    Set map(Vec vec)  const;
+    
+    /// Map the argument's range
+    Map map(Map map) const {
+      return map.applyRange(copy());
+    }
   }; // class Map
 
 

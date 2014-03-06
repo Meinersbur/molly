@@ -56,15 +56,18 @@ if(CLANG_ENABLE_REWRITER)
     )
 endif()
 
+#add_library(mollycc_obj OBJECT     
+#    driver.cpp 
+#    cc1as_main.cpp 
+#    cc1_main.cpp)
 
 add_molly_executable(mollycc
-  SOURCES
     driver.cpp 
     cc1as_main.cpp 
     cc1_main.cpp
-  TARGET_DEPENDS 
-    clang-headers 
-    intrinsics_gen
+#  TARGET_DEPENDS 
+#    clang-headers 
+#    intrinsics_gen
 #  LINK_COMPONENTS 
 #    ${LLVM_TARGETS_TO_BUILD}
 #    asmparser
@@ -78,6 +81,8 @@ add_molly_executable(mollycc
 #    selectiondag
   LINK_LIBS 
     LLVMMolly
-    LLVMPollyAnalysis # PollyAnalysis references symbols from LLVMPolly
-    LLVMPollyExchange
+    LLVMPollyLib
 )
+
+add_dependencies(mollycc     clang-headers     intrinsics_gen)
+target_link_libraries(mollycc ${LLVM_LINK_LIBS})

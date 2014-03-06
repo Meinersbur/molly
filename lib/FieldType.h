@@ -9,6 +9,7 @@
 #include "islpp/Islfwd.h"
 #include "islpp/Id.h"
 #include "islpp/Space.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace isl {
   class Ctx;
@@ -20,40 +21,35 @@ namespace isl {
 
 namespace molly {
   class MollyContextPass;
+  class FieldLayout;
 } // namespace molly
 
 
 namespace molly {
 
+  /// Fields of same FieldType are logically assignable
+  /// Therefore, the logical indexsets and element type match
+  /// In future implementations the their layouts may be different
   class FieldType {
   private:
-    //molly::MollyContextPass *mollyContext;
     isl::Ctx *islctx;
-    //llvm::DataLayout *datalayout;
     llvm::Module *module;
 
     clang::CodeGen::FieldTypeMetadata metadata;
 
-    //llvm::MDNode *metadata; //TODO: Only used during construction
-
-    // The LLVM type that represents this field
-    //llvm::StructType *ty;
-
-    /// Logical (global) shape
-    //LengthsType lengths;
-    //isl::Set shape;
-
-    // Local shape(s)
-    bool isdistributed;
-    llvm::SmallVector<int, 4> localLengths;
-    //isl::Id clusterTupleId;
     isl::Space clusterSpace;
-    //isl::Set localShape
 
-    //llvm::Function *reffunc;
-    //llvm::Function *islocalfunc;
+    /// Layouts that occur in the program for this field type
+    /// Thats is, if fields are passed by reference, which are the layouts the SCoP must be prepared for
+    /// NOT SUPPORTED YET
+    /// We need to add a discriminator to identify the layout a field currently has
+    /// Choices:
+    /// - The index in this vector
+    /// - The address to the index computation function
+    std::vector<FieldLayout*> layouts;
 
-    FieldLayout *layout;
+    /// Without #pragma molly transform, this should be the standard layout
+    FieldLayout *defaultLayout;
 
   protected:
     FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata);
@@ -92,35 +88,12 @@ namespace molly {
     //void emitIsLocalFunc();
 
 
-    bool isDistributed() {
-      return isdistributed;
-    }
+
     llvm::ArrayRef<int> getLengths() {
       assert(metadata.dimLengths.size() >= 1);
       return metadata.dimLengths;
     }
-    llvm::ArrayRef<int> getLocalLengths() {
-      if (!isDistributed())
-        return getLengths();
-      return localLengths;
-    }
-    int getLocalLength(unsigned d) {
-      assert(0 <= d && d < getNumDimensions());
-      return localLengths[d];
-    }
-
-    void setDistributed(bool val = true) {
-      isdistributed = val;
-    }
-    void setLocalLength(const llvm::ArrayRef<int> &lengths, isl::Space clusterSpace) {
-      this->localLengths.clear();
-      this->localLengths.append(lengths.begin(), lengths.end());
-      this->clusterSpace = clusterSpace.move();
-    }
-    //void setDistribution(const llvm::ArrayRef<int> &localLengths )
-    //isl::Map getDistributionMapping(); /* global coordinate -> node coordinate */
-    //isl::MultiAff getDistributionAff(); /* global coordinate -> node coordinate */
-
+  
     llvm::Function *getFuncGetBroadcast() {
       assert(metadata.funcGetBroadcast);
       return metadata.funcGetBroadcast;
@@ -139,21 +112,12 @@ namespace molly {
       return metadata.funcPtrLocal;
     }
 
-    //llvm::Function *localOffsetFunc;
-    //llvm::Function *getLocalOffsetFunc() { return localOffsetFunc; }
-    //void setLocalOffsetFunc(llvm::Function *func) { assert(func); this->localOffsetFunc = func; }
 
     llvm::Function *localLengthFunc;
     llvm::Function *getLocalLengthFunc() { return localLengthFunc; }
     void setLocalLengthFunc(llvm::Function *func) { assert(func); this->localLengthFunc = func; }
 
-    //llvm::Function *islocalFunc;
     llvm::Function *getIslocalFunc() { assert(metadata.funcIslocal); return metadata.funcIslocal; }
-    //void setIslocalFunc(llvm::Function *func) { assert(func); this->islocalFunc = func; }
-
-    //llvm::Function *ptrFunc;
-    //llvm::Function *getPtrFunc() { return ptrFunc; }
-    //void setPtrFunc(llvm::Function *func) { assert(func); this->ptrFunc = func; }
 
     llvm::Type *getEltType() const;
     llvm::PointerType *getEltPtrType() const;
@@ -163,22 +127,18 @@ namespace molly {
     isl::Set getGlobalIndexset();
     int getGlobalLength(unsigned d);
 
-    isl::Map getLocalIndexset(const isl::BasicSet &clusterSet); // { clusterCoordinate -> Indexset }
+    //isl::Map getLocalIndexset(const isl::BasicSet &clusterSet); // { clusterCoordinate -> Indexset }
 
     /// { globalcoord -> nodecoord } where the value is stored
-    isl::PwMultiAff getHomeAff(); 
-    isl::Map getHomeRel(); /* { cluster[nodecoord] -> fty[indexset] } which coordnated are stored at these nodes */
-
-    //isl::MultiAff getLocalIdxAff();
+    //isl::PwMultiAff getHomeAff(); 
+    //isl::Map getHomeRel(); /* { cluster[nodecoord] -> fty[indexset] } which coordnated are stored at these nodes */
 
     llvm::StringRef getName() const;
 
-    //uint64_t getEltSize() const;
-
-    //llvm::CallInst *callLocalPtrIntrinsic(llvm::Value *fieldvar, llvm::ArrayRef<llvm::Value> indices, llvm::Instruction *insertBefore = nullptr);
-
-    FieldLayout *getLayout() { return layout; }
-    void setLayout(FieldLayout *layout) { this->layout = layout; }
+    /// In the current implementation, every type has just one layout
+    /// TODO: This should be removed, layouts can be assigned per variable using #pragma molly transform; for some builtins we need a switch to select the applied layout
+    FieldLayout *getDefaultLayout() { return defaultLayout; }
+    void setDefaultLayout(FieldLayout *layout) { this->defaultLayout = layout; }
   }; // class FieldType
 } // namespace molly
 #endif /* MOLLY_FIELDTYPE_H */

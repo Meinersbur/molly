@@ -48,10 +48,12 @@
 #include "MollyScopStmtProcessor.h"
 #include "RectangularMapping.h"
 #include "FieldLayout.h"
-#include "llvm/Analysis/Verifier.h"
 #include "molly/Mollyfwd.h"
 #include "Codegen.h"
-#include "llvm/Assembly/PrintModulePass.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "clang/CodeGen/MollyFieldMetadata.h"
+#include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/IR/Verifier.h>
 
 using namespace molly;
 using namespace polly;
@@ -72,7 +74,7 @@ namespace {
     bool changedIR;
     bool changedScop;
 
-    void modifiedIR() LLVM_OVERRIDE {
+    void modifiedIR() override {
       changedIR = true;
     }
 
@@ -84,7 +86,7 @@ namespace {
     llvm::DenseMap<std::pair<llvm::AnalysisID, llvm::Function*>, llvm::FunctionPass*> currentFunctionAnalyses; 
     llvm::DenseMap<std::pair<llvm::AnalysisID,llvm::Region*>, llvm::RegionPass*> currentRegionAnalyses; 
 
-    void removePass(Pass *pass) LLVM_OVERRIDE {
+    void removePass(Pass *pass) override {
       if (!pass)
         return;
 
@@ -265,7 +267,7 @@ namespace {
 
     MollyModuleProcessor *moduleCtx;
 
-    void runModulePass(llvm::ModulePass *pass) LLVM_OVERRIDE {
+    void runModulePass(llvm::ModulePass *pass) override {
       auto passID = pass->getPassID();
       assert(!currentModuleAnalyses.count(passID));
 
@@ -344,7 +346,7 @@ namespace {
     }
 
 
-    void runFunctionPass(llvm::FunctionPass *pass, Function *func) LLVM_OVERRIDE {
+    void runFunctionPass(llvm::FunctionPass *pass, Function *func) override {
       auto passID = pass->getPassID(); 
       assert(!currentFunctionAnalyses.count(std::make_pair(passID, func)));
 
@@ -377,7 +379,7 @@ namespace {
     }
 
 
-    Pass *findAnalysis(AnalysisID passID, Function *func) LLVM_OVERRIDE {
+    Pass *findAnalysis(AnalysisID passID, Function *func) override {
       auto it = currentFunctionAnalyses.find(make_pair(passID, func));
       if (it != currentFunctionAnalyses.end()) {
         return it->second;
@@ -387,7 +389,7 @@ namespace {
     }
 
 
-    Pass *findOrRunAnalysis(AnalysisID passID, Function *func) LLVM_OVERRIDE {
+    Pass *findOrRunAnalysis(AnalysisID passID, Function *func) override {
       auto existing = findAnalysis(passID, func);
       if (existing)
         return existing;
@@ -435,7 +437,7 @@ namespace {
     }
 
   public:
-    void runRegionPass(llvm::RegionPass *pass, Region *region) LLVM_OVERRIDE {
+    void runRegionPass(llvm::RegionPass *pass, Region *region) override {
       auto passID = pass->getPassID();
       assert(!currentRegionAnalyses.count(std::make_pair(passID, region)));
 
@@ -453,14 +455,14 @@ namespace {
       pass->setResolver(MollyRegionProcessor::createResolver(this, region));
       bool changed = pass->runOnRegion(region, *(static_cast<RGPassManager*>(nullptr)));
       if (changed)
-        removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyses?
+        removeUnpreservedAnalyses(AU, nullptr, region); //TODO: Re-add required analyzes?
 
       // Add pass info
       registerEvaluatedAnalysis(pass, region);
     }
 
 
-    void registerEvaluatedAnalysis(llvm::RegionPass *pass, llvm::Region *region) LLVM_OVERRIDE {
+    void registerEvaluatedAnalysis(llvm::RegionPass *pass, llvm::Region *region) override {
       auto passID = pass->getPassID();
 
       auto passRegistry = PassRegistry::getPassRegistry();
@@ -475,7 +477,7 @@ namespace {
     }
 
 
-    Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) LLVM_OVERRIDE {
+    Pass *findAnalysis(AnalysisID passID, Function *func, Region *region) override {
       if (region && !func) {
         func = getFunctionOf(region);
       }
@@ -594,15 +596,15 @@ namespace {
 
 
   private:
-    void runOnFunction(Function *func) {
-    }
+    //void runOnFunction(Function *func) {
+    //}
 
   private:
     //llvm::OwningPtr< isl::Ctx > islctx;
     isl::Ctx *islctx;
 
   public:
-    llvm::LLVMContext &getLLVMContext() const LLVM_OVERRIDE { return module->getContext(); }
+    llvm::LLVMContext &getLLVMContext() const override { return module->getContext(); }
     isl::Ctx *getIslContext() { return islctx; }
 
   private:
@@ -630,6 +632,24 @@ namespace {
   private:
     llvm::DenseMap<llvm::StructType*, FieldType*> fieldTypes;
 
+
+    void recognizeField(GlobalVariable *var, MDNode *metadata) {
+      auto clangType = cast<StructType>(var->getType()->getPointerElementType());
+      auto fvar = getFieldVariable(var);
+     auto fty = fvar->getFieldType();
+
+      clang::CodeGen::FieldVarMetadata mdReader;
+      mdReader.readMetadata(module, metadata);
+      auto islstr = mdReader.islstr;
+      auto clusterdims = mdReader.clusterdims;
+      auto layoutMap = islctx->readMap(islstr);
+  assert(clusterdims == clusterConf->getClusterDims());
+
+      auto layout = FieldLayout::create(fty, clusterConf.get(), layoutMap.toPwMultiAff());
+      fvar->setDefaultLayout(layout);
+    }
+
+
     void fieldDetection() {
       auto &glist = module->getGlobalList();
       auto &flist = module->getFunctionList();
@@ -647,40 +667,73 @@ namespace {
           fieldTypes[field->getType()] = field;
         }
       }
+
+
+      for (auto &f : *module) {
+        auto func = &f;
+
+        for (auto itBlock = func->begin(), endBlock=func->end(); itBlock!=endBlock;++itBlock) {
+          auto bb = &*itBlock;
+
+          for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
+            auto instr = &*itInstr;
+
+            auto finitInstr = dyn_cast<IntrinsicInst>(instr);
+            if (!finitInstr)
+              continue;
+            if (finitInstr->getIntrinsicID() != Intrinsic::molly_field_init)
+              continue;
+
+            assert(finitInstr->getNumArgOperands() == 2);
+          auto var = cast<GlobalVariable> (finitInstr->getArgOperand(0));
+          auto md = cast<MDNode>(finitInstr->getArgOperand(1));
+          recognizeField(var, md);
+          }
+        }
+      }
     }
 #pragma endregion
 
 
-#pragma region Field Distribution  
+#pragma region Field Element Distribution  
+    /// Find a default layout for a field type if not existing yet
     void fieldDistribution_processFieldType(FieldType *fty) { 
-      assert(!fty->isDistributed()); assert(!fty->getLayout());
+      if (fty->getDefaultLayout())
+        return; 
+
       auto lengths = fty->getLengths();
+      auto globalIndexset = fty->getGlobalIndexset();
+      auto nIndexDims = globalIndexset.getDimCount();
       auto cluster = clusterConf->getClusterLengths();
       auto clusterSpace = clusterConf->getClusterSpace();
+      auto clusterShape = clusterConf->getClusterShape();
       auto nDims = lengths.size();
 
-      auto lengthsAff = clusterSpace.mapsTo(nDims).createZeroMultiAff();
-      auto offsetsAff = lengthsAff.copy();
+      auto nMinDims = std::min(globalIndexset.getDimCount(), clusterShape.getDimCount());
 
-      SmallVector<int,4> locallengths;
-      for (auto d = nDims-nDims; d<nDims; d+=1) {
-        auto len = lengths[d];
-        auto clusterLen = (d < cluster.size()) ? cluster[d] : 1;
+      auto resultSpace = islctx->createMapSpace(globalIndexset.getSpace(), clusterShape.getDimCount() + (globalIndexset.getDimCount() - nMinDims));
+      auto nResultDims = resultSpace.getOutDimCount();
+      auto result = resultSpace.createZeroMultiAff();
+      for (auto d = nMinDims-nMinDims; d < nMinDims; d+=1) {
+        auto indexLen = lengths[d];
+        auto shapeLen = clusterConf->getClusterLength(d);
+        //auto tileLen = shapeLen / indexLen;
+        auto tileLen = indexLen / shapeLen;
 
-        assert(len % clusterLen == 0);
-        auto localLen = (len + clusterLen - 1) / clusterLen;
-        locallengths.push_back(localLen);
+        auto affSpace = resultSpace.getDomainSpace();
+        
 
-        lengthsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen));
-        offsetsAff.setAff_inplace(d, clusterSpace.createConstantAff(localLen) * clusterSpace.createAffOnVar(d) );
+        auto tilePos = floor(affSpace.createAffOnVar(d) / tileLen);
+        auto posWithinTile = affSpace.createAffOnVar(d) - tilePos * tileLen;
+        result.setAff_inplace(d, tilePos);
+        result.setAff_inplace(nMinDims + d, posWithinTile);
       }
-
-      auto linearizer = RectangularMapping::create(lengthsAff, offsetsAff);
-      auto layout = FieldLayout::create(fty, nullptr, linearizer);
-
-      fty->setDistributed();
-      fty->setLocalLength(locallengths, clusterConf->getClusterSpace());
-      fty->setLayout(layout);
+      for (auto d = nMinDims; d < nIndexDims; d+=1) {
+        result.setAff_inplace(nMinDims + d, resultSpace.createAffOnVar(d));
+      }
+      
+      auto layout = FieldLayout::create(fty, clusterConf.get(), result);
+      fty->setDefaultLayout(layout);
     }
 
 
@@ -913,7 +966,7 @@ namespace {
 #pragma endregion
 
 
-    MollyFunctionProcessor *getFuncContext(Function *func) LLVM_OVERRIDE {
+    MollyFunctionProcessor *getFuncContext(Function *func) override {
       auto &ctx = funcs[func];
       if (!ctx)
         ctx = MollyFunctionProcessor::create(this, func);
@@ -921,7 +974,7 @@ namespace {
     }
 
 
-    MollyScopProcessor *getScopContext(Scop *scop) LLVM_OVERRIDE {
+    MollyScopProcessor *getScopContext(Scop *scop) override {
       auto &ctx = scops[scop];
       if (!ctx)
         ctx = MollyScopProcessor::create(this, scop);
@@ -1022,7 +1075,7 @@ namespace {
     }
 
 
-    FieldVariable *getFieldVariable(llvm::Value *val) LLVM_OVERRIDE {
+    FieldVariable *getFieldVariable(llvm::Value *val) override {
       if (!isa<GlobalVariable>(val))
         return nullptr;
       return getFieldVariable(cast<GlobalVariable>(val));
@@ -1051,7 +1104,7 @@ namespace {
     }
 
 
-    MollyFieldAccess getFieldAccess(ScopStmt *stmt) LLVM_OVERRIDE {
+    MollyFieldAccess getFieldAccess(ScopStmt *stmt) override {
       assert(stmt);
       auto result = MollyFieldAccess::fromScopStmt (stmt);
       augmentFieldVariable(result);
@@ -1059,7 +1112,7 @@ namespace {
     }
 
 
-    MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) LLVM_OVERRIDE {
+    MollyFieldAccess getFieldAccess(polly::MemoryAccess *memacc) override {
       assert(memacc);
       auto result = MollyFieldAccess::fromMemoryAccess(memacc);
       augmentFieldVariable(result);
@@ -1089,7 +1142,7 @@ namespace {
       return result;
     }
 
-    ArrayRef<CommunicationBuffer *> getCommunicationBuffers() LLVM_OVERRIDE {
+    ArrayRef<CommunicationBuffer *> getCommunicationBuffers() override {
       return combufs;
     }
 
@@ -1192,15 +1245,15 @@ namespace {
 
 
 #pragma region molly::MollyPassManager
-    ClusterConfig *getClusterConfig() LLVM_OVERRIDE {
+    ClusterConfig *getClusterConfig() override {
       return clusterConf.get();
     }
 
-    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() LLVM_OVERRIDE {
+    clang::CodeGen::MollyRuntimeMetadata *getRuntimeMetadata() override {
       return &runtimeMetadata;
     }
 
-    void modifiedScop() LLVM_OVERRIDE {
+      void modifiedScop() override {
       changedScop = true;
     }
 #pragma endregion
@@ -1208,7 +1261,7 @@ namespace {
 
 
     // TODO: Move to MollyModuleManager
-    llvm::Function *emitFieldRankofFunc(FieldLayout *layout) LLVM_OVERRIDE   {
+      llvm::Function *emitFieldRankofFunc(FieldLayout *layout) override {
       auto &rankoffunc = layout->rankoffunc;
       if (rankoffunc) 
         return rankoffunc;
@@ -1256,7 +1309,7 @@ namespace {
       coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
       coordsAff.cast_inplace(coordsAffSpace);
 
-      auto dist = fty->getHomeAff(); // { field[indexset] -> node[cluster] } 
+      auto dist = layout->getHomeAff(); // { field[indexset] -> node[cluster] } 
       auto homeAff = dist.pullback(coordsAff); // { [] -> node[cluster] }
 
       auto clusterLengths = clusterConf->getClusterLengthsAff();
@@ -1270,7 +1323,7 @@ namespace {
     }
 
 
-    llvm::Function *emitLocalIndexofFunc(FieldLayout *layout) LLVM_OVERRIDE {
+    llvm::Function *emitLocalIndexofFunc(FieldLayout *layout) override {
       auto &localidxfunc = layout->localidxfunc;
       if (localidxfunc) 
         return localidxfunc;
@@ -1349,6 +1402,7 @@ namespace {
     }
 
 
+    // TODO: Replace by intrinsics that generate these functions
     void implementMollyExternalFunctions() {
       auto &llvmContext = getLLVMContext();
 
@@ -1369,7 +1423,7 @@ namespace {
           }
 
           auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
-          auto layout = fty->getLayout();
+          auto layout = fty->getDefaultLayout();
 
           auto realfunc = emitFieldRankofFunc(layout);
           auto bb = BasicBlock::Create(llvmContext, "entry", &func);
@@ -1385,7 +1439,7 @@ namespace {
           auto fieldobj = &*itArgs;
 
           auto fty = getFieldType(cast<StructType>(fieldobj->getType()->getPointerElementType()));
-          auto layout = fty->getLayout();
+          auto layout = fty->getDefaultLayout();
           auto realfunc = emitLocalIndexofFunc(layout);
 
           auto bb = BasicBlock::Create(llvmContext, "entry", &func);
@@ -1411,18 +1465,18 @@ namespace {
 
 #pragma region llvm::ModulePass
   public:
-    void releaseMemory() LLVM_OVERRIDE {
+    void releaseMemory() override {
       removeAllAnalyses();
     }
-    const char *getPassName() const LLVM_OVERRIDE { 
+    const char *getPassName() const override {
       return "MollyPassManager"; 
     }
-    void getAnalysisUsage(llvm::AnalysisUsage &AU) const LLVM_OVERRIDE {
-      AU.addRequired<DataLayout>();
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+      AU.addRequired<DataLayoutPass>();
       // Requires nothing, preserves nothing
     }
 
-    bool runOnModule(llvm::Module &M) LLVM_OVERRIDE {
+    bool runOnModule(llvm::Module &M) override {
       this->changedIR = false;
       this->changedScop = false;
       this->module = &M;
@@ -1456,8 +1510,8 @@ namespace {
       }
 
       std::string infoDummy;
-      auto OSisolated = new raw_fd_ostream("4_isolated.ll", infoDummy);
-      runModulePass(llvm::createPrintModulePass(OSisolated, false, "After isolation\n\n"));
+      auto OSisolated = new raw_fd_ostream("4_isolated.ll", infoDummy, sys::fs::F_Text);
+      runModulePass(llvm::createPrintModulePass(*OSisolated, "After isolation\n\n"));
 
       // Find all scops
       runScopDetection();
@@ -1534,12 +1588,8 @@ namespace {
         verifyFunction(func);
       }
 
-
       // generate a new main function
       wrapMain();
-
-
-
 
       //FIXME: Find all the leaks
       //this->islctx.reset();

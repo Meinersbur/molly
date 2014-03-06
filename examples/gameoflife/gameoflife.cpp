@@ -3,7 +3,7 @@
 #define LENGTH (64*8)
 #define ITERATIONS 100
 #define TESTS 3
-#pragma molly transform ("{ [x,y] -> [px, py, lx, ly] : px=floor(x/3) and py=floor(y/3) and 3px+lx=x and 3py+ly+y }", 2)
+#pragma molly transform ("{ [x,y] -> (rank[px, py] -> local[lx, ly]) : px=floor(x/3) and py=floor(y/3) and 3px+lx=x and 3py+ly+y }", 2)
 molly::array<bool,LENGTH,LENGTH> habitat1;
 molly::array<bool,LENGTH,LENGTH> habitat2;
 

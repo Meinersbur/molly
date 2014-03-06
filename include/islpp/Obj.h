@@ -53,7 +53,7 @@ namespace isl {
     const D *getDerived() const { return static_cast<const D*>(this); }
 
   private:
-    StructTy *obj;
+    StructTy *obj = nullptr;
 
   public:
     StructTy *take() { 

@@ -49,6 +49,7 @@ endif (CMAKE_COMPILER_IS_GNUCXX)
 
 
 macro(add_molly_library name)
+message("add_molly_library(${name} ${ARGN})")
   parse_arguments(PARM "LINK_LIBS;LINK_COMPONENTS;TARGET_DEPENDS;EXTERNAL_LIBS;SOURCES;HEADERS;HEADER_DIRS" "" ${ARGN})
   
   set(_headers)
@@ -62,13 +63,16 @@ macro(add_molly_library name)
   endif ()
   
   add_llvm_library(${name} 
+    ${PARM_SOURCES} ${_headers} 
     ${PARM_DEFAULT_ARGS} 
-    SOURCES ${PARM_SOURCES} ${_headers} 
     LINK_LIBS ${PARM_LINK_LIBS} 
     LINK_COMPONENTS ${PARM_LINK_COMPONENTS} 
-    TARGET_DEPENDS ${PARM_TARGET_DEPENDS} 
-    EXTERNAL_LIBS ${PARM_EXTERNAL_LIBS}
+#    TARGET_DEPENDS ${PARM_TARGET_DEPENDS} 
+#   EXTERNAL_LIBS ${PARM_EXTERNAL_LIBS}
     )
+    if (PARM_TARGET_DEPENDS)
+      add_dependencies(${name} ${PARM_TARGET_DEPENDS})
+    endif ()
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_library)
 
@@ -538,14 +542,14 @@ endmacro()
 function (mollycc_compile _outfile)
 #message("   mollycc_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
-  get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
+  #get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
   clang_compile_link("${_outfile}" EXE
     COMPILER mollycc
     SOURCES ${_SOURCES}
     FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
     CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
     LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
-    LIBS ${_MollyRT_location} ${MPI_CXX_LIBRARIES} ${_LIBS}
+    LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES} ${_LIBS}
     COMMENT "${_COMMENT}"
     )
 endfunction ()

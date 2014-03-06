@@ -28,7 +28,7 @@ using std::move;
 
 
 
-FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) : layout(nullptr) {
+FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metadata) : defaultLayout(nullptr) {
   //assert(mollyContext);
   assert(islctx);
   assert(module);
@@ -42,7 +42,7 @@ FieldType::FieldType(isl::Ctx *islctx, llvm::Module *module, llvm::MDNode *metad
   localLengthFunc = NULL;
   //islocalFunc = NULL;
 
-  isdistributed = false;
+  //isdistributed = false;
   this->metadata.readMetadata(module, metadata);
 }
 
@@ -185,7 +185,7 @@ int FieldType::getGlobalLength(unsigned d) {
   return metadata.dimLengths[d];
 }
 
-
+#if 0
 isl::Map FieldType::getLocalIndexset(const isl::BasicSet &clusterSet) {
   auto nDims = getNumDimensions();//FIXME: Assumption cluster dimensions = field dimensions
   //auto space = getIslContext()->createMapSpace(0, nDims, nDims); 
@@ -255,7 +255,6 @@ isl::Map FieldType::getHomeRel() {
 }
 
 
-#if 0
 /// Get the coordinate that falls into the local range
 /// { field[indexset] -> [nDims] }
 isl::MultiAff FieldType::getLocalIdxAff() {

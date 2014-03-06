@@ -239,8 +239,8 @@ namespace isl {
 
   static inline bool isPlainEqual(const Aff &aff1, const Aff &aff2)  { return isl_aff_plain_is_equal(aff1.keep(), aff2.keep()); }
   static inline Aff mul(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_mul(aff1.take(), aff2.take())); }
-  static inline Aff div(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
-  static inline Aff div(Aff &&aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
+  static inline Aff div(Aff aff1, Aff aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
+  static inline Aff div(Aff aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
   static inline Aff add(Aff aff1, Aff aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
   static inline Aff sub(Aff aff1, Aff aff2) { return enwrap(isl_aff_sub(aff1.take(), aff2.take())); }
 
@@ -252,10 +252,17 @@ namespace isl {
   BasicSet leBasicSet(Aff &aff1, Aff &aff2);
   BasicSet geBasicSet(Aff &aff1, Aff &aff2);
 
+  static inline Aff operator+(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_add(lhs.take(), rhs.take())); }
   static inline Aff operator+(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return add(aff.move(), ls.createConstantAff(v)); }
+  static inline Aff operator-(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_sub(lhs.take(), rhs.take())); }
   static inline Aff operator-(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return sub(aff.move(), ls.createConstantAff(v)); }
-  static inline Aff operator*(Aff lhs, Aff rhs) {  return Aff::enwrap(isl_aff_mul(lhs.take(), rhs.take())); }
+  
+  static inline Aff operator*(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_mul(lhs.take(), rhs.take())); }
+  static inline Aff operator*(Aff lhs, int v) { auto ls = lhs.getDomainLocalSpace(); return add(lhs.move(), ls.createConstantAff(v)); }
 
+
+  static inline Aff operator/(Aff lhs, Aff rhs) { return div(std::move(lhs), std::move(rhs)); }
+  static inline Aff operator/(Aff lhs, int v) { return div(lhs.move(), v); }
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

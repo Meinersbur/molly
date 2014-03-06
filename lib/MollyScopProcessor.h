@@ -32,7 +32,7 @@ namespace molly {
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;
 
-    virtual void computeScopDistibution() = 0;
+    //virtual void computeScopDistibution() = 0;
     virtual void genCommunication() = 0;
     virtual void pollyCodegen() = 0;
 

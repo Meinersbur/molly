@@ -169,6 +169,12 @@ clang::CodeGen::MollyRuntimeMetadata *MollyCodeGenerator::getRtMetadata() {
 }
 
 
+static llvm::Value *codegenIslExprwithDefaultIRBuilder(DefaultIRBuilder &irBuilder, isl::AstExpr expr, const std::map<isl_id *, llvm::Value *> &values, llvm::Pass *pass) {
+  PollyIRBuilder pollyBuilder(irBuilder.GetInsertBlock(), irBuilder.GetInsertPoint(), irBuilder.getFolder(), irBuilder.getDefaultFPMathTag());
+  return polly::codegenIslExpr(pollyBuilder, expr.take(), values, pass);
+}
+
+
 // SCEVAffinator::getPwAff
 llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
   //TODO: What does polly::buildIslAff do with several pieces? Answer: Insert select instructions 
@@ -184,7 +190,7 @@ auto intTy = Type::getInt64Ty(llvmContext);
 
   auto expr = initAstBuild().exprFromPwAff(aff); //aff.resetDimIds(isl_dim_all)
   // auto pass = stmtCtx->asPass();
-  auto result = polly::codegenIslExpr(irBuilder, expr.takeCopy(), idtovalue, pass);
+  auto result = codegenIslExprwithDefaultIRBuilder(irBuilder, expr, idtovalue, pass);
   //auto result = polly::buildIslAff(irBuilder.GetInsertPoint(), aff.takeCopy(), valueMap, stmtCtx->asPass());
   return irBuilder.CreateIntCast(result, intTy, false/*???*/);
 }

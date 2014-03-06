@@ -29,7 +29,7 @@ namespace llvm {
 
 namespace isl {
   template<>
-  class Pw<MultiAff> : public Obj<PwMultiAff, isl_pw_multi_aff>, public Spacelike<PwMultiAff> {
+  class Pw<MultiAff> : public Obj<PwMultiAff, isl_pw_multi_aff>, public Spacelike<PwMultiAff>{
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
@@ -55,38 +55,38 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_pw_multi_aff_get_space(keep())); }
-    ISLPP_PROJECTION_ATTRS Space getSpacelike() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_pw_multi_aff_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION{ return Space::enwrap(isl_pw_multi_aff_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS Space getSpacelike() ISLPP_PROJECTION_FUNCTION{ return Space::enwrap(isl_pw_multi_aff_get_space(keep())); }
 
-    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
-    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return false; }
-    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return true; }
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION{ return false; }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION{ return false; }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION{ return true; }
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_pw_multi_aff_dim(keep(), type); }
-    //ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_pw_multi_aff_find_dim_by_id(keep(), type, id.keep()); }
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return isl_pw_multi_aff_dim(keep(), type); }
+      //ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_pw_multi_aff_find_dim_by_id(keep(), type, id.keep()); }
 
-    ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_tuple_name(keep(), type)); }
-    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_pw_multi_aff_get_tuple_name(keep(), type); }
-    //ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_tuple_name(take(), type, s)); }
-    ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_tuple_id(keep(), type)); }
-    ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_pw_multi_aff_get_tuple_id(keep(), type)); }
-    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_tuple_id(take(), type, id.take())); }
-    //ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_reset_tuple_id(take(), type)); }
+    ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return checkBool(isl_pw_multi_aff_has_tuple_name(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return isl_pw_multi_aff_get_tuple_name(keep(), type); }
+      //ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_tuple_name(take(), type, s)); }
+    ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return checkBool(isl_pw_multi_aff_has_tuple_id(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return Id::enwrap(isl_pw_multi_aff_get_tuple_id(keep(), type)); }
+    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_set_tuple_id(take(), type, id.take())); }
+      //ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_reset_tuple_id(take(), type)); }
 
-    //ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_dim_name(keep(), type, pos)); }
-    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return isl_pw_multi_aff_get_dim_name(keep(), type, pos); }
-    //ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_dim_name(take(), type, pos, s)); }
-    //ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_dim_id(keep(), type, pos)); }
-    ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_pw_multi_aff_get_dim_id(keep(), type, pos)); }
-    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_dim_id(take(), type, pos, id.take())); }
-    //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_reset_dim_id(take(), type, pos)); }
+      //ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_dim_name(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION{ return isl_pw_multi_aff_get_dim_name(keep(), type, pos); }
+      //ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_dim_name(take(), type, pos, s)); }
+      //ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_pw_multi_aff_has_dim_id(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION{ return Id::enwrap(isl_pw_multi_aff_get_dim_id(keep(), type, pos)); }
+    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_set_dim_id(take(), type, pos, id.take())); }
+      //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_reset_dim_id(take(), type, pos)); }
 
   protected:
     //ISLPP_INPLACE_ATTRS void addDims_internal(isl_dim_type type, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_add_dims(take(), type, count)); }
     //ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_insert_dims(take(), type, pos, count)); }
   public:
     //ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_drop_dims(take(), type, first, count)); }
+    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_drop_dims(take(), type, first, count)); }
 #pragma endregion
 
 
@@ -138,22 +138,22 @@ namespace isl {
 
     PwAff getPwAff(int pos) const { return PwAff::enwrap(isl_pw_multi_aff_get_pw_aff(keep(), pos)); }
     PwMultiAff setPwAff(int pos, PwAff &&pa) const { return enwrap(isl_pw_multi_aff_set_pw_aff(takeCopy(), pos, pa.take())); }
-    void setPwAff_inplace(int pos, PwAff &&pa) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_set_pw_aff(take(), pos, pa.take())); }
+    void setPwAff_inplace(int pos, PwAff &&pa) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_set_pw_aff(take(), pos, pa.take())); }
 
-    /// The set of elements for which this affine mapping is defined
+      /// The set of elements for which this affine mapping is defined
     Set domain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
     Set getDomain() const { return Set::enwrap(isl_pw_multi_aff_domain(takeCopy())); }
     Set getRange() const;
 
-    Space getRangeSpace() ISLPP_EXSITU_FUNCTION { return getSpace().getRangeSpace(); }
+    Space getRangeSpace() ISLPP_EXSITU_FUNCTION{ return getSpace().getRangeSpace(); }
 
 
     PwMultiAff scale(Val &&v) const { return enwrap(isl_pw_multi_aff_scale_val(takeCopy(), v.take())); }
     //PwMultiAff scale(Vec &&v) const { return enwrap(isl_pw_multi_aff_scale_multi_val(takeCopy(), v.take())); }
 
     PwMultiAff projectDomainOnParams() const { return enwrap(isl_pw_multi_aff_project_domain_on_params(takeCopy())); }
-    PwMultiAff alignParams(Space model) ISLPP_EXSITU_FUNCTION { return enwrap(isl_pw_multi_aff_align_params(takeCopy(), model.take())); }
-    void alignParams_inplace(Space model) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_align_params(take(), model.take())); }
+    PwMultiAff alignParams(Space model) ISLPP_EXSITU_FUNCTION{ return enwrap(isl_pw_multi_aff_align_params(takeCopy(), model.take())); }
+    void alignParams_inplace(Space model) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_align_params(take(), model.take())); }
 
     PwMultiAff coalesce() const { return enwrap(isl_pw_multi_aff_coalesce(takeCopy())); }
     PwMultiAff gistParams(Set &&set) const { return enwrap(isl_pw_multi_aff_gist_params(takeCopy(), set.take())); }
@@ -161,28 +161,28 @@ namespace isl {
 
     /// this(ma(x))
     PwMultiAff pullback(MultiAff ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
-    void pullback_inplace(MultiAff ma) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_pullback_multi_aff(take(), ma.take())); }
+    void pullback_inplace(MultiAff ma) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_pullback_multi_aff(take(), ma.take())); }
 
     PwMultiAff pullback(PwMultiAff pma) const { return enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
-    void pullback_inplace(PwMultiAff pma) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
+    void pullback_inplace(PwMultiAff pma) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_pullback_pw_multi_aff(takeCopy(), pma.take())); }
 
-    //PwMultiAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
-   ISLPP_EXSITU_ATTRS PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION { return pma.pullback(*this); }
-   ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION;
+      //PwMultiAff pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER;
+    ISLPP_EXSITU_ATTRS PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION{ return pma.pullback(*this); }
+    ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION;
 
-    bool foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &) const;
+    bool foreachPiece(const std::function<bool(Set &&, MultiAff &&)> &) const;
     //bool foreachPiece(const std::function<void(Set ,MultiAff , bool &stop)> &) const;
-    unsigned nPieces() const { unsigned result=0;  foreachPiece([&result] (Set&& , MultiAff&&)->bool { result+=1; return true; } ) ; return result; }
+    unsigned nPieces() const { unsigned result = 0;  foreachPiece([&result](Set&&, MultiAff&&)->bool { result += 1; return true; }); return result; }
 
     Map reverse() const;
     PwMultiAff neg() const;
 
     PwMultiAff operator-() const { return neg(); }
 
-    PwMultiAff unionAdd(const PwMultiAff &pma2) ISLPP_EXSITU_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_union_add(takeCopy(), pma2.takeCopy())); }
-    void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
+    PwMultiAff unionAdd(const PwMultiAff &pma2) ISLPP_EXSITU_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_union_add(takeCopy(), pma2.takeCopy())); }
+    void unionAdd_inplace(const PwMultiAff &pma2) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_union_add(take(), pma2.takeCopy())); }
 
-    // Same isl::Map operations
+      // Same isl::Map operations
     Set wrap() const;
 
     PwMultiAff projectOut(unsigned first, unsigned count) const;
@@ -193,22 +193,26 @@ namespace isl {
     ISLPP_EXSITU_ATTRS PwMultiAff sublist(Space subspace) ISLPP_EXSITU_FUNCTION;
 
     ISLPP_EXSITU_ATTRS PwMultiAff cast(Space space) ISLPP_EXSITU_FUNCTION;
-    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { give(cast(space).take()); }
+    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION{ give(cast(space).take()); }
 
     ISLPP_EXSITU_ATTRS PwMultiAff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION;
-   ISLPP_EXSITU_ATTRS PwMultiAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS PwMultiAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;
 
     //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
 
-   void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
-   void dumpExplicit(int maxElts) const;
-   void dumpExplicit() const; // In order do be callable without arguments from debugger
-   std::string toStringExplicit(int maxElts) const;
-   std::string toStringExplicit() const;
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+    void dumpExplicit(int maxElts) const;
+    void dumpExplicit() const; // In order do be callable without arguments from debugger
+    std::string toStringExplicit(int maxElts) const;
+    std::string toStringExplicit() const;
 
-   std::string toString()  const;
+    std::string toString()  const;
 
-     ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION {    return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take()));     }
+    ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take())); }
+    ISLPP_INPLACE_ATTRS void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_intersect_domain(take(), set.take())); }
+    ISLPP_CONSUME_ATTRS PwMultiAff intersectDomain_consume(Set domain) ISLPP_CONSUME_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(take(), domain.take())); }
+
+    ISLPP_PROJECTION_ATTRS Set range() ISLPP_PROJECTION_FUNCTION;
   }; // class Pw<MultiAff>
 
 

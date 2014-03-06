@@ -1,6 +1,13 @@
 #ifndef MOLLY_POLLYFWD_H
 #define MOLLY_POLLYFWD_H
 
+namespace llvm {
+  // #include <llvm/IR/IRBuilder.h>
+  class ConstantFolder;
+  template<bool preserveNames> class IRBuilderDefaultInserter;
+  template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
+} // namespace llvm
+
 namespace polly {
    // #include <polly/ScopInfo.h>
   class Scop;
@@ -9,6 +16,11 @@ namespace polly {
 
   // #include <polly/ScopPass.h>
   class ScopPass;
+
+  // #include <polly/IRBuilder.h>
+  template <bool PreserveNames> class PollyBuilderInserter;
+  typedef PollyBuilderInserter<true> IRInserter;
+  typedef llvm::IRBuilder<true, llvm::ConstantFolder, IRInserter> PollyIRBuilder;
 } // namespace polly
 
 #endif /* MOLLY_POLLYFWD_H */

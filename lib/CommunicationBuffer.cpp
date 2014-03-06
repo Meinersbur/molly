@@ -107,7 +107,8 @@ void CommunicationBuffer::doLayoutMapping() {
 
 void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm, MollyFunctionProcessor *funcCtx) {
   auto pass = funcCtx->asPass();
-  auto eltSizeQuery = &pass->getAnalysis<DataLayout>();
+  auto dlp = &pass->getAnalysis<DataLayoutPass>();
+auto eltSizeQuery = dlp ? &dlp->getDataLayout() : NULL;
   auto &llvmContext = codegen.getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
   auto &builder = codegen.getIRBuilder();

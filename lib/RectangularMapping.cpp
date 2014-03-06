@@ -13,7 +13,7 @@ RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::Mul
 }
 
 
-RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl::Map &map) {
+RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map map) {
   auto nDims = map.getOutDimCount();
   auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createZeroMultiPwAff();
   auto offsets = lengths.copy();
@@ -30,6 +30,11 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl:
 
   return new RectangularMapping(lengths.move(), offsets.move());
 }
+
+
+ //RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Set set) {
+ //  return createRectangualarHullMapping( alltoall( set.getParamsSpace().createUniverseBasicSet() , set) );
+ //}
 
 
 llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domain, const isl::MultiPwAff &coords) {
@@ -96,7 +101,7 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
  //auto lenout = mylengths.projectOut(isl_dim_in, 0, mylengths.getInDimCount()); // { -> len[] }
  //auto lengthsMap = mylengths.reverse(); // { len[] -> [A,C] }
 
- // We cannot optimize over the non-linear size function, so we do it per dimension which hence is a overapproximation
+ // We cannot optimize over the non-linear size function, so we do it per dimension which hence is an overapproximation
  auto nDims = mylengths.getOutDimCount();
  auto &irBuilder = codegen.getIRBuilder();
  Value *result = ConstantInt::get(codegen.getIntTy(), 1, true);

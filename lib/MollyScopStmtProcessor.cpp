@@ -1,23 +1,29 @@
 #include "MollyScopStmtProcessor.h"
+
 #include "MollyPassManager.h"
-#include "polly/ScopInfo.h"
 #include "MollyUtils.h"
 #include "ScopUtils.h"
 #include "ClusterConfig.h"
 #include "MollyScopProcessor.h"
-#include "islpp/Set.h"
-#include "islpp/Map.h"
-#include <llvm/IR/Instruction.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Value.h>
 #include "Codegen.h"
 #include "MollyRegionProcessor.h"
-#include <llvm/Analysis/ScalarEvolution.h>
 #include "MollyFieldAccess.h"
-#include "polly/FieldAccess.h"
 #include "FieldVariable.h"
 #include "FieldType.h"
 #include "ScopUtils.h"
+#include "FieldLayout.h"
+
+#include "islpp/Set.h"
+#include "islpp/Map.h"
+
+#include "polly/ScopInfo.h"
+#include "polly/FieldAccess.h"
+
+#include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Value.h>
+
 
 using namespace molly;
 using namespace polly;
@@ -100,16 +106,15 @@ namespace {
       }
     }
 
-
-    isl::Set getDomain() const LLVM_OVERRIDE {  
+    isl::Set getDomain() const override {
       return enwrap(stmt->getDomain());
     }
 
-    isl::Space getDomainSpace() const LLVM_OVERRIDE {
+    isl::Space getDomainSpace() const override {
     return getDomain().getSpace();
     }
 
-    isl::Set getDomainWithNamedDims() const LLVM_OVERRIDE {
+    isl::Set getDomainWithNamedDims() const override {
       auto scopCtx = getScopProcessor();
       auto domain = getDomain();
 
@@ -123,16 +128,16 @@ namespace {
       }
       return domain;
     }
-    isl::Map getScattering() const LLVM_OVERRIDE {
+    isl::Map getScattering() const override {
       return enwrap(stmt->getScattering());
     }
-    isl::PwMultiAff getScatteringAff() const LLVM_OVERRIDE {
+    isl::PwMultiAff getScatteringAff() const override {
       return getScattering().toPwMultiAff();
     }
     bool hasWhere() const {
       return enwrap(stmt->getWhereMap()).isValid();
     }
-    isl::Map getWhere() const LLVM_OVERRIDE {
+    isl::Map getWhere() const override {
       return enwrap(stmt->getWhereMap());
     } 
 
@@ -146,40 +151,42 @@ namespace {
      }
 
 
-    isl::Map getInstances() const LLVM_OVERRIDE {
+     isl::Map getInstances() const override {
       return enwrap(stmt->getWhereMap()).intersectDomain(getDomain());
     }
-    BasicBlock *getBasicBlock() LLVM_OVERRIDE {
+
+     BasicBlock *getBasicBlock() override {
       return stmt->getBasicBlock();
     }
-    polly::ScopStmt *getStmt() LLVM_OVERRIDE {
+
+     polly::ScopStmt *getStmt() override {
       return stmt;
     }
 
-    llvm::Pass *asPass() LLVM_OVERRIDE {
+     llvm::Pass *asPass() override {
       return getParentProcessor()->asPass();
     }
 
 
-    MollyCodeGenerator makeCodegen() LLVM_OVERRIDE {
+     MollyCodeGenerator makeCodegen() override {
       auto term = getBasicBlock()->getTerminator();
       return MollyCodeGenerator(this, term);
     }
 
 
-    MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) LLVM_OVERRIDE {
+     MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) override {
       assert(insertBefore);
       return MollyCodeGenerator(this, insertBefore);
     }
 
 
-    StmtEditor getEditor() LLVM_OVERRIDE {
+     StmtEditor getEditor() override {
       assert(stmt);
       return StmtEditor::create(stmt, asPass());
     }
 
 
-    void applyWhere() LLVM_OVERRIDE {
+     void applyWhere() override {
       auto scop = stmt->getParent();
       auto func = getFunctionOf(stmt);
       //auto funcCtx = pm->getFuncContext(func);
@@ -249,7 +256,7 @@ namespace {
     }
 
 
-    std::map<isl_id *, Value *> &getIdToValueMap() LLVM_OVERRIDE {
+    std::map<isl_id *, Value *> &getIdToValueMap() override {
       return idToValue;
 
       auto scop = getParent();
@@ -289,24 +296,24 @@ namespace {
     }
 
 
-    llvm::Value *getDomainValue(unsigned i) LLVM_OVERRIDE {
+      llvm::Value *getDomainValue(unsigned i) override {
       return const_cast<PHINode *>(stmt->getInductionVariableForDimension(i));
     }
 
 
-    const llvm::SCEV *getDomainSCEV(unsigned i) LLVM_OVERRIDE {
+    const llvm::SCEV *getDomainSCEV(unsigned i) override {
       auto value = getDomainValue(i);
       return getParentProcessor()->scevForValue(value);
     }
 
 
-    isl::Id getDomainId(unsigned i) LLVM_OVERRIDE {
+    isl::Id getDomainId(unsigned i) override {
       auto loop = stmt->getLoopForDimension(i);
       return getParentProcessor()->getIdForLoop(loop);
     }
 
 
-    isl::Aff getDomainAff(unsigned i) LLVM_OVERRIDE {
+    isl::Aff getDomainAff(unsigned i) override {
       // There are two possibilities on what to return:
       // 1. An aff that maps from the domain space. The result aff is equal to the i's isl_dim_in
       // 2. An aff without domain space. The result is the isl::Id that represent the SCEV
@@ -321,7 +328,7 @@ namespace {
     }
 
 
-    std::vector<llvm::Value *> getDomainValues() LLVM_OVERRIDE {
+    std::vector<llvm::Value *> getDomainValues() override {
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
 
@@ -335,7 +342,7 @@ namespace {
     }
 
 
-    isl::MultiAff getDomainMultiAff() LLVM_OVERRIDE {
+    isl::MultiAff getDomainMultiAff() override {
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
 
@@ -354,7 +361,7 @@ namespace {
     }
 
 
-    isl::MultiAff getClusterMultiAff() LLVM_OVERRIDE {
+    isl::MultiAff getClusterMultiAff() override {
       auto clusterShape = getClusterShape();
       auto nClusterDims = clusterShape.getDimCount();
       auto domainSpace = getDomainSpace();
@@ -370,23 +377,23 @@ namespace {
     }
 
 
-    void dump() const LLVM_OVERRIDE;
+    void dump() const override;
 
 
     // isValid
-    bool isFieldAccess() const LLVM_OVERRIDE {
+    bool isFieldAccess() const override {
       assert(!!fvar == !!fmemacc);
       return fvar != nullptr;
     }
 
 
-    FieldVariable *getFieldVariable() const LLVM_OVERRIDE {
+    FieldVariable *getFieldVariable() const override {
       assert(fvar);
       return fvar;
     }
 
 
-    FieldType *getFieldType() const LLVM_OVERRIDE { 
+    FieldType *getFieldType() const override {
       return fvar->getFieldType();
     }
 
@@ -415,7 +422,7 @@ namespace {
         auto coordVal = *it;
         auto coordSCEV = se->getSCEV(coordVal);
 
-        auto aff = convertScEvToAffine(scopStmt, coordSCEV);
+        auto aff = affinatePwAff(scopStmt, coordSCEV);
         result.setPwAff_inplace(i, aff.move());
         i+=1;
       }
@@ -425,7 +432,7 @@ namespace {
     }
 #endif
 
-    isl::Map/*iteration coord -> field coord*/ getAccessRelation() const LLVM_OVERRIDE {
+    isl::Map/*iteration coord -> field coord*/ getAccessRelation() const override {
       assert(isFieldAccess());
       assert(fmemacc);
       auto fvar = getFieldVariable();
@@ -459,7 +466,8 @@ namespace {
     }
 
     isl::PwMultiAff getHomeAff() const {
-      auto tyHomeAff = getFieldType() ->getHomeAff();
+      auto layout = getFieldType()->getDefaultLayout();
+      auto tyHomeAff = layout->getHomeAff();
       tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
       return tyHomeAff;
     }
@@ -478,7 +486,7 @@ namespace {
     }
 
 
-    void validate() const LLVM_OVERRIDE {
+    void validate() const override {
 #ifndef NDEBUG
       assert(stmt);
 
@@ -524,67 +532,67 @@ namespace {
     }
 
 
-    llvm::LLVMContext &getLLVMContext() const LLVM_OVERRIDE {
+      llvm::LLVMContext &getLLVMContext() const override {
       return pm->getLLVMContext();
     }
 
 
-    isl::Ctx *getIslContext() const LLVM_OVERRIDE {
+    isl::Ctx *getIslContext() const override {
       return enwrap(stmt->getIslCtx());
     }
 
 
-    bool isReadAccess() const LLVM_OVERRIDE {
+    bool isReadAccess() const override {
       assert(isFieldAccess());
       return fmemacc->isRead();
     }
 
 
-    bool isWriteAccess() const LLVM_OVERRIDE {
+    bool isWriteAccess() const override {
       assert(isFieldAccess());
       return fmemacc->isWrite();
     }
 
 
-    molly::MollyPassManager *getPassManager() LLVM_OVERRIDE {
+    molly::MollyPassManager *getPassManager() override {
       return pm;
     }
 
 
-    molly::MollyScopProcessor *getScopProcessor() const LLVM_OVERRIDE {
+    molly::MollyScopProcessor *getScopProcessor() const override {
       return getParentProcessor();
     }
 
-   const llvm::Region *getRegion() LLVM_OVERRIDE {
+    const llvm::Region *getRegion() override {
       return  stmt->getRegion();
     }
 
 
-    llvm::Instruction *getAccessor() LLVM_OVERRIDE {
+    llvm::Instruction *getAccessor() override {
       assert(isFieldAccess());
       return facc.getAccessor();
     }
 
 
-    llvm::LoadInst *getLoadAccessor() LLVM_OVERRIDE {
+    llvm::LoadInst *getLoadAccessor() override {
       assert(isReadAccess());
       return cast<LoadInst>(getAccessor());
     }
 
 
-    llvm::StoreInst *getStoreAccessor() LLVM_OVERRIDE {
+    llvm::StoreInst *getStoreAccessor() override {
       assert(isWriteAccess());
       return cast<StoreInst>(getAccessor());
     }
 
-    llvm::Value *getAccessedCoordinate(unsigned i) LLVM_OVERRIDE {
+    llvm::Value *getAccessedCoordinate(unsigned i) override {
       assert(isFieldAccess());
       return facc.getCoordinate(i);
     }
 
     /// Compared to getAccessRelation(), this returns just the one location that is accessed
     /// Hence, it won't work if there is a MAY access
-    isl::MultiPwAff getAccessed() LLVM_OVERRIDE {
+    isl::MultiPwAff getAccessed() override {
       assert(isFieldAccess());
 
       auto space = getAccessRelation().getSpace();
@@ -599,7 +607,7 @@ namespace {
     }
 
 
-    void addMemoryAccess(polly::MemoryAccess::AccessType type, const llvm::Value *base, isl::Map accessRelation, llvm::Instruction *accInstr) LLVM_OVERRIDE {
+    void addMemoryAccess(polly::MemoryAccess::AccessType type, const llvm::Value *base, isl::Map accessRelation, llvm::Instruction *accInstr) override {
       stmt->addAccess(type, base, accessRelation.take(), accInstr);
     }
 

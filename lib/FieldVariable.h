@@ -14,7 +14,9 @@ namespace molly {
   class FieldVariable {
   private:
     llvm::GlobalVariable *variable;
+    
     FieldType *fieldTy;
+    FieldLayout *defaultLayout;
 
   protected:
     FieldVariable(llvm::GlobalVariable *variable, FieldType *fieldTy);
@@ -30,15 +32,22 @@ namespace molly {
 
     llvm::GlobalVariable *getVariable() { return variable; }
     FieldType *getFieldType() { return fieldTy; }
-    FieldLayout *getLayout();
+    
 
     isl::Id getTupleId();
     isl::Space getAccessSpace();
 
     llvm::Type *getEltType();
-      llvm::Type *getEltPtrType();
+    llvm::Type *getEltPtrType();
 
-      isl::PwMultiAff getHomeAff();
+    isl::PwMultiAff getHomeAff();
+
+    // TODO: In future implementations, variables may have a range of layouts
+    FieldLayout *getLayout();
+    FieldLayout *getDefaultLayout() const;
+    void setDefaultLayout(FieldLayout *layout) {
+      this->defaultLayout = layout;
+    }
 
   }; // class FieldVariable
 

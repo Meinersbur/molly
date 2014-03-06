@@ -103,9 +103,9 @@ namespace llvm {
   class Loop;
 } // namespace llvm
 
-
 namespace molly {
   typedef llvm::IRBuilder<true,llvm::ConstantFolder,llvm::IRBuilderDefaultInserter<true>> DefaultIRBuilder;
+  //typedef polly::PollyIRBuilder DefaultIRBuilder;
 } // namespace molly;
 
 #endif /* MOLLY_LLVMFWD_H */

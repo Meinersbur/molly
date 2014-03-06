@@ -51,7 +51,8 @@ ScopEditor ScopEditor::newScop(isl::Ctx *ctx, llvm::Instruction *insertBefore, l
   //scopBB->setName(".enterscop");
   auto exitBB = getUnconditionalJumpTarget(scopBB->getTerminator());
 
-  auto dt = &p->getAnalysis<llvm::DominatorTree>();
+  auto dtw = &p->getAnalysis<llvm::DominatorTreeWrapperPass>();
+  auto dt = &dtw->getDomTree();
   auto ri = &p->getAnalysis<llvm::RegionInfo>();
   auto prarentRegion = ri->getRegionFor(scopBB);
   assert(scopBB!=exitBB);
@@ -202,7 +203,8 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
   if (pass) {
     RI = pass->getAnalysisIfAvailable<RegionInfo>();
     LI = pass->getAnalysisIfAvailable<LoopInfo>();
-    DT = pass->getAnalysisIfAvailable<DominatorTree>();
+    auto DTW = pass->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    DT = DTW ? &DTW->getDomTree() : NULL;
     assert(!RI == !DT);
   }
 
@@ -237,7 +239,7 @@ static BasicBlock *newLoop(Function *func, Value *nIterations, BasicBlock *&entr
       DT->changeImmediateDominator(oldChild, headerNode);
     }
 
-    DT->verifyAnalysis();
+    //DT->verifyAnalysis();
   }
 
   if (RI) {
@@ -371,14 +373,15 @@ static BasicBlock * insertNewBlockBefore(const Twine & name, BasicBlock * after,
         RI->setRegionFor(dedicated, OldRegion);
     }
 
-    if (DominatorTree *DT = pass->getAnalysisIfAvailable<DominatorTree>()) {
+    if (auto *DTW = pass->getAnalysisIfAvailable<DominatorTreeWrapperPass>()) {
+      auto DT = &DTW->getDomTree();
       // dedicated dominates after
       if (DomTreeNode *afterNode = DT->getNode(after)) {
         DomTreeNode *dedicatedNode = DT->addNewBlock(dedicated, afterNode->getIDom()->getBlock());
         DT->changeImmediateDominator(after, dedicated);
       }
 
-      DT->verifyAnalysis();
+      //DT->verifyAnalysis();
     }
   }
 

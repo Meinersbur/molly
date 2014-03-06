@@ -1,64 +1,187 @@
 
 #include <molly.h>
+
+// C++ std::complex
 #include <complex>
+//typedef std::complex<double> complex;
+
+// C99 complex
+#include <math.h>
+#include <complex.h>
+typedef _Complex double complex; 
 
 
-typedef  std::complex<double> complex;
+typedef struct {
+  complex c[3][3];
+} su3matrix_t;
 
-molly::array<complex, 32, 32, 32, 32, 4, 3> latticeIn;
-molly::array<complex, 32, 32, 32, 32, 4, 3> latticeOut;
-molly::array<complex, 32, 32, 32, 32, 4, 3, 3> gauge;
+typedef struct {
+  complex c[3];
+} su3vector_t;
 
-#define DIR_T 0
-#define DIR_X 1
-#define DIR_Y 2
-#define DIR_Z 3
+typedef struct {
+  su3_vector v[2];
+} halfspinor_t;
+typedef struct {
+  su3_vector v[4];
+} fullspinor_t;
+typedef fullspinor_t spinor_t;
 
-void HoppingMatrix() {
+typedef enum {
+  DIM_T,DIM_X,DIM_Y,DIM_Z;
+} dimension_t;
 
-  for (int t = 0; t < 32; t+=1) {
-    for (int x = 0; x < 32; x+=1) {
-      for (int y = 0; y < 32; y+=1) {
-        for (int z = 0; z < 32; z+=1) {
+typedef enum {
+  DIR_TUP,DIR_TDN,DIR_XUP,DIR_XDN,DIR_YUP,DIR_YDN,DIR_ZUP,DIR_ZDOWN;
+} direction_t;
 
-          // T+
-          complex[2][3] projected;
-          for (auto i =0; i < 3; i+=1) {
-            projected[0,i] = latticeIn[t+1,x,y,z,0,i] + latticeIn[t+1,x,y,z,2,i];
-            projected[1,i] = latticeIn[t+1,x,y,z,1,i] + latticeIn[t+1,x,y,z,3,i];
-          }
 
-          complex[2][3] multiplied;
-          for (auto i =0; i < 3; i+=1) {
-            multiplied[0][i] = 0;
-            multiplied[1][i] = 0;
-            for (auto j =0; j < 3; j+=1) {
-              multiplied[0][i] += projected[0][j] * gauge[t,x,y,z,DIR_T,i,j];
-            }
-          }
+#define L 8
+#define LT L
+#define LX L
+#define LY L
+#define LZ L
 
-          complex[4][3] expanded;
-          for (auto i = 0; i < 3; i+=1) {
-            expanded[0][i] = multiplied[0][i];
-            expanded[1][i] = multiplied[1][i];
-            expanded[2][i] = multiplied[0][i];
-            expanded[3][i] = multiplied[1][i];
-          }
+#pragma molly transform("[t,x,y,z] -> [], [t,x,y,z]")
+molly::array<spinor_t, LT, LX, LY, LZ> source,sink;
 
-          // Writeback
-          for (auto s =0; s < 4; s+=1) {
-            for (auto v =0; v < 3; v+=1) {
-              latticeOut[t,x,y,z,s,v] = expanded[s,v];
-            }
-          }
-        }
-      }
-    }
-  }
+#pragma molly transform("[t,x,y,z,d] -> [], [t,x,y,z,d]")
+molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
+
+
+halfspinor_t project_TUP(fullspinor_t spinor) {
+  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+}
+
+halfspinor_t project_TDN(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_XUP(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_XDN(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_YUP(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_YDN(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_ZUP(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
+}
+
+halfspinor_t project_ZDN(fullspinor_t spinor) {
+  halfspinor_t result;
+  result[0] = spinor[0] + spinor[2];
+  result[1] = spinor[1] + spinor[3];
+  return result;
 }
 
 
+fullspinor_t expand_TUP(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_TDN(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_XUP(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_XDN(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_YUP(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_YDN(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_ZUP(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+fullspinor_t expand_ZDN(halfspinor_t weyl) {
+  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+}
+
+
+
+typedef int64_t coord_t;
+
+
+
+void HoppingMatrix() {
+
+  for (coord_t t = 0; t < source.length(0); t+=1) 
+    for (coord_t x = 0; x < source.length(1); x+=1) 
+      for (coord_t y = 0; y < source.length(2); y+=1) 
+        for (coord_t z = 0; z < source.length(3); z+=1) {
+
+          // T+
+          auto result = expand_TUP(gauge[t,x,y,z,DIM_T]*project_TUP(source[molly::mod(t+1,LT),x,y,z]));
+          
+          // T-
+          result += expand_TDN(gauge[molly::mod(t-1,LT),x,y,z,DIM_T]*project_TUP(source[molly::mod(t-1,LT),x,y,z]));
+          
+          // X+
+          result += expand_XUP(gauge[t,x,y,z,DIM_X]*project_TUP(source[t,molly::mod(x+1,LX),y,z]));
+          
+           // X-
+          result += expand_XDN(gauge[t,molly::mod(x-1,LX),y,z,DIM_X]*project_TUP(source[t,molly::mod(x-1,LX),y,z]));
+          
+          // Y+
+          result += expand_YUP(gauge[t,x,y,z,DIM_Y]*project_TUP(source[t,x,molly::mod(y+1,LY),z]));
+          
+           // Y-
+          result += expand_YDN(gauge[t,x,molly::mod(y-1,LY),z,DIM_Y]*project_TUP(source[t,x,molly::mod(y-1,LY),z]));
+
+          // Z+
+          result += expand_ZUP(gauge[t,x,y,z,DIM_Z]*project_TUP(source[t,x,y,molly::mod(z+1,LZ)]));
+          
+          // Z-
+          result += expand_ZDN(gauge[t,x,y,molly::mod(z01,LZ),DIM_Z]*project_TUP(source[t,x,y,molly::mod(z+1,LZ)]));
+          
+           
+            // Writeback
+            sink[t,x,y,z,s,v] = result;
+        }
+} // void HoppingMatrix()
+
+
+
 int main(int argc, char *argv[]) {
+  // TODO: Initialize source,gauge
   HoppingMatrix();
   return 0;
 }

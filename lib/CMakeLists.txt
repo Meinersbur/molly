@@ -26,7 +26,6 @@ add_molly_library(LLVMMolly
 
     # Algorithms
     IslExprBuilder.cpp
-    SCEVAffinator.cpp
     MollyIntrinsics.cpp
     
     # Available Layouts

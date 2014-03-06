@@ -9,7 +9,7 @@ target_link_libraries(stencil MollyRT ${MPI_CXX_LIBRARIES})
 
 ### Compile using mollycc, link to MollyRT that has been compiled using CMAKE_CXX_COMPILER
 get_filename_component(stencil_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}stencil-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
-get_target_property(MollyRT_LOCATION MollyRT LOCATION)
+#get_target_property(MollyRT_LOCATION MollyRT LOCATION)
 mollycc_compile("${stencil_path}"
   SOURCES stencil.cpp
   CFLAGS -mllvm -shape=4

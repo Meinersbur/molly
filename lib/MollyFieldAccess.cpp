@@ -2,14 +2,15 @@
 #include "MollyFieldAccess.h"
 
 #include "FieldVariable.h"
+#include "ScopUtils.h"
+#include "FieldType.h"
+#include "FieldLayout.h"
+
 #include "islpp/Aff.h"
 #include "islpp/MultiAff.h"
 #include "islpp/Ctx.h"
 #include "islpp/Space.h"
 #include "islpp/Map.h"
-#include "SCEVAffinator.h"
-#include "ScopUtils.h"
-#include "FieldType.h"
 
 #include <llvm/Analysis/ScalarEvolution.h>
 
@@ -179,8 +180,8 @@ isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
     auto coordVal = *it;
     auto coordSCEV = se->getSCEV(coordVal);
 
-    auto aff = convertScEvToAffine(scopStmt, coordSCEV);
-    result.setPwAff_inplace(i, aff.move());
+    auto aff = isl::enwrap(affinatePwAff(scopStmt, coordSCEV));
+    result.setPwAff_inplace(i, aff);
     i+=1;
   }
 
@@ -227,7 +228,8 @@ isl::Map MollyFieldAccess::getAccessScattering() const {
 
 
 isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
-  auto tyHomeAff = getFieldType() ->getHomeAff();
+  auto layout = getFieldVariable()->getLayout();
+  auto tyHomeAff = layout->getHomeAff();
   tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
   return tyHomeAff;
 }

@@ -164,6 +164,8 @@ void test() {
 
 
 int main(int argc, const char *argv[]) {
+  test();
+
   auto ctx = isl_ctx_alloc();
   bool r1,r2;
 
@@ -189,6 +191,6 @@ int main(int argc, const char *argv[]) {
 
   assert(r1==r2 && "Help! Disjointness is different for nested and unnested spaces!!");
 
-  //test();
+  
   return EXIT_SUCCESS;
 }

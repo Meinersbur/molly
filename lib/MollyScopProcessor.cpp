@@ -32,6 +32,7 @@
 #include "islpp/DimRange.h"
 #include "islpp/MultiAff.h"
 #include "llvm/IR/Metadata.h"
+#include "FieldLayout.h"
 
 using namespace molly;
 using namespace polly;
@@ -239,7 +240,7 @@ namespace {
     }
 
 
-    const SCEV *getClusterCoordinate(unsigned i) LLVM_OVERRIDE {
+    const SCEV *getClusterCoordinate(unsigned i) override {
       //TODO: Cache SCEV
       auto funcCtx = pm->getFuncContext(func);
       auto coordVal = funcCtx->getClusterCoordinate(i);
@@ -268,11 +269,11 @@ namespace {
       return pm->findOrRunAnalysis<Analysis>(func, &scop->getRegion());
     }
 
-    Region *getRegion() LLVM_OVERRIDE {
+    Region *getRegion() override {
       return &scop->getRegion();
     }
 
-    llvm::Function *getParentFunction() LLVM_OVERRIDE {
+    llvm::Function *getParentFunction() override {
       return getFunctionOf(scop);
     }
 
@@ -307,70 +308,6 @@ namespace {
     }
 
 
-#pragma region Scop Distribution
-    void processFieldAccess(MollyFieldAccess &acc, isl::Map &executeWhereWrite, isl::Map &executeWhereRead) {
-      auto fieldVar = acc.getFieldVariable();
-      auto fieldTy = acc.getFieldType();
-      auto stmt = acc.getPollyScopStmt();
-      auto scop = stmt->getParent();
-
-      auto rel = acc.getAffineAccess(SE); /* iteration coord -> field coord */
-      auto home = fieldTy->getHomeAff();  /* field coord -> cluster coord */
-      auto relMap = rel.toMap().setOutTupleId(fieldTy->getIndexsetTuple());
-      auto it2rank = relMap.applyRange(home.toMap());
-
-      if (acc.isRead()) {
-        executeWhereRead = unite(executeWhereRead.subtractDomain(it2rank.getDomain()), it2rank);
-      }
-
-      if (acc.isWrite()) {
-        executeWhereWrite = unite(executeWhereWrite.subtractDomain(it2rank.getDomain()), it2rank);
-      }
-    }
-
-
-  protected:
-    void distributeScopStmt(ScopStmt *stmt) {
-      auto itDomain = getIterationDomain(stmt);
-      auto itSpace = itDomain.getSpace();
-
-      auto clusterConf =  pm->getClusterConfig();
-      auto executeWhereWrite = islctx->createEmptyMap(itSpace, clusterConf->getClusterSpace());
-      auto executeWhereRead = executeWhereWrite.copy();
-      auto executeEverywhere = islctx->createAlltoallMap(itDomain, clusterConf->getClusterShape());
-      auto executeMaster = islctx->createAlltoallMap(itDomain, clusterConf->getMasterRank().toMap().getRange());
-
-      for (auto itAcc = stmt->memacc_begin(), endAcc = stmt->memacc_end(); itAcc!=endAcc; ++itAcc) {
-        auto memacc = *itAcc;
-        auto acc = pm->getFieldAccess(memacc);
-        if (!acc.isValid())
-          continue;
-
-        processFieldAccess(acc, executeWhereWrite, executeWhereRead);
-      }
-
-      auto result = executeEverywhere;
-      result = unite(result.subtractDomain(executeWhereRead.getDomain()), executeWhereRead);
-      result = unite(result.subtractDomain(executeWhereWrite.getDomain()), executeWhereWrite);
-
-      result.setOutTupleId_inplace(pm->getClusterConfig()->getClusterTuple());
-      stmt->setWhereMap(result.take());
-      // FIXME: We must ensure that depended instructions are executed on the same node. Execute on multiple nodes if necessary
-
-      modifiedScop();
-    }
-
-
-  public:
-    void computeScopDistibution() {
-      SE = pm->findOrRunAnalysis<ScalarEvolution>(&scop->getRegion());
-
-      for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt!=endStmt; ++itStmt) {
-        auto stmt = *itStmt;
-        distributeScopStmt(stmt);
-      }
-    }
-#pragma endregion
 
 
 #pragma region Scop CommGen
@@ -835,7 +772,6 @@ namespace {
       //auto tmp = overviewWhere();
 
       // "source computes": execute statements that read data from before the SCoP at the home location of that data
-
       for (auto input : inputFlow.getSets()) {
         auto stmtCtx = getScopStmtContext(input);
         auto accessed = stmtCtx->getAccessRelation();
@@ -1049,7 +985,7 @@ namespace {
           combuf->codegenSendWait(sendwaitCodegen, sendwaitChunk, sendwaitSrc, sendwaitDst);
         }
 
-        // { dst[cluster], readStmt[domain] }: getinput
+        // { dst[cluster], readStmt[domain] }: get_input
         {
           auto getinputDomain = remoteTransfer.reorderSubspaces(dstNodeSpace >> readDomainSpace);
           auto getinputWhere = remoteTransfer.reorderSubspaces(dstNodeSpace >> readDomainSpace, srcNodeSpace).castRange(clusterSpace); // { (dst[cluster], readStmt[domain]) -> src[cluster] }
@@ -1600,7 +1536,9 @@ namespace {
       auto writeAccessed = writeStmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
       auto out = writeAccessed.intersectDomain(outSet); // { writeStmt[domain] -> field[indexset] }
       auto fty = writeStmtCtx->getFieldType();
-      auto fieldHome = fty->getHomeAff(); // { field[indexset] -> node[cluster] }
+      //auto fvar = writeStmtCtx->getFieldVariable();
+      auto layout = fvar->getDefaultLayout();
+      auto fieldHome = layout->getHomeAff(); // { field[indexset] -> node[cluster] }
       auto readHome = fieldHome.setOutTupleId(dstNodeId).setInTupleId(fvarId);
       auto writeHome = fieldHome.setOutTupleId(srcNodeId).setInTupleId(fvarId);
       auto indexsetSpace = writeAccessed.getRangeSpace();
@@ -1780,7 +1718,7 @@ namespace {
 #endif
 #ifdef PLUTO_FOUND
       case OPTIMIZER_PLUTO:
-        runPass( polly::createPlutoOptimizerPass());
+        runPass(polly::createPlutoOptimizerPass());
         break;
 #endif
       case OPTIMIZER_ISL:
@@ -1812,11 +1750,11 @@ namespace {
     }
 #pragma endregion
 
-    llvm::Pass *asPass() LLVM_OVERRIDE {
+    llvm::Pass *asPass() override {
       return this;
     }
 
-    bool runOnScop(Scop &S) LLVM_OVERRIDE {
+    bool runOnScop(Scop &S) override {
       return false;
     }
 
@@ -1825,24 +1763,24 @@ namespace {
     SCEVExpander scevCodegen;
     //std::map<const isl_id *, Value *> paramToValue;
 
-    isl::Space getParamsSpace() LLVM_OVERRIDE {
+    isl::Space getParamsSpace() override {
       //TODO: All parameters should be collected in an initialization phase, thereafter nothing needs to be realigned
       scop->realignParams();
       return enwrap(scop->getParamSpace()).getParamsSpace();
     }
 
-    const SmallVector<const SCEV *, 8> &getParamSCEVs() LLVM_OVERRIDE {
+    const SmallVector<const SCEV *, 8> &getParamSCEVs() override {
       return scop->getParams();
     }
 
     /// SCEVExpander remembers which SCEVs it already expanded in order to reuse them; this is why it is here
-    llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) LLVM_OVERRIDE {
+    llvm::Value *codegenScev(const llvm::SCEV *scev, llvm::Instruction *insertBefore) override {
       return scevCodegen.expandCodeFor(scev, nullptr, insertBefore);
     }
 
 
     /// ScalarEvolution remembers its SCEVs
-    const llvm::SCEV *scevForValue(llvm::Value *value) LLVM_OVERRIDE {
+    const llvm::SCEV *scevForValue(llvm::Value *value) override {
       if (!SE) {
         SE = pm->findOrRunAnalysis<ScalarEvolution>(&scop->getRegion());
       }
@@ -1855,7 +1793,7 @@ namespace {
     // We need to always return the same id for same loop since we use that Id as key in maps
     // Usually ISL would remember itself always created ids, but we use the key as weak reference so ISL generates a new id after refcount drops to 0 
     llvm::DenseMap<const Loop *, isl::Id> storedDomIds;
-    isl::Id getIdForLoop(const Loop *loop) LLVM_OVERRIDE {
+    isl::Id getIdForLoop(const Loop *loop) override {
       auto &id = storedDomIds[loop];
       if (id.isValid())
         return id;
@@ -1869,7 +1807,7 @@ namespace {
 
 
     /// Here, polly::Scop is supposed to remember (or create) them
-    isl::Id idForSCEV(const llvm::SCEV *scev) LLVM_OVERRIDE {
+    isl::Id idForSCEV(const llvm::SCEV *scev) override {
       auto id = scop->getIdForParam(scev);
       if (!id) {
         // id is not yet known to polly::Scop
@@ -1889,14 +1827,14 @@ namespace {
 
 
   public:
-    void dump() const LLVM_OVERRIDE {
+    void dump() const override {
       dbgs() << "ScopProcessor:\n";
       if (scop)
         scop->dump();
     }
 
 
-    void validate() const LLVM_OVERRIDE {
+    void validate() const override {
 #ifdef NDEBUG
       return;
 #endif
@@ -1937,13 +1875,13 @@ namespace {
     }
 
 
-    isl::MultiAff getCurrentNodeCoordinate() LLVM_OVERRIDE {
+    isl::MultiAff getCurrentNodeCoordinate() override {
       prepareCurrentNodeCoordinate();
       return currentNodeCoord;
     }
 
 
-    polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) LLVM_OVERRIDE {
+    polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) override {
       return scop->getScopStmtFor(bb);
     }
 

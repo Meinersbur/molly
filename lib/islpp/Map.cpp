@@ -349,3 +349,12 @@ ISLPP_EXSITU_ATTRS Map isl::Map::intersectRange( UnionSet uset ) ISLPP_EXSITU_FU
   auto set = uset.extractSet(getRangeSpace());
   return Map::enwrap(isl_map_intersect_range(takeCopy(), set.take()));
 }
+
+isl::Set isl::Map::map( Set set ) const {
+  return Set::enwrap(isl_set_apply(set.take(), takeCopy()));
+}
+
+isl::Set isl::Map::map( Vec vec ) const {
+  return map(vec.toBasicSet());
+}
+
