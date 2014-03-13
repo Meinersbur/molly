@@ -158,6 +158,7 @@ namespace isl {
     //bool foreachMap(int (*fn)(__isl_take isl_map *map, void *user), void *user) const { return isl_union_map_foreach_map(keep(), fn, user); }
     bool foreachMap(const std::function<bool(isl::Map)> &/*return true to break enumeration*/) const;
 
+    // No overloading possible
     //bool foreachMap(const std::function<void(Map)> &) const;
     //bool foreachMap(const std::function<void(Map, bool&)> &) const;
 

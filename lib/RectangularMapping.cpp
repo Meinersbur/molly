@@ -13,7 +13,7 @@ RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::Mul
 }
 
 
-RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map map) {
+RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map map) { //FIXME: spelling
   auto nDims = map.getOutDimCount();
   auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createZeroMultiPwAff();
   auto offsets = lengths.copy();

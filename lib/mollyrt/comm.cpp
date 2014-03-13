@@ -1,3 +1,4 @@
+#define __MOLLYRT
 #include "molly.h"
 
 #include <cstdint>

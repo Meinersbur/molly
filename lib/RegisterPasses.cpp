@@ -93,7 +93,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
 
-  auto OSaftermolly = new raw_fd_ostream("5_mollied.ll", infoDummy, sys::fs::F_Text);
+  auto OSaftermolly = new raw_fd_ostream("6_mollied.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OSaftermolly, "After Molly did its work\n\n"));
   PM.add(llvm::createVerifierPass());
 
@@ -119,7 +119,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createGlobalDCEPass());        
   PM.add(llvm::createConstantMergePass());     
 
-  auto OSaftercleanup = new raw_fd_ostream("6_cleaned.ll", infoDummy, sys::fs::F_Text);
+  auto OSaftercleanup = new raw_fd_ostream("7_cleaned.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OSaftercleanup, "After cleanup\n\n"));
 #endif
 }

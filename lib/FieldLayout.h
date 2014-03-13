@@ -28,7 +28,7 @@ namespace molly {
     /// { logical[indexset] -> (physical[cluster], physical[local]) }
     /// TODO: Want to chain them, also non-affine mappings like space-filling curves and indirect indexing
     isl::Map relation;
-    isl::PwMultiAff relationAff; //TODO: For compatibility; Code should be able to handle multiple locations
+    //isl::PwMultiAff relationAff; //TODO: For compatibility; Code should be able to handle multiple locations
 
     /// To make a single, ordered index out of a local coordinate
     /// Inputs: physical[cluster], physical[local]
@@ -37,7 +37,7 @@ namespace molly {
     RectangularMapping *linearizer;
 
   protected:
-    FieldLayout(FieldType *fty, isl::PwMultiAff relationAff, /*take*/ RectangularMapping *linearizer) : fty(fty), relation(relationAff), relationAff(relationAff), linearizer(linearizer) {
+    FieldLayout(FieldType *fty, isl::Map relation, /*take*/ RectangularMapping *linearizer) : fty(fty), relation(relation), linearizer(linearizer) {
       assert(fty);
       assert(linearizer);
     }
@@ -47,14 +47,33 @@ namespace molly {
 
     /// Create a new value distribution
     /// It it specific to one logical indexset and cluster shape
-    static FieldLayout *create(FieldType *fty, ClusterConfig *clusterConf, isl::PwMultiAff relation);
+    static FieldLayout *create(FieldType *fty, ClusterConfig *clusterConf, isl::Map relation);
 
     FieldType *getFieldType() { return fty; }
 
     /// { cluster[nodecoord] -> fty[indexset] } 
-    /// which coordinates are stored at these nodes 
+    /// which coordinates are stored at these nodes
+    // TODO: obsolete; use getPhysicalNode() instead
     isl::PwMultiAff getHomeAff() const {
-      return relationAff.sublist(relation.getRangeSpace().wrap().getDomainSpace());
+      return relation.toPwMultiAff().sublist(relation.getRangeSpace().unwrap().getDomainSpace());
+    }
+
+    isl::Space getLogicalIndexsetSpace() const;
+
+    isl::Space getPhysicalNodeSpace() const {
+      return relation.getRangeSpace().unwrap().getDomainSpace();
+    }
+
+    isl::Space getPhysicalLocalSpace() const {
+      return relation.getRangeSpace().unwrap().getRangeSpace();
+    }
+
+    isl::Map getPhysicalNode() const {
+      return relation.wrap().reorganizeSubspaces(getLogicalIndexsetSpace(), getPhysicalNodeSpace());
+    }
+
+    isl::Map getPhysicalLocal() const {
+      return relation.wrap().reorganizeSubspaces(getLogicalIndexsetSpace(), getPhysicalLocalSpace());
     }
 
     llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);

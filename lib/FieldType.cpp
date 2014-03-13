@@ -77,7 +77,7 @@ isl::BasicSet FieldType::getLogicalIndexset() {
     set.addConstraint_inplace(move(ge));
 
     auto lt = isl::Constraint::createInequality(space);
-    lt.setConstant_inplace(getLengths()[d]);
+    lt.setConstant_inplace(getLengths()[d] - 1);
     lt.setCoefficient_inplace(isl_dim_set, d, -1);
     set.addConstraint_inplace(move(lt));
   }

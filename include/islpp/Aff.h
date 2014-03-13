@@ -130,6 +130,8 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS PwMultiAff toPwMultiAff() ISLPP_EXSITU_FUNCTION;
 
+    ISLPP_EXSITU_ATTRS BasicMap toBasicMap() ISLPP_EXSITU_FUNCTION;
+
     ISLPP_EXSITU_ATTRS Map toMap() ISLPP_EXSITU_FUNCTION;
 #pragma endregion
 

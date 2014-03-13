@@ -118,11 +118,11 @@ set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -std=gnu++11  -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
+set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -mllvm -molly)
+set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing)
 set(MOLLYCC_COMMON_LDLAGS )
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
@@ -542,14 +542,15 @@ endmacro()
 function (mollycc_compile _outfile)
 #message("   mollycc_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
-  #get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
+  get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
   clang_compile_link("${_outfile}" EXE
     COMPILER mollycc
     SOURCES ${_SOURCES}
     FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
     CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
     LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
-    LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES} ${_LIBS}
+#    LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES} ${_LIBS}
+    LIBS "${_MollyRT_location}" ${MPI_CXX_LIBRARIES} ${_LIBS}
     COMMENT "${_COMMENT}"
     )
 endfunction ()

@@ -1,6 +1,7 @@
 #include "FieldLayout.h"
 
 #include "RectangularMapping.h"
+#include "ClusterConfig.h"
 #include "islpp/PwMultiAff.h"
 #include "FieldType.h"
 #include "islpp/Map.h"
@@ -33,20 +34,32 @@ llvm::Value *FieldLayout::codegenLocalSize(MollyCodeGenerator &codegen, isl::PwM
 }
 
 
-FieldLayout * molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterConf, isl::PwMultiAff relation) {
+FieldLayout * molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterConf, isl::Map relation) {
+  // Rebuild relation to fit the environment
   auto logicalSpan = fty->getLogicalIndexset();
-  assert(relation.domain() <= logicalSpan);
-
+  relation.castDomain_inplace(logicalSpan.getSpace());
+  assert(relation.domain() >= logicalSpan);
   relation.intersectDomain_inplace(logicalSpan);
-  auto mappedNodeSpan = relation.range().unwrap().domain();
-  auto mappedLocalSpan = relation.range().unwrap();
+  auto nodeRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().domain());
+  nodeRel.castRange_inplace(clusterConf->getClusterSpace());
+  nodeRel.intersectRange_inplace(clusterConf->getClusterShape());
+  auto localRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().range());
+  localRel.resetOutTupleId_inplace();
+  auto mappedNodeSpan = nodeRel.domain();
+  auto mappedLocalSpan = localRel;
 
-  auto linearizer = RectangularMapping::createRectangualarHullMapping(mappedLocalSpan);
-
+  relation = rangeProduct(nodeRel, localRel);
+  auto linearizer = RectangularMapping::createRectangualarHullMapping(relation.range().unwrap());
   return new FieldLayout(fty, relation, linearizer);
 }
 
 
 llvm::Value * molly::FieldLayout::codegenLocalMaxSize( MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator) {
   return linearizer->codegenMaxSize(codegen, domaintranslator);
+}
+
+
+isl::Space molly::FieldLayout::getLogicalIndexsetSpace() const {
+  assert(relation.getDomainSpace() == fty->getIndexsetSpace());
+  return relation.getDomainSpace();
 }

@@ -82,6 +82,7 @@ namespace isl {
 
     Space createParamsSpace(unsigned nparam);
     Space createSetSpace(unsigned nparam, unsigned dim);
+    Space createSetSpace(unsigned dim);
 #pragma endregion
 
 

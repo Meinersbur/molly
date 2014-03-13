@@ -56,11 +56,6 @@ if(CLANG_ENABLE_REWRITER)
     )
 endif()
 
-#add_library(mollycc_obj OBJECT     
-#    driver.cpp 
-#    cc1as_main.cpp 
-#    cc1_main.cpp)
-
 add_molly_executable(mollycc
     driver.cpp 
     cc1as_main.cpp 
@@ -84,5 +79,5 @@ add_molly_executable(mollycc
     LLVMPollyLib
 )
 
-add_dependencies(mollycc     clang-headers     intrinsics_gen)
+#add_dependencies(mollycc     clang-headers     intrinsics_gen)
 target_link_libraries(mollycc ${LLVM_LINK_LIBS})

@@ -185,6 +185,11 @@ isl::Map isl::Ctx::readMap( const std::string &str ) {
 }
 
 
+isl::Space isl::Ctx::createSetSpace(unsigned dim) {
+  return createSetSpace(0, dim);
+}
+
+
 Map Ctx::createEmptyMap(Space &&space) {
   assert(isl_space_get_ctx(space.keep()) == keep());
   return Map::enwrap(isl_map_empty(space.take()));

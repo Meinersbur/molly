@@ -12,11 +12,13 @@
 #include "islpp/Space.h"
 #include "islpp/Map.h"
 
+#include <polly/Accesses.h>
+
 #include <llvm/Analysis/ScalarEvolution.h>
 
-using std::move;
 using namespace llvm;
 using namespace molly;
+using std::move;
 using isl::enwrap;
 
 #if 0
@@ -46,14 +48,17 @@ void MollyFieldAccess::loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVaria
 
 void MollyFieldAccess::loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
   assert(stmt);
-  bool found = false;
+  auto found = false;
   for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
     auto memacc = *it;
-    loadFromMemoryAccess(memacc, fvar);
-    if (isValid()) { // There must be only one MemoryAccess to a field 
-      assert( this->scopStmt == stmt);
-      return;
-    }
+    auto acc = polly::Access::fromMemoryAccess(memacc);
+    if (!acc.isFieldAccess())
+      continue;
+
+    assert(!found);
+    loadFromMemoryAccess(memacc, fvar);// There must be only one MemoryAccess to a field 
+    assert(isValid());
+    found = true;
   }
 }
 
@@ -74,7 +79,7 @@ MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc, Fi
 
 MollyFieldAccess MollyFieldAccess::fromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
   MollyFieldAccess result;
-  result.loadFromScopStmt (stmt, fvar);
+  result.loadFromScopStmt(stmt, fvar);
   return result;
 }
 

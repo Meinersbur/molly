@@ -28,9 +28,10 @@
 #define _GLIBCXX_NESTED_EXCEPTION_H 1
 #endif
 
-#if defined __clang__
+#if defined(__clang__)
 //#pragma clang diagnostic ignored "-Wunknown-pragmas"
-#elif defined __GNUC__
+#pragma clang diagnostic ignored "-Wgnu-array-member-paren-init"
+#elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #endif
 
@@ -302,13 +303,25 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 
 
+#if defined(__PRETTY_FUNCTION__)
+#define __MOLLY_FUNCNAME__ __PRETTY_FUNCTION__
+#elif defined(__FUNCSIG__)
+#define __MOLLY_FUNCNAME__ __FUNCSIG__
+#elif defined(__FUNCTION__)
+#define __MOLLY_FUNCNAME__ __FUNCTION__
+#elif defined(__func__)
+#define __MOLLY_FUNCNAME__ __func__
+#else
+#define __MOLLY_FUNCNAME__ ""
+#endif
+
 
 //TODO: molly attribute that allows function calls to this in SCoPs
-#define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__);
+#define MOLLY_DEBUG_FUNCTION_SCOPE DebugFunctionScope _debugfunctionscopeguard(__MOLLY_FUNCNAME__, __FILE__, __LINE__);
 #define MOLLY_DEBUG_FUNCTION_ARGS(...) \
-  DebugFunctionScope _debugfunctionscopeguard(__PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
+  DebugFunctionScope _debugfunctionscopeguard(__MOLLY_FUNCNAME__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
 #define MOLLY_DEBUG_METHOD_ARGS(...) \
-  DebugFunctionScope _debugfunctionscopeguard(this, __PRETTY_FUNCTION__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
+  DebugFunctionScope _debugfunctionscopeguard(this, __MOLLY_FUNCNAME__, __FILE__, __LINE__, #__VA_ARGS__, __VA_ARGS__);
 #else
 #define MOLLY_DEBUG(...) ((void)0)
 #define MOLLY_VAR(...) ((void)0)
@@ -492,24 +505,24 @@ class Mesh4D {
 
 namespace molly {
 
-  template<typename T, uint64_t... L> class array;
+  template<typename T, int... L> class array;
 
-  template <uint64_t>
+  template <int64_t>
   class _inttype {
   public:
-    typedef uint64_t type;
+    typedef int64_t type;
   };
 
-  template <uint64_t...>
+  template <int64_t...>
   class _dimlengths; // Never instantiate, used to store a sequence of integers, namely the size of several dimensions
 
 
-  template <uint64_t First, uint64_t...Rest>
+  template <int64_t First, int64_t...Rest>
   class _unqueue {
   public:
     typedef _dimlengths<Rest...> rest;
     typedef _dimlengths<First> first;
-    static const uint64_t value = First;
+    static const int64_t value = First;
   };
 
 
@@ -579,22 +592,22 @@ namespace molly {
     typedef _array_partial_subscript<T, _dimlengths<Stored..., _unqueue<Togo...>::value>, typename _unqueue<Togo...>::rest > subty;
 
     fieldty *owner;
-    int coords[nStored]; 
+    int64_t coords[nStored];
   public:
     MOLLYATTR(inline) _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords)  
-      : owner(owner), coords({coords...})   {
+      : owner(owner), coords({coords...}) {
         assert(owner);
         //TODO: assertion that all stored are in range
     }
 
   private:
     template<size_t... Indices>
-    MOLLYATTR(inline) subty buildSubtyHelper(_indices<Indices...>/*unused*/, int coords[sizeof...(Indices)], int appendCoord)   {
+    MOLLYATTR(inline) subty buildSubtyHelper(_indices<Indices...>/*unused*/, int64_t coords[sizeof...(Indices)], int64_t appendCoord)   {
       return subty(owner, coords[Indices]..., appendCoord);
     }
 
   public:
-    MOLLYATTR(inline) subty operator[](int i) /*TODO: const*/ {
+    MOLLYATTR(inline) subty operator[](int64_t i) /*TODO: const*/ {
       //assert(0 <= i);
       //assert(i < _unqueue<Togo...>::value);
       return buildSubtyHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), coords, i);
@@ -602,7 +615,7 @@ namespace molly {
   }; // class _array_partial_subscript
 
 
-  template<typename T, int Togo, uint64_t... Stored> 
+  template<typename T, int Togo, int64_t... Stored>
   class _array_partial_subscript<T, _dimlengths<Stored...>, _dimlengths<Togo>> {
     static const int nStored = sizeof...(Stored);
     static const int nTogo = 1;
@@ -611,7 +624,7 @@ namespace molly {
     typedef array<T, Stored..., Togo> fieldty;
 
     fieldty *owner;
-    uint64_t coords[nStored]; 
+    int64_t coords[nStored];
   public:
     MOLLYATTR(inline) _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords) 
       : owner(owner), coords({coords...}) {
@@ -622,12 +635,12 @@ namespace molly {
 
   private:
     template<size_t... Indices>
-    MOLLYATTR(inline) T &getPtrHelper(_indices<Indices...>/*unused*/, uint64_t coords[sizeof...(Indices)], int last)  {
+    MOLLYATTR(inline) T &getPtrHelper(_indices<Indices...>/*unused*/, int64_t coords[sizeof...(Indices)], int64_t last)  {
       return *owner->ptr(coords[Indices]..., last);
     }
 
   public:
-    MOLLYATTR(inline) T &operator[](uint64_t i)  /*TODO: const*/{
+    MOLLYATTR(inline) T &operator[](int64_t i)  /*TODO: const*/{
       //assert(0 <= i); // Check lower bound of coordinate
       //assert(i < Togo); // Check upper bound of coordinate
       return getPtrHelper(typename _make_index_sequence<typename _inttype<Stored>::type...>::type(), this->coords, i);
@@ -651,7 +664,7 @@ namespace molly {
 
 
 #pragma region Dummy builtins for other compilers
-#ifndef __mollycc__
+#if !defined(__mollycc__) && !defined(__MOLLYRT)
   template<typename F, typename... Args>
   void *__builtin_molly_ptr(F field, Args... coords) { MOLLY_DEBUG_FUNCTION_SCOPE
     return NULL;
@@ -688,7 +701,18 @@ namespace molly {
 
   static void __builtin_molly_global_free() { MOLLY_DEBUG_FUNCTION_SCOPE
   }
-#endif
+
+  static int64_t __builtin_molly_mod(int64_t divident, int64_t divisor) {
+    MOLLY_DEBUG_FUNCTION_SCOPE
+     assert(divisor > 0);
+     auto result = (divident + divident%divisor)%divisor; // always positive
+     auto quotient = (divident - result) / divisor;
+     assert(result >= 0);
+     assert(result < abs(divisor));
+     assert(divisor*quotient + result == divident);
+     return result;
+  }
+#endif // !defined(__mollycc__) && !defined(__MOLLYRT) 
 #pragma endregion
 
   template<typename ... Args> 
@@ -781,7 +805,7 @@ namespace molly {
   /// T = underlaying type (must be POD)
   /// L = sizes of dimensions (each >= 1)
   // TODO: Support sizeof...(L)==0
-  template<typename T, uint64_t... L>
+  template<typename T, int... L>
   class CXX11ATTRIBUTE(molly::field) array: public LocalStore, public field<T, sizeof...(L)> {
 
 
@@ -1006,7 +1030,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)==1), T&>::type
-      MOLLYATTR(fieldmember) MOLLYATTR(inline) operator[](int i)  { //MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLYATTR(fieldmember) MOLLYATTR(inline) operator[](int64_t i)  { //MOLLY_DEBUG_FUNCTION_SCOPE
         //assert(0 <= i);
         //assert(i < _unqueue<L...>::value);
         return *ptr(i);
@@ -1016,7 +1040,7 @@ namespace molly {
 
     template<typename Dummy = void>
     typename std::enable_if<std::is_same<Dummy, void>::value && (sizeof...(L)>1), subty>::type
-      MOLLYATTR(fieldmember) MOLLYATTR(inline)  operator[](int i) { //MOLLY_DEBUG_FUNCTION_SCOPE
+      MOLLYATTR(fieldmember) MOLLYATTR(inline) operator[](int64_t i) { //MOLLY_DEBUG_FUNCTION_SCOPE
         //assert(0 <= i);
         //assert(i < _unqueue<L...>::value);
         return subty(this, i);
@@ -1094,19 +1118,20 @@ namespace molly {
     int getClusterDims();
     int getClusterLength(int d);
 
-
-    template<typename T> T mod(T divident, T divisor) {
+#if !defined(__MOLLYRT)
+    // TODO: Support multiple bit lengths
+    MOLLYATTR(inline) int64_t mod(int64_t divident, int64_t divisor) {
       return __builtin_molly_mod(divident, divisor);
     }
-
+#endif
 } // namespace molly
 
 
 namespace molly {
  class SendCommunicationBuffer;
  class RecvCommunicationBuffer;
-
 } // namespace molly;
+
 extern "C" void __molly_sendcombuf_create(molly::SendCommunicationBuffer *combuf, molly::rank_t dst, int size);
 extern "C" void __molly_recvcombuf_create(molly::RecvCommunicationBuffer *combuf, molly::rank_t src, int size);
 //extern "C" LLVM_ATTRIBUTE_USED void __molly_combuf_send(void *combuf, uint64_t dstRank);
@@ -1117,8 +1142,8 @@ extern "C" LLVM_ATTRIBUTE_USED uint64_t __molly_cluster_current_coordinate(uint6
 
 
 #ifndef __MOLLYRT
-template<typename T, uint64_t... L>
-LLVM_ATTRIBUTE_USED MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) void molly::array<T, L...>::__get_broadcast(T &val, typename _inttype<L>::type... coords) const { MOLLY_DEBUG_FUNCTION_SCOPE
+template<typename T, int... L>
+LLVM_ATTRIBUTE_USED MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) void molly::array<T, L...>::__get_broadcast(T &val, typename molly::_inttype<L>::type... coords) const { MOLLY_DEBUG_FUNCTION_SCOPE
   if (isLocal(coords...)) {
     __get_local(val, coords...);
     broadcast_send(&val, sizeof(T)); // Send to other ranks so they can return the same result

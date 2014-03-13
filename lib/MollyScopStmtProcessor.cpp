@@ -18,11 +18,13 @@
 
 #include "polly/ScopInfo.h"
 #include "polly/FieldAccess.h"
+#include "polly/Accesses.h"
 
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
+
 
 
 using namespace molly;
@@ -39,7 +41,7 @@ namespace {
     MollyPassManager *pm;
     ScopStmt *stmt;
     MemoryAccess *fmemacc;
-    FieldAccess facc;
+    //FieldAccess facc;
     FieldVariable *fvar;
 
   public:
@@ -47,18 +49,21 @@ namespace {
       assert(pm);
       assert(stmt);
 
+      llvm::Value *fptr;
       for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
         auto memacc = *it;
-        auto accInstr = const_cast<Instruction*>(memacc->getAccessInstruction());
-        facc.loadFromInstruction(accInstr);
-        if (facc.isValid()) {
-          fmemacc = memacc;
-          break;
-        }
+        auto acc = Access::fromMemoryAccess(memacc);
+
+        if (!acc.isFieldAccess())
+          continue;
+
+        assert(!fmemacc && "Must be at most one field access per ScopStmt");
+        fmemacc = memacc;
+        fptr = acc.getFieldPtr();
       }
 
       if (fmemacc) {
-        auto fptr = facc.getFieldPtr();
+        //auto fptr = facc.getFieldPtr();
         fvar = pm->getFieldVariable(fptr);
         assert(fvar);
         //TODO: Validate that this ScopStmt contains nothing but stuff to access a field
@@ -472,7 +477,7 @@ namespace {
       return tyHomeAff;
     }
 
-
+#if 0
     llvm::StoreInst *getLoadUse() const {
       auto ld = facc.getLoadInst();
 
@@ -484,7 +489,7 @@ namespace {
       auto use = *ld->use_begin();
       return cast<StoreInst>(use);
     }
-
+#endif
 
     void validate() const override {
 #ifndef NDEBUG
@@ -570,7 +575,9 @@ namespace {
 
     llvm::Instruction *getAccessor() override {
       assert(isFieldAccess());
-      return facc.getAccessor();
+      auto acc = Access::fromMemoryAccess(fmemacc);
+      assert(acc.isFieldAccess());
+      return acc.getInstruction();
     }
 
 
@@ -585,9 +592,12 @@ namespace {
       return cast<StoreInst>(getAccessor());
     }
 
+
     llvm::Value *getAccessedCoordinate(unsigned i) override {
       assert(isFieldAccess());
-      return facc.getCoordinate(i);
+      auto acc = Access::fromMemoryAccess(fmemacc);
+      assert(acc.isFieldAccess());
+      return acc.getCoordinate(i);
     }
 
     /// Compared to getAccessRelation(), this returns just the one location that is accessed

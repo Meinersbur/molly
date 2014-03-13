@@ -20,7 +20,7 @@ add_custom_target(stencil-mollycc
   DEPENDS "${stencil_path}"
   COMMENT "Built stencil using mollycc"
   VERBATIM)
-add_dependencies(stencil-mollycc MollyRT)
+#add_dependencies(stencil-mollycc MollyRT)
 set_target_properties(stencil-mollycc PROPERTIES FOLDER "Molly")
 
 

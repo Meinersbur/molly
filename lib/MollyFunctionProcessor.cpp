@@ -998,10 +998,12 @@ namespace {
 
     void isolateFieldAccesses() {
       // "Normalize" existing BasicBlocks
-      auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-      removePass(ib);
+     //auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+      auto ib = pm->findAnalysis(&polly::IndependentBlocksID, func);
+      if (ib)
+        removePass(ib); // Invalidate existing pass
 
-      // Because splitFieldAccessed add more BasicBlock that we do not want to enumerate
+      // Because splitFieldAccessed add more BasicBlocks that we do not want to enumerate
       SmallVector<BasicBlock*, 8> bbList;
       for (auto &b : *func) {
         bbList.push_back(&b);
@@ -1029,10 +1031,10 @@ namespace {
 #endif
 
 
-      if (changed) {
+      //if (changed) {
         // Also make new BBs independent
-        ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-      }
+      //  ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+      //}
 
 
       //auto sci = findOrRunAnalysis<TempScopInfo>();

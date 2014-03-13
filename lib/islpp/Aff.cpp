@@ -196,6 +196,12 @@ PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   return result;
 }
 
+
+ISLPP_EXSITU_ATTRS BasicMap isl::Aff::toBasicMap() ISLPP_EXSITU_FUNCTION{
+  return BasicMap::enwrap(isl_basic_map_from_aff(takeCopy()));
+}
+
+
 ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_FUNCTION {
   return Map::enwrap(isl_map_from_aff(takeCopy()));
 }

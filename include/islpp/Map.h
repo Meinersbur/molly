@@ -69,9 +69,12 @@ namespace isl {
     Under,
 
     /// No strict relationship between the approximated result and the exact result can be made
-    /// However, the result tries to be close to the exact result.
+    /// However, depending on the chosen accuracy, the it tries to be close to the exact result.
     Rough
   };
+
+  inline bool possiblyFalsePositives(Approximation approx) { return approx == Approximation::Rough || approx==Approximation::Over; }
+  inline bool possiblyFalseNegatives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Under; }
 
 
   class Map : public Obj<Map,isl_map>, public Spacelike<Map> {
@@ -151,6 +154,9 @@ namespace isl {
     Map(MultiPwAff mpaff) : Obj(mpaff.isValid() ? mpaff.toMap() : Map()) {}
     const Map &operator=(MultiPwAff mpaff) LLVM_LVALUE_FUNCTION { obj_reset(mpaff.isValid() ? mpaff.toMap() : Map()); return *this; }
 
+    // from Aff
+    Map(Aff aff) : Obj(aff.isValid() ? aff.toMap() : Map()) {}
+    const Map &operator=(Aff aff) LLVM_LVALUE_FUNCTION { obj_reset(aff.isValid() ? aff.toMap() : Map()); return *this; }
 
     // to PwMultiAff
     ISLPP_EXSITU_ATTRS PwMultiAff toPwMultiAff() ISLPP_EXSITU_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(takeCopy())); } 
@@ -276,6 +282,7 @@ namespace isl {
     Map lexmin() const { return Map::enwrap(isl_map_lexmin(takeCopy())); }
 
     /// For every element in the map's domain, compute the lexical minimum of the set the element is mapped to
+    // TODO: We have no compatibility constraints, make this the default (without PwMultiAff suffix)
     PwMultiAff lexminPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
     PwMultiAff lexminPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -286,10 +293,11 @@ namespace isl {
     Map lexmax() const { return Map::enwrap(isl_map_lexmax(takeCopy())); }
 
     /// For every element in the map's domain, compute the lexical maximum of the set the element is mapped to
-    PwMultiAff lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(takeCopy())); }
-    PwMultiAff lexmaxPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+    // TODO: We have no compatibility constraints, make this the default
+    PwMultiAff lexmaxPwMultiAff() const { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(takeCopy())); }
+    PwMultiAff lexmaxPwMultiAff_consume() { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    PwMultiAff lexmaxPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmin_pw_multi_aff(take())); }
+    PwMultiAff lexmaxPwMultiAff() && { return PwMultiAff::enwrap(isl_map_lexmax_pw_multi_aff(take())); }
 #endif
 
     PwMultiAff lexoptPwMultiAff(bool max) const {
@@ -320,13 +328,10 @@ namespace isl {
 #endif
 
 
-    void applyDomain_inplace(const Map &map2) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_domain(take(), map2.takeCopy())); }
-    void applyDomain_inplace(Map &&map2) ISLPP_INPLACE_FUNCTION { give(isl_map_apply_domain(take(), map2.take())); }
-    Map applyDomain(const Map &map2) const { return Map::enwrap(isl_map_apply_domain(takeCopy(), map2.takeCopy())); }
-    Map applyDomain(Map &&map2) const { return Map::enwrap(isl_map_apply_domain(takeCopy(), map2.take())); }
+    ISLPP_INPLACE_ATTRS void applyDomain_inplace(Map map2) ISLPP_INPLACE_FUNCTION{ give(isl_map_apply_domain(take(), map2.take())); }
+    ISLPP_EXSITU_ATTRS Map applyDomain(Map map2) ISLPP_EXSITU_FUNCTION{ return Map::enwrap(isl_map_apply_domain(takeCopy(), map2.take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-    Map applyDomain(const Map &map2) && { return Map::wrap(isl_map_apply_domain(take(), map2.takeCopy())); }
-    Map applyDomain(Map &&map2) && { return Map::wrap(isl_map_apply_domain(take(), map2.take())); }
+    Map applyDomain(Map map2) && { return Map::wrap(isl_map_apply_domain(take(), map2.take())); }
 #endif
 
 
@@ -654,8 +659,9 @@ namespace isl {
     void projectOutSubspace_inplace(isl_dim_type type, const Space &subspace) ISLPP_INPLACE_FUNCTION;
     Map projectOutSubspace(isl_dim_type type, const Space &subspace) const;
 
-    Map domainProduct(const Map &that) const { return Map::enwrap(isl_map_domain_product(this->takeCopy(), that.takeCopy())); }
-    Map rangeProduct(const Map &that) const { return Map::enwrap(isl_map_range_product(this->takeCopy(), that.takeCopy())); }
+    Map domainProduct(Map that) const { return Map::enwrap(isl_map_domain_product(takeCopy(), that.take())); }
+    Map rangeProduct(Map that) const { return Map::enwrap(isl_map_range_product(takeCopy(), that.take())); }
+    Map flatProduct(Map that) const { return Map::enwrap(isl_map_flat_product(takeCopy(), that.take())); }
 
     //Map resetTupleId(isl_dim_type type) const { return Map::enwrap(isl_map_reset_tuple_id(takeCopy(), type)); }
     //Map resetTupleId_consume(isl_dim_type type) { return Map::enwrap(isl_map_reset_tuple_id(take(), type)); }
@@ -675,8 +681,8 @@ namespace isl {
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
 
     void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
-    void dumpExplicit(int maxElts)const;
-    void dumpExplicit()const; // In order do be callable without arguments from debugger
+    void dumpExplicit(int maxElts) const;
+    void dumpExplicit() const; // In order do be callable without arguments from debugger
     std::string toStringExplicit(int maxElts = 8);
 
 #ifndef NDEBUG
@@ -686,8 +692,8 @@ namespace isl {
     const Map &operator-=(Map that) ISLPP_INPLACE_FUNCTION { give(isl_map_subtract(take(), that.take())); return *this; }
 
     /// Apply this map on things
-    Set map(Set set)  const;
-    Set map(Vec vec)  const;
+    Set map(Set set) const;
+    Set map(Vec vec) const;
     
     /// Map the argument's range
     Map map(Map map) const {
@@ -717,11 +723,12 @@ namespace isl {
 
   static inline Map applyDomain(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_domain(map1.take(), map2.take())); }
   static inline Map applyRange(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_apply_range(map1.take(), map2.take())); }
-  static inline Map domainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_domain_product(map1.take(), map2.take())); }
+  static inline Map domainProduct(Map map1, Map map2) { return Map::enwrap(isl_map_domain_product(map1.take(), map2.take())); }
   static inline Map rangeProduct(Map map1, Map map2) { return Map::enwrap(isl_map_range_product(map1.take(), map2.take())); }
-  static inline Map flatProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_product(map1.take(), map2.take())); }
+  static inline Map flatProduct(Map map1, Map map2) { return Map::enwrap(isl_map_flat_product(map1.take(), map2.take())); }
   static inline Map flatDomainProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_domain_product(map1.take(), map2.take())); }
   static inline Map flatRangeProduct(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_flat_range_product(map1.take(), map2.take())); }
+  static inline Map product(Map map1, Map map2) { return Map::enwrap(isl_map_product(map1.take(), map2.take())); }
 
   static inline Map intersect(Map &&map1, Map &&map2) { return Map::enwrap(isl_map_intersect(map1.take(), map2.take())); }
   static inline Map intersect(Map &&map1, const Map &map2) { return Map::enwrap(isl_map_intersect(map1.take(), map2.takeCopy())); }
@@ -780,7 +787,7 @@ namespace isl {
 
   static inline PwAff dimMax(Map &&map, int pos) { return PwAff::enwrap(isl_map_dim_max(map.take(), pos)); }
 
-  /// Create a cartesian product with a subset of dimensions are equated
+  /// Create a Cartesian product with a subset of dimensions are equated
   /// e.g.
   /// join({ (A -> B1) }, { (B2 -> C) }) = { (A -> B1) -> (B2 -> C) | B1==B2 }
   Map join(const Set &domain, const Set &range, unsigned firstDomainDim, unsigned firstRangeDim, unsigned countEquate);
