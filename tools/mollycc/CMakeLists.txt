@@ -76,7 +76,7 @@ add_molly_executable(mollycc
 #    selectiondag
   LINK_LIBS 
     LLVMMolly
-    LLVMPollyLib
+    Polly
 )
 
 #add_dependencies(mollycc     clang-headers     intrinsics_gen)

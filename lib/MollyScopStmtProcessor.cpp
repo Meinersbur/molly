@@ -568,6 +568,7 @@ namespace {
       return getParentProcessor();
     }
 
+
     const llvm::Region *getRegion() override {
       return  stmt->getRegion();
     }
@@ -581,15 +582,22 @@ namespace {
     }
 
 
-    llvm::LoadInst *getLoadAccessor() override {
+    llvm::Instruction *getLoadAccessor() override {
       assert(isReadAccess());
-      return cast<LoadInst>(getAccessor());
+      return getAccessor();
     }
 
 
-    llvm::StoreInst *getStoreAccessor() override {
+    llvm::Instruction *getStoreAccessor() override {
       assert(isWriteAccess());
-      return cast<StoreInst>(getAccessor());
+      return getAccessor();
+    }
+
+
+     llvm::Value *getAccessPtr() override {
+       assert(fmemacc);
+       auto acc = Access::fromMemoryAccess(fmemacc);
+       return acc.getTypedPtr();
     }
 
 
@@ -599,6 +607,101 @@ namespace {
       assert(acc.isFieldAccess());
       return acc.getCoordinate(i);
     }
+
+
+    Access getAccess() override {
+      assert(isFieldAccess());
+      return Access::fromMemoryAccess(fmemacc);
+    }
+
+
+    /// If this is a field access stmt, returns the alloca the load result is stored/the value to store is taken from
+    llvm::AllocaInst *getAccessStackStoragePtr() override {
+      assert(isFieldAccess());
+      auto acc = Access::fromMemoryAccess(fmemacc);
+      if (isReadAccess()) {
+        auto ptr = acc.getReadResultPtr();
+        if (!ptr) {
+        auto val = acc.getReadResultRegister();
+        ptr = getStackStoragePtr(val);
+        }
+        return cast<AllocaInst>(ptr);
+      } else {
+        assert(isWriteAccess());
+        auto ptr = acc.getWrittenValuePtr();
+        if (!ptr) {
+          auto val = acc.getWrittenValueRegister();
+          ptr = getStackStoragePtr(val);
+        }
+        return cast<AllocaInst>(ptr);
+      }
+    }
+
+
+    bool isDependent(llvm::Value *val) {
+      // Something that does not relate to scopes (Constants, GlobalVariables)
+      auto instr = dyn_cast<Instruction>(val);
+      if (!instr)
+        return false;
+
+      // Something within this statement is also non-dependent of the SCoP around
+      auto bb = getBasicBlock();
+      if (instr->getParent() == bb)
+        return false;
+
+      // Something outside the SCoP, but inside the function is also not dependent
+      auto scopCtx = getScopProcessor();
+      auto scopRegion = scopCtx->getRegion();
+      if (!scopRegion->contains(instr))
+        return false;
+
+      // As special exception, something that dominates all ScopStmts also is not concerned by shuffling the ScopStmts' order
+      // This is meant for AllocaInsts we put there
+      //if (instr->getParent() == scopRegion->getEntry())
+      //  return false;
+
+      return true;
+    }
+
+
+    /// Find the memory on the stack this value is stored between ScopStmts
+    /// For non-canSynthesize it is guranteed to exist by IndependentBlocks pass
+    /// Return nullptr if no memory has been allocated as temporary storeage
+    llvm::AllocaInst *getStackStoragePtr(llvm::Value *val) override {
+      val = val->stripPointerCasts();
+      if (auto alloca = dyn_cast<AllocaInst>(val)) {
+        // It is a alloca itself, using aggregate semantics 
+        return alloca;
+      }
+
+      // Is this value loading the scalar; if yes, it's scalar location is obviously where it has been loaded from
+      if (auto load = dyn_cast<LoadInst>(val)) {
+        auto ptr = load->getPointerOperand();
+        if (auto alloca = dyn_cast<AllocaInst>(ptr))
+          if (alloca->getAllocatedType() == val->getType())
+          return alloca;
+      }
+
+      // Look where IndependentBlocks stored the val
+      for (auto itUse = val->user_begin(), endUse = val->user_end(); itUse != endUse; ++itUse) {
+        auto useInstr = *itUse;
+        if (!isa<StoreInst>(useInstr))
+          continue;
+        if (itUse.getOperandNo() == StoreInst::getPointerOperandIndex())
+          continue; // Must be the value operand, not the target ptr
+
+        auto store = cast<StoreInst>(useInstr);
+        if (store->getParent() != getBasicBlock())
+          continue;
+        auto ptr = store->getPointerOperand();
+        if (auto alloca = dyn_cast<AllocaInst>(ptr)) {
+          if (alloca->getAllocatedType() == val->getType())
+            return alloca;
+        }
+      }
+      return nullptr;
+    }
+
 
     /// Compared to getAccessRelation(), this returns just the one location that is accessed
     /// Hence, it won't work if there is a MAY access

@@ -29,6 +29,13 @@ namespace llvm {
   class CallInst;
   class StoreInst;
   class LoadInst;
+  class AllocaInst;
+
+  // #include <llvm/IR/IntrinsicInst.h>
+  class IntrinsicInst;
+  class MemTransferInst;
+  class MemCpyInst;
+  class MemMoveInst;
 
   // #include <llvm/IR/BasicBlock.h>
   class BasicBlock;

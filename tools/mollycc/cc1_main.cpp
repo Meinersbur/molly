@@ -1,6 +1,3 @@
-#include "molly/LinkAllPasses.h"
-#include "molly/RegisterPasses.h"
-
 //===-- cc1_main.cpp - Clang CC1 Compiler Frontend ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -24,6 +21,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/LinkAllPasses.h"
@@ -36,6 +34,10 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
+#ifdef MOLLY
+#include "molly/LinkAllPasses.h"
+#include "molly/RegisterPasses.h"
+#endif /* MOLLY */
 using namespace clang;
 using namespace llvm::opt;
 
@@ -44,7 +46,7 @@ using namespace llvm::opt;
 //===----------------------------------------------------------------------===//
 
 static void LLVMErrorHandler(void *UserData, const std::string &Message,
-                             bool GenCrashDiag) {
+  bool GenCrashDiag) {
   DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
@@ -60,8 +62,8 @@ static void LLVMErrorHandler(void *UserData, const std::string &Message,
 }
 
 int cc1_main(const char **ArgBegin, const char **ArgEnd,
-             const char *Argv0, void *MainAddr) {
-  OwningPtr<CompilerInstance> Clang(new CompilerInstance());
+  const char *Argv0, void *MainAddr) {
+  std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Initialize targets first, so that --version shows registered targets.
@@ -77,13 +79,13 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
   bool Success;
   Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
-                                               ArgBegin, ArgEnd, Diags);
+    ArgBegin, ArgEnd, Diags);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
-      Clang->getHeaderSearchOpts().ResourceDir.empty())
+    Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+    CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -93,7 +95,7 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
   llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+    static_cast<void*>(&Clang->getDiagnostics()));
 
 #ifdef MOLLY
 #if 0
@@ -124,7 +126,7 @@ int cc1_main(const char **ArgBegin, const char **ArgEnd,
   if (Clang->getFrontendOpts().DisableFree) {
     if (llvm::AreStatisticsEnabled() || Clang->getFrontendOpts().ShowStats)
       llvm::PrintStatistics();
-    Clang.take();
+    BuryPointer(Clang.release());
     return !Success;
   }
 

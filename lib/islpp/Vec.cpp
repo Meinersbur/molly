@@ -2,7 +2,6 @@
 #include "islpp/Vec.h"
 
 #include "islpp/Printer.h"
-#include "../isl_sample.h"
 #include "islpp/BasicSet.h"
 
 using namespace isl;

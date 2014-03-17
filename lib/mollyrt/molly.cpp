@@ -1045,6 +1045,11 @@ extern "C" bool __molly_isMaster() {
   return communicator->isMaster();
 }
 
+
+extern "C" int64_t __molly_mod(int64_t divident, int64_t divisor) {
+  assert(divisor > 0);
+  return (divident+divident%divisor)%divisor;
+}
+
 #pragma endregion
  
-

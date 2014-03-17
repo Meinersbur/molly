@@ -1,26 +1,34 @@
 #include "MollyFunctionProcessor.h"
 
-#include <llvm/Pass.h>
+#include "MollyIntrinsics.h"
+#include "MollyUtils.h"
 #include "MollyPassManager.h"
-#include <llvm/ADT/Twine.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Instructions.h>
 #include "LLVMfwd.h"
-#include <llvm/IR/IRBuilder.h>
 #include "MollyFieldAccess.h"
 #include "FieldVariable.h"
-#include <llvm/IR/GlobalVariable.h>
 #include "FieldType.h"
-#include "MollyUtils.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "polly/LinkAllPasses.h"
 #include "ClusterConfig.h"
-#include "clang/CodeGen/MollyRuntimeMetadata.h"
 #include "Codegen.h"
-#include "llvm/IR/Module.h"
 #include "FieldLayout.h"
 #include "RectangularMapping.h"
+
+#include <clang/CodeGen/MollyRuntimeMetadata.h>
+
+#include <polly/LinkAllPasses.h>
+#include <polly/Accesses.h>
+
+#include <llvm/Pass.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/ADT/Twine.h>
+
+
+
 
 using namespace molly;
 using namespace polly;
@@ -466,31 +474,69 @@ namespace {
     }
 
 
-    void replaceValueAccess(llvm::Instruction *accInstr) {
-      auto acc = FieldAccess::fromAccessInstruction(accInstr);
-      assert(acc.isValid());
+    void replaceValueAccess(llvm::Instruction *accInstr, int opNo) {
+      auto accRead = Access::fromInstruction(accInstr, opNo, true, false);
+      auto accWrite = Access::fromInstruction(accInstr, opNo, false, true);
+      auto reading = accRead.isValid() && accRead.isFieldAccess() ;
+      auto writing = accWrite.isValid() && accWrite.isFieldAccess();
+
+      Access acc;
+      if (reading) {
+        acc = accRead;
+      } else if (writing) {
+        acc = accWrite;
+      } else 
+        return;
+
+      auto fvar = pm->getFieldVariable(acc.getFieldPtr());
+      auto coords = acc.getCoordinateValues();
+
       auto codegen = makeCodegen(accInstr);
-
-      auto coords = acc.getCoordinates();
-      auto field = acc.getBaseField();
-      auto fvar = pm->getFieldVariable(field);
-
+      codegen.setInsertBefore(accInstr);
       auto rank = codegen.callFieldRankof(fvar, coords);
       auto idx = codegen.callLocalIndexof(fvar, coords);
 
-      if (acc.isRead()) {
-        auto loadInst = acc.getLoadInst();
-        auto mollyLoad = codegen.codegenValueLoad(fvar, rank, idx);
-        loadInst->replaceAllUsesWith(mollyLoad);
-        loadInst->eraseFromParent();
+      if (reading)
+        if (auto loadInst = accRead.getReadResultRegister()) {
+          assert(!writing);
+          auto mollyLoad = codegen.codegenValueLoad(fvar, rank, idx);
+          loadInst->replaceAllUsesWith(mollyLoad);
+          loadInst->eraseFromParent();
+          return;
+        }
+    
+      if (writing) {
+        if (auto writtenValue = accWrite.getWrittenValueRegister()) {
+          assert(!reading);
+          codegen.codegenValueStore(fvar, writtenValue, rank, idx);
+          accInstr->eraseFromParent();
+          return;
+        }
       }
-      else if (acc.isWrite()) {
-        auto storeInst = acc.getStoreInst();
-        codegen.codegenValueStore(fvar, storeInst->getValueOperand(), rank, idx);
-        storeInst->eraseFromParent();
+
+      assert(!acc.getInstructionAsLoad() && !acc.getInstructionAsStore()); // From here on the read/write operand is a pointer
+
+      auto ptr = accInstr->getOperand(opNo);
+      assert(ptr->getType()->isPointerTy());
+
+      if (reading && writing) {
+        int e = 0;
       }
-      else
-        llvm_unreachable("Strange access");
+
+      auto stackSpace = codegen.allocStackSpace(acc.getElementType(), "fieldelt");
+      auto castedSpace = codegen.createPointerCast(stackSpace, ptr->getType());
+      accInstr->setOperand(opNo, castedSpace);
+
+      if (reading) {
+        // If memcpy, this adds another memcpy, which other optimization passes should optimize coalesce
+        codegen.setInsertBefore(accInstr);
+        codegen.callValueLoad(fvar, stackSpace, rank, idx);
+      }
+
+      if (writing) {
+        codegen.setInsertAfter(accInstr);
+        codegen.callValueStore(fvar, stackSpace, rank, idx);
+      }
     }
 
 
@@ -504,27 +550,61 @@ namespace {
       //  auto coord = call->getOperand(i+1);
       //}
 
-      SmallVector<Instruction *, 4> uses;
-      for (auto useIt = call->use_begin(), end = call->use_end(); useIt != end; ++useIt) {
+      SmallVector<std::pair<Instruction *,int>, 4> uses;
+      for (auto useIt = call->user_begin(), end = call->user_end(); useIt != end; ++useIt) {
         auto opno = useIt.getOperandNo();
         auto use = &useIt.getUse();
         auto user = cast<Instruction>(*useIt);
 
+        if (auto castInstr = dyn_cast<BitCastInst>(user)) {
+          assert(opno == 0);
+          for (auto useIt = castInstr->user_begin(), end = castInstr->user_end(); useIt != end; ++useIt) {
+            auto opno = useIt.getOperandNo();
+            auto use = &useIt.getUse();
+            auto user = cast<Instruction>(*useIt);
+            uses.push_back(make_pair(user, opno));
+          }
+          continue;
+        }
+
         // Make copy because replaceValueAccess() will erease the instr from the list
-        uses.push_back(user);
+        uses.push_back(make_pair(user,opno));
       }
 
-      for (auto use : uses) {
-        replaceValueAccess(use);
+      for (const auto &use : uses) {
+        auto useInstr = use.first;
+        auto useOpIdx = use.second;
+        replaceValueAccess(useInstr, useOpIdx);
       }
-      call->eraseFromParent();
+      //call->eraseFromParent(); // There might be some stale bitcast left, let dce remove it
     }
+
+
+    LLVMContext &getLLVMContext() {
+      return func->getContext();
+    }
+
+
+    void replaceMod(MollyModInst *call) {
+      auto divident = call->getDivident();
+      auto divisor = call->getDivisor();
+
+      auto &llvmContext = getLLVMContext();
+      auto intTy = Type::getInt64Ty(llvmContext);
+
+      Type *tys[] = { intTy, intTy };
+      auto funcDecl = getRuntimeFunc("__molly_mod", intTy, tys); // TODO: function call overhead high for such a small function, better emit inline
+      auto funcTy = funcDecl->getFunctionType();
+
+      DefaultIRBuilder irBuilder(call);
+     auto result = irBuilder.CreateCall2(funcDecl, divident, divisor);
+     call->replaceAllUsesWith(result); call->eraseFromParent();
+    }
+
 
     isl::Ctx *getIslContext() {
       return pm->getIslContext();
     }
-
-
 
 
     void replaceFieldRankof(CallInst *call, Function *called) {
@@ -802,6 +882,9 @@ namespace {
           //case Intrinsic::molly_cluster_myrank:
           //  replaceClusterMyrank(instr, called);
           //  break;
+        case Intrinsic::molly_mod:
+          replaceMod(cast<MollyModInst>(instr));
+          break;
         default:
           llvm_unreachable("Need to replace intrinsic!");
         }
@@ -969,7 +1052,7 @@ namespace {
         auto gep = facc.getFieldCall();
         assert(gep->hasNUses(1));
         auto acc = facc.getAccessor();
-        gep->moveBefore(acc);
+        //gep->moveBefore(acc); // Let IndependentBlocks move it; llvm.memcpy has a bitcast in between accessor and llvm.molly.ptr
 
         auto splitPt1 = gep;
         auto splitPt2 = acc->getNextNode();

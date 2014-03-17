@@ -750,7 +750,7 @@ namespace {
       // Split into flow and output dependencies, and remove the bbpos annotation
       isl::UnionMap nonfieldMustFlowBtwStmt;
       //nonfieldMustFlow.foreachMap([&](isl::Map map) -> bool {
-      for (auto map : nonfieldMustFlow.getMaps()) {
+      for (auto map : nonfieldMustFlow.getMaps()) {//TODO: Remove self-dependencies
         auto stmtbbposSpace = map.getDomainSpace();
         auto stmtSpace = stmtbbposSpace.unwrap().getDomainSpace();
         auto removeBbposMap = domainProduct(stmtSpace.identityToSelfBasicMap(), alltoall(bbposSpace, stmtSpace));
@@ -1007,6 +1007,8 @@ namespace {
       auto readWhere = readStmt->getWhere().intersectDomain(readDomain).setOutTupleId(dstNodeId); // { stmtRead[domain] -> dstNode[cluster] }
       auto readEditor = readStmt->getEditor();
       auto readVal = readStmt->getLoadAccessor();
+      auto readPtr = readStmt->getAccessPtr();
+      auto readAccess = readStmt->getAccess();
       auto readAccessedAff = readStmt->getAccessed();
 
       auto fvar = readFvar;
@@ -1035,8 +1037,10 @@ namespace {
         //auto readlocalCurrentAccessed = readAccRel.castDomain(readlocalStmtCtx->getDomainSpace()); // { readlocalStmt[domain] -> field[indexset] }
         auto readlocalCurrentAccessed = readAccessedAff.castDomain(readlocalStmtCtx->getDomainSpace()); // { readlocalStmt[domain] -> field[indexset] }
 
-        auto readlocalVal = readlocalCodegen.codegenLoadLocal(fvar, readlocalCurrentNode, readlocalCurrentAccessed);
-        readlocalCodegen.updateScalar(readVal->getPointerOperand(), readlocalVal);
+        auto readStorage = readStmt->getAccessStackStoragePtr();
+        readlocalCodegen.codegenAssignScalarFromLocal(readStorage, fvar, readlocalCurrentNode, readlocalCurrentAccessed);
+//        auto readlocalVal = readlocalCodegen.codegenLoadLocal(fvar, readlocalCurrentNode, readlocalCurrentAccessed);
+//        readlocalCodegen.updateScalar(readPtr, readlocalVal);
       }
 
 
@@ -1142,7 +1146,7 @@ namespace {
           //auto readflowBufptr = combuf->codegenPtrToRecvBuf(readflowCodegen, readflowChunk, readflowSrc, readflowDst, readflowIndex);
           //auto readflowVal = readflowCodegen.getIRBuilder().CreateLoad(readflowBufptr, "readflowval");
           auto readflowVal = combuf->codegenLoadFromRecvBuf(readflowCodegen, readflowChunk, readflowSrc, readflowDst, readflowIndex);
-          readflowCodegen.updateScalar(readVal->getPointerOperand(), readflowVal);
+          readflowCodegen.updateScalar(readPtr, readflowVal);
         }
 
 
@@ -1517,10 +1521,12 @@ namespace {
       auto writeFlowStmt = getScopStmtContext(writeFlowEditor.getStmt());
       auto writeFlowCodegen = writeFlowStmt->makeCodegen();
 
-      auto writeStore = writeStmt->getStoreAccessor();
+      //auto writeStore = writeStmt->getStoreAccessor();
+      auto writeAcc = writeStmt->getAccess();
       auto writeAccessed = writeStmt->getAccessed().toPwMultiAff(); // { writeStmt[domain] -> field[indexset] }
-      auto writeVal = writeStore->getValueOperand();
-      auto writeflowVal = writeFlowCodegen.materialize(writeVal);
+      //auto writeVal = writeStore->getValueOperand();
+      //auto writeflowVal = writeFlowCodegen.materialize(writeVal);
+      auto writeflowVal = writeFlowCodegen.materialize(writeAcc.getWrittenValueRegister());
 
       auto writeFlowCurrentIteration = writeFlowEditor.getCurrentIteration();
       auto writeFlowCurrentDst = writeFlowCurrentIteration.sublist(readNodeShape.getSpace());
@@ -1661,7 +1667,9 @@ namespace {
         auto writelocalCodegen = writelocalStmtCtx->makeCodegen();
 
         auto writeStore = writeStmtCtx->getStoreAccessor();
-        auto writeVal = writeStore->getValueOperand();
+        //auto writeVal = writeStore->getValueOperand();
+        auto writeAcc = writeStmtCtx->getAccess();
+        auto writeVal = writeAcc.getWrittenValueRegister();
         auto writeAccessRel = writeStmtCtx->getAccessRelation();
         auto writeAccessed = writeStmtCtx->getAccessed();
 
@@ -1677,8 +1685,11 @@ namespace {
           writelocalCurrentIndex.push_back(v);
         }
 
-        auto writelocalVal = writelocalCodegen.materialize(writeVal);
-        writelocalCodegen.codegenStoreLocal(writelocalVal, fvar, writelocalCurrentNode, writelocalCurrentAccessed);
+        auto writeStorage = writeStmtCtx->getAccessStackStoragePtr();
+        writelocalCodegen.codegenAssignLocalFromScalar(fvar, writelocalCurrentNode, writelocalCurrentAccessed, writeStorage);
+
+        //auto writelocalVal = writelocalCodegen.materialize(writeVal);
+        //writelocalCodegen.codegenStoreLocal(writelocalVal, fvar, writelocalCurrentNode, writelocalCurrentAccessed);
       }
 
 
@@ -1710,6 +1721,7 @@ namespace {
         auto writeflowCodegen = writeflowStmtCtx->makeCodegen();
 
         auto writeStore = writeStmtCtx->getStoreAccessor();
+        auto writeAcc = writeStmtCtx->getAccess();
         auto writeAccessedAff = writeStmtCtx->getAccessed(); // { writeStmt[domain] -> field[indexset] }
 
         auto writeflowCurrent = writeflowEditor.getCurrentIteration();
@@ -1719,7 +1731,7 @@ namespace {
         auto writeflowCurrentDst = fieldHome.pullback(writeflowCurrentIndex);
         auto writeflowCurrentChunk = writeDomainSpace.mapsTo(epilogueDomainSpace).createZeroMultiAff(); // {  writeStmt[domain] -> prologue[] }
         auto writeflowPtr = combuf->codegenPtrToSendBuf(writeflowCodegen, writeflowCurrentChunk, writeflowCurrentNode, writeflowCurrentDst, writeflowCurrentIndex);
-        auto writeflowStore = writeflowCodegen.getIRBuilder().CreateStore(writeStore->getValueOperand(), writeflowPtr);
+        auto writeflowStore = writeflowCodegen.getIRBuilder().CreateStore(writeAcc.getWrittenValueRegister(), writeflowPtr);
 
 
         // { dstNode[cluster] }: send

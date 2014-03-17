@@ -750,6 +750,8 @@ namespace {
 
 
 #pragma region Field CodeGen
+#if 0
+    // There is no local length anymore
     Function *emitLocalLength(FieldType *fty) {
       auto &context = module->getContext();
       auto llvmTy = fty->getType();
@@ -794,10 +796,11 @@ namespace {
       fty->setLocalLengthFunc(localLengthFunc);
       return localLengthFunc;
     }
+#endif
 
     void generateAccessFuncs() {
       for (auto it : fieldTypes) {
-        emitLocalLength(it.second);
+        //emitLocalLength(it.second);
       }
     }
 
@@ -1510,8 +1513,9 @@ namespace {
 
         auto funcCtx = getFuncContext(func);
         //funcCtx->promoteMemcpy();
+        assert(!verifyFunction(f, &llvm::errs()));
         funcCtx->isolateFieldAccesses();
-        verifyFunction(f);
+        assert(!verifyFunction(f, &llvm::errs()));
       }
 
       std::string infoDummy;
@@ -1549,7 +1553,7 @@ namespace {
         // Decide on which node(s) a ScopStmt should execute 
         //scopCtx->computeScopDistibution();
         //scopCtx->validate();
-        //verifyFunction(*scopCtx->getParentFunction());
+        //assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
 
         // Insert communication between ScopStmt
         // Implementation note: This modifies the original IR;
@@ -1559,7 +1563,7 @@ namespace {
         // Disadvantages: Modifies Polly itself, hard to keep it independent from Polly; Need to modify both codegens (Cloog and ISL); Theoretically, we can modify the added IR such that it works, no codegen needed at all
         scopCtx->genCommunication();
         scopCtx->validate();
-        verifyFunction(*scopCtx->getParentFunction());
+        assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
       }
 
       // Create some SCoPs that init the combufs
@@ -1571,19 +1575,19 @@ namespace {
         if (!scopCtx->hasFieldAccess())
           continue;
 
-        verifyFunction(*scopCtx->getParentFunction());
+        assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
 
           stmtCtx->applyWhere();
           stmtCtx->validate();
         }
-        verifyFunction(*scopCtx->getParentFunction());
+        assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
 
         // Let polly optimize and and codegen the scops
         //scopCtx->pollyOptimize();
         scopCtx->pollyCodegen();
-        verifyFunction(*scopCtx->getParentFunction());
+        assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
       }
 
 
@@ -1605,9 +1609,9 @@ namespace {
         auto funcCtx = getFuncContext(&func);
 
         funcCtx->replaceIntrinsics();
-        verifyFunction(func);
+        assert(!verifyFunction(func, &llvm::errs()));
         funcCtx->replaceRemainaingIntrinsics();
-        verifyFunction(func);
+        assert(!verifyFunction(func, &llvm::errs()));
       }
 
       // generate a new main function

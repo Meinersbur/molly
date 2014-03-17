@@ -248,6 +248,6 @@ llvm::StoreInst *MollyFieldAccess::getLoadUse() const {
   assert( this->getPollyScopStmt() );
   assert(ld->getNumUses() == 1);
 
-  auto use = *ld->use_begin();
+  auto use = *ld->user_begin();
   return cast<StoreInst>(use);
 }

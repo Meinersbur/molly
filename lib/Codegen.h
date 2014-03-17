@@ -45,13 +45,25 @@ namespace molly {
 
     isl::AstBuild &initAstBuild();
 
-    llvm::Value *allocStackSpace(llvm::Type *ty);
+    
 
   protected:
     Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
 
   public:
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
+
+    llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Twine name = Twine());
+    llvm::Value *createPointerCast(llvm::Value *val, llvm::Type *type);
+
+    void setInsertBefore(llvm::Instruction *beforeInstr) {
+      irBuilder.SetInsertPoint(beforeInstr);
+    }
+    void setInsertAfter(llvm::Instruction *afterInstr) {
+      auto beforeInstr = afterInstr->getNextNode();
+      assert(beforeInstr);
+      irBuilder.SetInsertPoint(beforeInstr);
+    }
 
     llvm::CallInst *callLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
@@ -102,6 +114,7 @@ namespace molly {
     llvm::CallInst *callValueLoad(FieldVariable *fvar, llvm::Value *valptr, llvm::Value *rank, llvm::Value *idx);
     llvm::CallInst *callRuntimeValueLoad(FieldVariable *fvar, llvm::Value *srcbufptr, llvm::Value *rank, llvm::Value *idx);
     llvm::LoadInst *codegenValueLoad(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx);
+    //void codegenValueLoadPtr(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx, llvm::Value *writeIntoPtr);
 
     llvm::CallInst *callValueStore(FieldVariable *fvar, llvm::Value *valueToStore, llvm::Value *rank, llvm::Value *idx);
     llvm::CallInst *callRuntimeValueStore(FieldVariable *fvar,  llvm::Value *dstbufptr, llvm::Value *rank, llvm::Value *idx);
@@ -157,7 +170,18 @@ namespace molly {
     //void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
 
+    void codegenAssignLocalFromScalar(FieldVariable *dstFvar, isl::PwMultiAff dstWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff dstIndex/* [domain] -> field[indexset] */, llvm::Value *srcPtr);
+
+    llvm::Value *codegenLoadLocalPtr(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
     llvm::Value *codegenLoadLocal(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
+
+    llvm::MemCpyInst *codegenAssignPtrPtr(llvm::Value *dstPtr, llvm::Value *srcPtr);
+    llvm::MemCpyInst *codegenAssignPtrPtr(llvm::Value *dstPtr, llvm::Value *dstBase, isl::Map dstIndex, llvm::Value *srcPtr, llvm::Value *srcBase, isl::Map srcIndex);
+
+    void codegenAssignPtrVal(llvm::Value *dstPtr, llvm::Value *srcVal);
+    void codegenAssignValPtr(llvm::Value *dstVal, llvm::Value *srcPtr);
+    void codegenAssignValVal(llvm::Value *dstVal, llvm::Value *srcVal);
+    void codegenAssignScalarFromLocal(llvm::Value *destPtr, FieldVariable *srcFvar, isl::PwMultiAff srcWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff srcIndex/* [domain] -> field[indexset] */);
 
     //void codegenStore(llvm::Value *val, llvm::Value *ptr);
 

@@ -37,7 +37,7 @@ namespace molly {
     RectangularMapping *linearizer;
 
   protected:
-    FieldLayout(FieldType *fty, isl::Map relation, /*take*/ RectangularMapping *linearizer) : fty(fty), relation(relation), linearizer(linearizer) {
+    FieldLayout(FieldType *fty, isl::Map relation, /*take*/ RectangularMapping *linearizer) : rankoffunc(nullptr), localidxfunc(nullptr), fty(fty), relation(relation), linearizer(linearizer) {
       assert(fty);
       assert(linearizer);
     }

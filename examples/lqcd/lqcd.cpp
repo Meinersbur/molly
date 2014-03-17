@@ -205,19 +205,9 @@ molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-
-
 typedef int64_t coord_t;
 
-enum E {
-A,B,C
-};
-
-
 extern "C" void HoppingMatrix() {
-
-
-
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
       for (coord_t y = 0; y < source.length(2); y += 1)

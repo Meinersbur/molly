@@ -21,6 +21,10 @@ namespace polly {
   template <bool PreserveNames> class PollyBuilderInserter;
   typedef PollyBuilderInserter<true> IRInserter;
   typedef llvm::IRBuilder<true, llvm::ConstantFolder, IRInserter> PollyIRBuilder;
+
+  // #include <polly/Accesses.h>
+  class Access;
+
 } // namespace polly
 
 #endif /* MOLLY_POLLYFWD_H */

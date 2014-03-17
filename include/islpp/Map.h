@@ -74,7 +74,9 @@ namespace isl {
   };
 
   inline bool possiblyFalsePositives(Approximation approx) { return approx == Approximation::Rough || approx==Approximation::Over; }
+  inline bool allPositivesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Over; }
   inline bool possiblyFalseNegatives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Under; }
+  inline bool allNegativesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Under; }
 
 
   class Map : public Obj<Map,isl_map>, public Spacelike<Map> {
