@@ -56,7 +56,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createPrintModulePass(*OSorig, "Before any Molly-specific passes\n\n"));
 
   // Unconditional inlining for field member function to make llvm.molly intrinsics visible
-  PM.add(molly::createMollyInlinePass()); 
+  PM.add(molly::createMollyInlinePass());
 
   auto OSafterinline = new raw_fd_ostream("1_inlined.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OSafterinline, "After MollyInline pass\n\n"));
@@ -93,7 +93,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
 
-  auto OSaftermolly = new raw_fd_ostream("6_mollied.ll", infoDummy, sys::fs::F_Text);
+  auto OSaftermolly = new raw_fd_ostream("8_mollied.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OSaftermolly, "After Molly did its work\n\n"));
   PM.add(llvm::createVerifierPass());
 
@@ -106,20 +106,20 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createInstructionCombiningPass());
   PM.add(llvm::createReassociatePass());
   PM.add(llvm::createLICMPass());
-  PM.add(llvm::createIndVarSimplifyPass());  
+  PM.add(llvm::createIndVarSimplifyPass());
   PM.add(llvm::createLoopDeletionPass());
   PM.add(llvm::createAggressiveDCEPass());
   PM.add(llvm::createCFGSimplificationPass());
 
   // cleanup module
-  PM.add(llvm::createGlobalOptimizerPass());     
-  PM.add(llvm::createIPSCCPPass());              
+  PM.add(llvm::createGlobalOptimizerPass());
+  PM.add(llvm::createIPSCCPPass());
   //PM.add(llvm::createDeadArgEliminationPass());  
   PM.add(llvm::createGVNPass());
-  PM.add(llvm::createGlobalDCEPass());        
-  PM.add(llvm::createConstantMergePass());     
+  PM.add(llvm::createGlobalDCEPass());
+  PM.add(llvm::createConstantMergePass());
 
-  auto OSaftercleanup = new raw_fd_ostream("7_cleaned.ll", infoDummy, sys::fs::F_Text);
+  auto OSaftercleanup = new raw_fd_ostream("9_cleaned.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OSaftercleanup, "After cleanup\n\n"));
 #endif
 }
@@ -154,7 +154,7 @@ namespace molly {
     // delete it all as dead code, even with whole program optimization,
     // yet is effectively a NO-OP. As the compiler isn't smart enough
     // to know that getenv() never returns -1, this will do the job.
-    if (std::getenv("bar") != (char*) -1)
+    if (std::getenv("bar") != (char*)-1)
       return;
 
     //molly::createFieldDetectionAnalysisPass();
@@ -167,4 +167,16 @@ namespace molly {
     USE(NoOptPassRegister);
     USE(MollyEnabled);
   }
+
+
+  // Polly moved its static initializer to polly.cpp in LLVMPolly, which we do not load
+  // Therefore we have to initialize Polly by ourselves
+  //FIXME: static initialization is a chaos, this could should be cleaned up!
+  struct StaticInitializer {
+    StaticInitializer() {
+      llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+      polly::initializePollyPasses(Registry);
+    }
+  } _initializer;
+
 } // namespace molly

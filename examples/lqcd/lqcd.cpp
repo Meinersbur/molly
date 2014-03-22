@@ -4,7 +4,7 @@
 // C++ std::complex
 #include <complex>
 typedef std::complex<double> complex;
-
+ 
 // C99 complex
 #include <math.h>
 #include <complex.h>
@@ -18,13 +18,13 @@ typedef struct {
 
 typedef struct su3vector_t {
   complex c[3];
-
+   
 public:
   [[molly::pure]] su3vector_t() : c({0,0,0}) {}
   [[molly::pure]] su3vector_t(complex c0, complex c1, complex c2) : c({ c0, c1, c2 }) {
-  //  c[0] = c0;
-   // c[1] = c1;
-  //  c[2] = c2;
+    // c[0] = c0;
+    // c[1] = c1;
+    // c[2] = c2;
   }
 
   [[molly::pure]] const complex &operator[](size_t idx) const { return c[idx]; }
@@ -102,20 +102,6 @@ typedef enum {
 [[molly::pure]] halfspinor_t operator*(su3matrix_t m, halfspinor_t v) {
   return halfspinor_t(m*v[0], m*v[1]);
 }
-
-
-
-#define L 8
-#define LT L
-#define LX L
-#define LY L
-#define LZ L
-
-#pragma molly transform("{ [t,x,y,z] -> [node[0,0,0,0] -> local[t,x,y,z]] }")
-molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-
-#pragma molly transform("{ [t,x,y,z,d] -> [node[0,0,0,0] -> local[t,x,y,z,d]] }")
-molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
 
 
 
@@ -207,18 +193,41 @@ molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
 
 typedef int64_t coord_t;
 
+
+#if 0
+#if 0
+#define L 8
+#define LT L
+#define LX L
+#define LY L
+#define LZ L
+
+//#pragma molly transform("{ [t,x,y,z] -> [node[0,0,0,0] -> local[t,x,y,z]] }")
+#pragma molly transform("{ [t,x,y,z] -> [node[pt,px,py,pz] -> local[t,x,y,z]] : pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4) }")
+molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
+
+//#pragma molly transform("{ [t,x,y,z,d] -> [node[0,0,0,0] -> local[t,x,y,z,d]] }")
+#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor((t-1)/4) and px=floor((x-1)/4) and py=floor((y-1)/4) and pz=floor((z-1)/4)) }")
+molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
+#else
+
+#define LT 6
+#define LX 3
+#define LY 3
+#define LZ 3
+
+#pragma molly transform("{ [t,x,y,z] -> [node[pt] -> local[t,x,y,z]] : pt=floor(t/3) }")
+molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
+
+#pragma molly transform("{ [t,x,y,z,d] -> [node[pt] -> local[t,x,y,z,d]] : pt=floor(t/3) or pt=floor((t-1)/3) }")
+molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
+#endif
+
 extern "C" void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
       for (coord_t y = 0; y < source.length(2); y += 1)
         for (coord_t z = 0; z < source.length(3); z += 1) {
-
-          //spinor_t tmp;
-          //sink[t][x][y][z] = tmp;
-          //auto i = source[t][2*x][y][z];
-          //auto i = source[t][x][y][z];
-          //auto j = gauge[t][x][y][z][DIM_T];
-
 
           // T+
           auto result = expand_TUP(gauge[t][x][y][z][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x][y][z]));
@@ -230,7 +239,7 @@ extern "C" void HoppingMatrix() {
           result += expand_XUP(gauge[t][x][y][z][DIM_X] * project_TUP(source[t][molly::mod(x + 1, LX)][y][z]));
 
           // X-
-          result += expand_XDN(gauge[t][molly::mod(x - 1, LX)][y][z][DIM_X] * project_TUP(source[t][molly::mod(x - 1, LX)][y][z]));
+         result += expand_XDN(gauge[t][molly::mod(x - 1, LX)][y][z][DIM_X] * project_TUP(source[t][molly::mod(x - 1, LX)][y][z]));
 
           // Y+
           result += expand_YUP(gauge[t][x][y][z][DIM_Y] * project_TUP(source[t][x][molly::mod(y + 1, LY)][z]));
@@ -247,10 +256,35 @@ extern "C" void HoppingMatrix() {
 
           // Writeback
           sink[t][x][y][z] = result;
+        }
+} // void HoppingMatrix()
+#else
 
+#define LT 6
+#define LX 4
+
+#pragma molly transform("{ [t,x] -> [node[pt] -> local[t,x]] : pt=floor(t/3) }")
+molly::array<spinor_t, LT, LX> source, sink;
+
+#pragma molly transform("{ [t,x,d] -> [node[pt] -> local[t,x,d]] : pt=floor(t/3) or pt=floor((t-1)/3) }")
+molly::array<su3matrix_t, LT, LX, 2> gauge;
+
+extern "C" void HoppingMatrix() {
+  for (coord_t t = 0; t < source.length(0); t += 1)
+    for (coord_t x = 0; x < source.length(1); x += 1) {
+
+          // T+
+          auto result = expand_TUP(gauge[t][x][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x]));
+
+          // T-
+          result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
+
+          // Writeback
+          sink[t][x] = result;
         }
 } // void HoppingMatrix()
 
+#endif
 
 
 int main(int argc, char *argv[]) {

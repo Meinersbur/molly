@@ -27,6 +27,8 @@ public:
 
   static char ID; // Pass identification, replacement for typeid
 
+  const char *getPassName() const override { return "MollyInline"; }
+
   virtual InlineCost getInlineCost(CallSite CS);
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;

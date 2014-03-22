@@ -50,7 +50,7 @@ namespace {
       assert(stmt);
 
       llvm::Value *fptr;
-      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
+      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it != end; ++it) {
         auto memacc = *it;
         auto acc = Access::fromMemoryAccess(memacc);
 
@@ -86,7 +86,7 @@ namespace {
       assert(domain.hasTupleId());
       auto nDims = domain.getDimCount();
       bool changed = false;
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         if (!domain.hasDimId(i)) {
           auto loop = stmt->getLoopForDimension(i);
           auto id = scopCtx->getIdForLoop(loop);
@@ -116,7 +116,7 @@ namespace {
     }
 
     isl::Space getDomainSpace() const override {
-    return getDomain().getSpace();
+      return getDomain().getSpace();
     }
 
     isl::Set getDomainWithNamedDims() const override {
@@ -124,11 +124,11 @@ namespace {
       auto domain = getDomain();
 
       auto nDims = domain.getDimCount();
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         //if (!domain.hasDimId(i)) { /* Domains might be constructed from other means, like iterating over node coords; in this case, its id will be the cluster's rankdim id, which we do not want */
-          auto loop = stmt->getLoopForDimension(i);
-          auto id = scopCtx->getIdForLoop(loop);
-          domain.setDimId_inplace(i, id);
+        auto loop = stmt->getLoopForDimension(i);
+        auto id = scopCtx->getIdForLoop(loop);
+        domain.setDimId_inplace(i, id);
         //}
       }
       return domain;
@@ -144,54 +144,54 @@ namespace {
     }
     isl::Map getWhere() const override {
       return enwrap(stmt->getWhereMap());
-    } 
+    }
 
-     void setWhere(isl::Map instances) {
-       assert(matchesSpace(getDomainSpace(), instances.getDomainSpace()));
-       stmt->setWhereMap(instances.take());
-     }
-     void addWhere(isl::Map newInstances) {
-       assert(hasWhere());
-       setWhere(unite(getWhere(), newInstances).coalesce());
-     }
+    void setWhere(isl::Map instances) {
+      assert(matchesSpace(getDomainSpace(), instances.getDomainSpace()));
+      stmt->setWhereMap(instances.take());
+    }
+    void addWhere(isl::Map newInstances) {
+      assert(hasWhere());
+      setWhere(unite(getWhere(), newInstances).coalesce());
+    }
 
 
-     isl::Map getInstances() const override {
+    isl::Map getInstances() const override {
       return enwrap(stmt->getWhereMap()).intersectDomain(getDomain());
     }
 
-     BasicBlock *getBasicBlock() override {
+    BasicBlock *getBasicBlock() override {
       return stmt->getBasicBlock();
     }
 
-     polly::ScopStmt *getStmt() override {
+    polly::ScopStmt *getStmt() override {
       return stmt;
     }
 
-     llvm::Pass *asPass() override {
+    llvm::Pass *asPass() override {
       return getParentProcessor()->asPass();
     }
 
 
-     MollyCodeGenerator makeCodegen() override {
+    MollyCodeGenerator makeCodegen() override {
       auto term = getBasicBlock()->getTerminator();
       return MollyCodeGenerator(this, term);
     }
 
 
-     MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) override {
+    MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) override {
       assert(insertBefore);
       return MollyCodeGenerator(this, insertBefore);
     }
 
 
-     StmtEditor getEditor() override {
+    StmtEditor getEditor() override {
       assert(stmt);
       return StmtEditor::create(stmt, asPass());
     }
 
 
-     void applyWhere() override {
+    void applyWhere() override {
       auto scop = stmt->getParent();
       auto func = getFunctionOf(stmt);
       //auto funcCtx = pm->getFuncContext(func);
@@ -209,11 +209,11 @@ namespace {
       assert(coordValues.size() == nCoords);
 
       auto coordMatches = coordSpace.createUniverseBasicSet();
-      for (auto i = nCoords-nCoords; i < nCoords; i+=1) {
+      for (auto i = nCoords - nCoords; i < nCoords; i += 1) {
         // auto coordValue = coordValues[i];
         auto scev = coordValues[i];
         auto id = enwrap(scop->getIdForParam(scev));
-        coordMatches.alignParams_inplace(pm->getIslContext()->createParamsSpace(1).setParamDimId(0,id)); // Add the param if not exists yet
+        coordMatches.alignParams_inplace(pm->getIslContext()->createParamsSpace(1).setParamDimId(0, id)); // Add the param if not exists yet
         auto paramDim = coordMatches.findDim(id);
         assert(paramDim.isValid());
         auto coordDim = coordSpace.getSetDim(i);
@@ -255,7 +255,7 @@ namespace {
 
 
   protected:
-    template<typename Analysis> 
+    template<typename Analysis>
     Analysis *findOrRunAnalysis() {
       return pm->findOrRunAnalysis<Analysis>(nullptr, getRegionOf(stmt));
     }
@@ -272,7 +272,7 @@ namespace {
       auto paramsSpace = enwrap(scop->getParamSpace());
       auto domain = getDomain();
       auto nDims = domain.getDimCount();
-      auto expectedIds = nDims + validParams.size() + paramsSpace.getParamDimCount(); 
+      auto expectedIds = nDims + validParams.size() + paramsSpace.getParamDimCount();
       assert(idToValue.size() <= expectedIds);
       if (idToValue.size() == expectedIds)
         return idToValue;
@@ -285,12 +285,12 @@ namespace {
 
       // 2. Params
       auto nParamDims = paramsSpace.getParamDimCount();
-      for (auto i = nParamDims-nParamDims; i<nParamDims; i+=1) {
+      for (auto i = nParamDims - nParamDims; i < nParamDims; i += 1) {
         auto id = paramsSpace.getParamDimId(i);
       }
 
       // 3. The loop induction variables
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto iv = getDomainValue(i);
         auto id = getDomainId(i);
         assert(id.isValid());
@@ -301,7 +301,7 @@ namespace {
     }
 
 
-      llvm::Value *getDomainValue(unsigned i) override {
+    llvm::Value *getDomainValue(unsigned i) override {
       return const_cast<PHINode *>(stmt->getInductionVariableForDimension(i));
     }
 
@@ -338,7 +338,7 @@ namespace {
       auto nDims = domain.getDimCount();
 
       std::vector<llvm::Value *> result;
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto iv = getDomainValue(i);
         result.push_back(iv);
       }
@@ -352,7 +352,7 @@ namespace {
       auto nDims = domain.getDimCount();
 
       auto result = domain.getSpace().mapsTo(domain.getSpace()).createZeroMultiAff();
-      for (auto i = nDims-nDims; i < nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto aff = getDomainAff(i);
         result.setAff_inplace(i, aff);
       }
@@ -453,7 +453,7 @@ namespace {
       return result;
     }
 
-    isl::Space getIndexsetSpace() {
+    isl::Space getIndexsetSpace() const {
       auto memacc = getFieldMemoryAccess();
       assert(memacc);
       auto map = isl::enwrap(memacc->getAccessRelation());
@@ -470,12 +470,12 @@ namespace {
       return getScattering();
     }
 
-    isl::PwMultiAff getHomeAff() const {
-      auto layout = getFieldType()->getDefaultLayout();
-      auto tyHomeAff = layout->getHomeAff();
-      tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
-      return tyHomeAff;
-    }
+    //isl::PwMultiAff getHomeAff() const {
+    //  auto layout = getFieldType()->getDefaultLayout();
+    //  auto tyHomeAff = layout->getHomeAff();
+    //  tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
+    //  return tyHomeAff;
+    //}
 
 #if 0
     llvm::StoreInst *getLoadUse() const {
@@ -514,7 +514,7 @@ namespace {
         //assert(where.domain().isSupersetOf(domain)); // TODO: Where.domain()  may include additional restrictions of some isl_dim_param which renders them not-equal
       }
 
-      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
+      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it != end; ++it) {
         auto memacc = *it;
         auto accrel = enwrap(memacc->getAccessRelation());
         assert(accrel.getDomainSpace().matchesSpace(domainSpace));
@@ -537,7 +537,7 @@ namespace {
     }
 
 
-      llvm::LLVMContext &getLLVMContext() const override {
+    llvm::LLVMContext &getLLVMContext() const override {
       return pm->getLLVMContext();
     }
 
@@ -594,10 +594,10 @@ namespace {
     }
 
 
-     llvm::Value *getAccessPtr() override {
-       assert(fmemacc);
-       auto acc = Access::fromMemoryAccess(fmemacc);
-       return acc.getTypedPtr();
+    llvm::Value *getAccessPtr() override {
+      assert(fmemacc);
+      auto acc = Access::fromMemoryAccess(fmemacc);
+      return acc.getTypedPtr();
     }
 
 
@@ -622,8 +622,8 @@ namespace {
       if (isReadAccess()) {
         auto ptr = acc.getReadResultPtr();
         if (!ptr) {
-        auto val = acc.getReadResultRegister();
-        ptr = getStackStoragePtr(val);
+          auto val = acc.getReadResultRegister();
+          ptr = getStackStoragePtr(val);
         }
         return cast<AllocaInst>(ptr);
       } else {
@@ -679,7 +679,7 @@ namespace {
         auto ptr = load->getPointerOperand();
         if (auto alloca = dyn_cast<AllocaInst>(ptr))
           if (alloca->getAllocatedType() == val->getType())
-          return alloca;
+            return alloca;
       }
 
       // Look where IndependentBlocks stored the val
@@ -711,7 +711,7 @@ namespace {
       auto space = getAccessRelation().getSpace();
       auto result = space.createZeroMultiPwAff();
       auto nDims = result.getOutDimCount();
-      for (auto i = nDims-nDims; i < nDims ; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto scev = getParentProcessor()->scevForValue(getAccessedCoordinate(i));
         auto aff = enwrap(polly::affinatePwAff(stmt, scev)).setInTupleId(space.getInTupleId());
         result.setPwAff_inplace(i, aff);

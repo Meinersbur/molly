@@ -302,6 +302,40 @@ void CommunicationBuffer::codegenStoreInSendbuf(MollyCodeGenerator &codegen, con
 }
 
 
+AnnotatedPtr CommunicationBuffer::codegenSendbufPtr(MollyCodeGenerator &codegen, const isl::MultiPwAff chunk, const isl::MultiPwAff srcCoord, const isl::MultiPwAff dstCoord, const isl::MultiPwAff index) {
+  auto &irBuilder = codegen.getIRBuilder();
+
+  //auto buftranslator = isl::rangeProduct(chunk, srcCoord).toPwMultiAff();
+  auto buftranslator = srcCoord.toPwMultiAff();
+  auto sendbufIdx = codegenSendbufDstIndex(codegen, buftranslator, dstCoord);
+  auto sendbufPtr = codegen.callCombufSendbufPtr(this, sendbufIdx);
+
+  auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
+  auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
+  auto ptr = irBuilder.CreateGEP(sendbufPtr, indexIdx, "sendbufelt");
+
+ // return AnnotatedPtr::createArrayPtr(ptr, sendbufPtr, index); // FIXME: sendbufPtr as base might be a problem because it is the return value of __molly_combuf_send_wait
+  return AnnotatedPtr::createUnannotated(ptr); // Combufs are not user-accessible, any dependency must be handled by the caller; In Molly's case, accesses never overlap, there only must be deps from send_wait and to send
+//FIXME: When Polly reorder optimization is activated, some dependendencies MUST be added
+}
+
+
+AnnotatedPtr CommunicationBuffer::codegenRecvbufPtr(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord, isl::MultiPwAff index) {
+  auto &irBuilder = codegen.getIRBuilder();
+
+  //auto buftranslator = isl::rangeProduct(chunk, dstCoord).toPwMultiAff();
+  auto buftranslator = dstCoord.toPwMultiAff();
+  auto recvbufIdx = recvbufMapping->codegenIndex(codegen, buftranslator, srcCoord);
+  auto recvbufPtr = codegen.callCombufRecvbufPtr(this, recvbufIdx);
+
+  auto idxtranslator = isl::rangeProduct(chunk, isl::rangeProduct(srcCoord, dstCoord)).toPwMultiAff();
+  auto indexIdx = mapping->codegenIndex(codegen, idxtranslator, index);
+  auto ptr = irBuilder.CreateGEP(recvbufPtr, indexIdx, "recvbufelt");
+
+  return AnnotatedPtr::createUnannotated(ptr);
+}
+
+
 llvm::Value *CommunicationBuffer::codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index) {
   auto &irBuilder = codegen.getIRBuilder();
 

@@ -622,7 +622,7 @@ namespace {
       auto fvar = pm->getFieldVariable(fieldobj);
       auto fty = fvar->getFieldType();
       auto layout = fvar->getLayout();
-      auto dist = layout->getHomeAff(); // { field[indexset] -> node[cluster] } 
+      auto dist = layout->getPrimaryPhysicalNode(); // { field[indexset] -> node[cluster] } 
 
       auto islctx = getIslContext();
       auto codegen = makeCodegen(call);

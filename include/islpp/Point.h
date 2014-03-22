@@ -47,14 +47,13 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_point_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
+    void printFormatted(llvm::raw_ostream &out, bool printTupleNames= true) const;
     void dump() const { isl_point_dump(keep()); }
 #pragma endregion
 
 
 #pragma region Creational
-    static Point createZero(Space &&space);
-
-    //Point copy() const { return Point::wrap(takeCopy()); }
+    static Point createZero(Space space);
 #pragma endregion
 
 

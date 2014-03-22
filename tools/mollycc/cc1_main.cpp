@@ -12,7 +12,7 @@
 // demonstration and testing purposes.
 //
 //===----------------------------------------------------------------------===//
-
+ 
 #include "llvm/Option/Arg.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -35,6 +35,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #ifdef MOLLY
+#include "polly/LinkAllPasses.h"
+#include "polly/RegisterPasses.h"
 #include "molly/LinkAllPasses.h"
 #include "molly/RegisterPasses.h"
 #endif /* MOLLY */

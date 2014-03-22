@@ -35,7 +35,7 @@ void FieldVariable::dump() {
 }
 
 
-isl::Id FieldVariable::getTupleId() {
+isl::Id FieldVariable::getTupleId() const {
 #if 0
   llvm::SmallString<255> sstr;
   llvm::raw_svector_ostream os(sstr);
@@ -52,7 +52,7 @@ isl::Id FieldVariable::getTupleId() {
 }
 
 
-isl::Space FieldVariable::getAccessSpace() {
+isl::Space FieldVariable::getAccessSpace() const {
   return getFieldType()->getIndexsetSpace().setSetTupleId(getTupleId());
 }
 
@@ -74,9 +74,25 @@ llvm::Type * molly::FieldVariable::getEltPtrType() {
 }
 
 
-isl::PwMultiAff molly::FieldVariable::getHomeAff() {
-  auto layout = getLayout();
-  return layout->getHomeAff().setInTupleId(getTupleId());
+//isl::PwMultiAff molly::FieldVariable::getHomeAff() {
+//  auto layout = getLayout();
+//  return layout->getHomeAff().setInTupleId(getTupleId());
+//}
+
+
+isl::Map FieldVariable::getPhysicalNode() const {
+  auto layout = getDefaultLayout();
+  auto home = layout->getPhysicalNode();
+  home.castDomain_inplace(getAccessSpace());
+  return home;
+}
+
+
+isl::PwMultiAff FieldVariable::getPrimaryPhysicalNode() const {
+  auto layout = getDefaultLayout();
+  auto home = layout->getPrimaryPhysicalNode();
+  home.castDomain_inplace(getAccessSpace());
+  return home;
 }
 
 

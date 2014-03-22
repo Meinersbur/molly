@@ -3,7 +3,7 @@
 
 #include "molly_debug.h"
 
-#define PRINTRANK 3
+#define PRINTRANK -1
 
 
 // TODO: Modes:
@@ -116,7 +116,7 @@ extern "C" int __molly_cluster_mympirank();
 static void dbgPrintVars_inner(const char *varnames) {}
 
 template<typename First>
-static void dbgPrintVars_inner(const char *varnames, const First &first) {
+static void dbgPrintVars_inner(const char *varnames, const First &first) {   if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)  return;
   //fprintf(stderr, " ");
   std::cerr << ' ';
   auto argsnames=varnames;
@@ -152,7 +152,7 @@ static void dbgPrintVars_inner(const char *varnames, const First &first) {
 }
 
 template<typename First, typename... Args>
-static void dbgPrintVars_inner(const char *varnames, const First &first, const Args&... args) {
+static void dbgPrintVars_inner(const char *varnames, const First &first, const Args&... args) {  if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)  return;
   std::cerr << ' ';
   auto argsnames=varnames;
 
@@ -189,7 +189,7 @@ static void dbgPrintVars_inner(const char *varnames, const First &first, const A
 
 template<typename... Args>
 static void dbgPrintVars(const char *file, int line, const char *varnames, const Args&... args) {
-  if (__molly_cluster_mympirank()!=PRINTRANK)
+  if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)
     return;
   std::cerr << __molly_cluster_mympirank() << ")";
 
@@ -286,8 +286,8 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #else
 #define MOLLY_DEBUG(...)                             \
   do {                                               \
-    if (__molly_cluster_mympirank()!=PRINTRANK) \
-      break; \
+    if (PRINTRANK>=0 && __molly_cluster_mympirank()!=PRINTRANK)      \
+      break;                                         \
     std::cerr << __molly_cluster_mympirank() << ")"; \
     for (int i = _debugindention; i > 0; i-=1) {     \
       std::cerr << ' ' << ' ';                       \
@@ -303,9 +303,9 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 
 
 
-#if defined(__PRETTY_FUNCTION__)
+#if defined(__MOLLY_FUNCNAME__) || defined(__GNUC__)
 #define __MOLLY_FUNCNAME__ __PRETTY_FUNCTION__
-#elif defined(__FUNCSIG__)
+#elif defined(__FUNCSIG__) || defined(_MSC_VER)
 #define __MOLLY_FUNCNAME__ __FUNCSIG__
 #elif defined(__FUNCTION__)
 #define __MOLLY_FUNCNAME__ __FUNCTION__
@@ -337,24 +337,123 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 static std::string extractFuncname(const char *prettyfunc) {
   std::string prettyFunction = prettyfunc;
   auto lparen = prettyFunction.find("(");
-if (lparen == std::string::npos)
-  return prettyfunc;
+  if (lparen == std::string::npos)
+    return prettyfunc;
 
-auto space = prettyFunction.substr(0,lparen).rfind(" ");
-auto firstColon = prettyFunction.substr(0,lparen).rfind("::");
-size_t secondColon = std::string::npos;
-if (firstColon!=std::string::npos) {
-  secondColon = prettyFunction.substr(0,firstColon).rfind("::");
+  auto space = prettyFunction.substr(0, lparen).rfind(" ");
+  auto firstColon = prettyFunction.substr(0, lparen).rfind("::");
+  size_t secondColon = std::string::npos;
+  if (firstColon != std::string::npos) {
+    secondColon = prettyFunction.substr(0, firstColon).rfind("::");
+  }
+
+  size_t start = 0;
+  if (space != std::string::npos)
+    start = space + 1;
+  if (secondColon != std::string::npos && secondColon >= start)
+    start = secondColon + 2;
+
+  return prettyFunction.substr(start, lparen - start);
 }
 
-size_t start=0;
-if (space != std::string::npos)
-  start = space+1;
-if (secondColon != std::string::npos && secondColon>=start)
-  start = secondColon+2;
 
-return prettyFunction.substr(start,lparen-start);
+
+#pragma region Implementation of out_printargs
+#ifndef NDEBUG
+template<typename... Args>
+struct out_printargs_impl;
+
+template<>
+struct out_printargs_impl<> {
+protected:
+  const char *varnames;
+public:
+  out_printargs_impl(const char *varnames) : varnames(varnames) {}
+
+  void print(std::ostream &os) const { }
+  void print(std::ostream &os, const char *remainingnames) const { }
+};
+
+template<typename Arg>
+struct out_printargs_impl<Arg> : protected out_printargs_impl<> {
+private:
+  const Arg &arg;
+public:
+  out_printargs_impl(const char *varnames, const Arg &arg)
+    : out_printargs_impl<>(varnames), arg(arg) {}
+
+  void print(std::ostream &os) const {
+    print(os, this->varnames);
+  }
+
+  void print(std::ostream &os, const char *remainingnames) const {
+    auto lastvar = remainingnames;
+    while (true) {
+      if (lastvar[0] == '\0')
+        break;
+      if (lastvar[0] == ' ' || lastvar[0] == ',') {
+        lastvar+=1;
+        continue;
+      }
+
+      break;
+    }
+    os << lastvar << "=" << arg;
+  }
+};
+
+template<typename Arg, typename... Args>
+struct out_printargs_impl<Arg, Args...> : protected out_printargs_impl<Args...>{
+  //const char *varnames;
+private:
+  const Arg &arg;
+public:
+  out_printargs_impl(const char *varnames, const Arg &arg, const Args&... args)
+    : out_printargs_impl<Args...>(varnames, args...), arg(arg) {}
+
+  void print(std::ostream &os) const {
+    print(os, this->varnames);
+  }
+
+  void print(std::ostream &os, const char *remainingnames) const {
+    auto varname = remainingnames;
+    while (true) {
+      if (varname[0] == '\0')
+        break;
+      if (varname[0] == ' ' || varname[0] == ',') {
+        varname+=1;
+        continue;
+      }
+      break;
+    }
+
+    auto endvarname = varname;
+    while (true) {
+      if (endvarname[0] == '\0')
+        break;
+      if (endvarname[0] == ' ' || endvarname[0] == ',')
+        break;
+      endvarname += 1;
+    }
+
+    os << std::string(varname, endvarname) << "=" << arg << ", ";
+    out_printargs_impl<Args...>::print(os, endvarname);
+  }
+};
+
+template<typename... Args>
+std::ostream &operator<<(std::ostream &stream, const out_printargs_impl<Args...> &ob) {
+  ob.print(stream);
+  return stream;
 }
+
+template<typename... Args>
+static inline out_printargs_impl<Args...> out_printargs(const char *varnames, const Args&... args) {
+  return out_printargs_impl<Args...>(varnames, args...); //FIXME: perfect forwarding, rvalue-refs
+}
+#endif
+#pragma endregion
+
 
 
 class DebugFunctionScope {
@@ -365,29 +464,29 @@ public:
   template<typename... T>
   DebugFunctionScope(const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
-        if (__molly_cluster_mympirank()!=PRINTRANK)
-    return;
+    //std::cerr << "varnames=" <<varnames << "\n";
+    if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)
+      return;
     std::cerr << __molly_cluster_mympirank() << ")";
-    for (int i = _debugindention; i > 0; i-=1) {
-      //fprintf(stderr,"  ");
-      std::cerr << ' ' << ' ';
+    for (int i = _debugindention; i > 0; i -= 1) {
+      std::cerr << "  ";
     }
-    std::cerr << "ENTER " << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+    std::cerr << "ENTER " << extractFuncname(funcname) << '(' << out_printargs(varnames, vars...) << ')';
     std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
     _debugindention += 1;
   }
 
   template<typename... T>
-  DebugFunctionScope(void *self, const char *funcname, const char *file, int line,  const char *varnames, const T&... vars)
+  DebugFunctionScope(void *self, const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
-        if (__molly_cluster_mympirank()!=PRINTRANK)
-    return;
+    if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)
+      return;
     std::cerr << __molly_cluster_mympirank() << ")";
-    for (int i = _debugindention; i > 0; i-=1) {
+    for (int i = _debugindention; i > 0; i -= 1) {
       //fprintf(stderr,"  ");
-      std::cerr << ' ' << ' ';
+      std::cerr << "  ";
     }
-    std::cerr << "ENTER " << self << "->" << extractFuncname(funcname) << '(' << out_parampack(", ", vars...) << ')';
+    std::cerr << "ENTER " << self << "->" << extractFuncname(funcname) << '(' << out_printargs(varnames, vars...) << ')';
     std::cerr << " (" << extractFilename(file) << ':' << line << ')' << std::endl;
     _debugindention += 1;
   }
@@ -429,77 +528,7 @@ void broadcast_recv(void *recvbuf, size_t size, rank_t sender);
 int cart_dims();
 int cart_self_coord(int d);
 rank_t world_self();
-
-
 } // namespace molly
-#if 0
-template<typename T, int/*size_t*/ length1>
-class Mesh1D {
-public:
-  int memberwithattr() __attribute__(( annotate("memberwithattr") )) __attribute__(( molly_lengthfunc ));
-
-private:
-  long me __attribute__(( molly_lengths(field, length1) ));
-  long b __attribute__(( annotate("foo") ));
-  T x;
-
-public:
-  Mesh1D() {}
-  ~Mesh1D() {}
-
-  int length() __attribute__((annotate("foo"))) __attribute__(( molly_lengthfunc )) { return length1; }
-
-  T get(int i) __attribute__(( molly_getterfunc )) { return x; }
-  void set(int i, const T &val) __attribute__(( molly_setterfunc )) {}
-  T *ptr(int i) __attribute__(( molly_reffunc )) __attribute__(( molly_inline )) { return (T*)__builtin_molly_ptr(this, length1, i); }
-
-  bool isLocal(int i) __attribute__(( molly_islocalfunc )) __attribute__(( molly_inline )) { return __builtin_molly_islocal(this, length1, i); }
-  bool isRemote(int i) { return !isLocal(i); }
-  rank_t getRankOf(int i) __attribute__(( molly_getrankoffunc )) __attribute__(( molly_inline )) { return __builtin_molly_rankof(this, length1, i); }
-
-  T getLocal(int i) { assert(isLocal(i)); return x; }
-  void setLocal(int i, const T &val) { assert(isLocal(i)); x = val; }
-
-  T __get_broadcast(int i) const {
-    auto remoteRank = getRankOf(i);
-    if (remoteRank == _rank_local) {
-      // The required value is here; broadcast it to all other nodes
-
-
-    } else {
-      // The required value is somewhere else; wait to receive it
-    }
-  }
-  void __set_broadcast(int i, T value) {
-    auto remoteRank = getRankOf(i);
-    if (remoteRank == _rank_local) {
-    } else {
-    }
-  }
-} __attribute__(( molly_lengths(clazz, length1) )) /*__attribute__(( molly_dims(1) ))*/; // class Mesh1D
-
-
-//TODO: Either introduce class TorusXD
-
-template<typename T, int length1, int length2>
-class Mesh2D {
-  long c;
-} __attribute__(( /*molly_lengths(dummy, length1, length2)*//*, molly_dims(2)*/ )); // class Mesh2D
-
-
-template<typename T, int L1, int L2, int L3>
-class Mesh3D {
-}; // class Mesh3D
-
-
-
-
-
-template<typename T, int L1, int L2, int L3, int L4>
-class Mesh4D {
-}; // class Mesh4D
-
-#endif
 
 
 
@@ -570,10 +599,6 @@ namespace molly {
   // TODO: Also a version that converts constants parameter packs (instead of type parameter pack)
 #pragma endregion
 
-  //template<int... List>
-  //int select(int i, typename _inttype<List>::type... list) {
-  //  return 
-  //}
 
 #pragma region _array_partial_subscript
   template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >

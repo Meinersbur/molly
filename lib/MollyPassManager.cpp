@@ -1312,7 +1312,7 @@ namespace {
       coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
       coordsAff.cast_inplace(coordsAffSpace);
 
-      auto dist = layout->getHomeAff(); // { field[indexset] -> node[cluster] } 
+      auto dist = layout->getPrimaryPhysicalNode(); // { field[indexset] -> node[cluster] } 
       auto homeAff = dist.pullback(coordsAff); // { [] -> node[cluster] }
 
       auto clusterLengths = clusterConf->getClusterLengthsAff();
@@ -1536,7 +1536,9 @@ namespace {
       }
 
       auto OSindependent = new raw_fd_ostream("5_independent.ll", infoDummy, sys::fs::F_Text);
-      runModulePass(llvm::createPrintModulePass(*OSindependent, "After IndependentBlocks\n\n"));
+      auto PassIndependent = llvm::createPrintModulePass(*OSindependent, "After IndependentBlocks\n\n");
+      runModulePass(PassIndependent);
+      removePass(PassIndependent); // Because runModulePass complains that "PrintModulePass" has already been executed
 
 
       // Find all scops
@@ -1566,6 +1568,11 @@ namespace {
         assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
       }
 
+
+      auto OScommunication = new raw_fd_ostream("6_communication.ll", infoDummy, sys::fs::F_Text);
+      runModulePass(llvm::createPrintModulePass(*OScommunication, "After communication generation\n\n"));
+
+
       // Create some SCoPs that init the combufs
       //addCallToCombufInit();
 
@@ -1589,6 +1596,10 @@ namespace {
         scopCtx->pollyCodegen();
         assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
       }
+
+
+      auto OSpollycodegen = new raw_fd_ostream("7_pollycodegen.ll", infoDummy, sys::fs::F_Text);
+      runModulePass(llvm::createPrintModulePass(*OSpollycodegen, "After Polly's code generation\n\n"));
 
 
       // Generate access functions

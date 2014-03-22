@@ -283,13 +283,21 @@ namespace isl {
       return Id();
     }
 
-    bool hasInTupleId() const { assert(getDerived()->isMap()); return hasTupleId(isl_dim_in); }
-    bool hasOutTupleId() const { assert(getDerived()->isMap()); return hasTupleId(isl_dim_out); }
-    bool hasSetTupleId() const { assert(getDerived()->isSet()); return hasTupleId(isl_dim_set); }
+    bool hasInTupleId() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_in); }
+    bool hasOutTupleId() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_out); }
+    bool hasSetTupleId() const { assert(getDerived()->isSet()); return getDerived()->hasTupleId(isl_dim_set); }
+
+    ISLPP_PROJECTION_ATTRS bool hasInTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isMap()); return getDerived()->hasTupleName(isl_dim_in); }
+    ISLPP_PROJECTION_ATTRS bool hasOutTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isMap()); return getDerived()->hasTupleName(isl_dim_out); }
+    ISLPP_PROJECTION_ATTRS bool hasSetTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isSet()); return getDerived()->hasTupleName(isl_dim_set); }
 
     Id getInTupleId() const { return getDerived()->getTupleId(isl_dim_in); }
     Id getOutTupleId() const { return getDerived()->getTupleId(isl_dim_out); }
     Id getSetTupleId() const { return getDerived()->getTupleId(isl_dim_set); }
+
+    ISLPP_PROJECTION_ATTRS const char* getInTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isMap());  return getDerived()->getTupleName(isl_dim_in); }
+    ISLPP_PROJECTION_ATTRS  const char* getOutTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isMap());  return getDerived()->getTupleName(isl_dim_out); }
+    ISLPP_PROJECTION_ATTRS const char* getSetTupleName() ISLPP_PROJECTION_FUNCTION{ assert(getDerived()->isSet());  return getDerived()->getTupleName(isl_dim_set); }
 
     Id getInTupleIdOrNull() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_in) ? getDerived()->getTupleId(isl_dim_in) : Id(); }
     Id getOutTupleIdOrNull() const { assert(getDerived()->isMap()); return getDerived()->hasTupleId(isl_dim_out) ? getDerived()->getTupleId(isl_dim_out) : Id(); }

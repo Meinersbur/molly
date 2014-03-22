@@ -34,7 +34,7 @@ llvm::Value *FieldLayout::codegenLocalSize(MollyCodeGenerator &codegen, isl::PwM
 }
 
 
-FieldLayout * molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterConf, isl::Map relation) {
+FieldLayout *molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterConf, isl::Map relation) {
   // Rebuild relation to fit the environment
   auto logicalSpan = fty->getLogicalIndexset();
   relation.castDomain_inplace(logicalSpan.getSpace());
@@ -54,7 +54,7 @@ FieldLayout * molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterC
 }
 
 
-llvm::Value * molly::FieldLayout::codegenLocalMaxSize( MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator) {
+llvm::Value *molly::FieldLayout::codegenLocalMaxSize( MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator) {
   return linearizer->codegenMaxSize(codegen, domaintranslator);
 }
 

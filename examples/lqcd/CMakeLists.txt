@@ -29,7 +29,7 @@ set_target_properties(lqcd-mollycc PROPERTIES FOLDER "Molly")
 get_filename_component(lqcd_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}lqcd-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${lqcd_path}"
   SOURCES "lqcd.cpp"
-  FLAGS -mllvm -shape=2x2x2x2 -mllvm -polly-only-func=HoppingMatrix
+  FLAGS -mllvm -shape=2 -mllvm -polly-only-func=HoppingMatrix
   COMMENT "mollycc molly.a lqcd.cpp..."
 )
 
@@ -42,3 +42,10 @@ set_target_properties(lqcd-mollycc-a PROPERTIES FOLDER "Molly")
 #add_dependencies(lqcd-mollycc-a MollyRT-a)
 
 
+add_custom_target(run-lqcd-mollycc-a
+  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_POSTFLAGS} "${lqcd_path}"
+  DEPENDS "${lqcd_path}"
+  COMMENT "Running lqcd-mollycc-a..."
+  VERBATIM
+)
+set_target_properties(run-lqcd-mollycc-a PROPERTIES FOLDER "Molly")

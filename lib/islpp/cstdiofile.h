@@ -10,26 +10,31 @@ namespace llvm {
 
 
 #if defined(__MINGW32__)
-// Neither open_memstream nor fopen_s (with "TD" options) available
+// Neither open_memstream nor fopen_s are available
+//#define CSTDIOFILE_HAS_TD 1 // MinGW runtime is msvcrt-based, therefore supports the TD option
 //#define CSTDIOFILE_TMPFILE 1
 //#define CSTDIOFILE_FOPEN 1
 //#define CSTDIOFILE_FOPEN_S 1
 //#define CSTDIOFILE_OPEN_MEMSTREAM 1
 #define CSTDIOFILE_LLVM_CREATETEMPORARYFILE 1
-#elif defined(_WIN32)
+#elif defined(_MSC_VER)
 // open_memstream not available, use temporary file that is not written to disk instead
+#define CSTDIOFILE_HAS_TD 1
 #define CSTDIOFILE_FOPEN_S 1
 //#define CSTDIOFILE_LLVM_CREATETEMPORARYFILE 1
 #else
-// POSIX
+// POSIX, best solution; pure in-memory without syscalls
 #define CSTDIOFILE_OPEN_MEMSTREAM 1
 #endif
 
 
 #ifdef CSTDIOFILE_FOPEN
 #include <cstdio> // L_tmpnam
-#endif
+#endif /* CSTDIOFILE_FOPEN */
 
+#ifdef CSTDIOFILE_LLVM_CREATETEMPORARYFILE
+#include <llvm/ADT/SmallString.h>
+#endif
 
 namespace molly {
 
@@ -44,8 +49,16 @@ namespace molly {
     size_t writtensize;
 #endif
 
+#ifdef CSTDIOFILE_FOPEN_S
+    char *tmpfilename;
+#endif
+
 #ifdef CSTDIOFILE_FOPEN
     char tmpfilename[L_tmpnam];
+#endif
+
+#ifdef CSTDIOFILE_LLVM_CREATETEMPORARYFILE
+    llvm::SmallString<128> tmppath;
 #endif
 
     CstdioFile(CstdioFile &&that) {
@@ -56,6 +69,19 @@ namespace molly {
      this->buf = that.buf;
      that.buf = nullptr;
      this->writtensize = that.writtensize;
+#endif
+
+#ifdef CSTDIOFILE_FOPEN_S
+     this->tmpfilename = that.tmpfilename;
+#endif
+
+#ifdef CSTDIOFILE_FOPEN
+     memcpy(&this->tmpfilename, that.tmpfilename, sizeof(tmpfilename));
+#endif
+
+#ifdef CSTDIOFILE_LLVM_CREATETEMPORARYFILE
+    this-> tmppath = std::move(that.tmppath);
+    that.tmppath.clear();
 #endif
     }
     const CstdioFile &operator=(const CstdioFile &) LLVM_DELETED_FUNCTION;

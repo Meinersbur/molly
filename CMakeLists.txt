@@ -130,7 +130,7 @@ foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
   list(APPEND MOLLYRT_COMMON_CFLAGS "-I${_include}")
 endforeach()
 
-set(MOLLYRT_VERBOSE_FLAGS )
+set(MOLLYRT_VERBOSE_FLAGS -w -fmax-errors=1)
 set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 

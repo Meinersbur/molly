@@ -65,7 +65,7 @@ llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, llvm::Twine nam
 
 
 llvm::Value *MollyCodeGenerator::createPointerCast(llvm::Value *val, llvm::Type *type) {
- return irBuilder.CreatePointerCast(val, type);
+  return irBuilder.CreatePointerCast(val, type);
 }
 
 
@@ -663,6 +663,32 @@ llvm::MemCpyInst *MollyCodeGenerator::codegenAssignPtrPtr(llvm::Value *dstPtr, l
 }
 
 
+void MollyCodeGenerator::codegenAssign(const AnnotatedPtr &dst, const AnnotatedPtr &src) {
+  auto srcPtr = src.getPtr();
+  auto dstPtr = dst.getPtr();
+
+  auto ty = dstPtr->getType()->getPointerElementType();
+  assert(ty == srcPtr->getType()->getPointerElementType());
+
+  llvm::Instruction *ldInstr;
+  llvm::Instruction *stInstr;
+  if (ty->isSingleValueType()) {
+    ldInstr = irBuilder.CreateLoad(srcPtr, "assignval");
+    stInstr = irBuilder.CreateStore(ldInstr, dstPtr);
+  } else {
+    auto memcpyInstr = irBuilder.CreateMemCpy(dstPtr, srcPtr, ConstantExpr::getSizeOf(ty), 0);
+    ldInstr = memcpyInstr;
+    stInstr = memcpyInstr;
+  }
+
+  auto domainSpace = stmtCtx->getDomainSpace();
+  if (src.isAnnotated())
+    addLoadAccess(src.getDiscriminator(), src.getCoord().castDomain(domainSpace), ldInstr);
+  if (dst.isAnnotated())
+    addStoreAccess(dst.getDiscriminator(), dst.getCoord().castDomain(domainSpace), stInstr);
+}
+
+
 llvm::MemCpyInst *MollyCodeGenerator::codegenAssignPtrPtr(llvm::Value *dstPtr, llvm::Value *dstBase, isl::Map dstIndex, llvm::Value *srcPtr, llvm::Value *srcBase, isl::Map srcIndex) {
   auto instr = codegenAssignPtrPtr(dstPtr, srcPtr);
   if (dstIndex.isValid())
@@ -704,6 +730,12 @@ void MollyCodeGenerator::codegenAssignScalarFromLocal(llvm::Value *dstPtr, Field
 
   assert(isa<AllocaInst>(dstPtr));
   codegenAssignPtrPtr(dstPtr, dstPtr, isl::Map(), srcPtr, srcFvar->getVariable(), srcIndex);
+}
+
+
+AnnotatedPtr MollyCodeGenerator::codegenFieldLocalPtr(FieldVariable *srcFvar, isl::PwMultiAff srcWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff srcIndex/* [domain] -> field[indexset] */) {
+  auto srcPtr = codegenLoadLocalPtr(srcFvar, srcWhere, srcIndex);
+  return AnnotatedPtr::createFieldPtr(srcPtr, srcFvar, srcIndex);
 }
 
 
@@ -944,4 +976,85 @@ llvm::StoreInst * molly::MollyCodeGenerator::createArrayStore(llvm::Value *val, 
   auto idxval = ConstantInt::get(intTy, idx);
   auto idxaff = domainSpace.createConstantAff(idx);
   return createArrayStore(val, baseptr, idxval, idxaff);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callBeginMarker(StringRef str) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
+  Type *argTys[] = { strTy };
+  auto funcDecl = getRuntimeFunc("__molly_begin_marker", voidTy, argTys);
+
+  auto strConst = ConstantDataArray::getString(llvmContext, str);
+  auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst);
+
+  llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy) };
+  return irBuilder.CreateCall(funcDecl, args);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callEndMarker(StringRef str) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
+  Type *argTys[] = { strTy };
+  auto funcDecl = getRuntimeFunc("__molly_end_marker", voidTy, argTys);
+
+  auto strConst = ConstantDataArray::getString(llvmContext, str);
+  auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst);
+
+  llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy) };
+  return irBuilder.CreateCall(funcDecl, args);
+}
+
+string compatName(StringRef arg) {
+  SmallString<255> result;
+  result.reserve(arg.size());
+
+  int pos = 0;
+  while (pos < arg.size()) {
+    auto c = arg[pos];
+    if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '.') || (c == '_'))
+      result.push_back(c);
+    else if (pos>0 && (('0' <= c && c <= '9') || (c == '-')))
+      result.push_back(c);
+    pos += 1;
+  }
+
+  return result.str();
+}
+
+
+void molly::MollyCodeGenerator::markBlock(StringRef str) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
+  Type *argTys[] = { strTy };
+
+
+  auto strConst = ConstantDataArray::getString(llvmContext, str);
+  auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst, compatName(str));
+  llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy) };
+
+  auto bb = irBuilder.GetInsertBlock();
+  irBuilder.SetInsertPoint(bb, bb->begin());
+  auto beginDecl = getRuntimeFunc("__molly_begin_marker", voidTy, argTys);
+  irBuilder.CreateCall(beginDecl, args);
+
+  auto term = bb->getTerminator();
+  if (term)
+    irBuilder.SetInsertPoint(bb, term);
+  else
+    irBuilder.SetInsertPoint(bb, bb->end());
+  auto endDecl = getRuntimeFunc("__molly_end_marker", voidTy, argTys);
+  irBuilder.CreateCall(endDecl, args);
+}
+
+
+llvm::Value * molly::AnnotatedPtr::getDiscriminator() const {
+  return fvar ? fvar->getVariable() : base;
 }

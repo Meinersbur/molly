@@ -15,7 +15,7 @@ RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::Mul
 
 RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map map) { //FIXME: spelling
   auto nDims = map.getOutDimCount();
-  auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createZeroMultiPwAff();
+  auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createEmptyMultiPwAff();
   auto offsets = lengths.copy();
 
   for (auto i = nDims-nDims; i < nDims; i+=1) {
@@ -28,6 +28,8 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map m
     offsets.setPwAff_inplace(i, min);
   }
 
+  lengths.coalesce_inplace();
+  offsets.coalesce_inplace();
   return new RectangularMapping(lengths.move(), offsets.move());
 }
 

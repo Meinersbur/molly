@@ -232,12 +232,12 @@ isl::Map MollyFieldAccess::getAccessScattering() const {
 }
 
 
-isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
-  auto layout = getFieldVariable()->getLayout();
-  auto tyHomeAff = layout->getHomeAff();
-  tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
-  return tyHomeAff;
-}
+//isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
+//  auto layout = getFieldVariable()->getLayout();
+//  auto tyHomeAff = layout->getHomeAff();
+//  tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
+//  return tyHomeAff;
+//}
 
 
 llvm::StoreInst *MollyFieldAccess::getLoadUse() const {

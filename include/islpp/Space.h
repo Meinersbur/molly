@@ -126,8 +126,8 @@ namespace isl {
       compatibilize(self, range);
       return Space::enwrap(isl_space_map_from_domain_and_range(self.take(), range.take()));
     }
-    ISLPP_EXSITU_ATTRS Space mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION{ return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()))); }
-    Space mapsToItself() ISLPP_EXSITU_FUNCTION{ assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
+    ISLPP_EXSITU_ATTRS Space mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()))); }
+    ISLPP_EXSITU_ATTRS Space mapsToItself() ISLPP_EXSITU_FUNCTION { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
 
       // If this is a param space
     Space createSetSpace(count_t nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
@@ -208,6 +208,7 @@ namespace isl {
     MultiAff createZeroMultiAff() const;
     MultiAff createIdentityMultiAff() const;
     MultiPwAff createZeroMultiPwAff() const;
+    ISLPP_EXSITU_ATTRS MultiPwAff createEmptyMultiPwAff() ISLPP_EXSITU_FUNCTION;
     PwMultiAff createEmptyPwMultiAff() const;
 
     Point zeroPoint() const;

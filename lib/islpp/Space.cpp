@@ -260,6 +260,11 @@ MultiPwAff Space::createZeroMultiPwAff() const {
 }
 
 
+ISLPP_EXSITU_ATTRS MultiPwAff Space::createEmptyMultiPwAff() ISLPP_EXSITU_FUNCTION {
+  return MultiPwAff::enwrap(isl_multi_pw_aff_from_pw_multi_aff(isl_pw_multi_aff_empty(takeCopy())));
+}
+
+
 PwMultiAff Space::createEmptyPwMultiAff() const {
   return PwMultiAff::enwrap(isl_pw_multi_aff_empty(takeCopy()));
 }

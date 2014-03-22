@@ -30,6 +30,11 @@ namespace molly {
     isl::Map relation;
     //isl::PwMultiAff relationAff; //TODO: For compatibility; Code should be able to handle multiple locations
 
+    /// For every element selects a node that can be used as data source if the element is not local
+    /// { logical[indexset] -> physical[cluster] }
+    // TODO: select a primary remote for every node, so traffic is load-balanced
+    isl::PwMultiAff primary;
+
     /// To make a single, ordered index out of a local coordinate
     /// Inputs: physical[cluster], physical[local]
     /// Output: ordinal
@@ -40,6 +45,9 @@ namespace molly {
     FieldLayout(FieldType *fty, isl::Map relation, /*take*/ RectangularMapping *linearizer) : rankoffunc(nullptr), localidxfunc(nullptr), fty(fty), relation(relation), linearizer(linearizer) {
       assert(fty);
       assert(linearizer);
+
+      // FIXME: There are way better algos for chosing a primary
+      primary = relation.uncurry().domain().unwrap().lexmaxPwMultiAff();
     }
 
   public:
@@ -54,9 +62,11 @@ namespace molly {
     /// { cluster[nodecoord] -> fty[indexset] } 
     /// which coordinates are stored at these nodes
     // TODO: obsolete; use getPhysicalNode() instead
-    isl::PwMultiAff getHomeAff() const {
-      return relation.toPwMultiAff().sublist(relation.getRangeSpace().unwrap().getDomainSpace());
-    }
+    //isl::PwMultiAff getHomeAff() const {
+    //  return relation.toPwMultiAff().sublist(relation.getRangeSpace().unwrap().getDomainSpace());
+    //}
+
+    isl::PwMultiAff getPrimaryPhysicalNode() const { return primary; }
 
     isl::Space getLogicalIndexsetSpace() const;
 

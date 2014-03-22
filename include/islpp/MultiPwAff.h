@@ -177,6 +177,10 @@ namespace isl {
    ISLPP_EXSITU_ATTRS MultiPwAff embedIntoDomainSpace(Space framespace) ISLPP_EXSITU_FUNCTION;
 
    ISLPP_EXSITU_ATTRS Map projectOut(isl_dim_type type, pos_t first, count_t count) ISLPP_EXSITU_FUNCTION;
+
+   ISLPP_EXSITU_ATTRS MultiPwAff coalesce() ISLPP_EXSITU_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_coalesce(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_multi_pw_aff_coalesce(take())); }
+   ISLPP_CONSUME_ATTRS MultiPwAff coalesce_consume() ISLPP_CONSUME_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_coalesce(take())); }
 }; // class MultiAff
 
 

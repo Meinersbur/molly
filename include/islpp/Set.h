@@ -267,7 +267,10 @@ namespace isl {
     //Map chainNested(const Map &map) const; // deprecated; use chainSubspace
     Map chainSubspace(const Map &map) ISLPP_EXSITU_FUNCTION;
     Map chainSubspace_consume(const Map &map) ISLPP_CONSUME_FUNCTION;
-    Map chainNested(const Map &map, unsigned tuplePos) const; // deprecared?
+    Map chainNested(const Map &map, unsigned tuplePos) const; // deprecated?
+
+    ISLPP_EXSITU_ATTRS PwMultiAff chainSubspace(PwMultiAff pma) ISLPP_EXSITU_FUNCTION;
+    ISLPP_CONSUME_ATTRS PwMultiAff chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION;
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
@@ -306,7 +309,7 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
     ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
 
-    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); }
+    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); } // TODO: Some no-op on dimension that reset the space
 
     //FIXME: Not part of public isl interface
      ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
@@ -314,10 +317,10 @@ namespace isl {
      ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION { return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
 
 
-     void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
-     void dumpExplicit(int maxElts) const;
+     void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
+     void dumpExplicit(int maxElts, bool newlines, bool formatted ) const;
      void dumpExplicit() const; // In order do be callable without arguments from debugger
-     std::string toStringExplicit(int maxElts = 8);
+     std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false);
 
      std::string toString()  const;
   }; // class Set

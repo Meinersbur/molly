@@ -139,7 +139,7 @@ BasicSet Ctx::createRectangularSet(llvm::ArrayRef<unsigned> lengths) {
     set.addConstraint_inplace(std::move(ge));
 
     auto lt = Constraint::createInequality(space);
-    lt.setConstant_inplace(lengths[d]);
+    lt.setConstant_inplace(lengths[d]-1);
     lt.setCoefficient_inplace(isl_dim_set, d, -1);
     set.addConstraint_inplace(std::move(lt));
   }

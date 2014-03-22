@@ -682,10 +682,10 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
 
-    void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
-    void dumpExplicit(int maxElts) const;
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
+    void dumpExplicit(int maxElts, bool newlines = false, bool formatted = false) const;
     void dumpExplicit() const; // In order do be callable without arguments from debugger
-    std::string toStringExplicit(int maxElts = 8);
+    std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false);
 
 #ifndef NDEBUG
     std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise

@@ -110,6 +110,10 @@ namespace molly {
     llvm::Value *codegenPtrToSendBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
    void codegenStoreInSendbuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index, llvm::Value *val);
     
+   AnnotatedPtr codegenSendbufPtr(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord, isl::MultiPwAff index);
+   AnnotatedPtr codegenRecvbufPtr(MollyCodeGenerator &codegen, isl::MultiPwAff chunk, isl::MultiPwAff srcCoord, isl::MultiPwAff dstCoord, isl::MultiPwAff index);
+
+
     llvm::Value *codegenPtrToRecvBuf(MollyCodeGenerator &codegen, const isl::MultiPwAff &chunk, const isl::MultiPwAff &srcCoord, const isl::MultiPwAff &dstCoord, const isl::MultiPwAff &index);
      llvm::Value *codegenLoadFromRecvBuf(MollyCodeGenerator &codegen,  isl::MultiPwAff chunk,  isl::MultiPwAff srcCoord,  isl::MultiPwAff dstCoord,  isl::MultiPwAff index);
 

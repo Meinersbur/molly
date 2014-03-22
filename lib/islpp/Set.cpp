@@ -40,12 +40,12 @@ Set Set::createFromParams(Set &&set) {
 }
 
 
-Set Set::createFromPwAff(PwAff &&aff) { 
+Set Set::createFromPwAff(PwAff &&aff) {
   return Set::enwrap(isl_set_from_pw_aff(aff.take()));
 }
 
 
-Set Set::createFromPwMultiAff(PwMultiAff &&aff) { 
+Set Set::createFromPwMultiAff(PwMultiAff &&aff) {
   return Set::enwrap(isl_set_from_pw_multi_aff(aff.take()));
 }
 
@@ -55,7 +55,7 @@ Set Set::createFromPoint(Point &&point) {
 }
 
 
-Set Set:: createBoxFromPoints(Point &&pnt1, Point &&pnt2) {
+Set Set::createBoxFromPoints(Point &&pnt1, Point &&pnt2) {
   return Set::enwrap(isl_set_box_from_points(pnt1.take(), pnt2.take()));
 }
 
@@ -70,147 +70,147 @@ Set Set::readFrom(Ctx *ctx, const char *str) {
 }
 
 
-void Set::print(llvm::raw_ostream &out) const { 
+void Set::print(llvm::raw_ostream &out) const {
   molly::CstdioFile tmp;
   isl_set_print(this->keep(), tmp.getFileDescriptor(), 0, ISL_FORMAT_ISL);
   out << tmp;
 }
 
 
-void Set::dump() const { 
+void Set::dump() const {
   isl_set_dump(keep());
 }
 
 
-static const char *povray_prologue = 
-  "// Generated from an Integer Set Library set\n"
-  "#include \"colors.inc\"\n"
-  "#include \"screen.inc\"\n"
-  "\n"
-  "#macro Point3D(xx,yy,zz)\n"
-  "#ifndef (Min_X) #declare Min_X = xx; #elseif (xx < Min_X) #declare Min_X = xx; #end\n"
-  "#ifndef (Max_X) #declare Max_X = xx; #elseif (xx > Max_X) #declare Max_X = xx; #end\n"
-  "#ifndef (Min_Y) #declare Min_Y = yy; #elseif (xx < Min_Y) #declare Min_Y = yy; #end\n"
-  "#ifndef (Max_Y) #declare Max_Y = yy; #elseif (xx > Max_Y) #declare Max_Y = yy; #end\n"
-  "#ifndef (Min_Z) #declare Min_Z = zz; #elseif (zz < Min_Y) #declare Min_Z = zz; #end\n"
-  "#ifndef (Max_Z) #declare Max_Z = zz; #elseif (zz > Max_Y) #declare Max_Z = zz; #end\n"
-  "object {\n"
-  "  sphere { <0,0,0>, 0.25\n"
-  "    pigment { color Black }\n"
-  "    finish { specular 0.3 }\n"
-  "  }\n"
-  "  translate<xx,yy,zz>\n"
-  "}\n"
-  "#end\n"
-  "\n"
-  "#macro Point2D(xx,yy)\n"
-  "  Point3D(xx,yy,0)\n"
-  "#end\n"
-  "\n"
-  "#macro Point1D(xx)\n"
-  "  Point2D(xx,0)\n"
-  "#end\n"
-  "\n"
-  "#macro Space1D()\n"
-  "  plane { <0,1,0,>, 0.5  }\n"
-  "  plane { <0,-1,0>, 0.5 }\n"
-  "  plane { <0,0,1>, 0.5 }\n"
-  "  plane { <0,0,-1>, 0.5  }\n"
-  "#end \n"
-  "\n" 
-  "#macro CondIneq1D(c, xx)\n"
-  "  #local vec = <xx,0,0>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro CondEq1D(c, xx)\n"
-  "#local vec = <xx,0,0>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro Space2D()\n"
-  "  plane { <0,0,1>, 0.5 }\n"
-  "  plane { <0,0,-1>, 0.5  }\n"
-  "#end\n"
-  "\n"
-  "#macro CondIneq2D(c, xx, yy)\n"
-  "  #local vec = <xx,yy,0>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro CondEq2D(c, xx, yy)\n"
-  "#local vec = <xx,yy,0>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro Space3D()\n"
-  "#end\n"
-  "\n"
-  "#macro CondIneq3D(c, xx, yy, zz)\n"
-  "  #local vec = <xx,yy,0>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro CondEq3D(c, xx, yy, zz)\n"
-  "#local vec = <xx,yy,zz>;\n"
-  "  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
-  "#end\n"
-  "\n"
-  "#macro Polytope()\n"
-  "  texture { pigment { color Red transmit 0.5 } }\n"
-  "  finish { diffuse 0.9 phong 0.5 }\n"
-  "#end\n"
-  "\n"
-  ;
+static const char *povray_prologue =
+"// Generated from an Integer Set Library set\n"
+"#include \"colors.inc\"\n"
+"#include \"screen.inc\"\n"
+"\n"
+"#macro Point3D(xx,yy,zz)\n"
+"#ifndef (Min_X) #declare Min_X = xx; #elseif (xx < Min_X) #declare Min_X = xx; #end\n"
+"#ifndef (Max_X) #declare Max_X = xx; #elseif (xx > Max_X) #declare Max_X = xx; #end\n"
+"#ifndef (Min_Y) #declare Min_Y = yy; #elseif (xx < Min_Y) #declare Min_Y = yy; #end\n"
+"#ifndef (Max_Y) #declare Max_Y = yy; #elseif (xx > Max_Y) #declare Max_Y = yy; #end\n"
+"#ifndef (Min_Z) #declare Min_Z = zz; #elseif (zz < Min_Y) #declare Min_Z = zz; #end\n"
+"#ifndef (Max_Z) #declare Max_Z = zz; #elseif (zz > Max_Y) #declare Max_Z = zz; #end\n"
+"object {\n"
+"  sphere { <0,0,0>, 0.25\n"
+"    pigment { color Black }\n"
+"    finish { specular 0.3 }\n"
+"  }\n"
+"  translate<xx,yy,zz>\n"
+"}\n"
+"#end\n"
+"\n"
+"#macro Point2D(xx,yy)\n"
+"  Point3D(xx,yy,0)\n"
+"#end\n"
+"\n"
+"#macro Point1D(xx)\n"
+"  Point2D(xx,0)\n"
+"#end\n"
+"\n"
+"#macro Space1D()\n"
+"  plane { <0,1,0,>, 0.5  }\n"
+"  plane { <0,-1,0>, 0.5 }\n"
+"  plane { <0,0,1>, 0.5 }\n"
+"  plane { <0,0,-1>, 0.5  }\n"
+"#end \n"
+"\n"
+"#macro CondIneq1D(c, xx)\n"
+"  #local vec = <xx,0,0>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro CondEq1D(c, xx)\n"
+"#local vec = <xx,0,0>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro Space2D()\n"
+"  plane { <0,0,1>, 0.5 }\n"
+"  plane { <0,0,-1>, 0.5  }\n"
+"#end\n"
+"\n"
+"#macro CondIneq2D(c, xx, yy)\n"
+"  #local vec = <xx,yy,0>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro CondEq2D(c, xx, yy)\n"
+"#local vec = <xx,yy,0>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro Space3D()\n"
+"#end\n"
+"\n"
+"#macro CondIneq3D(c, xx, yy, zz)\n"
+"  #local vec = <xx,yy,0>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro CondEq3D(c, xx, yy, zz)\n"
+"#local vec = <xx,yy,zz>;\n"
+"  plane { -vec, (c+0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"  plane { -vec, (c-0.5*vlength(vec))/(vlength(vec)*vlength(vec)) }\n"
+"#end\n"
+"\n"
+"#macro Polytope()\n"
+"  texture { pigment { color Red transmit 0.5 } }\n"
+"  finish { diffuse 0.9 phong 0.5 }\n"
+"#end\n"
+"\n"
+;
 
-static const char *povray_epilogue = 
-  "\n"
-  "\n"            
-  "#declare Midpoint = <(Min_X+Max_X)/2,(Min_Y+Max_Y)/2(Min_Y+Max_Y)/2>;\n"
-  "\n"
-  "Set_Camera_Location(<1,1,1>*vlength(Midpoint)*1.1)\n"
-  "Set_Camera_Look_At(Midpoint)\n"
-  "Set_Camera_Aspect(image_width,image_height)\n"
-  "\n"
-  "background {\n"
-  "  color White\n"
-  "}\n"
-  "\n"
-  "light_source {\n"
-  "  Camera_Location*0.7\n"
-  "  color 1.5\n"
-  "}\n"
-  "\n"
-  "#macro Arrow(dst,c)\n"
-  "union {\n"
-  "  union {\n"
-  "    cylinder{<0,0,0>, dst, 0.1 }\n"
-  "    cone { dst,0.4,dst+vnormalize(dst)*1.5,0 }\n"
-  "    pigment { c }\n"
-  "  }\n"
-  "  #declare K = 0;\n"
-  "  #while (K <= vlength(dst))\n"
-  "        cylinder{ vnormalize(dst)*K, vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.3 , 0.05 }\n"
-  "        text { ttf \"crystal.ttf\", str(K,0,0), 0.01, 0\n"
-  "          translate <0,-0.5,0>\n"
-  "          scale 0.8\n"
-  "          transform { Camera_Transform }\n"
-  "          translate -Camera_Location\n"
-  "          translate vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.5\n"
-  "        }\n"
-  "        #declare K = K + 1;\n"
-  "   #end \n"
-  "   pigment { Black }\n"
-  "}\n"
-  "#end\n"
-  "\n"
-  "Arrow(<7,0,0>, rgb<1,0,0>)\n"
-  "Arrow(<0,5,0>, rgb<0,1,0>)\n"
-  "Arrow(<0,0,3>, rgb<0,0,1>)\n"
-  ;
+static const char *povray_epilogue =
+"\n"
+"\n"
+"#declare Midpoint = <(Min_X+Max_X)/2,(Min_Y+Max_Y)/2(Min_Y+Max_Y)/2>;\n"
+"\n"
+"Set_Camera_Location(<1,1,1>*vlength(Midpoint)*1.1)\n"
+"Set_Camera_Look_At(Midpoint)\n"
+"Set_Camera_Aspect(image_width,image_height)\n"
+"\n"
+"background {\n"
+"  color White\n"
+"}\n"
+"\n"
+"light_source {\n"
+"  Camera_Location*0.7\n"
+"  color 1.5\n"
+"}\n"
+"\n"
+"#macro Arrow(dst,c)\n"
+"union {\n"
+"  union {\n"
+"    cylinder{<0,0,0>, dst, 0.1 }\n"
+"    cone { dst,0.4,dst+vnormalize(dst)*1.5,0 }\n"
+"    pigment { c }\n"
+"  }\n"
+"  #declare K = 0;\n"
+"  #while (K <= vlength(dst))\n"
+"        cylinder{ vnormalize(dst)*K, vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.3 , 0.05 }\n"
+"        text { ttf \"crystal.ttf\", str(K,0,0), 0.01, 0\n"
+"          translate <0,-0.5,0>\n"
+"          scale 0.8\n"
+"          transform { Camera_Transform }\n"
+"          translate -Camera_Location\n"
+"          translate vnormalize(dst)*K + vnormalize(vnormalize(dst) - <1,1,1>)*1.5\n"
+"        }\n"
+"        #declare K = K + 1;\n"
+"   #end \n"
+"   pigment { Black }\n"
+"}\n"
+"#end\n"
+"\n"
+"Arrow(<7,0,0>, rgb<1,0,0>)\n"
+"Arrow(<0,5,0>, rgb<0,1,0>)\n"
+"Arrow(<0,0,3>, rgb<0,0,1>)\n"
+;
 
 void Set::printPovray(llvm::raw_ostream &out) const {
   out << povray_prologue;
@@ -225,13 +225,13 @@ void Set::printPovray(llvm::raw_ostream &out) const {
   //Int max[3] = {0,0,0};
   bool firstCoord = true;
 
-  foreachPoint([&,dims] (Point point) -> bool {
+  foreachPoint([&, dims](Point point) -> bool {
     out << "Point" << dims << "D(";
 
     bool first = true;
-    for (auto d = dims-dims; d < dims; d+=1) {
+    for (auto d = dims - dims; d < dims; d += 1) {
       if (!first) {
-        out<<", ";
+        out << ", ";
       }
       auto coord = point.getCoordinate(isl_dim_set, d);
       if (d < 3) {
@@ -263,13 +263,13 @@ void Set::printPovray(llvm::raw_ostream &out) const {
   //}
   out << "\n\n";
 
-  foreachBasicSet([&] (BasicSet bset) -> bool {
+  foreachBasicSet([&](BasicSet bset) -> bool {
     out << "intersection {\n";
     auto lspace = bset.getLocalSpace();
     auto dims = lspace.dim(isl_dim_set);
     out << "  Space" << dims << "D()\n";
 
-    bset.foreachConstraint([&] (Constraint constraint) -> bool {
+    bset.foreachConstraint([&](Constraint constraint) -> bool {
       //constraint.printProperties(out, 2);
 
       auto space = constraint.getLocalSpace();
@@ -277,7 +277,7 @@ void Set::printPovray(llvm::raw_ostream &out) const {
 
       auto offset = constraint.getConstant();
       bool anyNonzero = false;
-      for (auto i = dims-dims; i < dims;i+=1) {
+      for (auto i = dims - dims; i < dims; i += 1) {
         auto coeff = constraint.getCoefficient(isl_dim_set, i);
         if (!coeff.isZero()) {
           anyNonzero = true;
@@ -289,7 +289,7 @@ void Set::printPovray(llvm::raw_ostream &out) const {
 
       anyNonzero = false;
       auto divdims = space.dim(isl_dim_div);
-      for (auto i = divdims-divdims; i < divdims;i+=1) {
+      for (auto i = divdims - divdims; i < divdims; i += 1) {
         auto coeff = constraint.getCoefficient(isl_dim_div, i);
         if (!coeff.isZero()) {
           return false; // Div dimensionsions do not appear in diagram
@@ -297,7 +297,7 @@ void Set::printPovray(llvm::raw_ostream &out) const {
       }
 
       out << (constraint.isEquality() ? "  CondEq" : "  CondIneq") << dims << "D(" << offset;
-      for (auto i = dims-dims; i < dims;i+=1) {
+      for (auto i = dims - dims; i < dims; i += 1) {
         out << ", ";
         auto coeff = constraint.getCoefficient(isl_dim_set, i);
         out << coeff;
@@ -347,7 +347,7 @@ static int basicsetcallback(__isl_take isl_basic_set *bset, void *user) {
 }
 bool Set::foreachBasicSet(std::function<bool(BasicSet/*rvalue ref?*/)> fn) const {
   auto retval = isl_set_foreach_basic_set(keep(), basicsetcallback, &fn);
-  return retval!=0;
+  return retval != 0;
 }
 
 
@@ -365,14 +365,14 @@ static int pointcallback(__isl_take isl_point *pnt, void *user) {
 }
 bool Set::foreachPoint(std::function<bool(Point)> fn) const {
   auto retval = isl_set_foreach_point(keep(), pointcallback, &fn);
-  return retval!=0;
+  return retval != 0;
 }
 
 
 std::vector<Point> Set::getPoints() const {
   std::vector<Point> result;
-  foreachPoint([&] (Point point) -> bool { 
-    result.push_back(std::move(point));  
+  foreachPoint([&](Point point) -> bool {
+    result.push_back(std::move(point));
     return false;
   });
   return result;
@@ -391,7 +391,7 @@ unsigned Set::dim(isl_dim_type type) const {
 
 //unsigned Set::getSetDimCount() const { return dim(isl_dim_set); }
 
-int Set::getInvolvedDims(isl_dim_type type,unsigned first, unsigned n) const {
+int Set::getInvolvedDims(isl_dim_type type, unsigned first, unsigned n) const {
   return isl_set_involves_dims(keep(), type, first, n);
 }
 
@@ -485,7 +485,7 @@ bool Set::plainIsFixed(isl_dim_type type, unsigned pos, Int &val) const {
 }
 
 
-void Set::eliminate( isl_dim_type type, unsigned first, unsigned n) {
+void Set::eliminate(isl_dim_type type, unsigned first, unsigned n) {
   give(isl_set_eliminate(take(), type, first, n));
 }
 
@@ -577,7 +577,7 @@ void Set::flatten() {
 
 
 Map isl::flattenMap(Set &&set) {
-  return Map::enwrap(isl_set_flatten_map( set.take()));
+  return Map::enwrap(isl_set_flatten_map(set.take()));
 }
 
 
@@ -587,7 +587,7 @@ void Set::lift() {
 
 
 PwAff Set::dimMin(int pos) const {
-  return PwAff::enwrap(isl_set_dim_min(takeCopy(), pos));   
+  return PwAff::enwrap(isl_set_dim_min(takeCopy(), pos));
 }
 
 
@@ -598,7 +598,7 @@ PwAff Set::dimMin(const Dim &dim) const {
 
 
 PwAff Set::dimMax(int pos) const {
-  return PwAff::enwrap(isl_set_dim_max(takeCopy(), pos));   
+  return PwAff::enwrap(isl_set_dim_max(takeCopy(), pos));
 }
 
 
@@ -608,8 +608,8 @@ PwAff Set::dimMax(const Dim &dim) const {
 }
 
 
-void Set::apply_inplace(Map &&map) ISLPP_INPLACE_FUNCTION { give(isl_set_apply(take(), map.take())); } 
-void Set::apply_inplace(const Map &map) ISLPP_INPLACE_FUNCTION { give(isl_set_apply(take(), map.takeCopy())); } 
+void Set::apply_inplace(Map &&map) ISLPP_INPLACE_FUNCTION{ give(isl_set_apply(take(), map.take())); }
+void Set::apply_inplace(const Map &map) ISLPP_INPLACE_FUNCTION{ give(isl_set_apply(take(), map.takeCopy())); }
 Set Set::apply(Map &&map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.take())); }
 Set Set::apply(const Map &map) const { return Set::enwrap(isl_set_apply(takeCopy(), map.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
@@ -672,22 +672,22 @@ Map Set::chainNested(const Map &map, unsigned tuplePos) const {
   unsigned tupleDimCount = map.getInDimCount();
   assert(space.extractNestedTupleSpace(isl_dim_set, space.findTuplePos(isl_dim_set, domainTuple)) == map.getDomainSpace());
 
-  auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, tuplePos, tupleDimCount, isl_dim_out, 0); 
+  auto equator = Space::createMapFromDomainAndRange(space, map.getDomainSpace()).equalBasicMap(isl_dim_in, tuplePos, tupleDimCount, isl_dim_out, 0);
   return chain(equator).applyDomain(map);
 }
 
 
-void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION {
+void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION{
   llvm::SmallVector<unsigned, 4> poss(order.begin(), order.end());
   auto nDims = getSetDimCount();
 
   auto nextDst = 0;
   auto size = order.size();
-  for (auto i = size-size; i < size; i+=1) {
+  for (auto i = size - size; i < size; i += 1) {
     auto origPos = order[i];
     auto next = nDims;
-    for (auto j = size-size; j < size; j+=1) {
-      if (j==i)
+    for (auto j = size - size; j < size; j += 1) {
+      if (j == i)
         continue;
       if (order[j] < origPos)
         continue;
@@ -698,10 +698,10 @@ void Set::permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNC
 
     moveDims_inplace(isl_dim_set, nextDst, isl_dim_set, srcPos, len);
 
-    for (auto j = i+1; j < size; j+=1) {
-      if (poss[j] < srcPos) 
+    for (auto j = i + 1; j < size; j += 1) {
+      if (poss[j] < srcPos)
         continue;
-      assert(poss[j] >= srcPos+len);
+      assert(poss[j] >= srcPos + len);
       poss[j] += len; // Dims has been moved in front
     }
     nextDst += len;
@@ -744,14 +744,14 @@ Set isl::alignParams(Set &&set, Space &&model) {
 }
 
 
-Set isl::addDims(Set &&set,isl_dim_type type, unsigned n) {
-  return Set::enwrap(isl_set_add_dims(set.take(),type,n));
+Set isl::addDims(Set &&set, isl_dim_type type, unsigned n) {
+  return Set::enwrap(isl_set_add_dims(set.take(), type, n));
 }
 
 Set isl::insertDims(Set &&set, isl_dim_type type, unsigned pos, unsigned n){
   return Set::enwrap(isl_set_insert_dims(set.take(), type, pos, n));
 }
-Set isl::moveDims(Set &&set, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos,  unsigned n){
+Set isl::moveDims(Set &&set, isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned n){
   return Set::enwrap(isl_set_move_dims(set.take(), dst_type, dst_pos, src_type, src_pos, n));
 }
 
@@ -892,7 +892,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto nTotalDomainDims = 0;
   Space domainSpace;
   auto nDomainSubspaces = domainSubspaces.size();
-  for (auto i = nDomainSubspaces-nDomainSubspaces; i < nDomainSubspaces; i+=1) {
+  for (auto i = nDomainSubspaces - nDomainSubspaces; i < nDomainSubspaces; i += 1) {
     auto subspace = domainSubspaces[i];
     domainSpace = combineSpaces(domainSpace, subspace);
     nTotalDomainDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
@@ -903,7 +903,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto nTotalRangeDims = 0;
   Space rangeSpace;
   auto nRangeSubspaces = rangeSubspaces.size();
-  for (auto i = nRangeSubspaces-nRangeSubspaces; i < nRangeSubspaces; i+=1) {
+  for (auto i = nRangeSubspaces - nRangeSubspaces; i < nRangeSubspaces; i += 1) {
     auto subspace = rangeSubspaces[i];
     rangeSpace = combineSpaces(rangeSpace, subspace);
     nTotalRangeDims += subspace.dim(isl_dim_in) + subspace.dim(isl_dim_out);
@@ -918,7 +918,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto domainMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getDomainSpace());
   auto domainMap = domainMapSpace.universeBasicMap();
   unsigned pos = 0;
-  for (auto i = nDomainSubspaces-nDomainSubspaces; i < nDomainSubspaces; i+=1) {
+  for (auto i = nDomainSubspaces - nDomainSubspaces; i < nDomainSubspaces; i += 1) {
     auto subspace = domainSubspaces[i];
     auto dimrange = space.findSubspace(isl_dim_set, subspace);
     assert(dimrange.isValid());
@@ -929,7 +929,7 @@ Map Set::reorganizeSubspaceList(llvm::ArrayRef<Space> domainSubspaces, llvm::Arr
   auto rangeMapSpace = Space::createMapFromDomainAndRange(space, resultSpace.getRangeSpace());
   auto rangeMap = domainMapSpace.universeBasicMap();
   pos = 0;
-  for (auto i = nRangeSubspaces-nRangeSubspaces; i < nRangeSubspaces; i+=1) {
+  for (auto i = nRangeSubspaces - nRangeSubspaces; i < nRangeSubspaces; i += 1) {
     auto subspace = rangeSubspaces[i];
     auto dimrange = space.findSubspace(isl_dim_set, subspace);
     assert(dimrange.isValid());
@@ -950,7 +950,7 @@ static void reorganizeSubspaces_recursive(const Space &parentSpace, /*out*/Basic
       map.intersect_inplace(map.getSpace().equalBasicMap(isl_dim_in, dimrange.getBeginPos(), dimrange.getCount(), isl_dim_out, offset));
       offset += dimrange.getCount();
       return;
-    } 
+    }
   }
 
   if (subspace.isWrapping()) {
@@ -958,8 +958,8 @@ static void reorganizeSubspaces_recursive(const Space &parentSpace, /*out*/Basic
   } else if (subspace.isMapSpace()) {
     reorganizeSubspaces_recursive(parentSpace, map, subspace.getDomainSpace(), offset, mustExist);
     if (map.isNull()) {
-    assert(mustExist);
-    return;
+      assert(mustExist);
+      return;
     }
     reorganizeSubspaces_recursive(parentSpace, map, subspace.getRangeSpace(), offset, mustExist);
   } else {
@@ -1008,7 +1008,7 @@ Map Set::reorganizeSubspaces(const Space &domainSpace_, const Space &rangeSpace_
 }
 
 
-Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_FUNCTION {
+Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_FUNCTION{
   auto myspace = getSpace();
   auto targetspace = space.normalizeWrapped();
 
@@ -1032,72 +1032,93 @@ Set Set::cast(Space space) ISLPP_EXSITU_FUNCTION {
 }
 
 
-ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces( const Space &domainSpace, const Space &rangeSpace ) ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces(const Space &domainSpace, const Space &rangeSpace) ISLPP_EXSITU_FUNCTION{
   return reorganizeSubspaces(std::move(domainSpace), std::move(rangeSpace), true);
 }
 
 
-void isl::Set::dumpExplicit( int maxElts /*= 8*/ )const{
-  printExplicit(llvm::dbgs(), maxElts);
+void isl::Set::dumpExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) const {
+  printExplicit(llvm::dbgs(), maxElts, newlines, formatted);
   llvm::dbgs() << "\n";
 }
 
-void isl::Set::dumpExplicit()const
-{
-  dumpExplicit(8);
+
+void isl::Set::dumpExplicit() const {
+  dumpExplicit(8, false, false);
 }
 
 
+void isl::Set::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) const {
+  int count = 0;
+  auto omittedsome = this->foreachPoint([&count, maxElts, &os, newlines, formatted](Point p) -> bool {
+    if (count >= maxElts)
+      return true;
 
-void isl::Set::printExplicit( llvm::raw_ostream &os, int maxElts /*= 8*/ )const {
-  os << "{ ";
-  int count=0;
- auto omittedsome = this->foreachPoint([&count,maxElts,&os](Point p) -> bool {
-   if (count >= maxElts)
-     return true;
+    if (count == 0) {
+      os << (newlines ? "{\n  " : "{ ");
+    } else {
+      os << (newlines ? ",\n  " : ", ");
+    }
+    if (formatted)
+      p.printFormatted(os);
+    else
+      os << p;
 
-   if (count>0) {
-     os << ", ";
-   }
-   os << p;
-
-    count+=1;
+    count += 1;
     return false;
   });
 
- if (omittedsome) {
-   os << ", ...";
- }
- os << " }";
+  if (count == 0) {
+    if (omittedsome) {
+      os << "{ ... }";
+    } else {
+      os << "{ }";
+    }
+  } else {
+    if (omittedsome) {
+      os << (newlines ? ",\n  ...\n}" : ", ... }");
+    } else {
+      os << (newlines ? "\n}" : " }");
+    }
+  }
 }
 
-std::string isl::Set::toStringExplicit( int maxElts /*= 8*/ )
-{
+std::string isl::Set::toStringExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  printExplicit(os, maxElts);
+  printExplicit(os, maxElts, newlines);
   os.flush();
   return str; // NRVO
 }
 
 
-std::string isl::Set::toString() const
-{
+std::string isl::Set::toString() const {
   return ObjBaseTy::toString();
 }
 
 
-void isl::Set::intersect_inplace( UnionSet that ) ISLPP_INPLACE_FUNCTION
-{
+void isl::Set::intersect_inplace(UnionSet that) ISLPP_INPLACE_FUNCTION {
   intersect_inplace(that.extractSet(getSpace()));
 }
 
 
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Set::chainSubspace(PwMultiAff pma) ISLPP_EXSITU_FUNCTION {
+  auto domainSpace = getSpace();
+  auto middleSpace = pma.getDomainSpace();
+  auto id = MultiAff::createIdentity(domainSpace.mapsToItself());
+ 
+  isl::Space subspace;
+  auto range = domainSpace.findSubspace(isl_dim_set, middleSpace); assert(range.isValid());
+  id.removeDims_inplace(isl_dim_out, range.getEnd(), id.getOutDimCount() - range.getEnd());
+  id.removeDims_inplace(isl_dim_out, 0, range.getFirst());
+  auto restricted = id.castRange(middleSpace).restrictDomain(copy());
+  return restricted.applyRange(std::move(pma));
+}
 
 
-
-
+ISLPP_CONSUME_ATTRS PwMultiAff Set::chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION{
+  return chainSubspace(std::move(pma));
+}
 
 
 Set isl::params(Set &&set){
@@ -1114,13 +1135,16 @@ Set isl::computeDivs(Set &&set) {
   return Set::enwrap(isl_set_compute_divs(set.take()));
 }
 
+
 Set isl::alignDivs(Set &&set) {
   return Set::enwrap(isl_set_align_divs(set.take()));
 }
 
+
 Set isl::removeDivs(Set &&set) {
   return Set::enwrap(isl_set_remove_divs(set.take()));
 }
+
 
 Set isl::removeDivsInvolvingDims(Set &&set, isl_dim_type type, unsigned first, unsigned n) {
   return Set::enwrap(isl_set_remove_divs_involving_dims(set.take(), type, first, n));
@@ -1170,11 +1194,11 @@ int isl::plainCmp(const Set &lhs, const Set &rhs) {
 }
 
 
-isl::Map isl::alltoall( Set domainSet, Set rangeSet ) {
+isl::Map isl::alltoall(Set domainSet, Set rangeSet) {
   return product(domainSet, rangeSet).unwrap();
 }
 
 
-isl::Map isl::alltoall( Space domainUniverse, Set rangeSet ) {
+isl::Map isl::alltoall(Space domainUniverse, Set rangeSet) {
   return alltoall(domainUniverse.universeBasicSet(), std::move(rangeSet));
 }

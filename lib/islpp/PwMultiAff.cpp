@@ -201,6 +201,11 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castDomain(Space domainSpace) ISLPP_EX
 }
 
 
+ISLPP_INPLACE_ATTRS void PwMultiAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION{
+  obj_give(castDomain(domainSpace));
+}
+
+
 ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION{
   assert(getOutDimCount() == rangeSpace.getSetDimCount());
 
@@ -218,52 +223,42 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSI
 }
 
 
-ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange(Map map) ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange(Map map) ISLPP_EXSITU_FUNCTION {
   return toMap().applyRange(map);
 }
 
 
-
-
-void isl::Pw<MultiAff>::dumpExplicit(int maxElts) const
-{
-  toMap().dumpExplicit(maxElts);
+void isl::Pw<MultiAff>::dumpExplicit(int maxElts, bool newlines, bool formatted) const {
+  toMap().dumpExplicit(maxElts, newlines, formatted);
 }
 
 
-void isl::Pw<MultiAff>::dumpExplicit() const
-{
+void isl::Pw<MultiAff>::dumpExplicit() const {
   toMap().dumpExplicit();
 }
 
 
-void isl::Pw<MultiAff>::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/) const
-{
-  toMap().printExplicit(os, maxElts);
+void isl::Pw<MultiAff>::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines, bool formatted) const {
+  toMap().printExplicit(os, maxElts, newlines,formatted);
 }
 
 
-std::string isl::Pw<MultiAff>::toStringExplicit(int maxElts) const
-{
-  return toMap().toStringExplicit(maxElts);
+std::string isl::Pw<MultiAff>::toStringExplicit(int maxElts, bool newlines, bool formatted) const {
+  return toMap().toStringExplicit(maxElts,newlines,formatted);
 }
 
 
-std::string isl::Pw<MultiAff>::toStringExplicit() const
-{
-  return toStringExplicit(8);
+std::string isl::Pw<MultiAff>::toStringExplicit() const {
+  return toMap().toStringExplicit();
 }
 
 
-std::string isl::Pw<MultiAff>::toString() const
-{
+std::string isl::Pw<MultiAff>::toString() const {
   return ObjBaseTy::toString();
 }
 
 
 isl::Pw<MultiAff>::Pw(MultiPwAff that) : Obj(that.isValid() ? that.toPwMultiAff() : PwMultiAff()) {
-
 }
 
 
@@ -272,8 +267,7 @@ const PwMultiAff & isl::Pw<MultiAff>::operator=(MultiPwAff that) {
 }
 
 
-void isl::Pw<MultiAff>::dump() const
-{
+void isl::Pw<MultiAff>::dump() const {
   isl_pw_multi_aff_dump(keep());
 }
 
