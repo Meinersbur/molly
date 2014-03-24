@@ -194,7 +194,7 @@ typedef enum {
 typedef int64_t coord_t;
 
 
-#if 0
+#if 1
 #if 0
 #define L 8
 #define LT L

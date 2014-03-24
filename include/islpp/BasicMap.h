@@ -203,7 +203,7 @@ namespace isl {
       return result;
     }
 
-    bool imageIsBounded() const { return isl_basic_map_image_is_bounded(keep()); } // isBoundedRange
+    //bool imageIsBounded() const { return isl_basic_map_image_is_bounded(keep()); } // isBoundedRange
     bool isUniverse() const { return isl_basic_map_is_universe(keep()); }
     bool plainIsEmpty() const { return isl_basic_map_plain_is_empty(keep()); }
     bool fastIsEmpty() const { return isl_basic_map_fast_is_empty(keep()); }
@@ -269,6 +269,10 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS Aff dimMin(pos_t pos) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS Aff dimMax(pos_t pos) ISLPP_EXSITU_FUNCTION;
+
+    ISLPP_PROJECTION_ATTRS bool imageIsBounded() ISLPP_PROJECTION_FUNCTION { // isBoundedRange
+      return checkBool(isl_basic_map_image_is_bounded(keep())); 
+    }
   }; // class BasicMap
 
 

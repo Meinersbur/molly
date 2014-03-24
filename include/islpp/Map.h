@@ -701,6 +701,13 @@ namespace isl {
     Map map(Map map) const {
       return map.applyRange(copy());
     }
+
+    ISLPP_PROJECTION_ATTRS bool imageIsBounded() ISLPP_PROJECTION_FUNCTION { 
+      bool aborted = foreachBasicMap([](BasicMap &&map) -> bool {
+       return !map.imageIsBounded();
+      });
+      return !aborted;
+    }
   }; // class Map
 
 

@@ -70,18 +70,26 @@ namespace llvm {
 #endif
 
 
-#define ISLPP_PROJECTION_ATTRS ISLPP_WARN_UNUSED_RESULT
-#define ISLPP_PROJECTION_FUNCTION const
-
+// A function that does not alter the object
 #define ISLPP_EXSITU_ATTRS ISLPP_WARN_UNUSED_RESULT
 #define ISLPP_EXSITU_FUNCTION const
 
+// A function that modifies the objects to store the operation's result in it and by destroying the previously held value
+// Typically postfixed using "_inplace"
 #define ISLPP_INPLACE_ATTRS
 #define ISLPP_INPLACE_FUNCTION ISLPP_LVALUE_FUNCTION
 
+// A consume-function may not preserve the resources of the object
+// Hence, the object should not be used after executing such a function
+// Function typically postifixed with "_consume" or &&-qualified
 #define ISLPP_CONSUME_ATTRS ISLPP_WARN_UNUSED_RESULT
 #define ISLPP_CONSUME_FUNCTION 
 
+// A function that does not alter the object
+// In contrast to inplace-functions, using inplace- or consume-versions of the operation would not gain any benefit, therefore don't exist
+// Typical examples: reductions, queriyng properties, getCtx(), ...
+#define ISLPP_PROJECTION_ATTRS ISLPP_WARN_UNUSED_RESULT
+#define ISLPP_PROJECTION_FUNCTION const
 
 
 namespace isl {

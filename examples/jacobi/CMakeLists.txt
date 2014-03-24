@@ -1,8 +1,11 @@
 
-### Compile using standard compiler (Will miscompile since this needs mollycc, but adds it to Visual Studio project)
+### Compile using standard compiler (without WITH_MOLLY being defined)
 add_molly_example(jacobi jacobi.cpp)
 
-
+add_custom_target(run-jacobi
+   COMMAND "$<TARGET_FILE:jacobi>" 
+   COMMENT "Running ref jacobi..."
+)
 
 
 
@@ -10,7 +13,7 @@ add_molly_example(jacobi jacobi.cpp)
 get_filename_component(jacobi_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}jacobi-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_compile("${jacobi_path}"
   SOURCES "jacobi.cpp"
-  CFLAGS -mllvm -shape=2x2
+  CFLAGS -mllvm -shape=2 -mllvm -polly-only-marked
   COMMENT "mollycc MollyRT jacobi.cpp..."
 )
 
@@ -29,7 +32,7 @@ set_target_properties(jacobi-mollycc PROPERTIES FOLDER "Molly")
 get_filename_component(jacobi_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}jacobi-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${jacobi_a_path}"
   SOURCES "jacobi.cpp"
-  FLAGS -mllvm -shape=2x2
+  FLAGS -mllvm -shape=2 -mllvm -polly-only-marked
   COMMENT "mollycc molly.a jacobi.cpp..."
 )
 

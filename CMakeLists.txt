@@ -122,7 +122,7 @@ set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/incl
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing)
+set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing)
 set(MOLLYCC_COMMON_LDLAGS )
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)

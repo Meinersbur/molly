@@ -17,6 +17,10 @@ struct isl_multi_pw_aff;
 
 
 namespace isl {
+
+  /// operator[] proxy class
+  class MultiPwAffSubscript;
+
   template<>
   class Multi<PwAff> : public Obj<MultiPwAff, isl_multi_pw_aff>, public Spacelike<MultiPwAff> {
   public:
@@ -124,6 +128,9 @@ namespace isl {
     void setPwAff_inplace(int pos, PwAff &&el) ISLPP_INPLACE_FUNCTION { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.take())); }
     void setPwAff_inplace(int pos, const PwAff &el) ISLPP_INPLACE_FUNCTION { give(isl_multi_pw_aff_set_pw_aff(take(), pos, el.takeCopy())); }
 
+     MultiPwAffSubscript operator[](pos_t pos);
+     EltType operator[](pos_t pos) const { return getPwAff(pos); }
+
     void push_back(PwAff &&);
 #pragma endregion
 
@@ -137,7 +144,7 @@ namespace isl {
     //void lift() { give(isl_multi_pw_aff_lift(take(), nullptr)); }
 
 
-    EltType operator[](unsigned pos) const { return getPwAff(pos); } 
+   //EltType operator[](unsigned pos) const { return getPwAff(pos); } 
 
     MultiPwAff sublist(pos_t first, count_t count) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.sublist_inplace(first, count); return result; }
       void sublist_inplace(pos_t first, count_t count) ISLPP_INPLACE_FUNCTION;
@@ -181,7 +188,33 @@ namespace isl {
    ISLPP_EXSITU_ATTRS MultiPwAff coalesce() ISLPP_EXSITU_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_coalesce(takeCopy())); }
    ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_multi_pw_aff_coalesce(take())); }
    ISLPP_CONSUME_ATTRS MultiPwAff coalesce_consume() ISLPP_CONSUME_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_coalesce(take())); }
+
+     ISLPP_EXSITU_ATTRS Set getDomain() ISLPP_EXSITU_FUNCTION;
 }; // class MultiAff
+
+
+class MultiPwAffSubscript {
+  Multi<PwAff> &parent;
+  pos_t pos;
+
+private:
+  MultiPwAffSubscript() LLVM_DELETED_FUNCTION;
+  //MultiPwAffSubscript(const MultiPwAffSubscript &) LLVM_DELETED_FUNCTION;
+  //MultiPwAffSubscript &operator=(const MultiPwAffSubscript &) LLVM_DELETED_FUNCTION;
+
+public:
+  MultiPwAffSubscript(Multi<PwAff> &parent, pos_t pos) : parent(parent), pos(pos) {}
+
+  operator PwAff() const { return parent.getPwAff(pos); }
+  void operator=(PwAff arg) { parent.setPwAff_inplace(pos, std::move(arg)); }
+}; // class MultiPwAffSubscript
+
+
+inline MultiPwAffSubscript Multi<PwAff>::operator[](pos_t pos) {
+  return MultiPwAffSubscript(*this, pos);
+}
+
+
 
 
   static inline MultiPwAff enwrap(__isl_take isl_multi_pw_aff *obj) { return Multi<PwAff>::enwrap(obj); }

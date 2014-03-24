@@ -112,10 +112,11 @@ namespace {
   }
 
 
-  isl::MultiAff constantScatter(isl::MultiAff translate/* { result[domain] -> model[domain] } */, isl::MultiAff modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
+  isl::MultiPwAff constantScatter(isl::MultiAff translate/* { result[domain] -> model[domain] } */, isl::MultiPwAff modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
     auto result = modelScatter.pullback(translate);
     auto nScatterDims = result.getOutDimCount();
-    result.setAff_inplace(nScatterDims - 1, result.getAff(nScatterDims - 1) + relative);
+    //result.setPwAff_inplace(nScatterDims - 1, result.getPwAff(nScatterDims - 1) + relative);
+    result[nScatterDims - 1] = result[nScatterDims - 1] + relative;
     return result;
   }
 
@@ -437,9 +438,14 @@ namespace {
       DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << funcName << "\n");
       if (funcName == "test") {
         int a = 0;
-      } if (funcName == "HoppingMatrix") {
+      } else if (funcName == "HoppingMatrix") {
         int b = 0;
+      } else if (funcName == "Jacobi") {
+        int c = 0;
+      } else if (funcName == "reduce") {
+        int d = 0;
       }
+
       auto clusterConf = pm->getClusterConfig();
       auto &llvmContext = func->getContext();
       auto module = func->getParent();
@@ -496,6 +502,7 @@ namespace {
         assert(domain.getSpace().matchesSetSpace(domainTuple));
 
         auto scattering = getScattering(stmt); /* { stmt[domain] -> scattering[scatter] }  */
+        assert(scattering.imageIsBounded());
         assert(scattering.getSpace().matchesMapSpace(domainTuple, scatterTuple));
         scattering.intersectDomain_inplace(domain);
         schedule.addMap_inplace(scattering);
@@ -620,10 +627,10 @@ namespace {
       auto nScatterDims = scatterRange.getDimCount();
 
       assert(!scatterRange.isEmpty());
-      auto max = affineHull(alltoall(epilogueDomainSpace.universeBasicSet(), scatterRange)).dimMax(0) + 1;
+      auto max = alltoall(epilogueDomainSpace.universeBasicSet(), scatterRange).dimMax(0) + 1;
       //max.setInTupleId_inplace(epilogueId);
       this->afterScopScatter = epilogueScatterSpace.createZeroMultiAff();
-      this->afterScopScatter.setAff_inplace(0, max);
+      this->afterScopScatter[0] = max;
 
       isl::Set epilogueDomain = epilogueDomainSpace.universeSet();
       auto epilogieMapToZero = epilogueScatterSpace.createUniverseBasicMap();
@@ -632,10 +639,10 @@ namespace {
       }
 
       assert(!scatterRange.isEmpty());
-      auto min = affineHull(alltoall(prologueDomainSpace.universeBasicSet(), scatterRange)).dimMin(0) - 1; /* { [1] } */
+      auto min = alltoall(prologueDomainSpace.universeBasicSet(), scatterRange).dimMin(0) - 1; /* { [1] } */
       // min.setInTupleId_inplace(prologueId); /* { scattering[nScatterDims] -> [1] } */
       this->beforeScopScatter = prologueScatterSpace.createZeroMultiAff();
-      this->beforeScopScatter.setAff_inplace(0, min);
+      this->beforeScopScatter[0] = min;
 
       //min.addDims_inplace(isl_dim_in, nScatterDims);
       //auto beforeScopScatter = scatterRangeSpace.mapsTo(scatterRangeSpace).createZeroMultiPwAff(); /* { scattering[nScatterDims] -> scattering[nScatterDims] } */
@@ -643,7 +650,7 @@ namespace {
       beforeScopScatterRange = beforeScopScatter.toMap().getRange();
 
 
-      auto afterBeforeScatter = beforeScopScatter.setAff(1, beforeScopScatter.getDomainSpace().createConstantAff(1));
+      auto afterBeforeScatter = beforeScopScatter.setPwAff(1, beforeScopScatter.getDomainSpace().createConstantAff(1));
       afterBeforeScatterRange = afterBeforeScatter.toMap().getRange();
 
       // Insert fake read access after scop
@@ -981,8 +988,8 @@ namespace {
 
 
   private:
-    isl::MultiAff beforeScopScatter; // { prologue[] -> scattering[scatter] }
-    isl::MultiAff afterScopScatter; // { epilogue[] -> scattering[scatter] }
+    isl::MultiPwAff beforeScopScatter; // { prologue[] -> scattering[scatter] }
+    isl::MultiPwAff afterScopScatter; // { epilogue[] -> scattering[scatter] }
 
 
     void genInputCommunication(isl::Set inp/* { readStmt[domain] } */) {
@@ -1065,7 +1072,7 @@ namespace {
 
       if (!remoteTransferSrc.isEmpty()) {
         auto prologueDomain = beforeScopScatter.getDomain(); // { prologue[] }
-        auto epilogueDomain = afterScopScatter.getDomain(); // { epilogue[] }
+        auto epilogueDomain = afterScopScatter.getDomainSpace().createUniverseBasicSet(); // { epilogue[] }
 
         //auto primaryHome = fvar->getPrimaryPhysicalNode(); // { fvar[domain] -> node[cluster] }
         //auto primaryHomeReorganzied = primaryHome.toMap().castRange(srcNodeSpace).wrap().reorganizeSubspaces(remoteTransfer.getSpace());
