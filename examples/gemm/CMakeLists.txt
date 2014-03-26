@@ -45,7 +45,7 @@ set_target_properties(gemm-mollycc-a PROPERTIES FOLDER "Molly")
 
 
 add_custom_target(run-gemm-mollycc-a
-  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPIEXEC_POSTFLAGS} "${gemm_a_path}"
+  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_POSTFLAGS} "${gemm_a_path}"
   DEPENDS "${gemm_a_path}"
   COMMENT "Running gemm-mollycc-a..."
   VERBATIM

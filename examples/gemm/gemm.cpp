@@ -37,29 +37,41 @@ MOLLY_ATTR(pure) double initValB(coord_t y, coord_t z) {
   return 0;
 }
 
-//molly::array<double, LX> test;
-
 extern "C" MOLLY_ATTR(process) void init() {
   for (coord_t x = 0; x < LX; x += 1)
     for (coord_t y = 0; y < LY; y += 1) {
-      A[x][y] = initValA(x,y);
+      A[x][y] = initValA(x, y);
     }
 
   for (coord_t y = 0; y < LY; y += 1)
-    for (coord_t z= 0; z < LZ; z += 1){
+    for (coord_t z = 0; z < LZ; z += 1) {
       B[y][z] = initValB(y, z);
     }
 }
 
+
 extern "C" MOLLY_ATTR(process) void gemm() {
   for (coord_t x = 0; x < LX; x += 1)
     for (coord_t z = 0; z < LZ; z += 1) {
+      //C[x][z] = 0;
       double sum = 0;
       for (coord_t y = 0; y < LY; y += 1) {
         //C[x][z] += A[x][y] * B[y][z];
         sum += A[x][y] * B[y][z];
       }
       C[x][z] = sum;
+    }
+}
+
+
+MOLLY_ATTR(pure) void checkResult(double val, coord_t x, coord_t z) {
+  double expected = 0;
+  if (x==0 && (z==0 || z==1))
+    expected = 1;
+
+  if (val != expected) {
+    if (__molly_isMaster())
+      std::cerr << "ERROR C[" << x << ','<< z << "]=" << val << " (" << expected << " expected)\n";
   }
 }
 
@@ -67,20 +79,26 @@ extern "C" MOLLY_ATTR(process) void gemm() {
 extern "C" MOLLY_ATTR(process) double reduce() {
   double sum = 0;
   for (coord_t x = 0; x < LX; x += 1)
-    for (coord_t y = 0; y < LY; y += 1) {
-      sum += C[x][y];
+    for (coord_t z = 0; z < LZ; z += 1) {
+      auto val = C[x][z];
+      checkResult(val,x,z);
+      sum += val;
     }
   return sum;
 }
 
 
-int main(int argc, char *argv[]) {
-  init();
-  gemm();
-  auto sum = reduce();
 
+int main(int argc, char *argv[]) {
+  waitToAttach();
+  init();
+
+  waitToAttach();
+  gemm();
+
+  auto sum = reduce();
   if (__molly_isMaster())
-    std::cout << "Molly result = " << sum << '\n';
+    std::cout << ">>>> Result = " << sum << '\n';
 
   return 0;
 }

@@ -1180,4 +1180,6 @@ LLVM_ATTRIBUTE_USED MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) void molly::
 }
 #endif
 
+extern "C" void waitToAttach();
+
 #endif /* MOLLY_H */

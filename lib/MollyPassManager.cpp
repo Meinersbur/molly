@@ -1,46 +1,16 @@
 #define DEBUG_TYPE "molly"
 #include "MollyPassManager.h"
 
-#include <llvm/Support/Debug.h>
-#include <llvm/Pass.h>
 #include "MollyUtils.h"
-#include <llvm/ADT/DenseSet.h>
-#include <polly/ScopInfo.h>
-#include <polly/LinkAllPasses.h>
 #include "ClusterConfig.h"
-#include <llvm/Support/CommandLine.h>
-#include "molly/RegisterPasses.h"
-#include <polly/RegisterPasses.h>
-#include <llvm/Support/Debug.h>
 #include "FieldType.h"
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/IRBuilder.h>
-#include <polly/ScopInfo.h>
-#include "MollyUtils.h"
-#include <llvm/Support/ErrorHandling.h>
 #include "ScopUtils.h"
 #include "MollyFieldAccess.h"
-#include "islpp/Set.h"
-#include "islpp/Map.h"
-#include <llvm/Analysis/ScalarEvolution.h>
 #include "FieldVariable.h"
-#include <llvm/IR/Intrinsics.h>
-#include "islpp/UnionMap.h"
 #include "ScopEditor.h"
-#include "islpp/Point.h"
-#include <polly/TempScopInfo.h>
-#include <polly/LinkAllPasses.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#include <polly/CodeGen/BlockGenerators.h>
-#include "llvm/ADT/StringRef.h"
 #include "MollyIntrinsics.h"
 #include "CommunicationBuffer.h"
-#include <clang/CodeGen/MollyRuntimeMetadata.h>
 #include "IslExprBuilder.h"
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/Module.h>
-#include <polly/CodeGen/CodeGeneration.h>
-
 #include "MollyModuleProcessor.h"
 #include "MollyFunctionProcessor.h"
 #include "MollyRegionProcessor.h"
@@ -48,12 +18,44 @@
 #include "MollyScopStmtProcessor.h"
 #include "RectangularMapping.h"
 #include "FieldLayout.h"
-#include "molly/Mollyfwd.h"
 #include "Codegen.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "clang/CodeGen/MollyFieldMetadata.h"
+
+#include "molly/RegisterPasses.h"
+#include "molly/Mollyfwd.h"
+
+#include "islpp/Set.h"
+#include "islpp/Map.h"
+#include "islpp/UnionMap.h"
+#include "islpp/Point.h"
+
+#include <polly/ScopInfo.h>
+#include <polly/LinkAllPasses.h>
+#include <polly/RegisterPasses.h>
+#include <polly/TempScopInfo.h>
+#include <polly/CodeGen/BlockGenerators.h>
+#include <polly/CodeGen/CodeGeneration.h>
+
+#include <clang/CodeGen/MollyRuntimeMetadata.h>
+#include <clang/CodeGen/MollyFieldMetadata.h>
+
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/Analysis/ScalarEvolution.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Pass.h>
+
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Debug.h>
+#include <llvm/Support/ErrorHandling.h>
+
+#include <llvm/ADT/DenseSet.h>
+#include <llvm/ADT/StringRef.h>
 
 using namespace molly;
 using namespace polly;

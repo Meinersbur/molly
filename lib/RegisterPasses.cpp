@@ -39,6 +39,15 @@ static void initializeMollyPasses(PassRegistry &Registry) {
   //initializeFieldDetectionAnalysisPass(Registry);
 }
 
+static int printerval = 8;
+static void addPrintModulePass(llvm::PassManagerBase &PM, StringRef name) {
+  std::string infoDummy;
+  auto OS = new raw_fd_ostream((Twine(printerval) + Twine('_') + name + ".ll").str().c_str(), infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OS, (Twine("After ") + name + "\n\n").str()));
+  printerval += 1;
+}
+
+
 
 static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, int optLevel) {
   if (!mollyEnabled) {
@@ -92,35 +101,63 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   // Do the Molly thing
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
+  addPrintModulePass(PM, "Molly");
 
-  auto OSaftermolly = new raw_fd_ostream("8_mollied.ll", infoDummy, sys::fs::F_Text);
-  PM.add(llvm::createPrintModulePass(*OSaftermolly, "After Molly did its work\n\n"));
   PM.add(llvm::createVerifierPass());
 
 #ifndef NDEBUG
   // cleanup function
   PM.add(llvm::createCFGSimplificationPass());
+  addPrintModulePass(PM, "ControlFlowGraphSimplification");
+
   PM.add(llvm::createEarlyCSEPass());
+  addPrintModulePass(PM, "EarlyCSE");
+
   PM.add(llvm::createPromoteMemoryToRegisterPass());
+  addPrintModulePass(PM, "Mem2Reg");
+
   PM.add(llvm::createCorrelatedValuePropagationPass());
+  addPrintModulePass(PM, "CorrelatedValuePropagation");
+
   PM.add(llvm::createInstructionCombiningPass());
+  addPrintModulePass(PM, "InstructionCombining");
+
   PM.add(llvm::createReassociatePass());
+  addPrintModulePass(PM, "Reassociate");
+
   PM.add(llvm::createLICMPass());
+  addPrintModulePass(PM, "LoopInvariantCodeMotion");
+
   PM.add(llvm::createIndVarSimplifyPass());
+  addPrintModulePass(PM, "IndVarSimplify");
+
   PM.add(llvm::createLoopDeletionPass());
+  addPrintModulePass(PM, "LoopDeletion");
+
   PM.add(llvm::createAggressiveDCEPass());
+  addPrintModulePass(PM, "AggressiveDeadCodeElimination");
+
   PM.add(llvm::createCFGSimplificationPass());
+  addPrintModulePass(PM, "ControlFlowGrapSimplification");
 
   // cleanup module
   PM.add(llvm::createGlobalOptimizerPass());
+  addPrintModulePass(PM, "GlobalOptimizer");
+
   PM.add(llvm::createIPSCCPPass());
+  addPrintModulePass(PM, "IPSCC");
+
   //PM.add(llvm::createDeadArgEliminationPass());  
   PM.add(llvm::createGVNPass());
-  PM.add(llvm::createGlobalDCEPass());
-  PM.add(llvm::createConstantMergePass());
+  addPrintModulePass(PM, "GlobalValueNumbering");
 
-  auto OSaftercleanup = new raw_fd_ostream("9_cleaned.ll", infoDummy, sys::fs::F_Text);
-  PM.add(llvm::createPrintModulePass(*OSaftercleanup, "After cleanup\n\n"));
+  PM.add(llvm::createGlobalDCEPass());
+  addPrintModulePass(PM, "GlobalDeadCodeElimination");
+
+  PM.add(llvm::createConstantMergePass());
+  addPrintModulePass(PM, "ConstantMerge");
+
+  addPrintModulePass(PM, "Cleaned");
 #endif
 }
 

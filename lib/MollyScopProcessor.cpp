@@ -415,9 +415,11 @@ namespace {
       return getScopStmtContext(set.getTupleId());
     }
 
+
     bool contains(const Instruction *instr) const {
       return getRegion()->contains(instr);
     }
+
 
     bool usedOutside(const Value *val) const {
       for (auto use = val->use_begin(), end = val->use_end(); use != end; ++use) {
@@ -430,6 +432,32 @@ namespace {
       return false;
     }
 
+
+    bool usedAfterwards(const Value *val) const {
+      auto instr = dyn_cast<Instruction>(val);
+      if (!instr)
+        return true; // Constant can be used anywhere, including other functions
+      assert(instr->getParent()->getParent() == func);
+
+      auto region = getRegion();
+      auto entry = region->getEntry();
+      auto TD = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+      for (auto use = val->use_begin(), end = val->use_end(); use != end; ++use) {
+        auto user = cast<Instruction>(use->getUser());
+        auto userBB = user->getParent();
+
+        if (this->contains(user))
+          continue; // Uses inside are not afterwards uses
+
+        assert(entry != userBB); // if those are equal, the user is inside the Region!
+        if (!TD->dominates(userBB, entry))
+          return true; // user not strictly before the region, use is possible
+      }
+
+      // FIXME: val could be used by an operation before or inside the SCoP (bitcast etc.) and then use afterwards
+      return false;
+    }
 
 
   public:
@@ -444,6 +472,10 @@ namespace {
         int c = 0;
       } else if (funcName == "reduce") {
         int d = 0;
+      } else if (funcName == "init") {
+        int e = 0;
+      } else if (funcName == "gemm") {
+        int f = 0;
       }
 
       auto clusterConf = pm->getClusterConfig();
@@ -540,15 +572,16 @@ namespace {
             nonfieldReadAccesses.unite_inplace(bbposRel);
 
             //TODO: Really needed for reads?
-            if (usedOutside(base)) {
-              nonfieldUsedOutside.unite_inplace(rel.range());
-            }
+            //if (usedOutside(base)) {
+            //  nonfieldUsedOutside.unite_inplace(rel.range());
+            //}
           }
 
           if (memacc->isWrite()) {
             nonfieldWriteAccesses.unite_inplace(bbposRel);
 
-            if (usedOutside(base)) {
+            if (usedAfterwards(base)) {
+              //assert(usedAfterwards(base));
               nonfieldUsedOutside.unite_inplace(rel.range());
             }
           }
@@ -672,6 +705,7 @@ namespace {
       // Find the data flows
       readAccesses.unite_inplace(epilogueTouchEverything);
       schedule.unite_inplace(epilogueScatter);
+      nonfieldSchedule.unite_inplace(epilogueScatter);
       isl::UnionMap mustFlow;
       isl::UnionMap mayFlow;
       isl::UnionMap mustNosrc;
@@ -725,14 +759,14 @@ namespace {
 
 
 #pragma region Flow for nonfield accesses
-      auto universeAccessEverything = emptyMap; // { epilogue[] -> [indexset] }
-      for (auto access : nonfieldWriteAccesses.getMaps()) {//TODO: Only add those that are read outside the SCoP
-        auto indexsetSpace = access.getRangeSpace();
-        auto universe = indexsetSpace.universeBasicSet();
-        auto accessEverything = alltoall(epilogueDomain, universe); // { epilogue[] -> nonfield[indexset] }
-        universeAccessEverything.unite_inplace(accessEverything);
-      }
-      universeAccessEverything = alltoall(epilogueDomain, nonfieldUsedOutside);
+      //auto universeAccessEverything = emptyMap; // { epilogue[] -> [indexset] }
+      //for (auto access : nonfieldWriteAccesses.getMaps()) {//TODO: Only add those that are read outside the SCoP
+      //  auto indexsetSpace = access.getRangeSpace();
+      //  auto universe = indexsetSpace.universeBasicSet();
+      //  auto accessEverything = alltoall(epilogueDomain, universe); // { epilogue[] -> nonfield[indexset] }
+      //  universeAccessEverything.unite_inplace(accessEverything);
+      //}
+      auto universeAccessEverything = alltoall(epilogueDomain, nonfieldUsedOutside);
       nonfieldReadAccesses.unite_inplace(universeAccessEverything);
 
       isl::UnionMap nonfieldMustFlow;
@@ -834,7 +868,7 @@ namespace {
       for (auto outSet : nonfieldOutputFlow.getSets()) { // { [domain] }
         auto stmt = getScopStmtContext(outSet);
 
-        stmt->addWhere(alltoall(outSet.getSpace().universeBasicSet(), nodeSpace.universeBasicSet()));
+        stmt->addWhere(alltoall(outSet, nodes));
         notyetExecuted.substract_inplace(outSet);
       }
       localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
@@ -842,11 +876,11 @@ namespace {
 
       // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations; but just fits at this moment
       for (auto output : outputFlow.getSets()) {
-        //FIXME: Serious mistake; only make those instances "owner computes", that are in output
+        
 
         //auto  outputnotyet =  intersect(output, notyetExecuted);
         auto stmtCtx = getScopStmtContext(output);
-        auto accessed = stmtCtx->getAccessRelation(); // { writeStmt[domain] -> field[indexset] }
+        auto accessed = stmtCtx->getAccessRelation().intersectDomain(output); // { writeStmt[domain] -> field[indexset] }
         auto accessedButNotyetExecuted = accessed.intersectDomain(notyetExecuted); // { stmt[domain] -> field[indexset] }
         auto fvar = stmtCtx->getFieldVariable();
         //auto flayout = fvar->getLayout();
@@ -1052,17 +1086,20 @@ namespace {
         auto readlocalStmtCtx = getScopStmtContext(readlocalStmt);
 
         auto readlocalCodegen = readlocalStmtCtx->makeCodegen();
+        auto readlocalCurrent = readlocalEditor.getCurrentIteration(); // { readinput_local[domain] -> readStmt[domain] }
+        auto readlocalCurrentDomain = readlocalCurrent.castRange(readDomainSpace);
+        auto readlocalCurrentIndex = readlocalCurrentDomain.applyRange(readAccessedAff); // { readinput_local[domain] -> field[indexset] }
         auto readlocalCurrentNode = readlocalStmtCtx->getClusterMultiAff(); // { readlocalStmt[domain] -> rank[cluster] }
         //auto readlocalCurrentAccessed = readAccRel.castDomain(readlocalStmtCtx->getDomainSpace()); // { readlocalStmt[domain] -> field[indexset] }
-        auto readlocalCurrentAccessed = readAccessedAff.castDomain(readlocalStmtCtx->getDomainSpace()); // { readlocalStmt[domain] -> field[indexset] }
+        //auto readlocalCurrentAccessed = readAccessedAff.castDomain(readlocalStmtCtx->getDomainSpace()); // { readlocalStmt[domain] -> field[indexset] }
 
-        auto readStorage = readStmt->getAccessStackStoragePtr();
+        //auto readStorage = readStmt->getAccessStackStoragePtr();
         //readlocalCodegen.codegenAssignScalarFromLocal(readStorage, fvar, readlocalCurrentNode, readlocalCurrentAccessed);
         //        auto readlocalVal = readlocalCodegen.codegenLoadLocal(fvar, readlocalCurrentNode, readlocalCurrentAccessed);
         //        readlocalCodegen.updateScalar(readPtr, readlocalVal);
 
-        auto fieldPtr = readlocalCodegen.codegenFieldLocalPtr(fvar, readlocalCurrentNode, readlocalCurrentAccessed);
-        auto stackPtr = AnnotatedPtr::createScalarPtr(readStorage, readlocalWhere.getDomainSpace());
+        auto fieldPtr = readlocalCodegen.codegenFieldLocalPtr(fvar, readlocalCurrentNode, readlocalCurrentIndex);
+        auto stackPtr = readStmt->getAccessStackStorageAnnPtr().pullbackDomain(readlocalCurrentDomain); //AnnotatedPtr::createScalarPtr(readStorage, readlocalWhere.getDomainSpace());
         readlocalCodegen.codegenAssign(stackPtr, fieldPtr);
 
         //auto marker = string() + "input local '" + readTupleId.getName() + "'";
@@ -1098,7 +1135,11 @@ namespace {
           auto sendwaitSrc = sendwaitStmtCtx->getClusterMultiAff().castRange(srcNodeSpace); // { sendwaitStmt[domain] -> src[cluster] }
           auto sendwaitDst = sendwaitEditor.getCurrentIteration().castRange(dstNodeSpace); // { sendwaitStmt[domain] -> dst[cluster] }
 
-          combuf->codegenSendWait(sendwaitCodegen, sendwaitChunk, sendwaitSrc, sendwaitDst);
+          //combuf->codegenSendWait(sendwaitCodegen, sendwaitChunk, sendwaitSrc, sendwaitDst);
+
+          auto sendbufPtrPtr = combuf->codegenSendbufPtrPtr(sendwaitCodegen, sendwaitChunk, sendwaitSrc, sendwaitDst);
+          auto bufptr = combuf->codegenSendWait(sendwaitCodegen, sendwaitChunk, sendwaitSrc, sendwaitDst);
+          sendwaitCodegen.getIRBuilder().CreateStore(bufptr, sendbufPtrPtr);
 
           sendwaitCodegen.markBlock((Twine("input remote send_wait '") + readTupleId.getName() + "'" + fvarname).str());
         }
@@ -1165,7 +1206,11 @@ namespace {
           auto recvwaitSrc = recvwaitEditor.getCurrentIteration().castRange(srcNodeSpace); // { recvwaitStmt[domain] -> src[cluster] }
           auto recvwaitDst = recvwaitStmtCtx->getClusterMultiAff().castRange(dstNodeSpace); // { recvwaitStmt[domain] -> dst[cluster] }
 
-          combuf->codegenRecvWait(recvwaitCodegen, recvwaitChunk, recvwaitSrc, recvwaitDst);
+          //combuf->codegenRecvWait(recvwaitCodegen, recvwaitChunk, recvwaitSrc, recvwaitDst);
+
+          auto bufPtr = combuf->codegenRecvWait(recvwaitCodegen, recvwaitChunk, recvwaitSrc, recvwaitDst);
+          auto sendbufPtrPtr = combuf->codegenRecvbufPtrPtr(recvwaitCodegen, recvwaitChunk, recvwaitSrc, recvwaitDst);
+          recvwaitCodegen.getIRBuilder().CreateStore(bufPtr, sendbufPtrPtr);
 
           recvwaitCodegen.markBlock((Twine("input remote recv_wait '") + readTupleId.getName() + "'" + fvarname).str());
         }

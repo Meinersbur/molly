@@ -45,4 +45,7 @@ static inline bool __molly_isMaster() {
   return true;
 }
 
+static inline void waitToAttach() {
+}
+
 #endif /* MOLLY_EMULATION_H */

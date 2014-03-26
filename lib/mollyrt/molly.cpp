@@ -105,11 +105,18 @@ namespace molly {
 } // namespace molly 
 
 
-
-void waitToAttach() {
+extern "C" void waitToAttach() {
   return;
-  std::cerr << __molly_cluster_mympirank() << ") Waiting until you change i to something nonzero\n";
-  int i = 0;
+  static int i = 0;
+  if (i)
+    return; // Already attached
+  auto rank = __molly_cluster_mympirank();
+  if (rank!=0)
+    return;
+
+  std::ostringstream os; // Buffer to avoid this is scattered in output between other rank output  
+  os << '\n' << rank << ") PID " << getpid() << " is waiting until you change i to something nonzero\n\n";
+  std::cerr << os.str() << std::flush;
   while (!i) {
 #ifdef _WIN32
     Sleep(2000);
@@ -304,7 +311,7 @@ namespace {
 
       barrier();
 
-      waitToAttach();
+      //waitToAttach();
 #endif /* NDEBUG */
     }
 
