@@ -42,6 +42,8 @@
 #define MOLLYATTR(...)
 #endif
 
+// TODO: Rename to make clear what the difference to MOLLYATTR is
+#define MOLLY_ATTR(X) [[molly::X]]
 
 
 #if !defined(__clang__) && (defined(_MSC_VER) || __GNUC__< 4 || (__GNUC__==4 && __GNUC_MINOR__<8))
