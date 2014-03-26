@@ -25,6 +25,7 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolutionExpressions.h>
+#include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Function.h>
@@ -44,7 +45,7 @@ isl::AstBuild &MollyCodeGenerator::initAstBuild() {
     if (stmtCtx) {
       fillIdToValueMap();
       //auto islctx = stmtCtx->getIslContext();
-      auto domain = context.isValid() ? context : stmtCtx->getDomainWithNamedDims();
+      auto domain = context.isValid() ? context : stmtCtx->getDomainWithNamedDims(); //TODO: Add constraints for parameter dimensions
       this->astBuild = isl::AstBuild::createFromContext(domain);
     } else {
       assert(context.isValid());
@@ -52,6 +53,172 @@ isl::AstBuild &MollyCodeGenerator::initAstBuild() {
     }
   }
   return astBuild;
+}
+
+#if 0
+static llvm::Value *copyOperandTree_recursive(llvm::DenseMap<Instruction*, Instruction*> &oldToNew, Value *old) {
+  auto oldInstr = dyn_cast<Instruction>(old);
+  if (!oldInstr)
+    return old; // Non-instructions (i.e. constants) are global; no need to copy
+
+  auto destBB = builder.GetInsertBlock();
+  if (oldInstr->getParent() == destBB)
+    return destBB; // Already in target block
+
+  if (is)
+
+    auto &result = oldToNew[oldInstr];
+  if (result) 
+    return result; // Already copied
+}
+#endif
+
+
+static bool isSafeToMove(Instruction *Inst) {
+  if (Inst->mayReadFromMemory() || Inst->mayWriteToMemory())
+    return false;
+
+  return isSafeToSpeculativelyExecute(Inst);
+}
+typedef llvm::DenseMap<Instruction*, Instruction*> ReplacedMapType;
+
+
+llvm::Value *MollyCodeGenerator::copyOperandTree(llvm::Value *val) {
+  //llvm::DenseMap<Instruction*, Instruction*> oldToNew;
+  //return copyOperandTree_recursive(oldToNew, irBuilder, val);
+
+  auto oldInst = dyn_cast<Instruction>(val);
+  if (!oldInst)
+    return val; // Constants are home to any BB
+  auto oldBB = oldInst->getParent();
+  auto CurBB = stmtCtx->getBasicBlock();
+  if (oldBB == CurBB)
+    return oldInst; // Already in required block
+  //auto InsertPos = irBuilder.GetInsertPoint();
+  auto SE = &pass->getAnalysis<ScalarEvolution>();
+  auto LI = &pass->getAnalysis<LoopInfo>();
+  auto R = stmtCtx->getScopProcessor()->getRegion();
+  //Instruction *result = nullptr;
+  ReplacedMapType ReplacedMap;
+
+  if (!R->contains(oldInst)) {
+    return oldInst; // SCoP-invariant
+  }
+
+  if (canSynthesize(oldInst, LI, SE, R)) {
+    return oldInst; // Loop counter
+  }
+
+  assert(isSafeToMove(oldInst)); // by polly::IndependentBlocks
+
+  auto newInst = oldInst->clone();
+  auto InsertPos = irBuilder.Insert(newInst);
+  auto Inst = newInst;
+
+  // Copied from IndependentBlock /////////////////////////////////////////////
+
+  // Depth first traverse the operand tree (or operand dag, because we will
+  // stop at PHINodes, so there are no cycles).
+  typedef Instruction::op_iterator ChildIt;
+  std::vector<std::pair<Instruction *, ChildIt>> WorkStack;
+
+  WorkStack.push_back(std::make_pair(Inst, Inst->op_begin()));
+  DenseSet<Instruction *> VisitedSet;
+
+  while (!WorkStack.empty()) {
+    Instruction *CurInst = WorkStack.back().first;
+    ChildIt It = WorkStack.back().second;
+    DEBUG(dbgs() << "Checking Operand of Node:\n" << *CurInst << "\n------>\n");
+    if (It == CurInst->op_end()) {
+      // Insert the new instructions in topological order.
+      if (!CurInst->getParent()) {
+        CurInst->insertBefore(InsertPos);
+        SE->forgetValue(CurInst);
+      }
+
+      WorkStack.pop_back();
+    } else {
+      // for each node N,
+      Instruction *Operand = dyn_cast<Instruction>(*It);
+      ++WorkStack.back().second;
+
+      // Can not move no instruction value.
+      if (Operand == 0)
+        continue;
+
+      DEBUG(dbgs() << "For Operand:\n" << *Operand << "\n--->");
+
+      if (Operand->getParent() != oldBB)
+        continue; // The other BB must already been independent, therefore no need to copy anything from other BBs
+
+      // If the Scop Region does not contain N, skip it and all its operands and
+      // continue: because we reach a "parameter".
+      // FIXME: we must keep the predicate instruction inside the Scop,
+      // otherwise it will be translated to a load instruction, and we can not
+      // handle load as affine predicate at this moment.
+      //if (!R->contains(Operand) && !isa<TerminatorInst>(CurInst)) {
+      //  DEBUG(dbgs() << "Out of region.\n");
+      //  continue;
+      //}
+
+      if (canSynthesize(Operand, LI, SE, R)) {
+        DEBUG(dbgs() << "is IV.\n");
+        continue;
+      }
+
+      // We can not move the operand, a non trivial scalar dependence found!
+      //if (!isSafeToMove(Operand)) {
+      //  DEBUG(dbgs() << "Can not move!\n");
+      //  continue;
+      //}
+      assert(isa<LoadInst>(Operand) || isSafeToMove(Operand)); // Ensured by polly::IndependendBlocks
+
+      // Do not need to move instruction if it is contained in the same BB with
+      // the root instruction.
+      if (Operand->getParent() == CurBB) {
+        DEBUG(dbgs() << "No need to move.\n");
+        // Try to move its operand, but do not visit an instruction twice.
+        if (VisitedSet.insert(Operand).second)
+          WorkStack.push_back(std::make_pair(Operand, Operand->op_begin()));
+        continue;
+      }
+
+      // Now we need to move Operand to CurBB.
+      // Check if we already moved it.
+      ReplacedMapType::iterator At = ReplacedMap.find(Operand);
+      if (At != ReplacedMap.end()) {
+        DEBUG(dbgs() << "Moved.\n");
+        Instruction *MovedOp = At->second;
+        It->set(MovedOp);
+        SE->forgetValue(MovedOp);
+      } else {
+        // Note that NewOp is not inserted in any BB now, we will insert it when
+        // it popped from the work stack, so it will be inserted in topological
+        // order.
+        Instruction *NewOp = Operand->clone(); // TODO: In case of LoadInst, create a MemoryAccess for it
+        //if (Operand == Inst) {
+        //  assert(!!result);
+        //  result = NewOp;
+        //}
+        NewOp->setName(Operand->getName() + ".copied.to." + CurBB->getName());
+        DEBUG(dbgs() << "Copy to " << *NewOp << "\n");
+        It->set(NewOp);
+        ReplacedMap.insert(std::make_pair(Operand, NewOp));
+        SE->forgetValue(Operand);
+
+        // Process its operands, but do not visit an instruction twice.
+        if (VisitedSet.insert(NewOp).second)
+          WorkStack.push_back(std::make_pair(NewOp, NewOp->op_begin()));
+      }
+    }
+  }
+  SE->forgetValue(Inst);
+
+  //auto it = ReplacedMap.find(Inst);
+  //assert(it!=ReplacedMap.end());
+  //assert(it->first==Inst);
+  //auto result = it->second;
+  return newInst;
 }
 
 
@@ -632,8 +799,55 @@ void MollyCodeGenerator::codegenAssignLocalFromScalar(FieldVariable *dstFvar, is
 }
 
 
+llvm::Value *MollyCodeGenerator::getLocalBufPtr(FieldVariable *fvar) {
+  auto ptrptr = stmtCtx->getScopProcessor()->codegenLocalBufferPtrOf(fvar);
+  return irBuilder.CreateLoad(ptrptr);
+}
+
+
+llvm::Value *MollyCodeGenerator::getSendBufPtrs(CommunicationBuffer *combuf) {
+  auto ptrarray = stmtCtx->getScopProcessor()->codegenSendbufPtrsOf(combuf);
+  return ptrarray;
+}
+
+
+llvm::Value *MollyCodeGenerator::getSendbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index) {
+  auto ptrarray = getSendBufPtrs(combuf);
+  auto sendbufPtrPtr = irBuilder.CreateGEP(ptrarray, index, "sendbufptrptr");
+  return sendbufPtrPtr;
+}
+
+
+llvm::Value *MollyCodeGenerator::getSendbufPtr(CommunicationBuffer *combuf, llvm::Value *index) {
+  auto sendbufPtrPtr = getSendbufPtrPtr(combuf, index);
+  auto sendbufPtr = irBuilder.CreateLoad(sendbufPtrPtr);
+  return sendbufPtr;
+}
+
+
+llvm::Value *MollyCodeGenerator::getRecvBufPtrs(CommunicationBuffer *combuf) {
+  auto ptrarray = stmtCtx->getScopProcessor()->codegenRecvbufPtrsOf(combuf);
+  return ptrarray;
+}
+
+
+llvm::Value *MollyCodeGenerator::getRecvbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index) {
+  auto ptrarray = getRecvBufPtrs(combuf);
+  auto sendbufPtrPtr = irBuilder.CreateGEP(ptrarray, index, "recvbufptrptr");
+  return sendbufPtrPtr;
+}
+
+
+llvm::Value *MollyCodeGenerator::getRecvbufPtr(CommunicationBuffer *combuf, llvm::Value *index) {
+  auto sendbufPtrPtr = getRecvbufPtrPtr(combuf, index);
+  auto sendbufPtr = irBuilder.CreateLoad(sendbufPtrPtr);
+  return sendbufPtr;
+}
+
+
+
 llvm::Value *MollyCodeGenerator::codegenLoadLocalPtr(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */) {
-  auto bufptr = callLocalPtr(fvar);
+  auto bufptr = getLocalBufPtr(fvar);
 
   auto layout = fvar->getLayout();
   assert(layout);
@@ -664,27 +878,36 @@ llvm::MemCpyInst *MollyCodeGenerator::codegenAssignPtrPtr(llvm::Value *dstPtr, l
 
 
 void MollyCodeGenerator::codegenAssign(const AnnotatedPtr &dst, const AnnotatedPtr &src) {
-  auto srcPtr = src.getPtr();
   auto dstPtr = dst.getPtr();
-
   auto ty = dstPtr->getType()->getPointerElementType();
-  assert(ty == srcPtr->getType()->getPointerElementType());
 
-  llvm::Instruction *ldInstr;
-  llvm::Instruction *stInstr;
-  if (ty->isSingleValueType()) {
-    ldInstr = irBuilder.CreateLoad(srcPtr, "assignval");
-    stInstr = irBuilder.CreateStore(ldInstr, dstPtr);
+  llvm::Instruction *ldInstr = nullptr;
+  llvm::Instruction *stInstr = nullptr;
+  if (src.isRegister()) {
+    auto srcVal = src.getRegister();
+    assert(srcVal->getType() == ty);
+
+    auto bbVal = copyOperandTree(srcVal); // TODO: This should be able to handle the other cases as well
+    assert(bbVal);
+    stInstr = irBuilder.CreateStore(bbVal, dstPtr, "assignvalreg");
   } else {
-    auto memcpyInstr = irBuilder.CreateMemCpy(dstPtr, srcPtr, ConstantExpr::getSizeOf(ty), 0);
-    ldInstr = memcpyInstr;
-    stInstr = memcpyInstr;
+    auto srcPtr = src.getPtr();
+    assert(ty == srcPtr->getType()->getPointerElementType());
+
+    if (ty->isSingleValueType()) {
+      ldInstr = irBuilder.CreateLoad(srcPtr, "assignval");
+      stInstr = irBuilder.CreateStore(ldInstr, dstPtr);
+    } else {
+      auto memcpyInstr = irBuilder.CreateMemCpy(dstPtr, srcPtr, ConstantExpr::getSizeOf(ty), 0);
+      ldInstr = memcpyInstr;
+      stInstr = memcpyInstr;
+    }
   }
 
   auto domainSpace = stmtCtx->getDomainSpace();
-  if (src.isAnnotated())
+  if (ldInstr && src.isAnnotated())
     addLoadAccess(src.getDiscriminator(), src.getCoord().castDomain(domainSpace), ldInstr);
-  if (dst.isAnnotated())
+  if (stInstr && dst.isAnnotated())
     addStoreAccess(dst.getDiscriminator(), dst.getCoord().castDomain(domainSpace), stInstr);
 }
 
@@ -1057,4 +1280,19 @@ void molly::MollyCodeGenerator::markBlock(StringRef str) {
 
 llvm::Value * molly::AnnotatedPtr::getDiscriminator() const {
   return fvar ? fvar->getVariable() : base;
+}
+
+
+void molly::AnnotatedPtr::dump() const {
+  llvm::errs() << "AnnotatedPtr ";
+  ptr->dump();
+  if (isFieldPtr())
+    llvm::errs() << " FIELD";
+  if (isScalar())
+    llvm::errs() << " SCALAR";
+  if (coord.isValid()) {
+    llvm::errs() << ' ';
+    coord.dump();
+  }
+  llvm::errs() << '\n';
 }

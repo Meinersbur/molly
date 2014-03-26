@@ -92,7 +92,7 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
   //domaintranslator; // { [domain] -> srcNode[cluster],dstNode[cluster] }
   //lengths; // { [chunk],srcNode[cluster],dstNode[cluster] -> field[indexset] }
 
-  auto mylengths = lengths.toMap().wrap().reorderSubspaces( domaintranslator.getRangeSpace(), lengths.getRangeSpace() ); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
+  auto mylengths = lengths.toMap().wrap().reorderSubspaces(domaintranslator.getRangeSpace(), lengths.getRangeSpace()); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
   auto lenout = domaintranslator.applyRange(mylengths); // { [domain] -> field[indexset] }
  
 

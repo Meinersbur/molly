@@ -100,11 +100,11 @@ bool BasicSet::foreachConstraint(std::function<bool(Constraint)> fn) const {
 }
 
 Mat BasicSet::equalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4) const{
-  return Mat::wrap(isl_basic_set_equalities_matrix(keep(), c1,c2,c3,c4));
+  return Mat::enwrap(isl_basic_set_equalities_matrix(keep(), c1,c2,c3,c4));
 }
 
 Mat BasicSet::inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2,  isl_dim_type c3,  isl_dim_type c4) const{
-  return Mat::wrap(isl_basic_set_inequalities_matrix(keep(), c1,c2,c3,c4));
+  return Mat::enwrap(isl_basic_set_inequalities_matrix(keep(), c1,c2,c3,c4));
 }
 
 void BasicSet::projectOut(isl_dim_type type, unsigned first, unsigned n) {

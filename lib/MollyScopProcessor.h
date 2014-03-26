@@ -55,6 +55,12 @@ namespace molly {
 
     virtual polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) = 0;
 
+
+    virtual llvm::AllocaInst *codegenLocalBufferPtrOf(FieldVariable *fvar) = 0;
+    virtual llvm::AllocaInst *codegenSendbufPtrsOf(CommunicationBuffer *combuf) = 0;
+    virtual llvm::AllocaInst *codegenRecvbufPtrsOf(CommunicationBuffer *combuf) = 0;
+
+
   public:
     static MollyScopProcessor *create(MollyPassManager *pm, polly::Scop *scop);
   }; // class MollyScopProcessor

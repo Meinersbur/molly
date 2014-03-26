@@ -27,29 +27,37 @@ namespace molly {
     // ptr into field
     FieldVariable *fvar;
 
+    llvm::Value *val;
+
   protected:
-    AnnotatedPtr(llvm::Value *ptr, isl::PwMultiAff coord, llvm::Value *base, FieldVariable *fvar)
-    : ptr(ptr), coord(coord),base(base),fvar(fvar) { }
+    AnnotatedPtr(llvm::Value *ptr, isl::PwMultiAff coord, llvm::Value *base, FieldVariable *fvar, llvm::Value *val)
+    : ptr(ptr), coord(coord),base(base),fvar(fvar),val(val) { }
   public:
   //  AnnotatedPtr() : 
     //  ptr(nullptr), base(nullptr), fvar(nullptr) { }
 
-    static AnnotatedPtr createScalarPtr( llvm::Value * ptr, isl::Space domainspace) {
+    static AnnotatedPtr createScalarPtr(llvm::Value * ptr, isl::Space domainspace) {
       auto islctx = domainspace.getCtx();
-    auto space= isl::Space::createMapFromDomainAndRange(domainspace, islctx->createSetSpace(0));
-      return AnnotatedPtr(ptr, space.createZeroMultiAff(), ptr, nullptr);
+      auto space = isl::Space::createMapFromDomainAndRange(domainspace, islctx->createSetSpace(0));
+      return AnnotatedPtr(ptr, space.createZeroMultiAff(), ptr, nullptr, nullptr);
     }
 
     static AnnotatedPtr createFieldPtr(llvm::Value *ptr, FieldVariable *fvar, isl::PwMultiAff coord) {
-      return AnnotatedPtr(ptr, coord, nullptr, fvar);
+      return AnnotatedPtr(ptr, coord, nullptr, fvar, nullptr);
     }
 
     static AnnotatedPtr createArrayPtr(llvm::Value *ptr, llvm::Value *base, isl::PwMultiAff coord) {
-      return AnnotatedPtr(ptr, coord, base, nullptr);
+      return AnnotatedPtr(ptr, coord, base, nullptr, nullptr);
     }
 
     static AnnotatedPtr createUnannotated(llvm::Value *ptr) {
-      return AnnotatedPtr(ptr, isl::PwMultiAff(), nullptr, nullptr);
+      return AnnotatedPtr(ptr, isl::PwMultiAff(), nullptr, nullptr, nullptr);
+    }
+
+    /// Content not actually stored at a ptr, but directly in a register
+    /// Cannot be written to
+    static AnnotatedPtr createRegister(llvm::Value *val) {
+      return AnnotatedPtr(nullptr, isl::PwMultiAff(), nullptr, nullptr, val);
     }
 
 
@@ -61,15 +69,30 @@ namespace molly {
       return coord.getOutDimCount() == 0; 
     }
 
+    bool isRegister() const {
+      return val!=nullptr;
+    }
+
     bool isAnnotated() const { return getDiscriminator() && coord.isValid(); }
 
-    llvm::Value *getPtr() const {return ptr;}
+    llvm::Value *getPtr() const { assert(!isRegister()); return ptr;}
     isl::PwMultiAff getCoord() const { return coord; } // or offset
 
     FieldVariable *getFieldVar() const{ return fvar; }
 
+    llvm::Value *getRegister() const { return val; }
+
     /// Used to identify which block of memory/field is accessed
     llvm::Value *getDiscriminator() const;
+
+    // coord: { old_domain[] -> field[] }
+    // mapper: { new_domain[] -> old_domain[] }
+    // { new_domain[] -> old_domain[]-> field[] }
+    AnnotatedPtr pullbackDomain(isl::PwMultiAff newToOldMapper) {
+      return AnnotatedPtr(ptr, coord.isValid() ? coord.pullback(newToOldMapper) : coord, base, fvar, val);
+    }
+
+    void dump() const;
   }; // class AnnotatedPtr
 
 
@@ -104,6 +127,8 @@ namespace molly {
     clang::CodeGen::MollyRuntimeMetadata *getRtMetadata();
 
     isl::AstBuild &initAstBuild();
+
+    llvm::Value *copyOperandTree(llvm::Value *val);
 
   protected:
     Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
@@ -233,6 +258,14 @@ namespace molly {
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
 
     void codegenAssignLocalFromScalar(FieldVariable *dstFvar, isl::PwMultiAff dstWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff dstIndex/* [domain] -> field[indexset] */, llvm::Value *srcPtr);
+
+    llvm::Value *getLocalBufPtr(FieldVariable *fvar);
+    llvm::Value *getSendBufPtrs(CommunicationBuffer *combuf);
+    llvm::Value *getSendbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getSendbufPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getRecvBufPtrs(CommunicationBuffer *combuf);
+    llvm::Value *getRecvbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getRecvbufPtr(CommunicationBuffer *combuf, llvm::Value *index);
 
     llvm::Value *codegenLoadLocalPtr(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
     llvm::Value *codegenLoadLocal(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);

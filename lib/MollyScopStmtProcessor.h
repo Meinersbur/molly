@@ -66,6 +66,7 @@ namespace molly {
     virtual polly::Access getAccess() = 0;
     virtual llvm::AllocaInst *getStackStoragePtr(llvm::Value *val) = 0;
     virtual llvm::AllocaInst *getAccessStackStoragePtr() = 0;
+    virtual AnnotatedPtr getAccessStackStorageAnnPtr() = 0;
 
     virtual llvm::Value *getAccessedCoordinate(unsigned i) = 0;
     virtual isl::MultiPwAff getAccessed() = 0; // { [domain] -> [indexset] }
@@ -99,6 +100,8 @@ namespace molly {
 
     // Process
     virtual void applyWhere() = 0;
+
+
 
   public:
     static MollyScopStmtProcessor *create(MollyPassManager *pm, polly::ScopStmt *scop);

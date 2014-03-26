@@ -220,8 +220,8 @@ namespace isl {
     bool canUncurry() const { return isl_basic_map_can_uncurry(keep()); }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_basic_map_involves_dims(keep(), type, first, n); }
 
-    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::wrap(isl_basic_map_equalities_matrix(keep(), c1,c2,c3,c4,c5)); }
-    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::wrap(isl_basic_map_inequalities_matrix(keep(), c1,c2,c3,c4,c5)); }
+    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1,c2,c3,c4,c5)); }
+    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1,c2,c3,c4,c5)); }
 
     void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_add_constraint(take(), constraint.take()));  }
     void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_add_constraint(take(), constraint.takeCopy()));  }
@@ -273,6 +273,8 @@ namespace isl {
     ISLPP_PROJECTION_ATTRS bool imageIsBounded() ISLPP_PROJECTION_FUNCTION { // isBoundedRange
       return checkBool(isl_basic_map_image_is_bounded(keep())); 
     }
+
+    ISLPP_EXSITU_ATTRS  BasicSet      wrap()ISLPP_EXSITU_ATTRS{ return BasicSet::enwrap(isl_basic_map_wrap(takeCopy())); }
   }; // class BasicMap
 
 

@@ -633,7 +633,33 @@ namespace {
           auto val = acc.getWrittenValueRegister();
           ptr = getStackStoragePtr(val);
         }
-        return cast<AllocaInst>(ptr);
+        return cast_or_null<AllocaInst>(ptr);
+      }
+    }
+
+    
+    AnnotatedPtr getAccessStackStorageAnnPtr() override {
+      assert(isFieldAccess());
+      auto acc = Access::fromMemoryAccess(fmemacc);
+      if (isReadAccess()) {
+        auto ptr = acc.getReadResultPtr();
+        if (!ptr) {
+          auto val = acc.getReadResultRegister();
+          ptr = getStackStoragePtr(val);
+        }
+        return AnnotatedPtr::createScalarPtr(ptr, getDomainSpace());
+      } else {
+        assert(isWriteAccess());
+        auto ptr = acc.getWrittenValuePtr();
+        if (!ptr) {
+          auto val = acc.getWrittenValueRegister();
+          ptr = getStackStoragePtr(val);
+          if (!ptr) {
+            // This is a problem; the value has been moved into the BB, so no stack storage necessary
+           return AnnotatedPtr::createRegister(val);
+          }
+        }
+        return AnnotatedPtr::createScalarPtr(ptr, getDomainSpace());
       }
     }
 
@@ -665,8 +691,8 @@ namespace {
 
 
     /// Find the memory on the stack this value is stored between ScopStmts
-    /// For non-canSynthesize it is guranteed to exist by IndependentBlocks pass
-    /// Return nullptr if no memory has been allocated as temporary storeage
+    /// For non-canSynthesize it is guaranteed to exist by IndependentBlocks pass
+    /// Return nullptr if no memory has been allocated as temporary storage
     llvm::AllocaInst *getStackStoragePtr(llvm::Value *val) override {
       val = val->stripPointerCasts();
       if (auto alloca = dyn_cast<AllocaInst>(val)) {

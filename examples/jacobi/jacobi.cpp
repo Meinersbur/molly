@@ -69,7 +69,7 @@ extern "C" MOLLY_ATTR(process) void Jacobi() {
 } // void Jacobi()
 
 
-MOLLY_ATTR(process) double reduce() {
+extern "C" MOLLY_ATTR(process) double reduce() {
   double sum = 0;
   for (coord_t x = 0; x < LX; x += 1)
     for (coord_t y = 0; y < LY; y += 1) {
