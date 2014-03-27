@@ -22,10 +22,9 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/OwningPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -37,6 +36,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -45,6 +45,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/system_error.h"
+#include <memory>
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
@@ -55,12 +56,12 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
-  void *P = (void*) (intptr_t) GetExecutablePath;
+  void *P = (void*)(intptr_t)GetExecutablePath;
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
 static const char *SaveStringInSet(std::set<std::string> &SavedStrings,
-                                   StringRef S) {
+  StringRef S) {
   return SavedStrings.insert(S).first->c_str();
 }
 
@@ -92,9 +93,9 @@ static const char *SaveStringInSet(std::set<std::string> &SavedStrings,
 /// \param Edit - The override command to perform.
 /// \param SavedStrings - Set to use for storing string representations.
 static void ApplyOneQAOverride(raw_ostream &OS,
-                               SmallVectorImpl<const char*> &Args,
-                               StringRef Edit,
-                               std::set<std::string> &SavedStrings) {
+  SmallVectorImpl<const char*> &Args,
+  StringRef Edit,
+  std::set<std::string> &SavedStrings) {
   // This does not need to be efficient.
 
   if (Edit[0] == '^') {
@@ -108,10 +109,10 @@ static void ApplyOneQAOverride(raw_ostream &OS,
     OS << "### Adding argument " << Str << " at end\n";
     Args.push_back(Str);
   } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
-             Edit.slice(2, Edit.size()-1).find('/') != StringRef::npos) {
+    Edit.slice(2, Edit.size() - 1).find('/') != StringRef::npos) {
     StringRef MatchPattern = Edit.substr(2).split('/').first;
     StringRef ReplPattern = Edit.substr(2).split('/').second;
-    ReplPattern = ReplPattern.slice(0, ReplPattern.size()-1);
+    ReplPattern = ReplPattern.slice(0, ReplPattern.size() - 1);
 
     for (unsigned i = 1, e = Args.size(); i != e; ++i) {
       std::string Repl = llvm::Regex(MatchPattern).sub(ReplPattern, Args[i]);
@@ -141,9 +142,9 @@ static void ApplyOneQAOverride(raw_ostream &OS,
     for (unsigned i = 1; i < Args.size();) {
       const char *A = Args[i];
       if (A[0] == '-' && A[1] == 'O' &&
-          (A[2] == '\0' ||
-           (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
-                             ('0' <= A[2] && A[2] <= '9'))))) {
+        (A[2] == '\0' ||
+        (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
+        ('0' <= A[2] && A[2] <= '9'))))) {
         OS << "### Deleting argument " << Args[i] << '\n';
         Args.erase(Args.begin() + i);
       } else
@@ -159,8 +160,8 @@ static void ApplyOneQAOverride(raw_ostream &OS,
 /// ApplyQAOverride - Apply a comma separate list of edits to the
 /// input argument lists. See ApplyOneQAOverride.
 static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
-                            const char *OverrideStr,
-                            std::set<std::string> &SavedStrings) {
+  const char *OverrideStr,
+  std::set<std::string> &SavedStrings) {
   raw_ostream *OS = &llvm::errs();
 
   if (OverrideStr[0] == '#') {
@@ -168,7 +169,7 @@ static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
     OS = &llvm::nulls();
   }
 
-  *OS << "### QA_OVERRIDE_GCC3_OPTIONS: " << OverrideStr << "\n";
+  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
 
   // This does not need to be efficient.
 
@@ -186,13 +187,13 @@ static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
 }
 
 extern int cc1_main(const char **ArgBegin, const char **ArgEnd,
-                    const char *Argv0, void *MainAddr);
+  const char *Argv0, void *MainAddr);
 extern int cc1as_main(const char **ArgBegin, const char **ArgEnd,
-                      const char *Argv0, void *MainAddr);
+  const char *Argv0, void *MainAddr);
 
 static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
-                          std::set<std::string> &SavedStrings,
-                          Driver &TheDriver)
+  std::set<std::string> &SavedStrings,
+  Driver &TheDriver)
 {
   // Try to infer frontend type and default target from the program name.
 
@@ -211,24 +212,28 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
   static const struct {
     const char *Suffix;
     const char *ModeFlag;
-  } suffixes [] = {
+  } suffixes[] = {
+    { "clang", 0 },
 #ifdef MOLLY
     // Molly is always C++
     //TODO: This should be name-insensitive
-    { "mollycc",   "--driver-mode=g++" },
+    { "mollycc", "--driver-mode=g++" },
 #endif
-    { "clang",     0 },
-    { "clang++",   "--driver-mode=g++" },
+    { "clang++", "--driver-mode=g++" },
     { "clang-c++", "--driver-mode=g++" },
-    { "clang-cc",  0 },
+    { "clang-cc", 0 },
     { "clang-cpp", "--driver-mode=cpp" },
     { "clang-g++", "--driver-mode=g++" },
     { "clang-gcc", 0 },
-    { "cc",        0 },
-    { "cpp",       "--driver-mode=cpp" },
-    { "++",        "--driver-mode=g++" },
+    { "clang-cl", "--driver-mode=cl" },
+    { "cc", 0 },
+    { "cpp", "--driver-mode=cpp" },
+    { "cl", "--driver-mode=cl" },
+    { "++", "--driver-mode=g++" },
   };
   std::string ProgName(llvm::sys::path::stem(ArgVector[0]));
+  std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(),
+    toLowercase);
   StringRef ProgNameRef(ProgName);
   StringRef Prefix;
 
@@ -270,9 +275,10 @@ static void ParseProgName(SmallVectorImpl<const char *> &ArgVector,
     SmallVectorImpl<const char *>::iterator it = ArgVector.begin();
     if (it != ArgVector.end())
       ++it;
-    ArgVector.insert(it, SaveStringInSet(SavedStrings, Prefix));
-    ArgVector.insert(it,
-      SaveStringInSet(SavedStrings, std::string("-target")));
+    const char* Strings[] =
+    { SaveStringInSet(SavedStrings, std::string("-target")),
+    SaveStringInSet(SavedStrings, Prefix) };
+    ArgVector.insert(it, Strings, Strings + llvm::array_lengthof(Strings));
   }
 }
 
@@ -280,7 +286,7 @@ namespace {
   class StringSetSaver : public llvm::cl::StringSaver {
   public:
     StringSetSaver(std::set<std::string> &Storage) : Storage(Storage) {}
-    const char *SaveString(const char *Str) LLVM_OVERRIDE {
+    const char *SaveString(const char *Str) override {
       return SaveStringInSet(Storage, Str);
     }
   private:
@@ -292,8 +298,16 @@ int main(int argc_, const char **argv_) {
   llvm::sys::PrintStackTraceOnErrorSignal();
   llvm::PrettyStackTraceProgram X(argc_, argv_);
 
+  SmallVector<const char *, 256> argv;
+  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
+  llvm::error_code EC = llvm::sys::Process::GetArgumentVector(
+    argv, llvm::ArrayRef<const char *>(argv_, argc_), ArgAllocator);
+  if (EC) {
+    llvm::errs() << "error: couldn't get arguments: " << EC.message() << '\n';
+    return 1;
+  }
+
   std::set<std::string> SavedStrings;
-  SmallVector<const char*, 256> argv(argv_, argv_ + argc_);
   StringSetSaver Saver(SavedStrings);
   llvm::cl::ExpandResponseFiles(Saver, llvm::cl::TokenizeGNUCommandLine, argv);
 
@@ -302,11 +316,11 @@ int main(int argc_, const char **argv_) {
     StringRef Tool = argv[1] + 4;
 
     if (Tool == "")
-      return cc1_main(argv.data()+2, argv.data()+argv.size(), argv[0],
-                      (void*) (intptr_t) GetExecutablePath);
+      return cc1_main(argv.data() + 2, argv.data() + argv.size(), argv[0],
+      (void*)(intptr_t)GetExecutablePath);
     if (Tool == "as")
-      return cc1as_main(argv.data()+2, argv.data()+argv.size(), argv[0],
-                      (void*) (intptr_t) GetExecutablePath);
+      return cc1as_main(argv.data() + 2, argv.data() + argv.size(), argv[0],
+      (void*)(intptr_t)GetExecutablePath);
 
     // Reject unknown tools.
     llvm::errs() << "error: unknown integrated tool '" << Tool << "'\n";
@@ -321,51 +335,38 @@ int main(int argc_, const char **argv_) {
     }
   }
 
-  // Handle QA_OVERRIDE_GCC3_OPTIONS and CCC_ADD_ARGS, used for editing a
-  // command line behind the scenes.
-  if (const char *OverrideStr = ::getenv("QA_OVERRIDE_GCC3_OPTIONS")) {
+  // Handle CCC_OVERRIDE_OPTIONS, used for editing a command line behind the
+  // scenes.
+  if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
     ApplyQAOverride(argv, OverrideStr, SavedStrings);
-  } else if (const char *Cur = ::getenv("CCC_ADD_ARGS")) {
-    // FIXME: Driver shouldn't take extra initial argument.
-    std::vector<const char*> ExtraArgs;
-
-    for (;;) {
-      const char *Next = strchr(Cur, ',');
-
-      if (Next) {
-        ExtraArgs.push_back(SaveStringInSet(SavedStrings,
-                                            std::string(Cur, Next)));
-        Cur = Next + 1;
-      } else {
-        if (*Cur != '\0')
-          ExtraArgs.push_back(SaveStringInSet(SavedStrings, Cur));
-        break;
-      }
-    }
-
-    argv.insert(&argv[1], ExtraArgs.begin(), ExtraArgs.end());
   }
 
   std::string Path = GetExecutablePath(argv[0], CanonicalPrefixes);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions;
   {
-    // Note that ParseDiagnosticArgs() uses the cc1 option table.
-    OwningPtr<OptTable> CC1Opts(createDriverOptTable());
+    std::unique_ptr<OptTable> Opts(createDriverOptTable());
     unsigned MissingArgIndex, MissingArgCount;
-    OwningPtr<InputArgList> Args(CC1Opts->ParseArgs(argv.begin()+1, argv.end(),
-                                            MissingArgIndex, MissingArgCount));
+    std::unique_ptr<InputArgList> Args(Opts->ParseArgs(
+      argv.begin() + 1, argv.end(), MissingArgIndex, MissingArgCount));
     // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
     // Any errors that would be diagnosed here will also be diagnosed later,
     // when the DiagnosticsEngine actually exists.
-    (void) ParseDiagnosticArgs(*DiagOpts, *Args);
+    (void)ParseDiagnosticArgs(*DiagOpts, *Args);
   }
   // Now we can create the DiagnosticsEngine with a properly-filled-out
   // DiagnosticOptions instance.
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  DiagClient->setPrefix(llvm::sys::path::filename(Path));
+
+  // If the clang binary happens to be named cl.exe for compatibility reasons,
+  // use clang-cl.exe as the prefix to avoid confusion between clang and MSVC.
+  StringRef ExeBasename(llvm::sys::path::filename(Path));
+  if (ExeBasename.equals_lower("cl.exe"))
+    ExeBasename = "clang-cl.exe";
+  DiagClient->setPrefix(ExeBasename);
+
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
@@ -411,7 +412,7 @@ int main(int argc_, const char **argv_) {
   if (TheDriver.CCLogDiagnostics)
     TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
 
-  OwningPtr<Compilation> C(TheDriver.BuildCompilation(argv));
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 0;
   SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
   if (C.get())
@@ -425,7 +426,7 @@ int main(int argc_, const char **argv_) {
   }
 
   for (SmallVectorImpl< std::pair<int, const Command *> >::iterator it =
-         FailingCommands.begin(), ie = FailingCommands.end(); it != ie; ++it) {
+    FailingCommands.begin(), ie = FailingCommands.end(); it != ie; ++it) {
     int CommandRes = it->first;
     const Command *FailingCommand = it->second;
     if (!Res)
@@ -443,7 +444,7 @@ int main(int argc_, const char **argv_) {
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
-  
+
   llvm::llvm_shutdown();
 
 #ifdef _WIN32

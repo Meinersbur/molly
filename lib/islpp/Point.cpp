@@ -23,7 +23,63 @@ void Point::print(llvm::raw_ostream &out) const {
 }
 
 
-Point Point::createZero(Space &&space) {
+static void printFormatted_recursive(llvm::raw_ostream &out, const Point &point, isl_dim_type type, pos_t first, Space subspace, bool printTupleNames) {
+  if (subspace.isMapSpace()) {
+    out << '[';
+    printFormatted_recursive(out, point, type, first, subspace.getDomainSpace(), printTupleNames);
+    out << " -> ";
+    printFormatted_recursive(out, point, type, first + subspace.getInDimCount(), subspace.getRangeSpace(), printTupleNames);
+    out << ']';
+    return;
+  }
+
+  assert(subspace.isSetSpace());
+  if (printTupleNames && subspace.hasSetTupleName()) {
+    out << subspace.getSetTupleName();
+  }
+
+  if (subspace.isWrapping()) {
+    printFormatted_recursive(out, point, type, first, subspace.unwrap(), printTupleNames);
+  } else {
+    out << '[';
+    auto nDims = subspace.getSetDimCount();
+    for (auto i = nDims - nDims; i < nDims; i += 1) {
+      if (i>0)
+        out << ",";
+      out << point.getCoordinate(type, first + i);
+    }
+    out << ']';
+  }
+}
+
+
+void Point::printFormatted(llvm::raw_ostream &out, bool printTupleNames) const {
+  auto space = getSpace();
+
+  auto nParamDims = space.getParamDimCount();
+  if (nParamDims > 0) {
+    out << '[';
+    for (auto i = nParamDims - nParamDims; i < nParamDims; i += 1) {
+      if (i>0)
+        out << ",";
+      out << this->getCoordinate(isl_dim_param, i);
+    }
+    out << "] -> ";
+  }
+
+  if (space.isMapSpace()) {
+    //out << '[';
+    printFormatted_recursive(out, *this, isl_dim_in, 0, space, printTupleNames);
+    out << " -> ";
+    printFormatted_recursive(out, *this, isl_dim_out, 0, space.move(), printTupleNames);
+    //out << ']';
+  } else if (space.isSetSpace()) {
+    printFormatted_recursive(out, *this, isl_dim_set, 0, space.move(), printTupleNames);
+  }
+}
+
+
+Point Point::createZero(Space space) {
   return Point::enwrap(isl_point_zero(space.take()));
 }
 
@@ -32,23 +88,23 @@ Space Point::getSpace() const {
   return Space::enwrap(isl_point_get_space(keep()));
 }
 
-   
-    BasicSet Point::toBasicSet() const {
-      return BasicSet::enwrap(isl_basic_set_from_point(takeCopy()));
-    }
+
+BasicSet Point::toBasicSet() const {
+  return BasicSet::enwrap(isl_basic_set_from_point(takeCopy()));
+}
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-   BasicSet Point::toBasicSet() const {
-      return BasicSet::enwrap(isl_basic_set_from_point(take()));
-    }
+BasicSet Point::toBasicSet() const {
+  return BasicSet::enwrap(isl_basic_set_from_point(take()));
+}
 #endif
-  
-    Set Point::toSet() const {
-      return Set::enwrap(isl_set_from_point(takeCopy()));
-    }
+
+Set Point::toSet() const {
+  return Set::enwrap(isl_set_from_point(takeCopy()));
+}
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
-   Set Point::toSet() const {
-     return Set::enwrap(isl_set_from_point(take()));
-    }
+Set Point::toSet() const {
+  return Set::enwrap(isl_set_from_point(take()));
+}
 #endif
 
 bool Point::isVoid() const{
@@ -80,5 +136,5 @@ void Point::sub(isl_dim_type type, int pos, unsigned val) {
 
 
 Set Point::apply(const Map &map) const {
-  return Set::enwrap( isl_set_apply( isl_set_from_point(takeCopy()), map.takeCopy()));
+  return Set::enwrap(isl_set_apply(isl_set_from_point(takeCopy()), map.takeCopy()));
 }

@@ -204,13 +204,24 @@ namespace isl {
     void equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2);
 
     /// Simplify the representation of a set or relation by trying to combine pairs of basic sets or relations into a single basic set or relation.
-    void coalesce();
+   ISLPP_EXSITU_ATTRS Set coalesce() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_coalesce(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_coalesce(take())); }
+   ISLPP_CONSUME_ATTRS Set coalesce_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_coalesce(take())); }
 
     /// Simplify the representation of a set or relation by detecting implicit equalities.
-    void detectEqualities();
+   ISLPP_EXSITU_ATTRS Set detectEqualities() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_detect_equalities(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void detectEqualities_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_detect_equalities(take())); }
+   ISLPP_CONSUME_ATTRS Set detectEqualities_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_detect_equalities(take())); }
 
     /// Removing redundant constraints
-    void removeRedundancies();
+   ISLPP_EXSITU_ATTRS Set removeRedundancies() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_remove_redundancies(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void removeRedundancies_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_remove_redundancies(take())); }
+   ISLPP_CONSUME_ATTRS Set removeRedundancies_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_remove_redundancies(take())); }
+
+   ISLPP_EXSITU_ATTRS Set makeDisjoint() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_make_disjoint(takeCopy())); }
+   ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_make_disjoint(take())); }
+   ISLPP_CONSUME_ATTRS Set makeDisjoint_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_make_disjoint(take())); }
+
 
     /// These functions drop any constraints (not) involving the specified dimensions. Note that the result depends on the representation of the input.
     void dropContraintsInvolvingDims(isl_dim_type type,  unsigned first, unsigned n);
@@ -256,7 +267,10 @@ namespace isl {
     //Map chainNested(const Map &map) const; // deprecated; use chainSubspace
     Map chainSubspace(const Map &map) ISLPP_EXSITU_FUNCTION;
     Map chainSubspace_consume(const Map &map) ISLPP_CONSUME_FUNCTION;
-    Map chainNested(const Map &map, unsigned tuplePos) const; // deprecared?
+    Map chainNested(const Map &map, unsigned tuplePos) const; // deprecated?
+
+    ISLPP_EXSITU_ATTRS PwMultiAff chainSubspace(PwMultiAff pma) ISLPP_EXSITU_FUNCTION;
+    ISLPP_CONSUME_ATTRS PwMultiAff chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION;
 
     void permuteDims_inplace(llvm::ArrayRef<unsigned> order) ISLPP_INPLACE_FUNCTION;
     Set permuteDims(llvm::ArrayRef<unsigned> order) const { auto result = copy(); result.permuteDims_inplace(order); return result; }
@@ -295,7 +309,7 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set cast(Space space) ISLPP_EXSITU_FUNCTION;
     ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space).move()); }
 
-    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); }
+    ISLPP_EXSITU_ATTRS Set cast() ISLPP_EXSITU_FUNCTION { return cast(getSpace().untyped()); } // TODO: Some no-op on dimension that reset the space
 
     //FIXME: Not part of public isl interface
      ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
@@ -303,10 +317,10 @@ namespace isl {
      ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION { return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
 
 
-     void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
-     void dumpExplicit(int maxElts) const;
+     void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
+     void dumpExplicit(int maxElts, bool newlines, bool formatted ) const;
      void dumpExplicit() const; // In order do be callable without arguments from debugger
-     std::string toStringExplicit(int maxElts = 8);
+     std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false);
 
      std::string toString()  const;
   }; // class Set

@@ -1,21 +1,25 @@
 #include "FieldVariable.h"
 
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Function.h>
-#include <assert.h>
-#include <llvm/IR/GlobalVariable.h>
-#include "islpp/Id.h"
 #include "FieldType.h"
-#include <llvm/ADT/SmallString.h>
+#include "FieldLayout.h"
+
+#include "islpp/Id.h"
 #include "islpp/Space.h"
 #include "islpp/PwMultiAff.h"
+
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/ADT/SmallString.h>
+
+#include <assert.h>
 
 using namespace llvm;
 using namespace molly;
 
 
 FieldVariable::FieldVariable(llvm::GlobalVariable *variable, FieldType *fieldTy) 
-  : variable(variable), fieldTy(fieldTy) {
+  : variable(variable), fieldTy(fieldTy) , defaultLayout(nullptr) {
     assert(variable);
     assert(fieldTy);
 }
@@ -31,7 +35,7 @@ void FieldVariable::dump() {
 }
 
 
-isl::Id FieldVariable::getTupleId() {
+isl::Id FieldVariable::getTupleId() const {
 #if 0
   llvm::SmallString<255> sstr;
   llvm::raw_svector_ostream os(sstr);
@@ -48,7 +52,7 @@ isl::Id FieldVariable::getTupleId() {
 }
 
 
-isl::Space FieldVariable::getAccessSpace() {
+isl::Space FieldVariable::getAccessSpace() const {
   return getFieldType()->getIndexsetSpace().setSetTupleId(getTupleId());
 }
 
@@ -56,7 +60,7 @@ isl::Space FieldVariable::getAccessSpace() {
 FieldLayout * molly::FieldVariable::getLayout() {
   // Currently there is a layout per type
   // Future version may have a layout per variable or even dynamic at runtime with automatic conversion between them
-  return fieldTy->getLayout();
+  return fieldTy->getDefaultLayout();
 }
 
 
@@ -70,6 +74,30 @@ llvm::Type * molly::FieldVariable::getEltPtrType() {
 }
 
 
-isl::PwMultiAff molly::FieldVariable::getHomeAff() {
-  return fieldTy->getHomeAff().setInTupleId(getTupleId());
+//isl::PwMultiAff molly::FieldVariable::getHomeAff() {
+//  auto layout = getLayout();
+//  return layout->getHomeAff().setInTupleId(getTupleId());
+//}
+
+
+isl::Map FieldVariable::getPhysicalNode() const {
+  auto layout = getDefaultLayout();
+  auto home = layout->getPhysicalNode();
+  home.castDomain_inplace(getAccessSpace());
+  return home;
+}
+
+
+isl::PwMultiAff FieldVariable::getPrimaryPhysicalNode() const {
+  auto layout = getDefaultLayout();
+  auto home = layout->getPrimaryPhysicalNode();
+  home.castDomain_inplace(getAccessSpace());
+  return home;
+}
+
+
+FieldLayout *molly::FieldVariable::getDefaultLayout() const {
+  if (defaultLayout)
+    return defaultLayout;
+  return fieldTy->getDefaultLayout();
 }

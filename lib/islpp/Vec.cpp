@@ -2,6 +2,7 @@
 #include "islpp/Vec.h"
 
 #include "islpp/Printer.h"
+#include "islpp/BasicSet.h"
 
 using namespace isl;
 
@@ -38,4 +39,14 @@ void Vec::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   } else {
     out << "...";
   }
+}
+
+isl::BasicSet isl::Vec::toBasicSet() const {
+  auto nDims = getSize();
+  auto result = getCtx()->createSetSpace(0, nDims).createUniverseBasicSet();  
+
+  for (auto i = nDims-nDims;i<nDims;i+=1) {
+    result.fix_inplace(isl_dim_set, i, getElement(i));
+  }
+  return result;
 }

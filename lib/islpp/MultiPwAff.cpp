@@ -129,11 +129,16 @@ ISLPP_INPLACE_ATTRS void isl::Multi<PwAff>::castDomain_inplace( Space domainSpac
 }
 
 
+ISLPP_EXSITU_ATTRS Set isl::Multi<PwAff>::getDomain() ISLPP_EXSITU_FUNCTION {
+  return Set::enwrap(isl_multi_pw_aff_domain(takeCopy()));
+}
 
 
 
-ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoDomainSpace( Space framespace ) ISLPP_EXSITU_FUNCTION
-{
+
+
+
+ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoDomainSpace( Space framespace ) ISLPP_EXSITU_FUNCTION {
   assert(framespace.isSet());
   auto domainSpace = getDomainSpace();
   auto rangeSpace = getRangeSpace();

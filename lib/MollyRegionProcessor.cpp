@@ -22,15 +22,15 @@ namespace {
     MollyRegionResolver(MollyPassManager *pm, Region *region) 
       :  AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), region(region) {}
 
-    Pass * findImplPass(AnalysisID PI) LLVM_OVERRIDE {
+    Pass * findImplPass(AnalysisID PI) override {
       return pm->findOrRunAnalysis(PI, nullptr, region);
     }
 
-    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
+    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) override {
       return pm->findOrRunAnalysis(PI, &F, region);
     }
 
-    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
+    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const override {
       return pm->findAnalysis(ID, nullptr, region);
     }
   }; // class MollyRegionResolver

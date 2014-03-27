@@ -49,6 +49,7 @@ endif (CMAKE_COMPILER_IS_GNUCXX)
 
 
 macro(add_molly_library name)
+message("add_molly_library(${name} ${ARGN})")
   parse_arguments(PARM "LINK_LIBS;LINK_COMPONENTS;TARGET_DEPENDS;EXTERNAL_LIBS;SOURCES;HEADERS;HEADER_DIRS" "" ${ARGN})
   
   set(_headers)
@@ -62,13 +63,16 @@ macro(add_molly_library name)
   endif ()
   
   add_llvm_library(${name} 
+    ${PARM_SOURCES} ${_headers} 
     ${PARM_DEFAULT_ARGS} 
-    SOURCES ${PARM_SOURCES} ${_headers} 
     LINK_LIBS ${PARM_LINK_LIBS} 
     LINK_COMPONENTS ${PARM_LINK_COMPONENTS} 
-    TARGET_DEPENDS ${PARM_TARGET_DEPENDS} 
-    EXTERNAL_LIBS ${PARM_EXTERNAL_LIBS}
+#    TARGET_DEPENDS ${PARM_TARGET_DEPENDS} 
+#   EXTERNAL_LIBS ${PARM_EXTERNAL_LIBS}
     )
+    if (PARM_TARGET_DEPENDS)
+      add_dependencies(${name} ${PARM_TARGET_DEPENDS})
+    endif ()
   set_target_properties(${name} PROPERTIES FOLDER "Molly")
 endmacro(add_molly_library)
 
@@ -114,11 +118,11 @@ set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -std=gnu++11  -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
+set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -mllvm -molly)
+set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing)
 set(MOLLYCC_COMMON_LDLAGS )
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
@@ -126,7 +130,7 @@ foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
   list(APPEND MOLLYRT_COMMON_CFLAGS "-I${_include}")
 endforeach()
 
-set(MOLLYRT_VERBOSE_FLAGS )
+set(MOLLYRT_VERBOSE_FLAGS -w -fmax-errors=1)
 set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
@@ -545,7 +549,8 @@ function (mollycc_compile _outfile)
     FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
     CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
     LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
-    LIBS ${_MollyRT_location} ${MPI_CXX_LIBRARIES} ${_LIBS}
+#    LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES} ${_LIBS}
+    LIBS "${_MollyRT_location}" ${MPI_CXX_LIBRARIES} ${_LIBS}
     COMMENT "${_COMMENT}"
     )
 endfunction ()

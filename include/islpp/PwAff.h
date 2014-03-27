@@ -144,6 +144,8 @@ namespace isl {
     void floor();
     void mod(const Int &mod);
 
+    ISLPP_EXSITU_ATTRS  PwAff mod(Val divisor) ISLPP_EXSITU_FUNCTION;
+
     void intersectParams(Set &&set);
     void intersetDomain(Set &&set);
 
@@ -201,6 +203,18 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS PwAff castDomain( Space domainSpace ) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(domainSpace); return result; }
     ISLPP_INPLACE_ATTRS void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION;
+
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8) const;
+    void dumpExplicit(int maxElts) const;
+    void dumpExplicit() const; // In order do be callable without arguments from debugger
+    std::string toStringExplicit(int maxElts = 8);
+
+#ifndef NDEBUG
+    std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise
+#endif
+
+    ISLPP_EXSITU_ATTRS Map reverse() ISLPP_EXSITU_FUNCTION;
+
   }; // class PwAff
 
 

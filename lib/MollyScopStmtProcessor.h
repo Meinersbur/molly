@@ -2,16 +2,19 @@
 #define MOLLY_MOLLYSCOPSTMTPROCESSOR_H
 
 #include "molly/Mollyfwd.h"
+#include "islpp/Islfwd.h"
 #include "Pollyfwd.h"
 #include "LLVMfwd.h"
-#include "islpp/Islfwd.h"
+
+#include "polly/ScopInfo.h"
+
 #include <map>
 #include <vector>
-#include "polly/ScopInfo.h"
 
 namespace {
   class MollyScopStmtProcessorImpl;
 }
+
 
 namespace molly {
 
@@ -57,8 +60,13 @@ namespace molly {
     virtual FieldType *getFieldType() const = 0;
 
     virtual llvm::Instruction *getAccessor() = 0;
-    virtual llvm::LoadInst *getLoadAccessor() = 0;
-    virtual llvm::StoreInst *getStoreAccessor() = 0;
+    virtual llvm::Instruction *getLoadAccessor() = 0;
+    virtual llvm::Instruction *getStoreAccessor() = 0;
+    virtual llvm::Value *getAccessPtr() = 0;
+    virtual polly::Access getAccess() = 0;
+    virtual llvm::AllocaInst *getStackStoragePtr(llvm::Value *val) = 0;
+    virtual llvm::AllocaInst *getAccessStackStoragePtr() = 0;
+    virtual AnnotatedPtr getAccessStackStorageAnnPtr() = 0;
 
     virtual llvm::Value *getAccessedCoordinate(unsigned i) = 0;
     virtual isl::MultiPwAff getAccessed() = 0; // { [domain] -> [indexset] }
@@ -92,6 +100,8 @@ namespace molly {
 
     // Process
     virtual void applyWhere() = 0;
+
+
 
   public:
     static MollyScopStmtProcessor *create(MollyPassManager *pm, polly::ScopStmt *scop);

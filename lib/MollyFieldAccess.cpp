@@ -2,20 +2,23 @@
 #include "MollyFieldAccess.h"
 
 #include "FieldVariable.h"
+#include "ScopUtils.h"
+#include "FieldType.h"
+#include "FieldLayout.h"
+
 #include "islpp/Aff.h"
 #include "islpp/MultiAff.h"
 #include "islpp/Ctx.h"
 #include "islpp/Space.h"
 #include "islpp/Map.h"
-#include "SCEVAffinator.h"
-#include "ScopUtils.h"
-#include "FieldType.h"
+
+#include <polly/Accesses.h>
 
 #include <llvm/Analysis/ScalarEvolution.h>
 
-using std::move;
 using namespace llvm;
 using namespace molly;
+using std::move;
 using isl::enwrap;
 
 #if 0
@@ -45,14 +48,17 @@ void MollyFieldAccess::loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVaria
 
 void MollyFieldAccess::loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
   assert(stmt);
-  bool found = false;
+  auto found = false;
   for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
     auto memacc = *it;
-    loadFromMemoryAccess(memacc, fvar);
-    if (isValid()) { // There must be only one MemoryAccess to a field 
-      assert( this->scopStmt == stmt);
-      return;
-    }
+    auto acc = polly::Access::fromMemoryAccess(memacc);
+    if (!acc.isFieldAccess())
+      continue;
+
+    assert(!found);
+    loadFromMemoryAccess(memacc, fvar);// There must be only one MemoryAccess to a field 
+    assert(isValid());
+    found = true;
   }
 }
 
@@ -73,7 +79,7 @@ MollyFieldAccess MollyFieldAccess::fromMemoryAccess(polly::MemoryAccess *acc, Fi
 
 MollyFieldAccess MollyFieldAccess::fromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
   MollyFieldAccess result;
-  result.loadFromScopStmt (stmt, fvar);
+  result.loadFromScopStmt(stmt, fvar);
   return result;
 }
 
@@ -179,8 +185,8 @@ isl::MultiPwAff MollyFieldAccess::getAffineAccess(llvm::ScalarEvolution *se) {
     auto coordVal = *it;
     auto coordSCEV = se->getSCEV(coordVal);
 
-    auto aff = convertScEvToAffine(scopStmt, coordSCEV);
-    result.setPwAff_inplace(i, aff.move());
+    auto aff = isl::enwrap(affinatePwAff(scopStmt, coordSCEV));
+    result.setPwAff_inplace(i, aff);
     i+=1;
   }
 
@@ -226,11 +232,12 @@ isl::Map MollyFieldAccess::getAccessScattering() const {
 }
 
 
-isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
-  auto tyHomeAff = getFieldType() ->getHomeAff();
-  tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
-  return tyHomeAff;
-}
+//isl::PwMultiAff MollyFieldAccess::getHomeAff() const {
+//  auto layout = getFieldVariable()->getLayout();
+//  auto tyHomeAff = layout->getHomeAff();
+//  tyHomeAff.setTupleId_inplace(isl_dim_in, getAccessRelation().getOutTupleId() );
+//  return tyHomeAff;
+//}
 
 
 llvm::StoreInst *MollyFieldAccess::getLoadUse() const {
@@ -241,6 +248,6 @@ llvm::StoreInst *MollyFieldAccess::getLoadUse() const {
   assert( this->getPollyScopStmt() );
   assert(ld->getNumUses() == 1);
 
-  auto use = *ld->use_begin();
+  auto use = *ld->user_begin();
   return cast<StoreInst>(use);
 }

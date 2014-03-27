@@ -31,6 +31,7 @@ namespace molly {
   class CommunicationBuffer;
 
   // #include "Codegen.h"
+  class AnnotatedPtr;
   class MollyCodeGenerator;
 
   // #include "ScopEditor.h"

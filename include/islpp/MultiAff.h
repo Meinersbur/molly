@@ -186,6 +186,8 @@ namespace isl {
     MultiAff cast(Space space) ISLPP_EXSITU_FUNCTION;
     void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(cast(space)); }
 
+      ISLPP_EXSITU_ATTRS MultiAff cast(Space domainSpace, Space rangeSpace) ISLPP_EXSITU_FUNCTION { return cast(Space::createMapFromDomainAndRange(domainSpace, rangeSpace)); }
+
       ISLPP_EXSITU_ATTRS MultiAff castDomain(Space rangeSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(rangeSpace); return result; }
     ISLPP_INPLACE_ATTRS void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION;
     ISLPP_EXSITU_ATTRS MultiAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;

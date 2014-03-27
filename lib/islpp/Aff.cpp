@@ -120,17 +120,12 @@ void Aff::addCoefficient(isl_dim_type type, unsigned pos, const Int &v) {
   give(isl_aff_add_coefficient(take(), type, pos, v.keep()));
 }
 
+
 bool Aff::isCst() const {
   return isl_aff_is_cst(keep());
 }
-#if 0
-void Aff::setDimName(isl_dim_type type, unsigned pos, const char *s) {
-  give(isl_aff_set_dim_name(take(), type, pos, s));
-}
-void Aff::setDimId(isl_dim_type type, unsigned pos, Id &&id) {
-  give(isl_aff_set_dim_id(take(), type, pos, id.take()));
-}
-#endif
+
+
 bool Aff::isPlainZero() const {
   return isl_aff_plain_is_zero(keep());
 }
@@ -201,8 +196,13 @@ PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   return result;
 }
 
-ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_FUNCTION
-{
+
+ISLPP_EXSITU_ATTRS BasicMap isl::Aff::toBasicMap() ISLPP_EXSITU_FUNCTION{
+  return BasicMap::enwrap(isl_basic_map_from_aff(takeCopy()));
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::Aff::toMap() ISLPP_EXSITU_FUNCTION {
   return Map::enwrap(isl_map_from_aff(takeCopy()));
 }
 

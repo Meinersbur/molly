@@ -211,6 +211,39 @@ ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
   return result;
 }
 
+
+void isl::PwAff::dumpExplicit(int maxElts /*= 8*/)const{
+  printExplicit(llvm::dbgs(), maxElts);
+  llvm::dbgs() << "\n";
+}
+
+
+void isl::PwAff::dumpExplicit() const {
+  dumpExplicit(8);
+}
+
+
+void isl::PwAff::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/) const {
+  toMap().printExplicit(os, maxElts);
+}
+
+
+std::string isl::PwAff::toStringExplicit(int maxElts /*= 8*/)
+{
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  printExplicit(os, maxElts);
+  os.flush();
+  return str; // NRVO
+}
+
+
+#ifndef NDEBUG
+std::string isl::PwAff::toString() const {
+  return ObjBaseTy::toString();
+}
+#endif
+
 PwAff isl::unionMin(PwAff pwaff1, PwAff pwaff2) {
   return PwAff::enwrap(isl_pw_aff_union_min(pwaff1.take(), pwaff2.take()));
 }
@@ -335,4 +368,14 @@ ISLPP_INPLACE_ATTRS void PwAff:: castDomain_inplace(Space domainSpace) ISLPP_INP
   auto transformDomain = transfromDomainSpace.createIdentityMultiAff();
 
   pullback_inplace(transformDomain);
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::PwAff::reverse() ISLPP_EXSITU_FUNCTION {
+  return toMap().reverse();
+}
+
+
+ISLPP_EXSITU_ATTRS PwAff isl::PwAff::mod(Val divisor) ISLPP_EXSITU_FUNCTION {
+  return PwAff::enwrap(isl_pw_aff_mod_val(takeCopy(), divisor.take()));
 }

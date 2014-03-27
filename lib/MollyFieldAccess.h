@@ -46,7 +46,7 @@ namespace molly {
       clear();
     }
 
-    void loadFromInstruction(llvm::Instruction *instr) LLVM_OVERRIDE {
+    void loadFromInstruction(llvm::Instruction *instr) override {
       clear();
       FieldAccess::loadFromInstruction(instr);
     }
@@ -98,7 +98,7 @@ namespace molly {
     // Later could also add another dimension to represent the order of the access relative to others
     isl::Map getAccessScattering() const;
 
-    isl::PwMultiAff getHomeAff() const;
+    //isl::PwMultiAff getHomeAff() const;
 
     llvm::StoreInst *getLoadUse() const;
   }; // class MollyFieldAccess

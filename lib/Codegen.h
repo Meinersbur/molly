@@ -13,6 +13,89 @@
 
 namespace molly {
 
+
+  /// A pointer with a offset annotation
+  /// Tells where the pointer is located relative to a base pointer or a field
+  /// Use to add access information when the pointer is read or written, which is again used to compute dependencies
+  class AnnotatedPtr {
+    llvm::Value *ptr;
+    isl::PwMultiAff coord; // { [domain] -> [index] } // TODO: Define and enforce tuple ids
+    
+    // ptr into array
+    llvm::Value *base;
+
+    // ptr into field
+    FieldVariable *fvar;
+
+    llvm::Value *val;
+
+  protected:
+    AnnotatedPtr(llvm::Value *ptr, isl::PwMultiAff coord, llvm::Value *base, FieldVariable *fvar, llvm::Value *val)
+    : ptr(ptr), coord(coord),base(base),fvar(fvar),val(val) { }
+  public:
+  //  AnnotatedPtr() : 
+    //  ptr(nullptr), base(nullptr), fvar(nullptr) { }
+
+    static AnnotatedPtr createScalarPtr(llvm::Value * ptr, isl::Space domainspace) {
+      auto islctx = domainspace.getCtx();
+      auto space = isl::Space::createMapFromDomainAndRange(domainspace, islctx->createSetSpace(0));
+      return AnnotatedPtr(ptr, space.createZeroMultiAff(), ptr, nullptr, nullptr);
+    }
+
+    static AnnotatedPtr createFieldPtr(llvm::Value *ptr, FieldVariable *fvar, isl::PwMultiAff coord) {
+      return AnnotatedPtr(ptr, coord, nullptr, fvar, nullptr);
+    }
+
+    static AnnotatedPtr createArrayPtr(llvm::Value *ptr, llvm::Value *base, isl::PwMultiAff coord) {
+      return AnnotatedPtr(ptr, coord, base, nullptr, nullptr);
+    }
+
+    static AnnotatedPtr createUnannotated(llvm::Value *ptr) {
+      return AnnotatedPtr(ptr, isl::PwMultiAff(), nullptr, nullptr, nullptr);
+    }
+
+    /// Content not actually stored at a ptr, but directly in a register
+    /// Cannot be written to
+    static AnnotatedPtr createRegister(llvm::Value *val) {
+      return AnnotatedPtr(nullptr, isl::PwMultiAff(), nullptr, nullptr, val);
+    }
+
+
+    bool isFieldPtr() const {
+      return fvar!=nullptr;
+    }
+
+    bool isScalar() const { 
+      return coord.getOutDimCount() == 0; 
+    }
+
+    bool isRegister() const {
+      return val!=nullptr;
+    }
+
+    bool isAnnotated() const { return getDiscriminator() && coord.isValid(); }
+
+    llvm::Value *getPtr() const { assert(!isRegister()); return ptr;}
+    isl::PwMultiAff getCoord() const { return coord; } // or offset
+
+    FieldVariable *getFieldVar() const{ return fvar; }
+
+    llvm::Value *getRegister() const { return val; }
+
+    /// Used to identify which block of memory/field is accessed
+    llvm::Value *getDiscriminator() const;
+
+    // coord: { old_domain[] -> field[] }
+    // mapper: { new_domain[] -> old_domain[] }
+    // { new_domain[] -> old_domain[]-> field[] }
+    AnnotatedPtr pullbackDomain(isl::PwMultiAff newToOldMapper) {
+      return AnnotatedPtr(ptr, coord.isValid() ? coord.pullback(newToOldMapper) : coord, base, fvar, val);
+    }
+
+    void dump() const;
+  }; // class AnnotatedPtr
+
+
   /// Everything needed to generate code into a ScopStmt
   class MollyCodeGenerator {
   private:
@@ -45,13 +128,30 @@ namespace molly {
 
     isl::AstBuild &initAstBuild();
 
-    llvm::Value *allocStackSpace(llvm::Type *ty);
+    llvm::Value *copyOperandTree(llvm::Value *val);
 
   protected:
     Function *getRuntimeFunc( llvm::StringRef name, llvm::Type *retTy, llvm::ArrayRef<llvm::Type*> tys);
 
   public:
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
+
+    llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Twine name = Twine());
+    llvm::Value *allocStackSpace(llvm::Type *ty, int count, llvm::Twine name = Twine());
+    llvm::Value *createPointerCast(llvm::Value *val, llvm::Type *type);
+
+    void setInsertBefore(llvm::Instruction *beforeInstr) {
+      irBuilder.SetInsertPoint(beforeInstr);
+    }
+    void setInsertAfter(llvm::Instruction *afterInstr) {
+      auto beforeInstr = afterInstr->getNextNode();
+      assert(beforeInstr);
+      irBuilder.SetInsertPoint(beforeInstr);
+    }
+
+    llvm::BasicBlock *getInsertBlock() const {
+    return irBuilder.GetInsertBlock();
+    }
 
     llvm::CallInst *callLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
@@ -102,6 +202,7 @@ namespace molly {
     llvm::CallInst *callValueLoad(FieldVariable *fvar, llvm::Value *valptr, llvm::Value *rank, llvm::Value *idx);
     llvm::CallInst *callRuntimeValueLoad(FieldVariable *fvar, llvm::Value *srcbufptr, llvm::Value *rank, llvm::Value *idx);
     llvm::LoadInst *codegenValueLoad(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx);
+    //void codegenValueLoadPtr(FieldVariable *fvar, llvm::Value *rank, llvm::Value *idx, llvm::Value *writeIntoPtr);
 
     llvm::CallInst *callValueStore(FieldVariable *fvar, llvm::Value *valueToStore, llvm::Value *rank, llvm::Value *idx);
     llvm::CallInst *callRuntimeValueStore(FieldVariable *fvar,  llvm::Value *dstbufptr, llvm::Value *rank, llvm::Value *idx);
@@ -157,7 +258,30 @@ namespace molly {
     //void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, llvm::ArrayRef<llvm::Value*> indices, isl::Map accessRelation);
     void codegenStoreLocal(llvm::Value *val, FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
 
+    void codegenAssignLocalFromScalar(FieldVariable *dstFvar, isl::PwMultiAff dstWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff dstIndex/* [domain] -> field[indexset] */, llvm::Value *srcPtr);
+
+    llvm::Value *getLocalBufPtr(FieldVariable *fvar);
+    llvm::Value *getSendBufPtrs(CommunicationBuffer *combuf);
+    llvm::Value *getSendbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getSendbufPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getRecvBufPtrs(CommunicationBuffer *combuf);
+    llvm::Value *getRecvbufPtrPtr(CommunicationBuffer *combuf, llvm::Value *index);
+    llvm::Value *getRecvbufPtr(CommunicationBuffer *combuf, llvm::Value *index);
+
+    llvm::Value *codegenLoadLocalPtr(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
     llvm::Value *codegenLoadLocal(FieldVariable *fvar, isl::PwMultiAff where/* [domain] -> curNode[cluster] */, isl::MultiPwAff index/* [domain] -> field[indexset] */);
+
+    llvm::MemCpyInst *codegenAssignPtrPtr(llvm::Value *dstPtr, llvm::Value *srcPtr);
+    llvm::MemCpyInst *codegenAssignPtrPtr(llvm::Value *dstPtr, llvm::Value *dstBase, isl::Map dstIndex, llvm::Value *srcPtr, llvm::Value *srcBase, isl::Map srcIndex);
+
+    void codegenAssignPtrVal(llvm::Value *dstPtr, llvm::Value *srcVal);
+    void codegenAssignValPtr(llvm::Value *dstVal, llvm::Value *srcPtr);
+    void codegenAssignValVal(llvm::Value *dstVal, llvm::Value *srcVal);
+    void codegenAssignScalarFromLocal(llvm::Value *destPtr, FieldVariable *srcFvar, isl::PwMultiAff srcWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff srcIndex/* [domain] -> field[indexset] */);
+
+    void codegenAssign(const AnnotatedPtr &dst, const AnnotatedPtr &src);
+
+    AnnotatedPtr codegenFieldLocalPtr(FieldVariable *srcFvar, isl::PwMultiAff srcWhere/* [domain] -> curNode[cluster] */, isl::MultiPwAff srcIndex/* [domain] -> field[indexset] */);
 
     //void codegenStore(llvm::Value *val, llvm::Value *ptr);
 
@@ -187,6 +311,29 @@ namespace molly {
     llvm::Function *getParentFunction() const {
       return irBuilder.GetInsertBlock()->getParent();
     }
+
+    llvm::CallInst *callBeginMarker(StringRef str);
+    llvm::CallInst *callEndMarker(StringRef str);
+
+    void beginMark(StringRef str) {
+      auto bb = irBuilder.GetInsertBlock();
+      irBuilder.SetInsertPoint(bb, bb->begin());
+      callBeginMarker(str);
+    }
+
+    void endMark(StringRef str) {
+      auto bb = irBuilder.GetInsertBlock();
+      auto term = bb->getTerminator();
+      if (term)
+        irBuilder.SetInsertPoint(bb, term);
+      else
+        irBuilder.SetInsertPoint(bb, bb->end());
+      callBeginMarker(str);
+    }
+
+
+    void markBlock(StringRef str);
+    void markBlock(StringRef str, isl::MultiPwAff coord);
   }; // class MollyCodeGenerator
 
 } // namespace molly

@@ -98,6 +98,10 @@ llvm::Region *getRegionOf(polly::ScopStmt *);
 llvm::Function *createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
 llvm::Function *createFunction( llvm::Type *rtnTy, llvm::Module *module,  llvm::GlobalValue::LinkageTypes linkage =  llvm::GlobalValue::PrivateLinkage ,llvm::StringRef name = llvm::StringRef());
 
+/// Get the index of the instruction in its BasicBlock
+/// This function should be avoided if possible because of its linear cost
+unsigned positionInBasicBlock(llvm::Instruction *instr);
+
 } // namespace molly
 
 void viewRegion(const llvm::Function *f);

@@ -29,6 +29,13 @@ namespace llvm {
   class CallInst;
   class StoreInst;
   class LoadInst;
+  class AllocaInst;
+
+  // #include <llvm/IR/IntrinsicInst.h>
+  class IntrinsicInst;
+  class MemTransferInst;
+  class MemCpyInst;
+  class MemMoveInst;
 
   // #include <llvm/IR/BasicBlock.h>
   class BasicBlock;
@@ -103,9 +110,9 @@ namespace llvm {
   class Loop;
 } // namespace llvm
 
-
 namespace molly {
   typedef llvm::IRBuilder<true,llvm::ConstantFolder,llvm::IRBuilderDefaultInserter<true>> DefaultIRBuilder;
+  //typedef polly::PollyIRBuilder DefaultIRBuilder;
 } // namespace molly;
 
 #endif /* MOLLY_LLVMFWD_H */

@@ -32,7 +32,7 @@ namespace molly {
     virtual bool hasFieldAccess() = 0;
     virtual llvm::Pass *asPass() = 0;
 
-    virtual void computeScopDistibution() = 0;
+    //virtual void computeScopDistibution() = 0;
     virtual void genCommunication() = 0;
     virtual void pollyCodegen() = 0;
 
@@ -54,6 +54,12 @@ namespace molly {
     virtual isl::Id getIdForLoop(const llvm::Loop *loop) = 0;
 
     virtual polly::ScopStmt *getStmtForBlock(llvm::BasicBlock *bb) = 0;
+
+
+    virtual llvm::AllocaInst *codegenLocalBufferPtrOf(FieldVariable *fvar) = 0;
+    virtual llvm::AllocaInst *codegenSendbufPtrsOf(CommunicationBuffer *combuf) = 0;
+    virtual llvm::AllocaInst *codegenRecvbufPtrsOf(CommunicationBuffer *combuf) = 0;
+
 
   public:
     static MollyScopProcessor *create(MollyPassManager *pm, polly::Scop *scop);

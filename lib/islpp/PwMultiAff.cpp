@@ -13,7 +13,7 @@ using namespace isl;
 using namespace llvm;
 
 
-PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) { 
+PwMultiAff PwMultiAff::create(Set &&set, MultiAff &&maff) {
   return enwrap(isl_pw_multi_aff_alloc(set.take(), maff.take()));
 }
 
@@ -61,14 +61,15 @@ void PwMultiAff::dump() const{
 void PwMultiAff::printProperties(llvm::raw_ostream &out, int depth, int indent) const {
   if (depth > 0) {
     print(out);
-  } else {
+  }
+  else {
     out << "...";
   }
 }
 
 
-Set PwMultiAff::getRange() const { 
-  return toMap().getRange(); 
+Set PwMultiAff::getRange() const {
+  return toMap().getRange();
 }
 
 #if 0
@@ -88,13 +89,13 @@ PwMultiAff PwMultiAff::pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER {
 
 static int foreachPieceCallback(__isl_take isl_set *set, __isl_take isl_multi_aff *maff, void *user) {
   assert(user);
-  auto &func = *static_cast<std::function<bool(Set &&,MultiAff &&)>*>(user);
-  auto retval = func( Set::enwrap(set), MultiAff::enwrap(maff) );
+  auto &func = *static_cast<std::function<bool(Set &&, MultiAff &&)>*>(user);
+  auto retval = func(Set::enwrap(set), MultiAff::enwrap(maff));
   return retval ? -1 : 0;
 }
-bool PwMultiAff::foreachPiece(const std::function<bool(Set &&,MultiAff &&)> &func) const {
-  auto retval = isl_pw_multi_aff_foreach_piece(keep(), &foreachPieceCallback, const_cast<std::function<bool(Set &&,MultiAff &&)>*>(&func));
-  return retval!=0;
+bool PwMultiAff::foreachPiece(const std::function<bool(Set &&, MultiAff &&)> &func) const {
+  auto retval = isl_pw_multi_aff_foreach_piece(keep(), &foreachPieceCallback, const_cast<std::function<bool(Set &&, MultiAff &&)>*>(&func));
+  return retval != 0;
 }
 
 
@@ -107,7 +108,7 @@ PwMultiAff PwMultiAff::neg() const {
   auto space = getSpace();
   auto result = space.createEmptyPwMultiAff();
 
-  foreachPiece([&result] (Set &&domain, MultiAff &&maff) -> bool {
+  foreachPiece([&result](Set &&domain, MultiAff &&maff) -> bool {
     maff.neg_inplace();
     result.unionAdd_inplace(maff.restrictDomain(domain));
     return false;
@@ -127,7 +128,7 @@ PwMultiAff PwMultiAff::projectOut(unsigned first, unsigned count) const {
 }
 
 
-PwMultiAff PwMultiAff:: projectOut(const DimRange &range) const {
+PwMultiAff PwMultiAff::projectOut(const DimRange &range) const {
   assert(range.isValid());
   assert(range.getType() == isl_dim_out);
   return projectOut(range.getBeginPos(), range.getCount());
@@ -140,12 +141,12 @@ PwMultiAff PwMultiAff::projectOutSubspace(const Space &subspace) const {
 }
 
 
-PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_FUNCTION {
+PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_FUNCTION{
   auto domainSpace = getDomainSpace();
   auto resultSpace = domainSpace.mapsTo(count);
   auto result = resultSpace.createEmptyPwMultiAff();
 
-  foreachPiece([first,count,&result](Set &&set, MultiAff &&aff) -> bool {
+  foreachPiece([first, count, &result](Set &&set, MultiAff &&aff) -> bool {
     auto subaff = aff.subMultiAff(first, count);
     auto subpwaff = PwMultiAff::create(set, subaff);
     result.unionAdd_inplace(subpwaff); //FIXME: disjointAdd
@@ -156,7 +157,7 @@ PwMultiAff PwMultiAff::sublist(pos_t first, count_t count) ISLPP_EXSITU_FUNCTION
 }
 
 
-ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_FUNCTION{
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
 
@@ -166,7 +167,7 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::sublist(Space subspace) ISLPP_EXSITU_F
 }
 
 
-PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION{
   assert(getOutDimCount() == space.getOutDimCount());
   assert(getInDimCount() == space.getInDimCount());
 
@@ -174,7 +175,7 @@ PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   auto meAligned = this->alignParams(space);
 
   auto result = space.move().createEmptyPwMultiAff();
-  meAligned.foreachPiece([&result,&space](Set&&set,MultiAff&&maff) -> bool {
+  meAligned.foreachPiece([&result, &space](Set&&set, MultiAff&&maff) -> bool {
     result.unionAdd_inplace(PwMultiAff::create(set.cast(space.getDomainSpace()), maff.cast(space))); // TODO: disjointUnion/addPiece 
     return false;
   });
@@ -183,14 +184,14 @@ PwMultiAff PwMultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
 }
 
 
-ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION{
   assert(getInDimCount() == domainSpace.getSetDimCount());
 
   domainSpace.alignParams_inplace(this->getSpace());
   auto meAligned = this->alignParams(domainSpace);
 
   auto result = Space::createMapFromDomainAndRange(domainSpace, getRangeSpace()).createEmptyPwMultiAff();
-  meAligned.foreachPiece([&result,&domainSpace](Set&&set,MultiAff&&maff) -> bool {
+  meAligned.foreachPiece([&result, &domainSpace](Set&&set, MultiAff&&maff) -> bool {
     auto resultPiece = PwMultiAff::create(set.cast(domainSpace), maff.castDomain(domainSpace));
     result.unionAdd_inplace(resultPiece.move()); // TODO: disjointUnion/addPiece 
     return false;
@@ -200,14 +201,19 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castDomain(Space domainSpace) ISLPP_EX
 }
 
 
-ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION {
+ISLPP_INPLACE_ATTRS void PwMultiAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION{
+  obj_give(castDomain(domainSpace));
+}
+
+
+ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION{
   assert(getOutDimCount() == rangeSpace.getSetDimCount());
 
   rangeSpace.alignParams_inplace(this->getSpace());
   auto meAligned = this->alignParams(rangeSpace);
 
   auto result = Space::createMapFromDomainAndRange(getDomainSpace(), rangeSpace).createEmptyPwMultiAff();
-  meAligned.foreachPiece([&result,&rangeSpace](Set &&set, MultiAff &&maff) -> bool {
+  meAligned.foreachPiece([&result, &rangeSpace](Set &&set, MultiAff &&maff) -> bool {
     auto resultPiece = PwMultiAff::create(set.move(), maff.castRange(rangeSpace));
     result.unionAdd_inplace(resultPiece.move()); // TODO: disjointUnion/addPiece 
     return false;
@@ -217,63 +223,55 @@ ISLPP_EXSITU_ATTRS PwMultiAff PwMultiAff::castRange(Space rangeSpace) ISLPP_EXSI
 }
 
 
-ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange( Map map ) ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyRange(Map map) ISLPP_EXSITU_FUNCTION {
   return toMap().applyRange(map);
 }
 
 
-
-
-void isl::Pw<MultiAff>::dumpExplicit( int maxElts ) const
-{
-  toMap().dumpExplicit(maxElts);
+void isl::Pw<MultiAff>::dumpExplicit(int maxElts, bool newlines, bool formatted) const {
+  toMap().dumpExplicit(maxElts, newlines, formatted);
 }
 
 
-void isl::Pw<MultiAff>::dumpExplicit() const
-{
+void isl::Pw<MultiAff>::dumpExplicit() const {
   toMap().dumpExplicit();
 }
 
 
-void isl::Pw<MultiAff>::printExplicit( llvm::raw_ostream &os, int maxElts /*= 8*/ ) const
-{
-  toMap().printExplicit(os, maxElts);
+void isl::Pw<MultiAff>::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines, bool formatted) const {
+  toMap().printExplicit(os, maxElts, newlines,formatted);
 }
 
 
-std::string isl::Pw<MultiAff>::toStringExplicit( int maxElts ) const
-{
-  return toMap().toStringExplicit(maxElts);
+std::string isl::Pw<MultiAff>::toStringExplicit(int maxElts, bool newlines, bool formatted) const {
+  return toMap().toStringExplicit(maxElts,newlines,formatted);
 }
 
 
-std::string isl::Pw<MultiAff>::toStringExplicit() const
-{
-  return toStringExplicit(8);
+std::string isl::Pw<MultiAff>::toStringExplicit() const {
+  return toMap().toStringExplicit();
 }
 
 
-std::string isl::Pw<MultiAff>::toString() const
-{
+std::string isl::Pw<MultiAff>::toString() const {
   return ObjBaseTy::toString();
 }
 
 
-isl::Pw<MultiAff>::Pw( MultiPwAff that ) : Obj(that.isValid() ? that.toPwMultiAff() : PwMultiAff())
-{
-
+isl::Pw<MultiAff>::Pw(MultiPwAff that) : Obj(that.isValid() ? that.toPwMultiAff() : PwMultiAff()) {
 }
 
 
-const PwMultiAff & isl::Pw<MultiAff>::operator=( MultiPwAff that )
-{
+const PwMultiAff & isl::Pw<MultiAff>::operator=(MultiPwAff that) {
   obj_give(that.isValid() ? that.toPwMultiAff() : PwMultiAff()); return *this;
 }
 
 
-void isl::Pw<MultiAff>::dump() const
-{
+void isl::Pw<MultiAff>::dump() const {
   isl_pw_multi_aff_dump(keep());
+}
+
+
+ISLPP_PROJECTION_ATTRS Set isl::Pw<MultiAff>::range() ISLPP_PROJECTION_FUNCTION{
+  return toMap().range();
 }

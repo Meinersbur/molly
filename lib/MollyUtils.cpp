@@ -158,6 +158,22 @@ llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, 
 }
 
 
+unsigned molly::positionInBasicBlock(llvm::Instruction *instr) {
+  assert(instr);
+  auto bb = instr->getParent();
+  assert(bb);
+
+  unsigned i = 0;
+  for (auto it = bb->begin(), end = bb->end(); it != end; ++it) {
+    if (&*it == instr)
+      return i;
+    i += 1;
+  }
+  llvm_unreachable("Instruction not in basic block it said itself it is in");
+}
+
+
+
 void viewRegion(const Function *f) {
   auto F = const_cast<Function*>(f);
   assert(!F->isDeclaration());

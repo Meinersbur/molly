@@ -139,7 +139,7 @@ BasicSet Ctx::createRectangularSet(llvm::ArrayRef<unsigned> lengths) {
     set.addConstraint_inplace(std::move(ge));
 
     auto lt = Constraint::createInequality(space);
-    lt.setConstant_inplace(lengths[d]);
+    lt.setConstant_inplace(lengths[d]-1);
     lt.setCoefficient_inplace(isl_dim_set, d, -1);
     set.addConstraint_inplace(std::move(lt));
   }
@@ -173,6 +173,21 @@ Map Ctx::createAlltoallMap(Set &&domain, Set &&range) {
 Map Ctx::createAlltoallMap(const Set &domain, Set &&range) { return createAlltoallMap(domain.copy(), range.move()); }
 Map Ctx::createAlltoallMap(Set &&domain, const Set &range) { return createAlltoallMap(domain.move(), range.copy()); }
 Map Ctx::createAlltoallMap(const Set &domain, const Set &range) { return createAlltoallMap(domain.copy(), range.copy()); }
+
+
+Map Ctx::readMap(const char *str) {
+  return Map::enwrap(isl_map_read_from_str(keep(), str));
+}
+
+
+isl::Map isl::Ctx::readMap( const std::string &str ) {
+  return readMap(str.c_str());
+}
+
+
+isl::Space isl::Ctx::createSetSpace(unsigned dim) {
+  return createSetSpace(0, dim);
+}
 
 
 Map Ctx::createEmptyMap(Space &&space) {

@@ -20,15 +20,15 @@ namespace {
     MollyModuleResolver(MollyPassManager *pm, Module *module) 
       :  AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), module(module) {}
 
-    Pass * findImplPass(AnalysisID PI) LLVM_OVERRIDE {
+    Pass * findImplPass(AnalysisID PI) override {
       return pm->findOrRunAnalysis(PI, nullptr, nullptr);
     }
 
-    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
+    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) override {
       return pm->findOrRunAnalysis(PI, &F, nullptr);
     }
 
-    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
+    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const override {
       return pm->findAnalysis(ID, nullptr, nullptr);
     }
   }; // class MollyModuleResolver

@@ -13,9 +13,9 @@ RectangularMapping *RectangularMapping::create(isl::MultiPwAff lengths, isl::Mul
 }
 
 
-RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl::Map &map) {
+RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map map) { //FIXME: spelling
   auto nDims = map.getOutDimCount();
-  auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createZeroMultiPwAff();
+  auto lengths = isl::Space::createMapFromDomainAndRange(map.getDomainSpace(), map.getRangeSpace()).createEmptyMultiPwAff();
   auto offsets = lengths.copy();
 
   for (auto i = nDims-nDims; i < nDims; i+=1) {
@@ -28,8 +28,15 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(const isl:
     offsets.setPwAff_inplace(i, min);
   }
 
+  lengths.coalesce_inplace();
+  offsets.coalesce_inplace();
   return new RectangularMapping(lengths.move(), offsets.move());
 }
+
+
+ //RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Set set) {
+ //  return createRectangualarHullMapping( alltoall( set.getParamsSpace().createUniverseBasicSet() , set) );
+ //}
 
 
 llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domain, const isl::MultiPwAff &coords) {
@@ -85,7 +92,7 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
   //domaintranslator; // { [domain] -> srcNode[cluster],dstNode[cluster] }
   //lengths; // { [chunk],srcNode[cluster],dstNode[cluster] -> field[indexset] }
 
-  auto mylengths = lengths.toMap().wrap().reorderSubspaces( domaintranslator.getRangeSpace(), lengths.getRangeSpace() ); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
+  auto mylengths = lengths.toMap().wrap().reorderSubspaces(domaintranslator.getRangeSpace(), lengths.getRangeSpace()); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
   auto lenout = domaintranslator.applyRange(mylengths); // { [domain] -> field[indexset] }
  
 
@@ -96,7 +103,7 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
  //auto lenout = mylengths.projectOut(isl_dim_in, 0, mylengths.getInDimCount()); // { -> len[] }
  //auto lengthsMap = mylengths.reverse(); // { len[] -> [A,C] }
 
- // We cannot optimize over the non-linear size function, so we do it per dimension which hence is a overapproximation
+ // We cannot optimize over the non-linear size function, so we do it per dimension which hence is an overapproximation
  auto nDims = mylengths.getOutDimCount();
  auto &irBuilder = codegen.getIRBuilder();
  Value *result = ConstantInt::get(codegen.getIntTy(), 1, true);

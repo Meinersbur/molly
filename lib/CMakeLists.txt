@@ -26,7 +26,6 @@ add_molly_library(LLVMMolly
 
     # Algorithms
     IslExprBuilder.cpp
-    SCEVAffinator.cpp
     MollyIntrinsics.cpp
     
     # Available Layouts
@@ -55,8 +54,8 @@ add_molly_library(LLVMMolly
     Polly
   LINK_LIBS 
     Islpp
-  TARGET_DEPENDS 
-    intrinsics_gen
+#  TARGET_DEPENDS 
+#    intrinsics_gen
   EXTERNAL_LIBS 
     #${GMP_LIBRARY} 
     #${ISL_LIBRARY} 

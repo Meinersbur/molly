@@ -12,17 +12,17 @@
 #include <polly/LinkAllPasses.h>
 #include <polly/CodeGen/BlockGenerators.h>
 
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/Analysis/RegionPass.h>
-#include <llvm/Analysis/Passes.h>
-#include <llvm/Analysis/CFGPrinter.h>
-#include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/InitializePasses.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Analysis/RegionPass.h>
+#include <llvm/Analysis/Passes.h>
+#include <llvm/Analysis/CFGPrinter.h>
+#include <llvm/IR/IRPrintingPasses.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
@@ -39,6 +39,15 @@ static void initializeMollyPasses(PassRegistry &Registry) {
   //initializeFieldDetectionAnalysisPass(Registry);
 }
 
+static int printerval = 8;
+static void addPrintModulePass(llvm::PassManagerBase &PM, StringRef name) {
+  std::string infoDummy;
+  auto OS = new raw_fd_ostream((Twine(printerval) + Twine('_') + name + ".ll").str().c_str(), infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OS, (Twine("After ") + name + "\n\n").str()));
+  printerval += 1;
+}
+
+
 
 static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, int optLevel) {
   if (!mollyEnabled) {
@@ -52,21 +61,21 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   //PM.add(llvm::createStripSymbolsPass(true));
 
   std::string infoDummy;
-  auto  OSorig = new raw_fd_ostream("0_orig.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OSorig, false, "Before any Molly-specific passes\n\n"));
+  auto OSorig = new raw_fd_ostream("0_orig.ll", infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OSorig, "Before any Molly-specific passes\n\n"));
 
   // Unconditional inlining for field member function to make llvm.molly intrinsics visible
-  PM.add(molly::createMollyInlinePass()); 
+  PM.add(molly::createMollyInlinePass());
 
-  auto OSafterinline = new raw_fd_ostream("1_inlined.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OSafterinline, false, "After MollyInline pass\n\n"));
+  auto OSafterinline = new raw_fd_ostream("1_inlined.ll", infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OSafterinline, "After MollyInline pass\n\n"));
 
   // Cleanup after inlining
   PM.add(llvm::createCFGSimplificationPass()); // calls to __builtin_molly_ptr and load/store instructions must be in same BB
   PM.add(llvm::createPromoteMemoryToRegisterPass()); // Canonical inductionvar must be a register
 
-  auto OStidy = new raw_fd_ostream("2_tidied.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OStidy, false, "After general cleanup necessary to recognize scop\n\n"));
+  auto OStidy = new raw_fd_ostream("2_tidied.ll", infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OStidy, "After general cleanup necessary to recognize scop\n\n"));
 
   // Canonicalization
   // Partially copied from Polly's registerCanonicalicationPasses
@@ -85,42 +94,70 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
     PM.add(polly::createIndVarSimplifyPass());
   PM.add(polly::createCodePreparationPass());
 
-  auto OScanonicalized = new raw_fd_ostream("3_canonicalized.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OScanonicalized, false, "After canonicalization\n\n"));
+  auto OScanonicalized = new raw_fd_ostream("3_canonicalized.ll", infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OScanonicalized, "After canonicalization\n\n"));
   PM.add(llvm::createVerifierPass());
 
   // Do the Molly thing
   // TODO: Configure to optLevel
   PM.add(createMollyPassManager());
+  addPrintModulePass(PM, "Molly");
 
-  auto OSaftermolly = new raw_fd_ostream("5_mollied.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OSaftermolly, false, "After Molly did its work\n\n"));
   PM.add(llvm::createVerifierPass());
 
 #ifndef NDEBUG
   // cleanup function
   PM.add(llvm::createCFGSimplificationPass());
+  addPrintModulePass(PM, "ControlFlowGraphSimplification");
+
   PM.add(llvm::createEarlyCSEPass());
+  addPrintModulePass(PM, "EarlyCSE");
+
   PM.add(llvm::createPromoteMemoryToRegisterPass());
+  addPrintModulePass(PM, "Mem2Reg");
+
   PM.add(llvm::createCorrelatedValuePropagationPass());
+  addPrintModulePass(PM, "CorrelatedValuePropagation");
+
   PM.add(llvm::createInstructionCombiningPass());
+  addPrintModulePass(PM, "InstructionCombining");
+
   PM.add(llvm::createReassociatePass());
+  addPrintModulePass(PM, "Reassociate");
+
   PM.add(llvm::createLICMPass());
-  PM.add(llvm::createIndVarSimplifyPass());  
+  addPrintModulePass(PM, "LoopInvariantCodeMotion");
+
+  PM.add(llvm::createIndVarSimplifyPass());
+  addPrintModulePass(PM, "IndVarSimplify");
+
   PM.add(llvm::createLoopDeletionPass());
+  addPrintModulePass(PM, "LoopDeletion");
+
   PM.add(llvm::createAggressiveDCEPass());
+  addPrintModulePass(PM, "AggressiveDeadCodeElimination");
+
   PM.add(llvm::createCFGSimplificationPass());
+  addPrintModulePass(PM, "ControlFlowGrapSimplification");
 
   // cleanup module
-  PM.add(llvm::createGlobalOptimizerPass());     
-  PM.add(llvm::createIPSCCPPass());              
+  PM.add(llvm::createGlobalOptimizerPass());
+  addPrintModulePass(PM, "GlobalOptimizer");
+
+  PM.add(llvm::createIPSCCPPass());
+  addPrintModulePass(PM, "IPSCC");
+
   //PM.add(llvm::createDeadArgEliminationPass());  
   PM.add(llvm::createGVNPass());
-  PM.add(llvm::createGlobalDCEPass());        
-  PM.add(llvm::createConstantMergePass());     
+  addPrintModulePass(PM, "GlobalValueNumbering");
 
-  auto OSaftercleanup = new raw_fd_ostream("6_cleaned.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OSaftercleanup, false, "After cleanup\n\n"));
+  PM.add(llvm::createGlobalDCEPass());
+  addPrintModulePass(PM, "GlobalDeadCodeElimination");
+
+  PM.add(llvm::createConstantMergePass());
+  addPrintModulePass(PM, "ConstantMerge");
+
+  addPrintModulePass(PM, "Cleaned");
 #endif
 }
 
@@ -139,8 +176,8 @@ static void registerMollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &B
 
 static void registerMollyLastPasses(const llvm::PassManagerBuilder &Builder, llvm::PassManagerBase &PM) {
   std::string infoDummy;
-  auto OSlast = new raw_fd_ostream("6_last.ll", infoDummy);
-  PM.add(llvm::createPrintModulePass(OSlast, false, "Last\n\n"));
+  auto OSlast = new raw_fd_ostream("6_last.ll", infoDummy, sys::fs::F_Text);
+  PM.add(llvm::createPrintModulePass(*OSlast, "Last\n\n"));
 }
 
 
@@ -154,7 +191,7 @@ namespace molly {
     // delete it all as dead code, even with whole program optimization,
     // yet is effectively a NO-OP. As the compiler isn't smart enough
     // to know that getenv() never returns -1, this will do the job.
-    if (std::getenv("bar") != (char*) -1)
+    if (std::getenv("bar") != (char*)-1)
       return;
 
     //molly::createFieldDetectionAnalysisPass();
@@ -167,4 +204,16 @@ namespace molly {
     USE(NoOptPassRegister);
     USE(MollyEnabled);
   }
+
+
+  // Polly moved its static initializer to polly.cpp in LLVMPolly, which we do not load
+  // Therefore we have to initialize Polly by ourselves
+  //FIXME: static initialization is a chaos, this could should be cleaned up!
+  struct StaticInitializer {
+    StaticInitializer() {
+      llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+      polly::initializePollyPasses(Registry);
+    }
+  } _initializer;
+
 } // namespace molly

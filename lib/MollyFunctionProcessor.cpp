@@ -1,26 +1,34 @@
 #include "MollyFunctionProcessor.h"
 
-#include <llvm/Pass.h>
+#include "MollyIntrinsics.h"
+#include "MollyUtils.h"
 #include "MollyPassManager.h"
-#include <llvm/ADT/Twine.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Instructions.h>
 #include "LLVMfwd.h"
-#include <llvm/IR/IRBuilder.h>
 #include "MollyFieldAccess.h"
 #include "FieldVariable.h"
-#include <llvm/IR/GlobalVariable.h>
 #include "FieldType.h"
-#include "MollyUtils.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "polly/LinkAllPasses.h"
 #include "ClusterConfig.h"
-#include "clang/CodeGen/MollyRuntimeMetadata.h"
 #include "Codegen.h"
-#include "llvm/IR/Module.h"
 #include "FieldLayout.h"
 #include "RectangularMapping.h"
+
+#include <clang/CodeGen/MollyRuntimeMetadata.h>
+
+#include <polly/LinkAllPasses.h>
+#include <polly/Accesses.h>
+
+#include <llvm/Pass.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/ADT/Twine.h>
+
+
+
 
 using namespace molly;
 using namespace polly;
@@ -37,19 +45,19 @@ namespace {
     Function *func;
 
   public:
-    MollyFunctionResolver(MollyPassManager *pm, Function *func) 
-      :  AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), func(func) {}
+    MollyFunctionResolver(MollyPassManager *pm, Function *func)
+      : AnalysisResolver(*static_cast<PMDataManager*>(nullptr)), pm(pm), func(func) {}
 
-    Pass * findImplPass(AnalysisID PI) LLVM_OVERRIDE {
+    Pass * findImplPass(AnalysisID PI) override {
       return pm->findOrRunAnalysis(PI, func, nullptr);
     }
 
-    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) LLVM_OVERRIDE {
+    Pass * findImplPass(Pass *P, AnalysisID PI, Function &F) override {
       assert(&F == func);
       return pm->findOrRunAnalysis(PI, &F, nullptr);
     }
 
-    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const LLVM_OVERRIDE {
+    Pass * getAnalysisIfAvailable(AnalysisID ID, bool Direction) const override {
       return pm->findAnalysis(ID, func, nullptr);
     }
   }; // class MollyFunctionResolver
@@ -69,7 +77,7 @@ namespace {
 
   public:
     static char ID;
-    MollyFunctionContext(MollyPassManager *pm, Function *func): FunctionPass(ID), pm(pm), func(func) {
+    MollyFunctionContext(MollyPassManager *pm, Function *func) : FunctionPass(ID), pm(pm), func(func) {
       assert(pm);
       assert(func);
 
@@ -77,7 +85,7 @@ namespace {
       this->setResolver(createResolver(pm, func));
     }
 
-    bool runOnFunction(Function &F) LLVM_OVERRIDE {
+    bool runOnFunction(Function &F) override {
       llvm_unreachable("This is not a pass");
     }
 
@@ -91,7 +99,7 @@ namespace {
     }
 
 
-    Value *createPtrTo(DefaultIRBuilder &builder,  Value *val, const Twine &name = Twine()) {
+    Value *createPtrTo(DefaultIRBuilder &builder, Value *val, const Twine &name = Twine()) {
       auto valueSpace = createAlloca(val->getType(), name);
       builder.CreateStore(val, valueSpace);
       return valueSpace;
@@ -109,10 +117,10 @@ namespace {
 
       auto buf = builder.CreateAlloca(access.getElementType(), NULL, "getbuf");
 
-      SmallVector<Value*,6> args;
+      SmallVector<Value*, 6> args;
       args.push_back(access.getFieldVariable()->getVariable()); // "this" implicit argument
       args.push_back(buf);
-      for (auto d = nDims-nDims; d < nDims; d+=1) {
+      for (auto d = nDims - nDims; d < nDims; d += 1) {
         auto coord = access.getCoordinate(d);
         args.push_back(coord);
       }
@@ -135,11 +143,11 @@ namespace {
       builder.SetInsertPoint(accessor->getNextNode()); // Behind the old store instr
 
 
-      SmallVector<Value*,6> args;
+      SmallVector<Value*, 6> args;
       args.push_back(access.getFieldVariable()->getVariable()); // "this" implicit argument
       auto stackPtr = createPtrTo(builder, writtenValue);
       args.push_back(stackPtr);
-      for (auto d = nDims-nDims; d < nDims; d+=1) {
+      for (auto d = nDims - nDims; d < nDims; d += 1) {
         auto coord = access.getCoordinate(d);
         args.push_back(coord);
       }
@@ -154,9 +162,11 @@ namespace {
 
       if (access.isRead()) {
         emitRead(access);
-      } else if (access.isWrite()) {
+      }
+      else if (access.isWrite()) {
         emitWrite(access);
-      } else {
+      }
+      else {
         llvm_unreachable("What is it?");
       }
 
@@ -206,7 +216,7 @@ namespace {
     isl::MultiAff currentNodeCoord; /* { [] -> node[cluster] } */
     std::map<isl_id *, llvm::Value *> idtovalue;
 
-    isl::MultiAff getCurrentNodeCoordinate() LLVM_OVERRIDE {
+    isl::MultiAff getCurrentNodeCoordinate() override {
       if (currentNodeCoord.isValid())
         return currentNodeCoord;
 
@@ -219,7 +229,7 @@ namespace {
       auto currentNodeCoordSpace = isl::Space::createMapFromDomainAndRange(0, clusterSpace).alignParams(paramSpace);
       //auto currentNodeCoordSpace = clusterSpace.alignParams(paramSpace);
 
-      for (auto i = nDims-nDims; i<nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto value = getClusterCoordinate(i);
         auto id = clusterConf->getClusterDimId(i);
         //currentNodeCoordSpace.setDimId_inplace(isl_dim_param, i, id);
@@ -227,7 +237,7 @@ namespace {
       }
 
       currentNodeCoord = currentNodeCoordSpace.createZeroMultiAff();
-      for (auto i = nDims-nDims; i<nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         auto id = clusterConf->getClusterDimId(i);
         currentNodeCoord.setAff_inplace(i, currentNodeCoordSpace.getDomainSpace().createAffOnParam(id));
       }
@@ -250,7 +260,7 @@ namespace {
       assert(initFunc->getReturnType() == retTy);
       assert(initFunc->getFunctionType()->getNumParams() == tys.size());
       auto nParams = tys.size();
-      for (auto i = nParams-nParams; i<nParams; i+=1) {
+      for (auto i = nParams - nParams; i < nParams; i += 1) {
         assert(initFunc->getFunctionType()->getParamType(i) == tys[i]);
       }
       return initFunc;
@@ -286,8 +296,8 @@ namespace {
       // We replaced the intrinsics by the runtime function, let that code generator know is
       // Otherwise, it would continue the freed value
       // Alternatively, we could clear this cache
-      for ( auto &currentnodefunc : currentClusterCoord) {
-        if (currentnodefunc == call) 
+      for (auto &currentnodefunc : currentClusterCoord) {
+        if (currentnodefunc == call)
           currentnodefunc = result;
       }
       for (auto &vtoid : idtovalue) {
@@ -311,12 +321,12 @@ namespace {
       auto &builder = codegen.getIRBuilder();
 
       auto fval = call->getArgOperand(0);
-      //auto fvar = pm->getFieldVariable(fval);
+      auto fvar = pm->getFieldVariable(fval);
       //if (fvar) {
       //auto fty = fvar->getFieldType();
-      auto fty = pm->getFieldType(cast<StructType>(fval->getType()->getPointerElementType()));
+      //auto fty = pm->getFieldType(cast<StructType>(fval->getType()->getPointerElementType()));
 
-      auto layout = fty->getLayout();
+      auto layout = fvar->getLayout();
       auto sizeVal = layout->codegenLocalSize(codegen, getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
 
       auto rankFunc = pm->emitFieldRankofFunc(layout);
@@ -359,7 +369,7 @@ namespace {
     }
 
 
-    MollyCodeGenerator makeCodegen(Instruction *insertBefore) LLVM_OVERRIDE {
+    MollyCodeGenerator makeCodegen(Instruction *insertBefore) override {
       // ensure idtovalue is up to date
       getCurrentNodeCoordinate();
 
@@ -464,29 +474,69 @@ namespace {
     }
 
 
-    void replaceValueAccess(llvm::Instruction *accInstr) {
-      auto acc = FieldAccess::fromAccessInstruction(accInstr);
-      assert(acc.isValid());
+    void replaceValueAccess(llvm::Instruction *accInstr, int opNo) {
+      auto accRead = Access::fromInstruction(accInstr, opNo, true, false);
+      auto accWrite = Access::fromInstruction(accInstr, opNo, false, true);
+      auto reading = accRead.isValid() && accRead.isFieldAccess() ;
+      auto writing = accWrite.isValid() && accWrite.isFieldAccess();
+
+      Access acc;
+      if (reading) {
+        acc = accRead;
+      } else if (writing) {
+        acc = accWrite;
+      } else 
+        return;
+
+      auto fvar = pm->getFieldVariable(acc.getFieldPtr());
+      auto coords = acc.getCoordinateValues();
+
       auto codegen = makeCodegen(accInstr);
-
-      auto coords = acc.getCoordinates();
-      auto field =  acc.getBaseField();
-      auto fvar = pm->getFieldVariable(field);
-
+      codegen.setInsertBefore(accInstr);
       auto rank = codegen.callFieldRankof(fvar, coords);
       auto idx = codegen.callLocalIndexof(fvar, coords);
 
-      if (acc.isRead()) {
-        auto loadInst = acc.getLoadInst();
-        auto mollyLoad = codegen.codegenValueLoad(fvar, rank, idx);
-        loadInst->replaceAllUsesWith(mollyLoad);
-        loadInst->eraseFromParent(); 
-      } else if (acc.isWrite()) {
-        auto storeInst = acc.getStoreInst();
-        codegen.codegenValueStore(fvar, storeInst->getValueOperand(), rank, idx);
-        storeInst->eraseFromParent();
-      } else
-        llvm_unreachable("Strange access");
+      if (reading)
+        if (auto loadInst = accRead.getReadResultRegister()) {
+          assert(!writing);
+          auto mollyLoad = codegen.codegenValueLoad(fvar, rank, idx);
+          loadInst->replaceAllUsesWith(mollyLoad);
+          loadInst->eraseFromParent();
+          return;
+        }
+    
+      if (writing) {
+        if (auto writtenValue = accWrite.getWrittenValueRegister()) {
+          assert(!reading);
+          codegen.codegenValueStore(fvar, writtenValue, rank, idx);
+          accInstr->eraseFromParent();
+          return;
+        }
+      }
+
+      assert(!acc.getInstructionAsLoad() && !acc.getInstructionAsStore()); // From here on the read/write operand is a pointer
+
+      auto ptr = accInstr->getOperand(opNo);
+      assert(ptr->getType()->isPointerTy());
+
+      if (reading && writing) {
+        int e = 0;
+      }
+
+      auto stackSpace = codegen.allocStackSpace(acc.getElementType(), "fieldelt");
+      auto castedSpace = codegen.createPointerCast(stackSpace, ptr->getType());
+      accInstr->setOperand(opNo, castedSpace);
+
+      if (reading) {
+        // If memcpy, this adds another memcpy, which other optimization passes should optimize coalesce
+        codegen.setInsertBefore(accInstr);
+        codegen.callValueLoad(fvar, stackSpace, rank, idx);
+      }
+
+      if (writing) {
+        codegen.setInsertAfter(accInstr);
+        codegen.callValueStore(fvar, stackSpace, rank, idx);
+      }
     }
 
 
@@ -500,51 +550,85 @@ namespace {
       //  auto coord = call->getOperand(i+1);
       //}
 
-      SmallVector<Instruction *,4> uses;
-      for (auto useIt = call->use_begin(), end = call->use_end(); useIt!=end; ++useIt) {
+      SmallVector<std::pair<Instruction *,int>, 4> uses;
+      for (auto useIt = call->user_begin(), end = call->user_end(); useIt != end; ++useIt) {
         auto opno = useIt.getOperandNo();
         auto use = &useIt.getUse();
         auto user = cast<Instruction>(*useIt);
 
+        if (auto castInstr = dyn_cast<BitCastInst>(user)) {
+          assert(opno == 0);
+          for (auto useIt = castInstr->user_begin(), end = castInstr->user_end(); useIt != end; ++useIt) {
+            auto opno = useIt.getOperandNo();
+            auto use = &useIt.getUse();
+            auto user = cast<Instruction>(*useIt);
+            uses.push_back(make_pair(user, opno));
+          }
+          continue;
+        }
+
         // Make copy because replaceValueAccess() will erease the instr from the list
-        uses.push_back(user);
+        uses.push_back(make_pair(user,opno));
       }
 
-      for (auto use : uses) {
-        replaceValueAccess(use);
+      for (const auto &use : uses) {
+        auto useInstr = use.first;
+        auto useOpIdx = use.second;
+        replaceValueAccess(useInstr, useOpIdx);
       }
-      call->eraseFromParent();
+      //call->eraseFromParent(); // There might be some stale bitcast left, let dce remove it
     }
+
+
+    LLVMContext &getLLVMContext() {
+      return func->getContext();
+    }
+
+
+    void replaceMod(MollyModInst *call) {
+      auto divident = call->getDivident();
+      auto divisor = call->getDivisor();
+
+      auto &llvmContext = getLLVMContext();
+      auto intTy = Type::getInt64Ty(llvmContext);
+
+      Type *tys[] = { intTy, intTy };
+      auto funcDecl = getRuntimeFunc("__molly_mod", intTy, tys); // TODO: function call overhead high for such a small function, better emit inline
+      auto funcTy = funcDecl->getFunctionType();
+
+      DefaultIRBuilder irBuilder(call);
+     auto result = irBuilder.CreateCall2(funcDecl, divident, divisor);
+     call->replaceAllUsesWith(result); call->eraseFromParent();
+    }
+
 
     isl::Ctx *getIslContext() {
       return pm->getIslContext();
     }
 
 
-
-
     void replaceFieldRankof(CallInst *call, Function *called) {
       assert(called->getIntrinsicID() == Intrinsic::molly_field_rankof);
       assert(call->getNumArgOperands() >= 2);
       auto fieldobj = call->getOperand(0);
-      SmallVector<Value*,4> coords;
+      SmallVector<Value*, 4> coords;
       auto nDims = call->getNumArgOperands() - 1;
-      coords.reserve(nDims);  
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
-        coords.push_back(call->getOperand(i+1));
+      coords.reserve(nDims);
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        coords.push_back(call->getOperand(i + 1));
       }
       auto clusterConf = pm->getClusterConfig();
 
       auto fvar = pm->getFieldVariable(fieldobj);
       auto fty = fvar->getFieldType();
       auto layout = fvar->getLayout();
-      auto dist = fty->getHomeAff(); // { field[indexset] -> node[cluster] } 
+      auto dist = layout->getPrimaryPhysicalNode(); // { field[indexset] -> node[cluster] } 
 
       auto islctx = getIslContext();
       auto codegen = makeCodegen(call);
       auto paramsSpace = islctx->createParamsSpace(nDims);
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
-        auto coord = call->getOperand(i+1);
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto coord = call->getOperand(i + 1);
         auto id = islctx->createId("idx" + Twine(i), coord);
         paramsSpace.setDimId_inplace(isl_dim_param, i, id);
         codegen.addParam(id, coord);
@@ -552,10 +636,10 @@ namespace {
 
       auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
       auto coordsAff = coordsAffSpace.createZeroMultiAff();
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
         coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
       }
-      coordsAffSpace =  coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
+      coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
       coordsAff.cast_inplace(coordsAffSpace);
 
       auto homeAff = dist.pullback(coordsAff); // { [] -> node[cluster] }
@@ -576,11 +660,11 @@ namespace {
       assert(call->getNumArgOperands() >= 2);
       auto fieldobj = call->getOperand(0);
 
-      SmallVector<Value*,4> coords;
+      SmallVector<Value*, 4> coords;
       auto nDims = call->getNumArgOperands() - 1;
-      coords.reserve(nDims);  
-      for (auto i = nDims-nDims; i <nDims; i+=1) {
-        coords.push_back(call->getOperand(i+1));
+      coords.reserve(nDims);
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        coords.push_back(call->getOperand(i + 1));
       }
 
       auto fvar = pm->getFieldVariable(fieldobj);
@@ -597,8 +681,8 @@ namespace {
         auto islctx = getIslContext();
 
         auto paramsSpace = islctx->createParamsSpace(nDims);
-        for (auto i = nDims-nDims; i <nDims; i+=1) {
-          auto coord = call->getOperand(i+1);
+        for (auto i = nDims - nDims; i < nDims; i += 1) {
+          auto coord = call->getOperand(i + 1);
           auto id = islctx->createId("idx" + Twine(i), coord);
           paramsSpace.setDimId_inplace(isl_dim_param, i, id);
           codegen.addParam(id, coord);
@@ -606,7 +690,7 @@ namespace {
 
         auto coordsAffSpace = paramsSpace.createMapSpace(0, nDims); // { [] -> field[indexset] }
         auto coordsAff = coordsAffSpace.createZeroMultiAff();
-        for (auto i = nDims-nDims; i <nDims; i+=1) {
+        for (auto i = nDims - nDims; i < nDims; i += 1) {
           coordsAff.setAff_inplace(i, coordsAff.getDomainSpace().createVarAff(isl_dim_param, i));
         }
         coordsAffSpace = coordsAffSpace.getDomainSpace().mapsTo(fty->getIndexsetSpace());
@@ -615,7 +699,8 @@ namespace {
         auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
         // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
         idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
-      } else {
+      }
+      else {
         // Field not known at runtime; call the virtual method
         codegen.callRuntimeLocalIndexof(fieldobj, coords);
       }
@@ -688,7 +773,7 @@ namespace {
   public:
 
     //TODO: This can easily refactored into its own BasicBlockPass
-    void replaceIntrinsics() LLVM_OVERRIDE {
+    void replaceIntrinsics() override {
       assert(isMollyIntrinsics(Intrinsic::molly_cluster_current_coordinate));
       assert(isMollyIntrinsics(Intrinsic::molly_global_init));
       assert(isMollyIntrinsics(Intrinsic::molly_global_free));
@@ -704,20 +789,21 @@ namespace {
       assert(isMollyIntrinsics(Intrinsic::molly_value_store));
       assert(isMollyIntrinsics(Intrinsic::molly_value_load));
       assert(isMollyIntrinsics(Intrinsic::molly_cluster_myrank));
+      assert(isMollyIntrinsics(Intrinsic::molly_mod));
 
       lowerMollyIntrinsics();
 
       // Second call because some replacements (molly_field_init, field_rankof) may introduce new intrinsics that have to be replaced
-      lowerMollyIntrinsics(); 
+      lowerMollyIntrinsics();
     }
 
 
     void lowerMollyIntrinsics() {
       // Make copy of all potentially to-be-replaced instructions
       SmallVector<CallInst*, 16> replaceWorklist;
-      for (auto it = func->begin(), end = func->end(); it!=end; ++it) {
+      for (auto it = func->begin(), end = func->end(); it != end; ++it) {
         auto bb = &*it;
-        for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr!=endInstr; ++itInstr) {
+        for (auto itInstr = bb->begin(), endInstr = bb->end(); itInstr != endInstr; ++itInstr) {
           auto instr = &*itInstr;
           if (!isa<CallInst>(instr))
             continue;
@@ -725,7 +811,7 @@ namespace {
           auto func = callInstr->getCalledFunction();
           if (!func)
             continue;
-          if(!func->isIntrinsic())
+          if (!func->isIntrinsic())
             continue;
           if (!isMollyIntrinsics(func->getIntrinsicID()))
             continue;
@@ -740,7 +826,7 @@ namespace {
           continue;
 
         auto intID = called->getIntrinsicID();
-        switch(intID) {
+        switch (intID) {
           //case Intrinsic::molly_global_init:
           //  replaceGlobalInit(instr, called);
           //  break;
@@ -758,7 +844,7 @@ namespace {
           replaceLocalIndexof(instr, called);
           break;
         case Intrinsic::molly_value_load:
-          replaceValueLoad(instr,called);
+          replaceValueLoad(instr, called);
           break;
         case Intrinsic::molly_value_store:
           replaceValueStore(instr, called);
@@ -796,6 +882,9 @@ namespace {
           //case Intrinsic::molly_cluster_myrank:
           //  replaceClusterMyrank(instr, called);
           //  break;
+        case Intrinsic::molly_mod:
+          replaceMod(cast<MollyModInst>(instr));
+          break;
         default:
           llvm_unreachable("Need to replace intrinsic!");
         }
@@ -819,7 +908,7 @@ namespace {
       collectInstructionList(func, instrs);
 
       // Replace intrinsics
-      for (auto it = instrs.begin(), end = instrs.end(); it!=end; ++it) {
+      for (auto it = instrs.begin(), end = instrs.end(); it != end; ++it) {
         auto instr = *it;
         if (auto callInstr = dyn_cast<CallInst>(instr)) {
           auto calledFunc = callInstr->getCalledFunction();
@@ -901,7 +990,7 @@ namespace {
       }
 
       auto oldName = isolatedBB->getName();
-      if (oldName.endswith(".split")) 
+      if (oldName.endswith(".split"))
         oldName = oldName.drop_back(6);
       isolatedBB->setName(oldName + ".isolated");
 
@@ -953,7 +1042,7 @@ namespace {
       auto term = bb->getTerminator();
       auto cnt = 0;
       BasicBlock *last = bb;
-      while (instr && instr!=term) {
+      while (instr && instr != term) {
         auto facc = getFieldAccess(instr);
         if (!facc.isValid()) { // Nothing to do
           instr = instr->getNextNode();
@@ -963,7 +1052,7 @@ namespace {
         auto gep = facc.getFieldCall();
         assert(gep->hasNUses(1));
         auto acc = facc.getAccessor();
-        gep->moveBefore(acc);
+        //gep->moveBefore(acc); // Let IndependentBlocks move it; llvm.memcpy has a bitcast in between accessor and llvm.molly.ptr
 
         auto splitPt1 = gep;
         auto splitPt2 = acc->getNextNode();
@@ -981,7 +1070,7 @@ namespace {
           after->setName(name + Twine(".inter") + Twine(cnt));
         }
 
-        cnt+=1;
+        cnt += 1;
         instr = splitPt2;
         last = after;
       }
@@ -992,11 +1081,13 @@ namespace {
 
     void isolateFieldAccesses() {
       // "Normalize" existing BasicBlocks
-      auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-      removePass(ib);
-      
-      // Because splitFieldAccessed add more BasicBlock that we do not want to enumerate
-      SmallVector<BasicBlock*,8> bbList;
+     //auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+      auto ib = pm->findAnalysis(&polly::IndependentBlocksID, func);
+      if (ib)
+        removePass(ib); // Invalidate existing pass
+
+      // Because splitFieldAccessed add more BasicBlocks that we do not want to enumerate
+      SmallVector<BasicBlock*, 8> bbList;
       for (auto &b : *func) {
         bbList.push_back(&b);
       }
@@ -1023,10 +1114,10 @@ namespace {
 #endif
 
 
-      if (changed) {
+      //if (changed) {
         // Also make new BBs independent
-        ib = findOrRunAnalysis(&polly::IndependentBlocksID);
-      }
+      //  ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+      //}
 
 
       //auto sci = findOrRunAnalysis<TempScopInfo>();
@@ -1057,11 +1148,11 @@ namespace {
   private:
     SmallVector<Value*, 4> currentClusterCoord;
 
-    Value* getClusterCoordinate(unsigned i) LLVM_OVERRIDE {
+    Value* getClusterCoordinate(unsigned i) override {
       auto clusterConf = pm->getClusterConfig();
 
       currentClusterCoord.reserve(clusterConf->getClusterDims());
-      while (i >= currentClusterCoord.size() )
+      while (i >= currentClusterCoord.size())
         currentClusterCoord.push_back(nullptr);
 
       auto &curCoord = currentClusterCoord[i];
@@ -1084,15 +1175,15 @@ namespace {
       auto nClusterDims = clusterConf->getClusterDims();
       result.reserve(nClusterDims);
 
-      for (auto i = nClusterDims-nClusterDims; i < nClusterDims;i+=1) {
+      for (auto i = nClusterDims - nClusterDims; i < nClusterDims; i += 1) {
         result.push_back(getClusterCoordinate(i));
-      } 
+      }
 
       return result;
     }
 
 #pragma region molly::MollyFunctionProcessor
-    llvm::FunctionPass *asPass() LLVM_OVERRIDE {
+    llvm::FunctionPass *asPass() override {
       return this;
     }
 #pragma endregion

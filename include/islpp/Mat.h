@@ -28,7 +28,7 @@ namespace isl {
 
     explicit Mat(isl_mat *mat) : mat(mat) { }
   public:
-    static Mat wrap(isl_mat *mat) { return Mat(mat); }
+    static Mat enwrap(isl_mat *mat) { return Mat(mat); }
 #pragma endregion
 
   public:
@@ -42,7 +42,7 @@ namespace isl {
 
   }; // class Mat
 
-  static inline Mat enwrap(__isl_take isl_mat *mat) { return Mat::wrap(mat); }
+  static inline Mat enwrap(__isl_take isl_mat *mat) { return Mat::enwrap(mat); }
 
 } // namespace isl
 #endif /* ISLPP_MAT_H */
