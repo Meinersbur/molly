@@ -923,9 +923,9 @@ namespace {
           auto producerStmt = getScopStmtContext(producerSpace);
           auto consumerStmt = getScopStmtContext(consumerSpace);
 
-          auto flowNotyetExecuted = flow.intersectRange(notyetExecuted); // { producer[domain] -> consumer[domain] }
-          auto flowProducerWhere = flowNotyetExecuted.wrap().chainSubspace(producerStmt->getWhere()); // { (producer[domain] -> consumer[domain]) -> consumer[cluster] }
-          auto producerSuggestedWhere = flowNotyetExecuted.applyDomain(producerStmt->getWhere()).reverse(); // { producer[domain] -> [cluster] }
+          auto flowNotyetExecuted = flow.intersectDomain(notyetExecuted); // { producer[domain] -> consumer[domain] }
+          //auto flowConsumerWhere = flowNotyetExecuted.wrap().chainSubspace(consumerStmt->getWhere()); // { (producer[domain] -> consumer[domain]) -> consumer[cluster] }
+          auto producerSuggestedWhere = flowNotyetExecuted.applyRange(consumerStmt->getWhere()); // { producer[domain] -> [cluster] }
 
           if (!producerSuggestedWhere.isEmpty()) {
             producerStmt->addWhere(producerSuggestedWhere);
@@ -944,6 +944,15 @@ namespace {
         } else {
           break;
         }
+      }
+
+      if (!notyetExecuted.isEmpty()) {
+        // Usually, for every statement at least one node should be found where it is executed
+        // Stmts without node do not produce any value used by others
+        // This should only happen if a field element is overwritten by another value
+        // In experiments, it also happens when some reg2mem-generated stores (jacobi.cpp) why?
+        // TODO: Such nodes might be sinks calling some function (printf); add some mechanism that executes them somewhere
+        int a = 0;
       }
 
       /////////////////////////////////////////////////
@@ -1613,14 +1622,14 @@ namespace {
           auto localwriteFieldPtr = localwriteCodegen.codegenFieldLocalPtr(writeFVar, localwriteCurrentNode, localwriteIndex);
           localwriteCodegen.codegenAssign(localwriteFieldPtr, localwriteValPtr);
 
-          localwriteCodegen.markBlock((Twine("flow local write '") + writeDomain.getSetTupleName() + "'" + writeFvarname).str());
+          localwriteCodegen.markBlock((Twine("flow local write '") + writeDomain.getSetTupleName() + "'" + writeFvarname).str(), localwriteCurrentIteration);
         }
 
         // read: { readStmt[domain] }
         {
           auto localreadWhere = localChunks.reorganizeSubspaces(readDomain.getSpace(), readNodeShape.getSpace()).setOutTupleId(clusterTupleId);
           auto localreadScatter = readScatter;
-          auto localreadEditor = writeEditor.createStmt(localreadWhere.domain(), localreadScatter, localreadWhere, "localread");
+          auto localreadEditor = readEditor.createStmt(localreadWhere.domain(), localreadScatter, localreadWhere, "localread");
           auto localreadStmt = getScopStmtContext(localreadEditor.getStmt());
           readEditor.removeInstances(localreadWhere);
           auto localreadCodegen = localreadStmt->makeCodegen();
@@ -1634,7 +1643,7 @@ namespace {
           auto localreatStackPtr = readStmt->getAccessStackStorageAnnPtr().pullbackDomain(localreadCurrentDomain);
           localreadCodegen.codegenAssign(localreatStackPtr, localreadFieldPtr);
 
-          localreadCodegen.markBlock((Twine("flow local read '") + readDomain.getSetTupleName() + "'" + readFvarname).str());
+          localreadCodegen.markBlock((Twine("flow local read '") + readDomain.getSetTupleName() + "'" + readFvarname).str(), localreadCurrentIteration);
         }
       }
 

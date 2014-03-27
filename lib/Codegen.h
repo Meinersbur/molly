@@ -137,6 +137,7 @@ namespace molly {
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
 
     llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Twine name = Twine());
+    llvm::Value *allocStackSpace(llvm::Type *ty, int count, llvm::Twine name = Twine());
     llvm::Value *createPointerCast(llvm::Value *val, llvm::Type *type);
 
     void setInsertBefore(llvm::Instruction *beforeInstr) {
@@ -330,10 +331,9 @@ namespace molly {
       callBeginMarker(str);
     }
 
-    //void markBlock(Twine str) {
-    //  markBlock(StringRef(str.str()));
-    //}
+
     void markBlock(StringRef str);
+    void markBlock(StringRef str, isl::MultiPwAff coord);
   }; // class MollyCodeGenerator
 
 } // namespace molly

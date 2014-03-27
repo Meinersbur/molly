@@ -8,26 +8,6 @@ add_custom_target(run-gemm
 )
 
 
-
-### Compile using mollycc, link to MollyRT that has been compiled using CMAKE_CXX_COMPILER
-get_filename_component(gemm_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}gemm-mollycc${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
-mollycc_compile("${gemm_path}"
-  SOURCES "gemm.cpp"
-  CFLAGS -mllvm -shape=2 -mllvm -polly-only-marked
-  COMMENT "mollycc MollyRT gemm.cpp..."
-)
-
-add_custom_target(gemm-mollycc
-  DEPENDS "${gemm_path}"
-  COMMENT "Building gemm using mollycc"
-  VERBATIM
-)
-set_target_properties(gemm-mollycc PROPERTIES FOLDER "Molly")
-
-
-
-
-
 ### Compile using mollycc, link to MollyRT-a
 get_filename_component(gemm_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}gemm-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${gemm_a_path}"
@@ -35,14 +15,12 @@ mollycc_a_compile("${gemm_a_path}"
   FLAGS -mllvm -shape=2 -mllvm -polly-only-marked
   COMMENT "mollycc molly.a gemm.cpp..."
 )
-
 add_custom_target(gemm-mollycc-a
   DEPENDS "${gemm_a_path}"
   COMMENT "Compiling gemm using mollycc-a"
   VERBATIM
 )
 set_target_properties(gemm-mollycc-a PROPERTIES FOLDER "Molly")
-
 
 add_custom_target(run-gemm-mollycc-a
   COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_POSTFLAGS} "${gemm_a_path}"

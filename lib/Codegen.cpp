@@ -231,6 +231,17 @@ llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, llvm::Twine nam
 }
 
 
+llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, int count, llvm::Twine name) {
+  auto intTy = Type::getInt64Ty(getLLVMContext());
+
+  auto bb = irBuilder.GetInsertBlock();
+  auto func = getFunctionOf(bb);
+  auto entryBB = &func->getEntryBlock();
+  auto result = new AllocaInst(ty, ConstantInt::get(intTy, count), name, entryBB->getFirstInsertionPt());
+  return result;
+}
+
+
 llvm::Value *MollyCodeGenerator::createPointerCast(llvm::Value *val, llvm::Type *type) {
   return irBuilder.CreatePointerCast(val, type);
 }
@@ -1258,7 +1269,6 @@ void molly::MollyCodeGenerator::markBlock(StringRef str) {
   auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
   Type *argTys[] = { strTy };
 
-
   auto strConst = ConstantDataArray::getString(llvmContext, str);
   auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst, compatName(str));
   llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy) };
@@ -1278,7 +1288,45 @@ void molly::MollyCodeGenerator::markBlock(StringRef str) {
 }
 
 
-llvm::Value * molly::AnnotatedPtr::getDiscriminator() const {
+void molly::MollyCodeGenerator::markBlock(StringRef str, isl::MultiPwAff coord) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto intPtrTy = PointerType::getUnqual(intTy);
+  auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
+  Type *argTys[] = { strTy, intTy, intPtrTy };
+
+  auto strConst = ConstantDataArray::getString(llvmContext, str);
+  auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst, compatName(str));
+
+  auto nDims = coord.getOutDimCount();
+  auto arrayTy = ArrayType::get(intTy, nDims);
+  //SmallVector<llvm::Value*, 4> coords;
+
+  auto bb = irBuilder.GetInsertBlock();
+  irBuilder.SetInsertPoint(bb, bb->begin());
+
+  auto coords = this->codegenMultiAff(coord);
+  auto space = this->allocStackSpace(intTy, nDims);
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    irBuilder.CreateStore(coords[i], irBuilder.CreateConstGEP1_64(space, i));
+  }
+  llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy), ConstantInt::get(intTy, nDims), space };
+
+  auto beginDecl = getRuntimeFunc("__molly_begin_marker_coord", voidTy, argTys);
+  irBuilder.CreateCall(beginDecl, args);
+
+  auto term = bb->getTerminator();
+  if (term)
+    irBuilder.SetInsertPoint(bb, term);
+  else
+    irBuilder.SetInsertPoint(bb, bb->end());
+  auto endDecl = getRuntimeFunc("__molly_end_marker_coord", voidTy, argTys);
+  irBuilder.CreateCall(endDecl, args);
+}
+
+
+llvm::Value *molly::AnnotatedPtr::getDiscriminator() const {
   return fvar ? fvar->getVariable() : base;
 }
 

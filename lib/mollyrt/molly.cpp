@@ -106,7 +106,6 @@ namespace molly {
 
 
 extern "C" void waitToAttach() {
-  return;
   static int i = 0;
   if (i)
     return; // Already attached
@@ -713,6 +712,7 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
 
   //Communicator::finalize();
   delete communicator;
+  communicator = nullptr;
 
   return retval;
 }
@@ -934,13 +934,29 @@ extern "C" int64_t __molly_floord(int64_t divident, int64_t divisor) {
 extern "C" void __molly_begin_marker(const char *str) {
   MOLLY_DEBUG("BEGIN " << str);
 }
-extern "C" void __molly_begin_marker1(const char *str, int64_t arg0) {
-}
-extern "C" void __molly_begin_marker2(const char *str, int64_t arg0, int64_t arg1) {
+extern "C" void __molly_begin_marker_coord(const char *str, int64_t count, int64_t *vals) {
+  std::ostringstream os;
+  for (auto i = count - count; i < count; i += 1) {
+    if (i>0)
+      os << ",";
+    os << vals[i];
+  }
+
+  MOLLY_DEBUG("BEGIN " << str << " (" << os.str() << ")");
 }
 
 extern "C" void __molly_end_marker(const char *str) {
   MOLLY_DEBUG("END   " << str);
+}
+extern "C" void __molly_end_marker_coord(const char *str, int64_t count, int64_t *vals) {
+  std::ostringstream os;
+  for (auto i = count - count; i < count; i += 1) {
+    if (i>0)
+      os << ",";
+    os << vals[i];
+  }
+
+  MOLLY_DEBUG("END   " << str << " (" << os.str() << ")");
 }
 
 #pragma endregion
