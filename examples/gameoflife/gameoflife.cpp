@@ -3,8 +3,11 @@
 molly::array<bool,6,6> habitat1;
 molly::array<bool,6,6> habitat2;
 
+uint64_t counter = 0;
+
 
 [[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_ARGS(prevHasLife, neighbors)
+  counter += 1;
   if (prevHasLife)
     return 2 <= neighbors && neighbors <= 3;
   return neighbors == 3;
@@ -62,6 +65,8 @@ extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
 int main(int argc, char *argv[], char *envp[]) { MOLLY_DEBUG_FUNCTION_SCOPE
 
   test();
+  
+  std::cerr << "Stencils on this rank: " << counter << std::endl;
 
   return EXIT_SUCCESS;
 }

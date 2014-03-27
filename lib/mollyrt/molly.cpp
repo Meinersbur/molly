@@ -565,6 +565,7 @@ namespace {
       MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
 
       this->initialized = true;
+      dump();
     }
 
     void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE
@@ -713,6 +714,7 @@ namespace {
     
       // Get to ready state immediately
       MPI_CHECK(MPI_Start(&request));
+      dump();
     }
 
     void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE
