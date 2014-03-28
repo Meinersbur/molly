@@ -250,6 +250,7 @@ MultiAff Space::createZeroMultiAff() const {
 
 
 MultiAff Space::createIdentityMultiAff() const {
+  assert(isMapSpace());
   return MultiAff::createIdentity(*this);
 }
 

@@ -89,6 +89,10 @@ namespace molly {
     llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
     llvm::Value *codegenLocalMaxSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
     llvm::Value *codegenLocalIndex(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator, isl::MultiPwAff logicalCoord);
+
+    /// { cluster[nodecoord] -> fty[indexset] }
+    /// Difference to other getPhysicalXYZ() is that it also returns the elements that are not contained in this->relation, but memory is allocated for because of overapproximation
+    isl::Map getIndexableIndices() const;
   }; // class FieldLayout
 
 } // namespace molly

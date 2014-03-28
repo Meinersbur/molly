@@ -30,6 +30,7 @@ namespace molly {
     virtual void replaceRemainaingIntrinsics() = 0; // TODO: Remove functionality into replaceIntrinsics()
 
     virtual MollyCodeGenerator makeCodegen(llvm::Instruction *insertBefore) = 0;
+    virtual MollyCodeGenerator makeEntryCodegen() =0;
 
   public:
     static MollyFunctionProcessor *create(MollyPassManager *pm, llvm::Function *func);

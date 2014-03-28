@@ -130,10 +130,10 @@ namespace isl {
     static BasicMap createIdentity(Space &&space) { return BasicMap::enwrap(isl_basic_map_identity(space.take())); }
     static BasicMap createIdentityLike(BasicMap &&model) { return BasicMap::enwrap(isl_basic_map_identity_like(model.take())); }
 
-    static BasicMap createEqual(Space &&space, unsigned n_equal) { return BasicMap::enwrap(isl_basic_map_equal(space.take(), n_equal)); }
-    static BasicMap createLessAt(Space &&space, unsigned pos) { return BasicMap::enwrap(isl_basic_map_less_at(space.take(), pos)); }
-    static BasicMap createMoreAt(Space &&space, unsigned pos) { return BasicMap::enwrap(isl_basic_map_more_at(space.take(), pos)); }
-    static BasicMap createEmpty(Space &&dim) { return BasicMap::enwrap(isl_basic_map_empty(dim.take())); }
+    static BasicMap createEqual(Space space, unsigned n_equal) { return BasicMap::enwrap(isl_basic_map_equal(space.take(), n_equal)); }
+    static BasicMap createLessAt(Space space, unsigned pos) { return BasicMap::enwrap(isl_basic_map_less_at(space.take(), pos)); }
+    static BasicMap createMoreAt(Space space, unsigned pos) { return BasicMap::enwrap(isl_basic_map_more_at(space.take(), pos)); }
+    static BasicMap createEmpty(Space dim) { return BasicMap::enwrap(isl_basic_map_empty(dim.take())); }
     static BasicMap createEmptyLikeMap(Map &&model);
     static BasicMap createEmptyLike(BasicMap &&model) { return BasicMap::enwrap(isl_basic_map_empty_like(model.take())); }
 
@@ -152,6 +152,42 @@ namespace isl {
     static BasicMap createFromAff(Aff &&aff) { return BasicMap::enwrap(isl_basic_map_from_aff(aff.take())); }
     static BasicMap createFromMultiAff(MultiAff &&maff) { return BasicMap::enwrap(isl_basic_map_from_multi_aff(maff.take())); }
     static BasicMap createFromAffList(Space &&space, AffList &&list) { return BasicMap::enwrap(isl_basic_map_from_aff_list(space.take(), list.take())); }
+
+    /// Create a map that contains all the domain elements that are, in all coordinates, less than the range elements (domain[0..n-1] < range[0..n-1])
+    /// space is a set space, returns an mapping from that space to the same space
+    static BasicMap createAllLt(Space space) {
+      assert(space.isSetSpace());
+      auto resultSpace = space.mapsToItself();
+      auto result = resultSpace.createUniverseBasicMap();
+      auto localSpace = resultSpace.asLocalSpace();
+      auto nDims = space.getSetDimCount();
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto c = localSpace.createInequalityConstraint();
+        c.setCoefficient_inplace(isl_dim_in, i, -1);
+        c.setCoefficient_inplace(isl_dim_out, i, +1);
+        c.setConstant_inplace(1);
+        result.addConstraint_inplace(std::move(c));
+      }
+      return result; // NRVO
+    }
+    static BasicMap createAllLe(Space space) {
+      assert(space.isSetSpace());
+      auto resultSpace = space.mapsToItself();
+      auto result = resultSpace.createUniverseBasicMap();
+      auto localSpace = resultSpace.asLocalSpace();
+      auto nDims = space.getSetDimCount();
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto c = localSpace.createInequalityConstraint();
+        c.setCoefficient_inplace(isl_dim_in, i, -1);
+        c.setCoefficient_inplace(isl_dim_out, i, +1);
+        c.setConstant_inplace(0);
+        result.addConstraint_inplace(std::move(c));
+      }
+      return result; // NRVO
+    }
+    static BasicMap createAllGe(Space space) { return createAllLe(std::move(space)).reverse(); }
+    static BasicMap createAllEq(Space space) { return createEqual(space.copy(), space.getSetDimCount()); }
+    static BasicMap createAllGt(Space space) { return createAllLt(std::move(space)).reverse(); }
 #pragma endregion
 
 
@@ -173,7 +209,8 @@ namespace isl {
     Map intersectRange(const Set &set) ISLPP_EXSITU_FUNCTION;
 
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
-    void reverse() { give(isl_basic_map_reverse(take())); }
+    void reverse_inplace() { give(isl_basic_map_reverse(take())); }
+    ISLPP_EXSITU_ATTRS BasicMap reverse() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_reverse(takeCopy())); }
 
     ISLPP_EXSITU_ATTRS BasicSet domain() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
     ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }

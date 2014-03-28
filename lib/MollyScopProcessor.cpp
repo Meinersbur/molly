@@ -16,6 +16,7 @@
 #include "Codegen.h"
 #include "MollyScopStmtProcessor.h"
 #include "MollyRegionProcessor.h"
+#include "RectangularMapping.h"
 
 #include "islpp/Ctx.h"
 #include "islpp/Map.h"
@@ -876,7 +877,7 @@ namespace {
 
       // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations; but just fits at this moment
       for (auto output : outputFlow.getSets()) {
-        
+
 
         //auto  outputnotyet =  intersect(output, notyetExecuted);
         auto stmtCtx = getScopStmtContext(output);
@@ -1605,6 +1606,70 @@ namespace {
 
 
       if (!localChunks.isEmpty()) {
+        // Source and target node being the same does not mean that the field element has a home on that node, we therefore cannot use the field as storage
+
+        auto sameNodeChunks = localChunks.reorganizeSubspaces(readDomain.getSpace() >> writeDomain.getSpace() >> indexsetSpace, writeNodeShape.getSpace()).setOutTupleId(clusterTupleId).wrap(); // { readStmt[domain], writeStmt[domain], field[indexset], node[cluster] }
+        auto layout = fvar->getLayout();
+        auto storageAvailable = layout->getIndexableIndices().castRange(fvar->getAccessSpace()); // { node[cluster] -> fty[indexset] }
+        auto storageRequired = sameNodeChunks.reorderSubspaces(clusterSpace, indexsetSpace); // { node[cluster] -> fty[indexset] }
+        if (storageAvailable >= storageRequired) {
+          int a = 0;
+          // No need to allocate more memory, everything can be put into the field's local storage
+          // TODO: Implement; also genOutputCommunication does not need to write those again if the latest value has already been written here
+          // TODO: In future, we may overapproximate field-local storage such that these elements can always be stored in the field's local storage
+#if 0
+          // write: { writeStmt[domain] }
+          {
+            auto localwriteWhere = localChunks.reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { write[domain] -> rank[cluster] }
+            auto localwriteScatter = writeScatter;
+            auto localwriteEditor = writeEditor.createStmt(localwriteWhere.domain(), localwriteScatter, localwriteWhere, "localwrite");
+            auto localwriteStmt = getScopStmtContext(localwriteEditor.getStmt());
+            auto localwriteCodegen = localwriteStmt->makeCodegen();
+
+            auto localwriteCurrentIteration = localwriteEditor.getCurrentIteration(); // { ??? -> localwrite[domain] }
+            auto localwriteCurrentDomain = localwriteCurrentIteration.castRange(writeDomain.getSpace()); // { ??? -> writeStmt[domain] }
+            auto localwriteCurrentNode = localwriteStmt->getClusterMultiAff(); // { ??? -> rank[cluster] }
+            auto localwriteIndex = localwriteCurrentDomain.applyRange(writeAccRel.toPwMultiAff());
+
+            auto localwriteValPtr = writeStmt->getAccessStackStorageAnnPtr().pullbackDomain(localwriteCurrentDomain);
+            auto localwriteFieldPtr = localwriteCodegen.codegenFieldLocalPtr(writeFVar, localwriteCurrentNode, localwriteIndex);
+            localwriteCodegen.codegenAssign(localwriteBufPtr, localwriteValPtr);
+
+            localwriteCodegen.markBlock((Twine("flow local write '") + writeDomain.getSetTupleName() + "'" + writeFvarname).str(), localwriteCurrentIteration);
+          }
+
+          // read: { readStmt[domain] }
+          {
+            auto localreadWhere = localChunks.reorganizeSubspaces(readDomain.getSpace(), readNodeShape.getSpace()).setOutTupleId(clusterTupleId);
+            auto localreadScatter = readScatter;
+            auto localreadEditor = readEditor.createStmt(localreadWhere.domain(), localreadScatter, localreadWhere, "localread");
+            auto localreadStmt = getScopStmtContext(localreadEditor.getStmt());
+            readEditor.removeInstances(localreadWhere);
+            auto localreadCodegen = localreadStmt->makeCodegen();
+
+            auto localreadCurrentIteration = localreadEditor.getCurrentIteration(); // { ??? -> localread[domain] }
+            auto localreadCurrentDomain = localreadCurrentIteration.castRange(readDomain.getSpace()); // { ??? -> readStmt[domain] }
+            auto localreadCurrentNode = localreadStmt->getClusterMultiAff(); // { ??? -> rank[cluster] }
+            auto localreadIndex = localreadCurrentDomain.applyRange(readAccRel.toPwMultiAff());
+
+            auto localreadFieldPtr = localreadCodegen.codegenFieldLocalPtr(readFvar, localreadCurrentNode, localreadIndex);
+            auto localreatStackPtr = readStmt->getAccessStackStorageAnnPtr().pullbackDomain(localreadCurrentDomain);
+            localreadCodegen.codegenAssign(localreatStackPtr, localreadFieldPtr);
+
+            localreadCodegen.markBlock((Twine("flow local read '") + readDomain.getSetTupleName() + "'" + readFvarname).str(), localreadCurrentIteration);
+          }
+#endif
+        }
+
+        // Allocate stack space for these
+        auto mapper = RectangularMapping::createRectangualarHullMapping(storageRequired);
+
+        auto funcCtx = getFunctionProcessor();
+        auto currentNode = funcCtx->getCurrentNodeCoordinate(); // { [] -> rank[cluster] }
+        auto funcCodegen = funcCtx->makeEntryCodegen();
+        auto size = mapper->codegenSize(funcCodegen, currentNode);
+        auto localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf"); // FIXME: the local flow dependences can be quite large, so allocating on the stack risks a stack overflow
+
         // write: { writeStmt[domain] }
         {
           auto localwriteWhere = localChunks.reorganizeSubspaces(writeDomain.getSpace(), writeNodeShape.getSpace()).setOutTupleId(clusterTupleId); // { write[domain] -> rank[cluster] }
@@ -1619,8 +1684,10 @@ namespace {
           auto localwriteIndex = localwriteCurrentDomain.applyRange(writeAccRel.toPwMultiAff());
 
           auto localwriteValPtr = writeStmt->getAccessStackStorageAnnPtr().pullbackDomain(localwriteCurrentDomain);
-          auto localwriteFieldPtr = localwriteCodegen.codegenFieldLocalPtr(writeFVar, localwriteCurrentNode, localwriteIndex);
-          localwriteCodegen.codegenAssign(localwriteFieldPtr, localwriteValPtr);
+          auto idx = mapper->codegenIndex(localwriteCodegen, localwriteCurrentNode, localwriteIndex);
+          auto ptr = localwriteCodegen.getIRBuilder().CreateGEP(localbuf, idx);
+          auto localwriteBufPtr = AnnotatedPtr::createArrayPtr(ptr, localbuf, localwriteIndex);
+          localwriteCodegen.codegenAssign(localwriteBufPtr, localwriteValPtr);
 
           localwriteCodegen.markBlock((Twine("flow local write '") + writeDomain.getSetTupleName() + "'" + writeFvarname).str(), localwriteCurrentIteration);
         }
@@ -1639,9 +1706,11 @@ namespace {
           auto localreadCurrentNode = localreadStmt->getClusterMultiAff(); // { ??? -> rank[cluster] }
           auto localreadIndex = localreadCurrentDomain.applyRange(readAccRel.toPwMultiAff());
 
-          auto localreadFieldPtr = localreadCodegen.codegenFieldLocalPtr(writeFVar, localreadCurrentNode, localreadIndex);
+          auto idx = mapper->codegenIndex(localreadCodegen, localreadCurrentNode, localreadIndex);
+          auto ptr = localreadCodegen.getIRBuilder().CreateGEP(localbuf, idx);
+          auto localreadBufPtr = AnnotatedPtr::createArrayPtr(ptr, localbuf, localreadIndex);
           auto localreatStackPtr = readStmt->getAccessStackStorageAnnPtr().pullbackDomain(localreadCurrentDomain);
-          localreadCodegen.codegenAssign(localreatStackPtr, localreadFieldPtr);
+          localreadCodegen.codegenAssign(localreatStackPtr, localreadBufPtr);
 
           localreadCodegen.markBlock((Twine("flow local read '") + readDomain.getSetTupleName() + "'" + readFvarname).str(), localreadCurrentIteration);
         }
@@ -2238,6 +2307,7 @@ namespace {
       return result;
     }
 
+
     DenseMap<CommunicationBuffer *, AllocaInst *> recvbufPtrs;
     llvm::AllocaInst *codegenRecvbufPtrsOf(CommunicationBuffer *combuf) override {
       auto &result = recvbufPtrs[combuf];
@@ -2254,6 +2324,7 @@ namespace {
       return result;
     }
   }; // class MollyScopContextImpl
+
 
   isl::UnionMap MollyScopContextImpl::overviewWhere() {
     isl::UnionMap result = islctx->createEmptyUnionMap();

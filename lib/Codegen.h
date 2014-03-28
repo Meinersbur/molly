@@ -136,8 +136,9 @@ namespace molly {
   public:
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
 
-    llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Twine name = Twine());
-    llvm::Value *allocStackSpace(llvm::Type *ty, int count, llvm::Twine name = Twine());
+    llvm::Value *allocStackSpace(llvm::Type *ty, const llvm::Twine &name = Twine());
+    llvm::Value *allocStackSpace(llvm::Type *ty, int count, const llvm::Twine &name = Twine());
+    llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Value *count, const llvm::Twine &name = Twine());
     llvm::Value *createPointerCast(llvm::Value *val, llvm::Type *type);
 
     void setInsertBefore(llvm::Instruction *beforeInstr) {

@@ -378,6 +378,12 @@ namespace {
     }
 
 
+    MollyCodeGenerator makeEntryCodegen() override {
+     auto entry = &func->getEntryBlock();
+     return makeCodegen(entry->getTerminator());
+    }
+
+
     void replaceCombufSendPtr(CallInst *call, Function *called) {
       auto combuf = call->getOperand(0);
       auto dst = call->getOperand(1);

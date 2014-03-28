@@ -116,6 +116,28 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
 }
 
 
+isl::Map molly::RectangularMapping::getIndexableIndices() const {
+  auto domain = lengths.getDomain();
+  domain.intersect_inplace(offsets.getDomain());
+  auto domainSpace = domain.getSpace();
+
+  auto rangeSpace = lengths.getRangeSpace();
+  assert(rangeSpace == offsets.getRangeSpace());
+
+  auto resultSpace = isl::Space::createMapFromDomainAndRange(domain.getSpace(), rangeSpace);
+
+  auto lowerBounds = offsets;
+  auto upperBounds = offsets + lengths;
+
+  auto lowerLimits = lowerBounds.applyRange(isl::BasicMap::createAllLe(rangeSpace));
+  auto upperLimits = upperBounds.applyRange(isl::BasicMap::createAllGt(rangeSpace));
+  auto result = intersect(lowerLimits, upperLimits);
+  assert(result.imageIsBounded());
+  return result;
+}
+
+
+
 #if 0
 int RectangularMapping:: map(ArrayRef<unsigned> coords) const {
   assert(coords.size() == lengths.size());

@@ -44,7 +44,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_multi_pw_aff_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_multi_pw_aff_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -112,6 +112,10 @@ namespace isl {
     static MultiType createZero(Space &&space) { return MultiPwAff::enwrap(isl_multi_pw_aff_zero(space.take())); }
     static MultiType createIdentity(Space &&space) { return MultiPwAff::enwrap(isl_multi_pw_aff_identity(space.take())); }
 
+    /// All range vectors that are less in every coordinate
+    //ISLPP_EXSITU_ATTRS Map createLtMap() ISLPP_EXSITU_FUNCTION;
+    //ISLPP_EXSITU_ATTRS Map createGeMap() ISLPP_EXSITU_FUNCTION;
+    
     //static MultiType readFromString(Ctx *ctx, const char *str) { return wrap(isl_multi_pw_aff_read_from_str(ctx->keep(), str)); } 
 #pragma endregion
 
@@ -190,6 +194,10 @@ namespace isl {
    ISLPP_CONSUME_ATTRS MultiPwAff coalesce_consume() ISLPP_CONSUME_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_coalesce(take())); }
 
      ISLPP_EXSITU_ATTRS Set getDomain() ISLPP_EXSITU_FUNCTION;
+
+     ISLPP_EXSITU_ATTRS Set getRange() ISLPP_EXSITU_FUNCTION;
+
+     ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION;
 }; // class MultiAff
 
 
@@ -243,6 +251,8 @@ inline MultiPwAffSubscript Multi<PwAff>::operator[](pos_t pos) {
   //static inline Set lexLeSet(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Set::wrap(isl_multi_pw_aff_lex_le_set(maff1.take(), maff2.take())); }
   //static inline Set lexGeSet(Multi<PwAff> &&maff1, Multi<PwAff> &&maff2) { return Set::wrap(isl_multi_pw_aff_lex_ge_set(maff1.take(), maff2.take())); }
 
+
+  MultiPwAff operator+(MultiPwAff lhs, MultiPwAff rhs);
 
 
 } // namespace isl
