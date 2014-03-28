@@ -33,7 +33,7 @@ MOLLY_ATTR(pure) double initValB(coord_t y, coord_t z) {
   if (y == 0 && z == 0)
     return 1;
   if (y == 0 && z == 1)
-    return 1;
+    return 2;
   return 0;
 }
 
@@ -90,10 +90,10 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 
 
 int main(int argc, char *argv[]) {
-  waitToAttach();
+  //waitToAttach();
   init();
 
-  waitToAttach();
+  //waitToAttach();
   gemm();
 
   auto sum = reduce();
