@@ -467,7 +467,8 @@ namespace {
 
 #ifndef NDEBUG
       auto count = get_MPI_count(&status);
-      MOLLY_VAR(count,sending,status.count,status.cancelled,status.MPI_SOURCE,status.MPI_TAG,status.MPI_ERROR);
+      //MOLLY_VAR(count,sending,status.count,status.cancelled,status.MPI_SOURCE,status.MPI_TAG,status.MPI_ERROR);
+      MOLLY_VAR(count,sending);
       //assert(count > 0 && "must receive something");
 #endif
     }
