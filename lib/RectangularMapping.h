@@ -46,6 +46,10 @@ namespace molly {
       assert(result == offsets.getDomainSpace());
       return result;
     }
+
+    /// Returns that rectangular area that is covered by the mapped, even not all of it is necessarily used
+    isl::Map getIndexableIndices() const;
+
   }; // class RectangularMapping
 
 } // namespace molly

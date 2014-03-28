@@ -13,7 +13,7 @@
 
 #define LX 6
 #define LY 3
-#define ITERATIONS 2
+#define ITERATIONS 10
 
 //#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
 #pragma molly transform("{ [x,y] -> [node[px] -> local[x,y]] : px=floor(x/3) }")

@@ -63,3 +63,7 @@ isl::Space molly::FieldLayout::getLogicalIndexsetSpace() const {
   assert(relation.getDomainSpace() == fty->getIndexsetSpace());
   return relation.getDomainSpace();
 }
+
+isl::Map molly::FieldLayout::getIndexableIndices() const {
+  return linearizer->getIndexableIndices();
+}

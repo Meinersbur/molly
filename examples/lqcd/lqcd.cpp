@@ -1,5 +1,9 @@
 
+#ifdef WITH_MOLLY
 #include <molly.h>
+#else /* WITH_MOLLY */
+#include <molly_emulation.h>
+#endif /* WITH_MOLLY */
 
 // C++ std::complex
 #include <complex>
@@ -13,74 +17,71 @@ typedef std::complex<double> complex;
 
 typedef struct {
   complex c[3][3];
-
 } su3matrix_t;
 
-typedef struct su3vector_t {
+struct su3vector_t {
   complex c[3];
    
 public:
-  [[molly::pure]] su3vector_t() : c({0,0,0}) {}
-  [[molly::pure]] su3vector_t(complex c0, complex c1, complex c2) : c({ c0, c1, c2 }) {
+  MOLLY_ATTR(pure) su3vector_t() : c({ 0, 0, 0 }) {}
+  MOLLY_ATTR(pure) su3vector_t(complex c0, complex c1, complex c2) : c({ c0, c1, c2 }) {
     // c[0] = c0;
     // c[1] = c1;
     // c[2] = c2;
   }
 
-  [[molly::pure]] const complex &operator[](size_t idx) const { return c[idx]; }
-  [[molly::pure]] complex &operator[](size_t idx)  { return c[idx]; }
+  MOLLY_ATTR(pure) const complex &operator[](size_t idx) const { return c[idx]; }
+  MOLLY_ATTR(pure) complex &operator[](size_t idx)  { return c[idx]; }
 
-  [[molly::pure]] const su3vector_t &operator+=(su3vector_t rhs) {
+  MOLLY_ATTR(pure) const su3vector_t &operator+=(su3vector_t rhs) {
     c[0] += rhs[0];
     c[1] += rhs[1];
     c[2] += rhs[2];
     return *this;
   }
-} su3vector_t;
+};
 
-[[molly::pure]] su3vector_t operator+(su3vector_t lhs, su3vector_t rhs) {
+MOLLY_ATTR(pure) su3vector_t operator+(su3vector_t lhs, su3vector_t rhs) {
   return su3vector_t(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[3]);
 }
 
-typedef struct halfspinor_t {
+struct halfspinor_t {
   su3vector_t v[2];
 
 public:
-  [[molly::pure]] halfspinor_t() {}
-  [[molly::pure]] halfspinor_t(su3vector_t v0, su3vector_t v1) {
+  MOLLY_ATTR(pure) halfspinor_t() {}
+  MOLLY_ATTR(pure) halfspinor_t(su3vector_t v0, su3vector_t v1) {
     v[0] = v0;
     v[1] = v1;
   }
 
-  [[molly::pure]] const su3vector_t &operator[](size_t idx) const { return v[idx]; }
-  [[molly::pure]] su3vector_t &operator[](size_t idx)  { return v[idx]; }
-} halfspinor_t;
-typedef struct fullspinor_t {
+  MOLLY_ATTR(pure) const su3vector_t &operator[](size_t idx) const { return v[idx]; }
+  MOLLY_ATTR(pure) su3vector_t &operator[](size_t idx)  { return v[idx]; }
+};
+struct fullspinor_t {
   su3vector_t v[4];
 
 public:
-  [[molly::pure]] fullspinor_t() {}
-  [[molly::pure]] fullspinor_t(su3vector_t v0, su3vector_t v1, su3vector_t v2, su3vector_t v3)  {
+  MOLLY_ATTR(pure) fullspinor_t() {}
+  MOLLY_ATTR(pure) fullspinor_t(su3vector_t v0, su3vector_t v1, su3vector_t v2, su3vector_t v3)  {
     v[0] = v0;
     v[1] = v1;
     v[2] = v2;
     v[3] = v3;
   }
 
-  [[molly::pure]] const su3vector_t &operator[](size_t idx) const { return v[idx]; }
-  [[molly::pure]] su3vector_t &operator[](size_t idx)  { return v[idx]; }
+  MOLLY_ATTR(pure) const su3vector_t &operator[](size_t idx) const { return v[idx]; }
+  MOLLY_ATTR(pure) su3vector_t &operator[](size_t idx)  { return v[idx]; }
 
-  [[molly::pure]] const fullspinor_t &operator+=(fullspinor_t rhs) {
+  MOLLY_ATTR(pure) const fullspinor_t &operator+=(fullspinor_t rhs) {
     v[0] += rhs[0];
     v[1] += rhs[1];
     v[2] += rhs[2];
     v[3] += rhs[3];
     return *this;
   }
-} fullspinor_t;
+};
 typedef fullspinor_t spinor_t;
-
-
 
 
 
@@ -92,66 +93,66 @@ typedef enum {
   DIR_TUP, DIR_TDN, DIR_XUP, DIR_XDN, DIR_YUP, DIR_YDN, DIR_ZUP, DIR_ZDOWN
 } direction_t;
 
-[[molly::pure]] su3vector_t operator*(su3matrix_t m, su3vector_t v) {
+MOLLY_ATTR(pure) su3vector_t operator*(su3matrix_t m, su3vector_t v) {
   return su3vector_t(
     m.c[0][0] * v[0] + m.c[0][1] * v[1] + m.c[0][2] * v[2],
     m.c[1][0] * v[0] + m.c[1][1] * v[1] + m.c[1][2] * v[2],
     m.c[2][0] * v[0] + m.c[2][1] * v[1] + m.c[2][2] * v[2]);
 }
 
-[[molly::pure]] halfspinor_t operator*(su3matrix_t m, halfspinor_t v) {
+MOLLY_ATTR(pure) halfspinor_t operator*(su3matrix_t m, halfspinor_t v) {
   return halfspinor_t(m*v[0], m*v[1]);
 }
 
 
 
-[[molly::pure]] halfspinor_t project_TUP(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_TUP(fullspinor_t spinor) {
   return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
 }
 
-[[molly::pure]] halfspinor_t project_TDN(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_TDN(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_XUP(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_XUP(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_XDN(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_XDN(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_YUP(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_YUP(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_YDN(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_YDN(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_ZUP(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_ZUP(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
   return result;
 }
 
-[[molly::pure]] halfspinor_t project_ZDN(fullspinor_t spinor) {
+MOLLY_ATTR(pure) halfspinor_t project_ZDN(fullspinor_t spinor) {
   halfspinor_t result;
   result[0] = spinor[0] + spinor[2];
   result[1] = spinor[1] + spinor[3];
@@ -159,35 +160,35 @@ typedef enum {
 }
 
 
-[[molly::pure]] fullspinor_t expand_TUP(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_TUP(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_TDN(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_TDN(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_XUP(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_XUP(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_XDN(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_XDN(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_YUP(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_YUP(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_YDN(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_YDN(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_ZUP(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_ZUP(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
-[[molly::pure]] fullspinor_t expand_ZDN(halfspinor_t weyl) {
+MOLLY_ATTR(pure) fullspinor_t expand_ZDN(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
 
@@ -223,7 +224,7 @@ molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
 #endif
 
-extern "C" void HoppingMatrix() {
+extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
       for (coord_t y = 0; y < source.length(2); y += 1)

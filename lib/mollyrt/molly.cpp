@@ -110,7 +110,7 @@ extern "C" void waitToAttach() {
   if (i)
     return; // Already attached
   auto rank = __molly_cluster_mympirank();
-  if (rank!=0)
+  if (rank!=1)
     return;
 
   std::ostringstream os; // Buffer to avoid this is scattered in output between other rank output  
@@ -938,6 +938,15 @@ extern "C" void __molly_begin_marker(const char *str) {
   MOLLY_DEBUG("BEGIN " << str);
 }
 extern "C" void __molly_begin_marker_coord(const char *str, int64_t count, int64_t *vals) {
+  if (std::string(str) == std::string("flow local write 'body3_fstore0'source")) {
+    assert(count >= 2);
+    if (vals[0] == 2 && vals[1] == 0) {
+      MOLLY_DEBUG("Got here!!!");
+      int a = 0;
+    }
+  }
+
+
   std::ostringstream os;
   for (auto i = count - count; i < count; i += 1) {
     if (i>0)

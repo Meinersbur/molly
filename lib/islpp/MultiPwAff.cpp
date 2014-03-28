@@ -134,8 +134,19 @@ ISLPP_EXSITU_ATTRS Set isl::Multi<PwAff>::getDomain() ISLPP_EXSITU_FUNCTION {
 }
 
 
+ISLPP_EXSITU_ATTRS Set isl::Multi<PwAff>::getRange() ISLPP_EXSITU_FUNCTION {
+  return getDomain().apply(toMap());
+}
 
 
+ISLPP_EXSITU_ATTRS Map isl::Multi<PwAff>::applyRange(Map map) ISLPP_EXSITU_FUNCTION {
+  return toMap().applyRange(map);
+}
+
+
+void isl::Multi<PwAff>::dump() const {
+  isl_multi_pw_aff_dump(keep());
+}
 
 
 ISLPP_EXSITU_ATTRS MultiPwAff isl::MultiPwAff::embedIntoDomainSpace( Space framespace ) ISLPP_EXSITU_FUNCTION {
@@ -296,6 +307,34 @@ ISLPP_EXSITU_ATTRS MultiPwAff MultiPwAff::castRange(Space space) ISLPP_EXSITU_FU
   auto nOutDims = result.getOutDimCount();
   for (auto i = nOutDims-nOutDims; i<nOutDims; i+=1) {
     result.setPwAff_inplace(i, meAligned.getPwAff(i));
+  }
+  return result;
+}
+
+#if 0
+ISLPP_EXSITU_ATTRS Map MultiPwAff::createLtMap() ISLPP_EXSITU_FUNCTION{
+  auto lt = BasicMap::createLt(getDomainSpace());
+  return applyRange(lt);
+}
+
+
+ISLPP_EXSITU_ATTRS Map MultiPwAff::createGeMap() ISLPP_EXSITU_FUNCTION{
+  auto ge = BasicMap::createLt(getDomainSpace());
+  return applyRange(ge);
+}
+#endif
+
+MultiPwAff isl::operator+(MultiPwAff lhs, MultiPwAff rhs) {
+  assert(lhs.getSpace() == rhs.getSpace());
+  auto nDims = lhs.getOutDimCount();
+  assert(nDims == rhs.getOutDimCount());
+
+  auto result = MultiPwAff::createZero(lhs.getSpace());
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto lhsAff = lhs[i];
+    auto rhsAff = rhs[i];
+    auto addAff = lhsAff + rhsAff;
+    result[i] = addAff;
   }
   return result;
 }

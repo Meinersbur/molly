@@ -222,23 +222,30 @@ llvm::Value *MollyCodeGenerator::copyOperandTree(llvm::Value *val) {
 }
 
 
-llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, llvm::Twine name) {
-  auto bb = irBuilder.GetInsertBlock();
-  auto func = getFunctionOf(bb);
-  auto entryBB = &func->getEntryBlock();
-  auto result = new AllocaInst(ty, name, entryBB->getFirstInsertionPt());
-  return result;
+llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, const llvm::Twine &name) {
+  auto intTy = Type::getInt64Ty(getLLVMContext());
+  return allocStackSpace(ty, ConstantInt::get(intTy, 1));
 }
 
 
-llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, int count, llvm::Twine name) {
+llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, int count, const llvm::Twine &name) {
   auto intTy = Type::getInt64Ty(getLLVMContext());
+  return allocStackSpace(ty, ConstantInt::get(intTy, count), name);
+}
 
+
+llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, llvm::Value *count, const llvm::Twine &name) {
   auto bb = irBuilder.GetInsertBlock();
   auto func = getFunctionOf(bb);
   auto entryBB = &func->getEntryBlock();
-  auto result = new AllocaInst(ty, ConstantInt::get(intTy, count), name, entryBB->getFirstInsertionPt());
-  return result;
+  if (entryBB == getInsertBlock()) {
+    if (auto instr = dyn_cast<Instruction>(count)) {
+      assert(instr->getParent()==entryBB);
+    }
+    return irBuilder.CreateAlloca(ty, count, name);
+  }
+  assert(isa<ConstantInt>(count));
+  return new AllocaInst(ty, count, name, entryBB->getFirstInsertionPt());
 }
 
 
