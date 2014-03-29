@@ -66,8 +66,10 @@ extern "C" MOLLY_ATTR(process) void gemm() {
 
 MOLLY_ATTR(pure) void checkResult(double val, coord_t x, coord_t z) {
   double expected = 0;
-  if (x==0 && (z==0 || z==1))
+  if (x==0 && z==0)
     expected = 1;
+  if (x==0 && z==1)
+    expected = 2;
 
   if (val != expected) {
     if (__molly_isMaster())

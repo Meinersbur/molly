@@ -623,7 +623,7 @@ namespace molly {
   public:
     MOLLYATTR(inline) _array_partial_subscript(fieldty *owner, typename _inttype<Stored>::type... coords)  
       : owner(owner), coords({coords...}) {
-        assert(owner);
+        //assert(owner);
         //TODO: assertion that all stored are in range
     }
 
@@ -657,7 +657,7 @@ namespace molly {
       : owner(owner), coords({coords...}) {
         //uint64_t tmp[] = {coords...};
         //std::copy(&tmp[0], &tmp[sizeof...(coords)], this->coords);
-        assert(owner);
+        //assert(owner);
     }
 
   private:
@@ -785,7 +785,7 @@ namespace molly {
   template<typename FirstType, typename... Types>
   MOLLYATTR(inline)
   static inline int _select(int i, FirstType first, Types... list)  {
-    assert(i < (int)(1/*first*/+sizeof...(list))); // Interferes with natural loop detection
+    //assert(i < (int)(1/*first*/+sizeof...(list))); // Interferes with natural loop detection
     if (i == 0)
       return first;
     return _select(i-1, list...); // This is no recursion, every _select has a different signature

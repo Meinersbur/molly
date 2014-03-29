@@ -88,15 +88,20 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createCFGSimplificationPass());
   PM.add(llvm::createReassociatePass());
   PM.add(llvm::createLoopRotatePass());
-  //PM.add(llvm::createInstructionCombiningPass());
-  PM.add(llvm::createInstructionSimplifierPass());
+  PM.add(llvm::createInstructionCombiningPass());
+  //PM.add(llvm::createInstructionSimplifierPass());
   if (!SCEVCodegen)
     PM.add(polly::createIndVarSimplifyPass());
   PM.add(polly::createCodePreparationPass());
 
+  //PM.add(llvm::createInstructionCombiningPass());
+  PM.add(llvm::createInstructionSimplifierPass());
+
   auto OScanonicalized = new raw_fd_ostream("3_canonicalized.ll", infoDummy, sys::fs::F_Text);
   PM.add(llvm::createPrintModulePass(*OScanonicalized, "After canonicalization\n\n"));
   PM.add(llvm::createVerifierPass());
+
+
 
   // Do the Molly thing
   // TODO: Configure to optLevel
