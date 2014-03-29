@@ -88,8 +88,8 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createCFGSimplificationPass());
   PM.add(llvm::createReassociatePass());
   PM.add(llvm::createLoopRotatePass());
-  //PM.add(llvm::createInstructionCombiningPass());
-  PM.add(llvm::createInstructionSimplifierPass());
+  PM.add(llvm::createInstructionCombiningPass()); // This may change instructions such that they are not recognized by ScalarEvolution anymore
+  //PM.add(llvm::createInstructionSimplifierPass());
   if (!SCEVCodegen)
     PM.add(polly::createIndVarSimplifyPass());
   PM.add(polly::createCodePreparationPass());

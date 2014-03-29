@@ -19,6 +19,7 @@
 #include "RectangularMapping.h"
 #include "FieldLayout.h"
 #include "Codegen.h"
+#include "LocalBuffer.h"
 
 #include "molly/RegisterPasses.h"
 #include "molly/Mollyfwd.h"
@@ -828,6 +829,10 @@ namespace {
       for (auto combuf : combufs) {
         combuf->codegenInit(codegen, this, funcCtx);
       }
+
+      for (auto locbuf : localbufs) {
+        locbuf->codegenInit(codegen, this, funcCtx);
+      }
     }
 
 
@@ -1132,7 +1137,7 @@ namespace {
     uint64_t combuftagcounter;
 
   public:
-    CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) {
+    CommunicationBuffer *newCommunicationBuffer(FieldType *fty, const isl::Map &relation) override {
       auto &llvmContext = getLLVMContext();
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
@@ -1149,6 +1154,15 @@ namespace {
 
     ArrayRef<CommunicationBuffer *> getCommunicationBuffers() override {
       return combufs;
+    }
+
+    std::vector<LocalBuffer *> localbufs;
+    LocalBuffer *newLocalBuffer(llvm::Type *eltTy, RectangularMapping *shape) override {
+      auto eltPtrTy = PointerType::getUnqual(eltTy);
+      auto bufptr = new GlobalVariable(*module, eltPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(eltPtrTy), "localbuf");
+      auto result = LocalBuffer::create(bufptr, shape);
+      localbufs.push_back(result);
+      return result;
     }
 
   private:

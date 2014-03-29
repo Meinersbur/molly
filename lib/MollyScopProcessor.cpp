@@ -17,6 +17,7 @@
 #include "MollyScopStmtProcessor.h"
 #include "MollyRegionProcessor.h"
 #include "RectangularMapping.h"
+#include "LocalBuffer.h"
 
 #include "islpp/Ctx.h"
 #include "islpp/Map.h"
@@ -1668,7 +1669,18 @@ namespace {
         auto currentNode = funcCtx->getCurrentNodeCoordinate(); // { [] -> rank[cluster] }
         auto funcCodegen = funcCtx->makeEntryCodegen();
         auto size = mapper->codegenSize(funcCodegen, currentNode);
-        auto localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf"); // FIXME: the local flow dependences can be quite large, so allocating on the stack risks a stack overflow
+
+        Value *localbuf=nullptr;
+        if (auto c = dyn_cast<ConstantInt>(size)) {
+         auto sizeConst =  c->getZExtValue();
+         if (sizeConst <= 128) { // Max elements we put on the stack
+           localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf"); 
+         }
+        }
+        if (!localbuf) {
+          auto lbuf = pm->newLocalBuffer(fvar->getEltType(), mapper);
+          localbuf = funcCodegen.getIRBuilder().CreateLoad(lbuf->getGlobalVariable(), "localflowbuf");
+        }
 
         // write: { writeStmt[domain] }
         {

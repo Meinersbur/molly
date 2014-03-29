@@ -136,6 +136,8 @@ namespace molly {
   public:
     llvm::LLVMContext &getLLVMContext() { return irBuilder.getContext(); }
 
+    const llvm::DataLayout *getDataLayout();
+
     llvm::Value *allocStackSpace(llvm::Type *ty, const llvm::Twine &name = Twine());
     llvm::Value *allocStackSpace(llvm::Type *ty, int count, const llvm::Twine &name = Twine());
     llvm::Value *allocStackSpace(llvm::Type *ty, llvm::Value *count, const llvm::Twine &name = Twine());

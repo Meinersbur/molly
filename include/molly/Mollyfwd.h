@@ -47,5 +47,8 @@ namespace molly {
   // #include "RectangularMapping.h"
   class RectangularMapping;
 
+  // #include "LocalBuffer.h"
+  class LocalBuffer;
+
 } // namespace molly
 #endif /* MOLLY_MOLLYFWD_H */

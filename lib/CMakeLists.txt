@@ -22,6 +22,7 @@ add_molly_library(LLVMMolly
     FieldVariable.cpp
     FieldLayout.cpp
     CommunicationBuffer.cpp
+    LocalBuffer.cpp
     ClusterConfig.cpp
 
     # Algorithms

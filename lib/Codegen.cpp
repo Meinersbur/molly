@@ -32,6 +32,7 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IntrinsicInst.h>
+#include <llvm/Support/CommandLine.h>
 
 using namespace molly;
 using namespace polly;
@@ -39,6 +40,14 @@ using namespace llvm;
 using namespace std;
 using isl::enwrap;
 
+
+extern cl::OptionCategory MollyCategory;
+
+static cl::opt<bool>
+MollyMarkStmts("molly-mark-stmts",
+cl::desc("Emit begin end and markers for generated ScopStmts"),
+cl::Hidden, cl::init(false), cl::ZeroOrMore,
+cl::cat(MollyCategory));
 
 isl::AstBuild &MollyCodeGenerator::initAstBuild() {
   if (astBuild.isNull()) {
@@ -1270,6 +1279,9 @@ string compatName(StringRef arg) {
 
 
 void molly::MollyCodeGenerator::markBlock(StringRef str) {
+  if (!MollyMarkStmts)
+    return;
+
   auto &llvmContext = getLLVMContext();
   auto voidTy = Type::getVoidTy(llvmContext);
   auto intTy = Type::getInt64Ty(llvmContext);
@@ -1330,6 +1342,12 @@ void molly::MollyCodeGenerator::markBlock(StringRef str, isl::MultiPwAff coord) 
     irBuilder.SetInsertPoint(bb, bb->end());
   auto endDecl = getRuntimeFunc("__molly_end_marker_coord", voidTy, argTys);
   irBuilder.CreateCall(endDecl, args);
+}
+
+
+const llvm::DataLayout * molly::MollyCodeGenerator::getDataLayout() {
+  auto DLP = &pass->getAnalysis<llvm::DataLayoutPass>();
+  return &DLP->getDataLayout();
 }
 
 
