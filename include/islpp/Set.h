@@ -5,20 +5,24 @@
 #include "Pw.h"
 #include "Multi.h"
 #include "Int.h"
-#include <llvm/Support/Compiler.h>
-#include <cassert>
-#include <string>
-#include <functional>
-#include <vector>
-#include <isl/space.h> // enum isl_dim_type;
-#include <isl/lp.h> // enum isl_lp_result;
-#include <isl/set.h>
 #include "Obj.h"
 #include "Space.h"
 #include "Spacelike.h"
 #include "Ctx.h"
 #include "BasicSet.h"
+
+#include <isl/space.h> // enum isl_dim_type;
+#include <isl/lp.h> // enum isl_lp_result;
+#include <isl/set.h>
+
+#include <llvm/Support/Compiler.h>
 #include <llvm/ADT/ArrayRef.h>
+
+#include <cassert>
+#include <string>
+#include <functional>
+#include <vector>
+
 
 struct isl_set;
 struct isl_basic_set;
@@ -48,9 +52,8 @@ namespace isl {
   typedef int (*PointCallback)(isl_point *pnt, void *user);
 
 
+  // or Pw<BasicSet>
   class Set : public Obj<Set, isl_set>, public Spacelike<Set> {
-
-
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
   protected:

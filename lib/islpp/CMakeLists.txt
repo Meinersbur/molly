@@ -48,6 +48,12 @@ add_molly_library(Islpp
     AstNode.cpp
     AffExpr.cpp
     ValList.cpp
+    ParamSpace.cpp
+    SetSpace.cpp
+    MapSpace.cpp
+    ParamSpacelike.cpp
+    SetSpacelike.cpp
+    MapSpacelike.cpp
     
     # deprecated; use AffExpr instead
     Expr.cpp 

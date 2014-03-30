@@ -173,11 +173,11 @@ namespace isl {
     //ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION;
     //ISLPP_PROJECTION_ATTRS Space/LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION;
 
-    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpacelike().isParams(); }
-    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpacelike().isSet(); }
-    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpacelike().isMap(); }
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return getDerived()->getSpacelike().isParams(); }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return getDerived()->getSpacelike().isSet(); }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return getDerived()->getSpacelike().isMap(); }
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpacelike().dim(type); }
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return getDerived()->getSpacelike().dim(type); }
     ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpace().findDimById(type, id); /* none of the additional dim type have named dimension */ }
 
     ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return getDerived()->getSpacelike().hasTupleName(type); }

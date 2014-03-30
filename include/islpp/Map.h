@@ -2,16 +2,7 @@
 #define ISLPP_MAP_H
 
 #include "islpp_common.h"
-#include <cassert>
-#include <string>
-#include <llvm/Support/ErrorHandling.h>
-#include <llvm/ADT/ArrayRef.h>
-#include <functional>
-
 #include "Islfwd.h"
-#include "Spacelike.h" // class Spacelike (baseclass of Map)
-
-#include <isl/map.h>
 #include "Space.h"
 #include "Id.h"
 #include "BasicMap.h"
@@ -24,9 +15,19 @@
 #include "Dim.h"
 #include "Ctx.h"
 #include "Obj.h"
+#include "Spacelike.h" // class Spacelike (baseclass of Map)
 #include "MultiPwAff.h"
+#include "MapSpacelike.h"
+
+#include <isl/map.h>
 #include <isl/deprecated/map_int.h>
 
+#include <llvm/Support/ErrorHandling.h>
+#include <llvm/ADT/ArrayRef.h>
+
+#include <cassert>
+#include <string>
+#include <functional>
 
 
 namespace llvm {
@@ -79,7 +80,8 @@ namespace isl {
   inline bool allNegativesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Under; }
 
 
-  class Map : public Obj<Map,isl_map>, public Spacelike<Map> {
+  // Or Pw<BasicMap>
+  class Map : public Obj<Map,isl_map>, public MapSpacelike<Map> {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;

@@ -1235,8 +1235,7 @@ ISLPP_EXSITU_ATTRS Space isl::Space::createMapSpace(count_t nDomainDims, Space r
   return Space::enwrap(result);
 }
 
-void isl::Space::dump() const
-{
+void isl::Space::dump() const {
   isl_space_dump(keep());
 }
 
