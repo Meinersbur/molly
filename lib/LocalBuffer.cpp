@@ -21,10 +21,10 @@ void molly::LocalBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManag
  auto eltTy = bufptr->getType()->getPointerElementType()->getPointerElementType();
 
  auto dl = codegen.getDataLayout();
- auto ptrSize = dl->getPointerSize();
+ auto ptrSize = dl->getPointerSizeInBits();
  auto intTy = Type::getIntNTy(codegen.getLLVMContext(), ptrSize);
 
- auto mallocCall = CallInst::CreateMalloc(irBuilder.GetInsertPoint(), intTy, eltTy, size);
+ auto mallocCall = CallInst::CreateMalloc(irBuilder.GetInsertPoint(), intTy, eltTy, irBuilder.CreateZExtOrTrunc(size, intTy));
  irBuilder.SetInsertPoint(mallocCall->getParent(), mallocCall->getNextNode());
  irBuilder.CreateStore(mallocCall, bufptr);
 }
