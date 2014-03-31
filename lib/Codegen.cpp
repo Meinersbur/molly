@@ -249,7 +249,7 @@ llvm::Value *MollyCodeGenerator::allocStackSpace(llvm::Type *ty, llvm::Value *co
   auto entryBB = &func->getEntryBlock();
   if (entryBB == getInsertBlock()) {
     if (auto instr = dyn_cast<Instruction>(count)) {
-      assert(instr->getParent()==entryBB);
+      assert(instr->getParent() == entryBB);
     }
     return irBuilder.CreateAlloca(ty, count, name);
   }
@@ -1230,6 +1230,9 @@ llvm::StoreInst * molly::MollyCodeGenerator::createArrayStore(llvm::Value *val, 
 
 
 llvm::CallInst *molly::MollyCodeGenerator::callBeginMarker(StringRef str) {
+  if (!MollyMarkStmts)
+    return nullptr;
+
   auto &llvmContext = getLLVMContext();
   auto voidTy = Type::getVoidTy(llvmContext);
   auto intTy = Type::getInt64Ty(llvmContext);
@@ -1246,6 +1249,9 @@ llvm::CallInst *molly::MollyCodeGenerator::callBeginMarker(StringRef str) {
 
 
 llvm::CallInst *molly::MollyCodeGenerator::callEndMarker(StringRef str) {
+  if (!MollyMarkStmts)
+    return nullptr;
+
   auto &llvmContext = getLLVMContext();
   auto voidTy = Type::getVoidTy(llvmContext);
   auto intTy = Type::getInt64Ty(llvmContext);
@@ -1348,6 +1354,60 @@ void molly::MollyCodeGenerator::markBlock(StringRef str, isl::MultiPwAff coord) 
 const llvm::DataLayout * molly::MollyCodeGenerator::getDataLayout() {
   auto DLP = &pass->getAnalysis<llvm::DataLayoutPass>();
   return &DLP->getDataLayout();
+}
+
+
+llvm::CallInst * molly::MollyCodeGenerator::callCombufLocalAlloc(llvm::Value *size, llvm::Value *eltSize) {
+  Value *args[] = { size, eltSize };
+  auto intFunc = Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::molly_combuf_local_alloc);
+  return irBuilder.CreateCall(intFunc, args);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callCombufLocalFree(llvm::Value *combufLocal) {
+  Value *args[] = { combufLocal };
+  auto func = Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::molly_combuf_local_free);
+  return irBuilder.CreateCall(func, args);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callCombufLocalDataPtr(llvm::Value *combufLocal) {
+  Value *args[] = { combufLocal };
+  auto func = Intrinsic::getDeclaration(getModule(), llvm::Intrinsic::molly_combuf_local_dataptr); assert(func);
+  return irBuilder.CreateCall(func, args);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callRuntimeCombufLocalAlloc(llvm::Value *size, llvm::Value *eltSize) {
+  auto &llvmContext = getLLVMContext();
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+
+  Type *tys[] = { intTy, intTy };
+  auto funcDecl = getRuntimeFunc("__molly_combuf_local_alloc", voidPtrTy, tys);
+  return irBuilder.CreateCall2(funcDecl, size, eltSize);
+}
+
+
+llvm::CallInst *molly::MollyCodeGenerator::callRuntimeCombufLocalFree(llvm::Value *combufvar) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+
+  Type *tys[] = { voidPtrTy };
+  auto funcDecl = getRuntimeFunc("__molly_combuf_local_free", voidTy, tys);
+  return irBuilder.CreateCall(funcDecl, combufvar);
+}
+
+
+llvm::CallInst * molly::MollyCodeGenerator::callRuntimeCombufLocalDataptr(llvm::Value *combufvar) {
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+
+  Type *tys[] = { voidPtrTy };
+  auto funcDecl = getRuntimeFunc("__molly_combuf_local_dataptr", voidTy, tys);
+  return irBuilder.CreateCall(funcDecl, combufvar);
 }
 
 

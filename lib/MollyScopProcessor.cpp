@@ -878,8 +878,6 @@ namespace {
 
       // "owner computes": execute statements that are valid after the exit of the SCoP at the value's home locations; but just fits at this moment
       for (auto output : outputFlow.getSets()) {
-
-
         //auto  outputnotyet =  intersect(output, notyetExecuted);
         auto stmtCtx = getScopStmtContext(output);
         auto accessed = stmtCtx->getAccessRelation().intersectDomain(output); // { writeStmt[domain] -> field[indexset] }
@@ -914,38 +912,113 @@ namespace {
       //tmp = overviewWhere();
 
       while (true) {
-        bool changed = false;
         if (notyetExecuted.isEmpty()) break;
+        bool changed = false;
 
-        // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
+        while (true) {
+          // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
+          for (auto flow : dataFlow.getMaps()) {
+            auto producerSpace = flow.getDomainSpace();
+            auto consumerSpace = flow.getRangeSpace();
+
+            auto producerStmt = getScopStmtContext(producerSpace);
+            auto consumerStmt = getScopStmtContext(consumerSpace);
+
+            auto flowNotyetExecuted = flow.intersectDomain(notyetExecuted); // { producer[domain] -> consumer[domain] }
+            //auto flowConsumerWhere = flowNotyetExecuted.wrap().chainSubspace(consumerStmt->getWhere()); // { (producer[domain] -> consumer[domain]) -> consumer[cluster] }
+            auto producerSuggestedWhere = flowNotyetExecuted.applyRange(consumerStmt->getWhere()); // { producer[domain] -> [cluster] }
+
+            if (!producerSuggestedWhere.isEmpty()) {
+              producerStmt->addWhere(producerSuggestedWhere);
+              notyetExecuted.substract_inplace(producerSuggestedWhere.domain());
+              localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+              changed = true;
+            }
+          }
+
+          //tmp = overviewWhere();
+
+          //TODO: This fixpoint computation should be done on a higher level; on unbounded domains, this method might not even finish
+          // See UnionMap::transitiveClosure for how it should work
+          if (!changed)
+            break;
+        }
+
+        if (notyetExecuted.isEmpty())
+          break;
+
+
+        for (auto nonexec : notyetExecuted.getSets()) {
+          auto nonexecSpace = nonexec.getSpace();
+          auto nonexecStmt = getScopStmtContext(nonexecSpace);
+          if (nonexecStmt->isFieldAccess())
+            continue; // Field access do need to be executed for its own sake
+
+          // What does it depend on?
+          auto depends = nonfieldDataFlowClosure.intersectRange(nonexec); // { producer[domain] -> nonexec[domain] }
+          for (auto dep : depends.getMaps()) {
+            dep = dep.intersectRange(notyetExecuted); // Remove lately added instances
+            auto producerSpace = dep.getDomainSpace();
+            auto producerStmt = getScopStmtContext(producerSpace);
+
+            auto producerWhere = producerStmt->getWhere();
+            auto producerSuggestedWhere = dep.applyDomain(producerWhere).reverse(); // { nonexec[domain] -> rank[cluster] }
+            if (!producerSuggestedWhere.isEmpty()) {
+              auto producerSuggestedOneWhere = producerSuggestedWhere.lexmin(); // { nonexec[domain] -> rank[cluster] }
+              nonexecStmt->addWhere(producerSuggestedOneWhere);
+              notyetExecuted.substract_inplace(producerSuggestedOneWhere.domain());
+              localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+              changed = true;
+            }
+          }
+          // Stmts that are still not executed anywhere, execute on the home locations of the accesses
+          depends.intersectRange_inplace(notyetExecuted);
+          for (auto dep : depends.getMaps()) {
+            dep = dep.intersectRange(notyetExecuted);
+            auto producerSpace = dep.getDomainSpace();
+            auto producerStmt = getScopStmtContext(producerSpace);
+
+            if (!producerStmt->isFieldAccess())
+              continue;
+            auto fvar = producerStmt->getFieldVariable();
+            auto home = fvar->getPrimaryPhysicalNode(); // { producer[domain] -> rank[cluster] }
+            auto suggested = home.applyDomain(producerStmt->getAccessed().reverse()).applyDomain(dep);
+            if (!suggested.isEmpty()) {
+              auto suggestOne = suggested.lexmin();
+              nonexecStmt->addWhere(suggestOne);
+              notyetExecuted.substract_inplace(suggestOne.domain());
+              localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
+              changed = true;
+            }
+          }
+        }
+
+#if 0
+        // Do the reverse; for SCoPStmts that call a function find at least one node where it is executed depending on its data input 
+        // TOOD: What if sink does not read anything?
         for (auto flow : dataFlow.getMaps()) {
           auto producerSpace = flow.getDomainSpace();
           auto consumerSpace = flow.getRangeSpace();
-
           auto producerStmt = getScopStmtContext(producerSpace);
           auto consumerStmt = getScopStmtContext(consumerSpace);
 
-          auto flowNotyetExecuted = flow.intersectDomain(notyetExecuted); // { producer[domain] -> consumer[domain] }
-          //auto flowConsumerWhere = flowNotyetExecuted.wrap().chainSubspace(consumerStmt->getWhere()); // { (producer[domain] -> consumer[domain]) -> consumer[cluster] }
-          auto producerSuggestedWhere = flowNotyetExecuted.applyRange(consumerStmt->getWhere()); // { producer[domain] -> [cluster] }
+          auto flowNotyetExecuted = flow.intersectRange(notyetExecuted); // { producer[domain] -> consumer[domain] }
+          auto consumerSuggestedWhere = flowNotyetExecuted.applyDomain(producerStmt->getWhere()).reverse();  // { consumer[domain] -> [cluster] }
 
-          if (!producerSuggestedWhere.isEmpty()) {
-            producerStmt->addWhere(producerSuggestedWhere);
-            notyetExecuted.substract_inplace(producerSuggestedWhere.domain());
+          if (!consumerSuggestedWhere.isEmpty()) {
+            // Chose just one
+            auto consumerSuggestedOneWhere = consumerSuggestedWhere.lexmin();
+            consumerStmt->addWhere(consumerSuggestedOneWhere);
+            notyetExecuted.substract_inplace(consumerSuggestedWhere.domain());
             localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
             changed = true;
           }
         }
+#endif
 
-        //tmp = overviewWhere();
-
-        //TODO: This fixpoint computation should be done on a higher level; on unbounded domains, this method might not even finish
-        // See UnionMap::transitiveClosure for how it should work
-        if (changed) {
-          //localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
-        } else {
+        if (!changed)
           break;
-        }
+
       }
 
       if (!notyetExecuted.isEmpty()) {
@@ -956,6 +1029,7 @@ namespace {
         // TODO: Such nodes might be sinks calling some function (printf); add some mechanism that executes them somewhere
         int a = 0;
       }
+
 
       /////////////////////////////////////////////////
 
@@ -1670,17 +1744,23 @@ namespace {
         auto funcCodegen = funcCtx->makeEntryCodegen();
         auto size = mapper->codegenSize(funcCodegen, currentNode);
 
-        Value *localbuf=nullptr;
+        Value *localbuf = nullptr;
         if (auto c = dyn_cast<ConstantInt>(size)) {
-         auto sizeConst =  c->getZExtValue();
-         if (sizeConst <= 128) { // Max elements we put on the stack
-           localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf"); 
-         }
+          auto sizeConst = c->getZExtValue();
+          if (sizeConst <= 128) { // Max elements we put on the stack
+            localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf");
+          }
         }
         if (!localbuf) {
           auto lbuf = pm->newLocalBuffer(fvar->getEltType(), mapper);
-          localbuf = funcCodegen.getIRBuilder().CreateLoad(lbuf->getGlobalVariable(), "localflowbuf");
+          //auto localbufptr = funcCodegen.getIRBuilder().CreateLoad(lbuf->getGlobalVariable(), "localflowbufptr");
+          //localbuf = funcCodegen.getIRBuilder().CreateLoad(localbufptr, "localflowbuf");
+          //localbuf = funcCodegen.getIRBuilder().CreateLoad(lbuf->getGlobalVariable(), "localflowbuf");
+
+          auto localbufobj = funcCodegen.getIRBuilder().CreateLoad(lbuf->getGlobalVariable(), "localbufobj");
+          localbuf = funcCodegen.callCombufLocalDataPtr(localbufobj);
         }
+        localbuf = funcCodegen.getIRBuilder().CreatePointerCast(localbuf, fvar->getEltPtrType());
 
         // write: { writeStmt[domain] }
         {

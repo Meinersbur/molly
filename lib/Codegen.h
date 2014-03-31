@@ -156,6 +156,17 @@ namespace molly {
     return irBuilder.GetInsertBlock();
     }
 
+
+    llvm::CallInst *callCombufLocalAlloc(llvm::Value *size, llvm::Value *eltSize);
+    llvm::CallInst *callCombufLocalFree(llvm::Value *combufLocal);
+    llvm::CallInst *callCombufLocalDataPtr(llvm::Value *combufLocal);
+
+    llvm::CallInst *callRuntimeCombufLocalAlloc(llvm::Value *size, llvm::Value *eltSize);
+    llvm::CallInst *callRuntimeCombufLocalFree(llvm::Value *combufvar);
+    llvm::CallInst *callRuntimeCombufLocalDataptr(llvm::Value *combufvar);
+
+
+
     llvm::CallInst *callLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalInit(llvm::Value *fvar,  llvm::Value *elts, llvm::Function *rankoffunc, llvm::Function *indexoffunc);
     llvm::CallInst *callRuntimeLocalIndexof(llvm::Value *fvar, llvm::ArrayRef<llvm::Value *> coords);
@@ -318,21 +329,29 @@ namespace molly {
     llvm::CallInst *callBeginMarker(StringRef str);
     llvm::CallInst *callEndMarker(StringRef str);
 
+#if 0
     void beginMark(StringRef str) {
+      if (!MollyMarkStmts)
+        return;
+
       auto bb = irBuilder.GetInsertBlock();
       irBuilder.SetInsertPoint(bb, bb->begin());
       callBeginMarker(str);
     }
 
     void endMark(StringRef str) {
+      if (!MollyMarkStmts)
+        return;
+
       auto bb = irBuilder.GetInsertBlock();
       auto term = bb->getTerminator();
       if (term)
         irBuilder.SetInsertPoint(bb, term);
       else
         irBuilder.SetInsertPoint(bb, bb->end());
-      callBeginMarker(str);
+      callEndMarker(str);
     }
+#endif
 
 
     void markBlock(StringRef str);

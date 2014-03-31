@@ -1,7 +1,8 @@
 #include "islpp_impl_common.h"
-#include "Ctx.h"
-#include "Space.h"
+#include "islpp/Ctx.h"
+#include "islpp/Space.h"
 #include "islpp/MapSpace.h"
+#include "islpp/Printer.h"
 
 using namespace isl;
 

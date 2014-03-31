@@ -3,15 +3,21 @@
 
 #include "islpp_common.h"
 #include "Islfwd.h"
-#include <assert.h>
-#include <isl/space.h> // enum isl_dim_type;
-
 #include "Ctx.h"
 #include "Multi.h"
 #include "Id.h"
 #include "Expr.h"
 #include "Obj.h" // isl::Obj<,> (baseclass of isl::Space)
 #include "Spacelike.h" // isl::Spacelike<> (baseclass of isl::Space)
+
+//#include <isl/ctx.h>
+//#include <isl/space.h>
+
+#include <assert.h>
+
+
+
+
 
 struct isl_space;
 

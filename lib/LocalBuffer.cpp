@@ -16,15 +16,21 @@ using namespace std;
 void molly::LocalBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassManager *pm, MollyFunctionProcessor *funcCtx) {
   auto &irBuilder = codegen.getIRBuilder();
 
- auto currentNode = funcCtx->getCurrentNodeCoordinate(); // { [] -> rank[cluster] }
- auto size = shape->codegenSize(codegen, currentNode); 
- auto eltTy = bufptr->getType()->getPointerElementType()->getPointerElementType();
+  auto desc = (Twine("local initbuf ") + bufptr->getName()).str();
+  codegen.callBeginMarker(desc);
 
- auto dl = codegen.getDataLayout();
- auto ptrSize = dl->getPointerSizeInBits();
- auto intTy = Type::getIntNTy(codegen.getLLVMContext(), ptrSize);
+  auto currentNode = funcCtx->getCurrentNodeCoordinate(); // { [] -> rank[cluster] }
+  auto size = shape->codegenSize(codegen, currentNode);
+  //auto eltTy = bufptr->getType()->getPointerElementType()->getPointerElementType();
 
- auto mallocCall = CallInst::CreateMalloc(irBuilder.GetInsertPoint(), intTy, eltTy, irBuilder.CreateZExtOrTrunc(size, intTy));
- irBuilder.SetInsertPoint(mallocCall->getParent(), mallocCall->getNextNode());
- irBuilder.CreateStore(mallocCall, bufptr);
+  auto dl = codegen.getDataLayout();
+  auto ptrSize = dl->getPointerSizeInBits();
+  auto intTy = Type::getIntNTy(codegen.getLLVMContext(), ptrSize);
+
+  auto allocCall = codegen.callCombufLocalAlloc(size, ConstantExpr::getSizeOf(eltTy));
+ // auto mallocCall = CallInst::CreateMalloc(irBuilder.GetInsertPoint(), intTy, eltTy, irBuilder.CreateZExtOrTrunc(size, intTy));
+  //irBuilder.SetInsertPoint(mallocCall->getParent(), mallocCall->getNextNode());
+  irBuilder.CreateStore(allocCall, bufptr);
+
+  codegen.callEndMarker(desc);
 }

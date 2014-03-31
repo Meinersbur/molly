@@ -66,12 +66,14 @@ extern "C" MOLLY_ATTR(process) void gemm() {
 
 MOLLY_ATTR(pure) void checkResult(double val, coord_t x, coord_t z) {
   double expected = 0;
-  if (x==0 && (z==0 || z==1))
+  if (x == 0 && z == 0)
     expected = 1;
+  if (x == 0 && z == 1)
+    expected = 2;
 
   if (val != expected) {
     if (__molly_isMaster())
-      std::cerr << "ERROR C[" << x << ','<< z << "]=" << val << " (" << expected << " expected)\n";
+      std::cerr << "ERROR C[" << x << ',' << z << "]=" << val << " (" << expected << " expected)\n";
   }
 }
 
@@ -81,7 +83,7 @@ extern "C" MOLLY_ATTR(process) double reduce() {
   for (coord_t x = 0; x < LX; x += 1)
     for (coord_t z = 0; z < LZ; z += 1) {
       auto val = C[x][z];
-      checkResult(val,x,z);
+      checkResult(val, x, z);
       sum += val;
     }
   return sum;

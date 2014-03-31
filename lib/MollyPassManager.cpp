@@ -818,6 +818,8 @@ namespace {
       auto entryBB = BasicBlock::Create(llvmContext, "entry", initFunc);
       auto ret = ReturnInst::Create(llvmContext, entryBB);
 
+      auto insertBB = SplitBlock(entryBB, ret, this); // Avoid messing up with MollyCodegen functions that insert stuff into the entry BB
+      assert(insertBB == ret->getParent());
       auto codegen = funcCtx->makeCodegen(ret);
       //auto translator = funcCtx->getCurrentNodeCoordinate(); /* { [] -> rank[cluster] } */
 
@@ -826,13 +828,14 @@ namespace {
         // Currently done in ctor
       }
 
+      for (auto locbuf : localbufs) {
+        locbuf->codegenInit(codegen, this, funcCtx);
+      }
+
       for (auto combuf : combufs) {
         combuf->codegenInit(codegen, this, funcCtx);
       }
 
-      for (auto locbuf : localbufs) {
-        locbuf->codegenInit(codegen, this, funcCtx);
-      }
     }
 
 
@@ -1156,14 +1159,19 @@ namespace {
       return combufs;
     }
 
+
     std::vector<LocalBuffer *> localbufs;
     LocalBuffer *newLocalBuffer(llvm::Type *eltTy, RectangularMapping *shape) override {
+      auto &llvmContext = getLLVMContext();
+      auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+
       auto eltPtrTy = PointerType::getUnqual(eltTy);
-      auto bufptr = new GlobalVariable(*module, eltPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(eltPtrTy), "localbuf");
-      auto result = LocalBuffer::create(bufptr, shape);
+      auto bufptr = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, nullptr, "localbuf");
+      auto result = LocalBuffer::create(bufptr, shape, eltTy);
       localbufs.push_back(result);
       return result;
     }
+
 
   private:
     llvm::Function* emitCombufInit(CommunicationBuffer *combuf) {

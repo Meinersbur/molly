@@ -44,7 +44,7 @@ namespace isl {
   protected:
     typedef Obj<D, S> ObjBaseTy;
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
   public:
     std::string _printed; // A cached toString() output to allow readable value inspection during debugging
 //    mutable bool _lastWasCopy; // set if the last operation was to make a (logical) copy of it; if the object is freed then this means that it would have been cheaper to move the object instead of making that copy
@@ -66,7 +66,7 @@ namespace isl {
       assert(obj); 
       StructTy *result = obj; 
       this->obj = nullptr; 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed.clear();
 //      this->_lastWasCopy = false;
 #endif
@@ -76,7 +76,7 @@ namespace isl {
     StructTy *takeOrNull() { 
       StructTy *result = obj; 
       this->obj = nullptr; 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed.clear();
 //      this->_lastWasCopy = false;
 #endif
@@ -91,7 +91,7 @@ namespace isl {
     StructTy *takeCopyOrNull() const {
       auto result = getDerived()->addref();
       assert(!result == !obj);
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
 //      this->_lastWasCopy = true;
 #endif
       return result;
@@ -99,14 +99,14 @@ namespace isl {
 
     StructTy *keep() const { 
       assert(obj); 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
 //      this->_lastWasCopy = false;
 #endif
       return obj;
     }
 
     StructTy *keepOrNull() const { 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
 //      this->_lastWasCopy = false;
 #endif
       return obj; 
@@ -115,7 +115,7 @@ namespace isl {
     StructTy **change() LLVM_LVALUE_FUNCTION { 
       if (!this)
         return nullptr;
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed = "<outdated>";
 //      this->_lastWasCopy = false;
       //TODO: need to run code after the obj has been updated, possibly by returning a proxy object that destructs after the expression
@@ -133,7 +133,7 @@ namespace isl {
       assert(obj); 
       getDerived()->release();
       this->obj = obj;
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       if (obj) {
         llvm::raw_string_ostream stream(this->_printed);
         getDerived()->print(stream);
@@ -145,7 +145,7 @@ namespace isl {
 #endif
     }
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
     void give(StructTy *obj, const std::string &printed) {
       assert(obj); 
       getDerived()->release(); 
@@ -172,7 +172,7 @@ namespace isl {
         getDerived()->release(); 
 
       this->obj = that.takeCopy(); 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed = that._printed;
 //      this->_lastWasCopy = false;
 #endif
@@ -184,7 +184,7 @@ namespace isl {
       if (this->obj)
         getDerived()->release(); 
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(that._printed);
 //      this->_lastWasCopy = false;
 #endif
@@ -199,7 +199,7 @@ namespace isl {
         getDerived()->release(); 
 
       this->obj = that.takeCopyOrNull(); 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       if (this->obj) 
         this->_printed = that._printed;
       else
@@ -214,7 +214,7 @@ namespace isl {
       if (this->obj)
         getDerived()->release(); 
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(that._printed);
 //      this->_lastWasCopy = false;
 #endif
@@ -227,7 +227,7 @@ namespace isl {
       if (this->obj)
         getDerived()->release();
       this->obj = obj;
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       if (obj) {
         llvm::raw_string_ostream stream(this->_printed);
         getDerived()->print(stream);
@@ -239,7 +239,7 @@ namespace isl {
     }
 
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
     void reset(StructTy *obj, const std::string &printed) {
       if (obj)
         getDerived()->release(); 
@@ -260,35 +260,35 @@ namespace isl {
 
   public:
     ~Obj() { 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
 //      if (obj && _lastWasCopy) {
         //llvm::dbgs() << "PerfWarn: isl::Obj " << _printed << " has been copied from, but not reused after that. Try to use _inplace methods or rvalue references.\n";
 //      }
 #endif
       getDerived()->release();
-#ifndef ISLPP_OBJPRINTED
+#ifndef NDEBUG
       this->obj = nullptr;
 #endif
     }
 
 
   protected:
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
     Obj() : _printed(), /*_lastWasCopy(false),*/ obj(nullptr) {  }
 #else
     Obj() : obj(nullptr) {  }
 #endif
 
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
     explicit Obj(ObjTy &&that) : _printed(std::move(that._printed)), /*_lastWasCopy(false),*/ obj(that.takeOrNull()) { }
     explicit Obj(const ObjTy &that) : _printed(that._printed), /*_lastWasCopy(false),*/ obj(that.takeCopyOrNull()) { }
 #else
     explicit Obj(ObjTy &&that) : obj(that.takeOrNull()) { }
-    explicit Obj(const ObjTy &that) : obj(that.keepOrNull()) { }
+    explicit Obj(const ObjTy &that) : obj(that.takeCopyOrNull()) { }
 #endif
 
     explicit Obj(StructTy *obj) : obj(obj) {
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       if (obj) {
         llvm::raw_string_ostream stream(_printed);
         getDerived()->print(stream);
@@ -316,7 +316,7 @@ namespace isl {
     // Necessary, since we have move ctor/assignment?
     static void swap(ObjTy &lhs, ObjTy &rhs) {
       std::swap(lhs.obj, rhs.obj);
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       std::swap(lhs._printed, rhs._printed);
 //      std::swap(lhs._lastWasCopy, rhs._lastWasCopy);
 #endif
@@ -325,7 +325,7 @@ namespace isl {
     ObjTy copy() const { 
       ObjTy result;
       result.obj_reset(*getDerived());
-#ifndef ISLPP_OBJPRINTED
+#ifdef ISLPP_OBJPRINTED
       // Should have been done implicitly anyway
 //      this->_lastWasCopy = true;
 #endif

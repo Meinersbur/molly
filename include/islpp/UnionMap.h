@@ -132,8 +132,11 @@ namespace isl {
     void gistDomain(UnionSet &&uset) { give(isl_union_map_gist_domain(take(), uset.take())); } 
     void gistRange(UnionSet &&uset) { give(isl_union_map_gist_range(take(), uset.take())); } 
 
-    void intersectDomain(UnionSet &&uset) { give(isl_union_map_intersect_domain(take(), uset.take())); } 
-    void intersectRange(UnionSet &&uset) { give(isl_union_map_intersect_range(take(), uset.take())); } 
+    ISLPP_EXSITU_ATTRS UnionMap intersectDomain(UnionSet uset) ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_intersect_domain(takeCopy(), uset.take())); }
+    void intersectDomain_inplace(UnionSet uset) { give(isl_union_map_intersect_domain(take(), uset.take())); } 
+    
+    ISLPP_EXSITU_ATTRS UnionMap intersectRange(UnionSet uset) ISLPP_EXSITU_FUNCTION { return UnionMap::enwrap(isl_union_map_intersect_range(takeCopy(), uset.take())); }
+    void intersectRange_inplace(UnionSet uset) { give(isl_union_map_intersect_range(take(), uset.take())); }
 
     void substractDomain(UnionSet &&uset) { give(isl_union_map_subtract_domain(take(), uset.take())); } 
     void substractRange(UnionSet &&uset) { give(isl_union_map_subtract_range(take(), uset.take())); } 

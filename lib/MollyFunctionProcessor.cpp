@@ -162,11 +162,9 @@ namespace {
 
       if (access.isRead()) {
         emitRead(access);
-      }
-      else if (access.isWrite()) {
+      } else if (access.isWrite()) {
         emitWrite(access);
-      }
-      else {
+      } else {
         llvm_unreachable("What is it?");
       }
 
@@ -379,8 +377,8 @@ namespace {
 
 
     MollyCodeGenerator makeEntryCodegen() override {
-     auto entry = &func->getEntryBlock();
-     return makeCodegen(entry->getTerminator());
+      auto entry = &func->getEntryBlock();
+      return makeCodegen(entry->getTerminator());
     }
 
 
@@ -483,7 +481,7 @@ namespace {
     void replaceValueAccess(llvm::Instruction *accInstr, int opNo) {
       auto accRead = Access::fromInstruction(accInstr, opNo, true, false);
       auto accWrite = Access::fromInstruction(accInstr, opNo, false, true);
-      auto reading = accRead.isValid() && accRead.isFieldAccess() ;
+      auto reading = accRead.isValid() && accRead.isFieldAccess();
       auto writing = accWrite.isValid() && accWrite.isFieldAccess();
 
       Access acc;
@@ -491,7 +489,7 @@ namespace {
         acc = accRead;
       } else if (writing) {
         acc = accWrite;
-      } else 
+      } else
         return;
 
       auto fvar = pm->getFieldVariable(acc.getFieldPtr());
@@ -510,7 +508,7 @@ namespace {
           loadInst->eraseFromParent();
           return;
         }
-    
+
       if (writing) {
         if (auto writtenValue = accWrite.getWrittenValueRegister()) {
           assert(!reading);
@@ -546,6 +544,30 @@ namespace {
     }
 
 
+    void replaceCombufLocalAlloc(IntrinsicInst *call) {
+      assert(call->getIntrinsicID() == Intrinsic::molly_combuf_local_alloc);
+      assert(call->getNumArgOperands() == 2);
+
+      auto codegen = makeCodegen(call);
+      auto result = codegen.callRuntimeCombufLocalAlloc(call->getArgOperand(0), call->getArgOperand(1));
+
+      call->replaceAllUsesWith(result);
+      result->eraseFromParent();
+    }
+
+
+    void replaceCombufLocalDataptr(IntrinsicInst *call) {
+      assert(call->getIntrinsicID() == Intrinsic::molly_combuf_local_dataptr);
+      assert(call->getNumArgOperands() == 1);
+
+      auto codegen = makeCodegen(call);
+      auto result = codegen.callRuntimeCombufLocalDataptr(call->getArgOperand(0));
+
+      call->replaceAllUsesWith(result);
+      call->eraseFromParent();
+    }
+
+
     void replacePtr(CallInst *call, Function *called) {
       assert(called->getIntrinsicID() == Intrinsic::molly_ptr);
       assert(call->getNumArgOperands() >= 2);
@@ -556,7 +578,7 @@ namespace {
       //  auto coord = call->getOperand(i+1);
       //}
 
-      SmallVector<std::pair<Instruction *,int>, 4> uses;
+      SmallVector<std::pair<Instruction *, int>, 4> uses;
       for (auto useIt = call->user_begin(), end = call->user_end(); useIt != end; ++useIt) {
         auto opno = useIt.getOperandNo();
         auto use = &useIt.getUse();
@@ -574,7 +596,7 @@ namespace {
         }
 
         // Make copy because replaceValueAccess() will erease the instr from the list
-        uses.push_back(make_pair(user,opno));
+        uses.push_back(make_pair(user, opno));
       }
 
       for (const auto &use : uses) {
@@ -603,8 +625,8 @@ namespace {
       auto funcTy = funcDecl->getFunctionType();
 
       DefaultIRBuilder irBuilder(call);
-     auto result = irBuilder.CreateCall2(funcDecl, divident, divisor);
-     call->replaceAllUsesWith(result); call->eraseFromParent();
+      auto result = irBuilder.CreateCall2(funcDecl, divident, divisor);
+      call->replaceAllUsesWith(result); call->eraseFromParent();
     }
 
 
@@ -705,8 +727,7 @@ namespace {
         auto curnode = getCurrentNodeCoordinate(); // { [] -> node[cluster] }
         // auto trans = coordsAffSpace.getDomainSpace().mapsToItself().createIdentityMultiAff();
         idx = layout->codegenLocalIndex(codegen, curnode, coordsAff);
-      }
-      else {
+      } else {
         // Field not known at runtime; call the virtual method
         codegen.callRuntimeLocalIndexof(fieldobj, coords);
       }
@@ -796,6 +817,9 @@ namespace {
       assert(isMollyIntrinsics(Intrinsic::molly_value_load));
       assert(isMollyIntrinsics(Intrinsic::molly_cluster_myrank));
       assert(isMollyIntrinsics(Intrinsic::molly_mod));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_local_alloc));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_local_free));
+      assert(isMollyIntrinsics(Intrinsic::molly_combuf_local_dataptr));
 
       lowerMollyIntrinsics();
 
@@ -890,6 +914,12 @@ namespace {
           //  break;
         case Intrinsic::molly_mod:
           replaceMod(cast<MollyModInst>(instr));
+          break;
+        case Intrinsic::molly_combuf_local_alloc:
+          replaceCombufLocalAlloc(cast<IntrinsicInst>(instr));
+          break;
+        case Intrinsic::molly_combuf_local_dataptr:
+          replaceCombufLocalDataptr(cast<IntrinsicInst>(instr));
           break;
         default:
           llvm_unreachable("Need to replace intrinsic!");
@@ -1087,7 +1117,7 @@ namespace {
 
     void isolateFieldAccesses() {
       // "Normalize" existing BasicBlocks
-     //auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
+      //auto ib = findOrRunAnalysis(&polly::IndependentBlocksID);
       auto ib = pm->findAnalysis(&polly::IndependentBlocksID, func);
       if (ib)
         removePass(ib); // Invalidate existing pass
@@ -1121,7 +1151,7 @@ namespace {
 
 
       //if (changed) {
-        // Also make new BBs independent
+      // Also make new BBs independent
       //  ib = findOrRunAnalysis(&polly::IndependentBlocksID);
       //}
 

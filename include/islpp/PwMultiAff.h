@@ -169,6 +169,8 @@ namespace isl {
     ISLPP_EXSITU_ATTRS PwMultiAff applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION{ return pma.pullback(*this); }
     ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION;
 
+    ISLPP_EXSITU_ATTRS Map applyDomain(Map map) ISLPP_EXSITU_FUNCTION;
+
     bool foreachPiece(const std::function<bool(Set &&, MultiAff &&)> &) const;
     //bool foreachPiece(const std::function<void(Set ,MultiAff , bool &stop)> &) const;
     unsigned nPieces() const { unsigned result = 0;  foreachPiece([&result](Set&&, MultiAff&&)->bool { result += 1; return true; }); return result; }

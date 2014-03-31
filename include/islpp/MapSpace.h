@@ -35,7 +35,7 @@ namespace isl {
     ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION{ return *this; }
     ISLPP_PROJECTION_ATTRS MapSpace getSpacelike() ISLPP_PROJECTION_FUNCTION{ return *this; }
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ isl_space_dim(keep(), type); }
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return isl_space_dim(keep(), type); }
 #pragma endregion
 
   public:

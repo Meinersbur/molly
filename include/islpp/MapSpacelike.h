@@ -21,7 +21,7 @@ namespace isl {
     //ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION;
     //ISLPP_PROJECTION_ATTRS Space/MapSpace/LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION;
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return self().getSpacelike().dim(type); }
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return derived().getSpacelike().dim(type); }
 #pragma endregion
 
   public:

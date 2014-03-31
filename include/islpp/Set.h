@@ -10,6 +10,7 @@
 #include "Spacelike.h"
 #include "Ctx.h"
 #include "BasicSet.h"
+#include "SetSpacelike.h"
 
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/lp.h> // enum isl_lp_result;
@@ -53,7 +54,7 @@ namespace isl {
 
 
   // or Pw<BasicSet>
-  class Set : public Obj<Set, isl_set>, public Spacelike<Set> {
+  class Set : public Obj<Set, isl_set>, public SetSpacelike<Set> {
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
   protected:

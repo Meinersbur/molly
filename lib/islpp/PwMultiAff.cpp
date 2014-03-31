@@ -272,6 +272,11 @@ void isl::Pw<MultiAff>::dump() const {
 }
 
 
-ISLPP_PROJECTION_ATTRS Set isl::Pw<MultiAff>::range() ISLPP_PROJECTION_FUNCTION{
+ISLPP_PROJECTION_ATTRS Set isl::Pw<MultiAff>::range() ISLPP_PROJECTION_FUNCTION {
   return toMap().range();
+}
+
+
+ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyDomain(Map map) ISLPP_EXSITU_FUNCTION {
+  return toMap().applyDomain(map);
 }

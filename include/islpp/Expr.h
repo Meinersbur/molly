@@ -7,6 +7,7 @@
 
 #include "islpp_common.h"
 #include "Obj.h"
+#include <isl/ctx.h>
 #include <isl/space.h>
 
 

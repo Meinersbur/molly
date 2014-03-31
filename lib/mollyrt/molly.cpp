@@ -689,6 +689,7 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   communicator = new MPICommunicator();
   communicator->init(nClusterDims, clusterShape, clusterPeriodic, argc, argv);
   //Communicator::init(argc, argv);
+  //waitToAttach();
   __molly_generated_init();
 
   // Molly puts combuf and local storage initialization here
@@ -966,6 +967,19 @@ extern "C" void __molly_end_marker_coord(const char *str, int64_t count, int64_t
   }
 
   MOLLY_DEBUG("END   " << str << " (" << os.str() << ")");
+}
+
+extern "C" void *__molly_combuf_local_alloc(int64_t count, int64_t eltSize) { MOLLY_DEBUG_FUNCTION_ARGS(count, eltSize)
+  return malloc(count*eltSize);
+}
+
+extern "C" void __moll_combuf_local_free(void *combuf_local) { MOLLY_DEBUG_FUNCTION_ARGS(combuf_local)
+  free(combuf_local);
+}
+
+extern "C" void *__molly_combuf_local_dataptr(void *combuf_local) { MOLLY_DEBUG_FUNCTION_ARGS(combuf_local)
+  assert(combuf_local);
+  return combuf_local;
 }
 
 #pragma endregion

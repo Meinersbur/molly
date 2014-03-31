@@ -75,3 +75,8 @@ UnionMap UnionSet::gt(const UnionSet &uset2) const {
 UnionMap UnionSet::ge(const UnionSet &uset2) const {
   return UnionMap::enwrap(isl_union_set_lex_ge_union_set(takeCopy(), uset2.takeCopy()));
 }
+
+
+void isl::Union<Set>::dump() const {
+  isl_union_set_dump(keep());
+}
