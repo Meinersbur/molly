@@ -913,9 +913,10 @@ namespace {
 
       while (true) {
         if (notyetExecuted.isEmpty()) break;
-        bool changed = false;
+        bool outerChanged = false;
 
         while (true) {
+          bool changed = false;
           // "Dependence computes": Execute statements that computes value preferably on the node where the value is needed again
           for (auto flow : dataFlow.getMaps()) {
             auto producerSpace = flow.getDomainSpace();
@@ -933,6 +934,7 @@ namespace {
               notyetExecuted.substract_inplace(producerSuggestedWhere.domain());
               localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
               changed = true;
+              outerChanged = true;
             }
           }
 
@@ -968,7 +970,7 @@ namespace {
               nonexecStmt->addWhere(producerSuggestedOneWhere);
               notyetExecuted.substract_inplace(producerSuggestedOneWhere.domain());
               localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
-              changed = true;
+              outerChanged = true;
             }
           }
           // Stmts that are still not executed anywhere, execute on the home locations of the accesses
@@ -988,7 +990,7 @@ namespace {
               nonexecStmt->addWhere(suggestOne);
               notyetExecuted.substract_inplace(suggestOne.domain());
               localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
-              changed = true;
+              outerChanged = true;
             }
           }
         }
@@ -1016,7 +1018,7 @@ namespace {
         }
 #endif
 
-        if (!changed)
+        if (!outerChanged)
           break;
 
       }
@@ -1748,7 +1750,7 @@ namespace {
         if (auto c = dyn_cast<ConstantInt>(size)) {
           auto sizeConst = c->getZExtValue();
           if (sizeConst <= 128) { // Max elements we put on the stack
-            localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf");
+            //localbuf = funcCodegen.allocStackSpace(fty->getEltType(), size, "localflowbuf");
           }
         }
         if (!localbuf) {

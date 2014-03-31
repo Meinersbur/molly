@@ -552,7 +552,7 @@ namespace {
       auto result = codegen.callRuntimeCombufLocalAlloc(call->getArgOperand(0), call->getArgOperand(1));
 
       call->replaceAllUsesWith(result);
-      result->eraseFromParent();
+      call->eraseFromParent();
     }
 
 

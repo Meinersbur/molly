@@ -1166,7 +1166,7 @@ namespace {
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
       auto eltPtrTy = PointerType::getUnqual(eltTy);
-      auto bufptr = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, nullptr, "localbuf");
+      auto bufptr = new GlobalVariable(*module, voidPtrTy, false, GlobalValue::PrivateLinkage, Constant::getNullValue(voidPtrTy), "localbuf");
       auto result = LocalBuffer::create(bufptr, shape, eltTy);
       localbufs.push_back(result);
       return result;

@@ -1406,7 +1406,7 @@ llvm::CallInst * molly::MollyCodeGenerator::callRuntimeCombufLocalDataptr(llvm::
   auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
 
   Type *tys[] = { voidPtrTy };
-  auto funcDecl = getRuntimeFunc("__molly_combuf_local_dataptr", voidTy, tys);
+  auto funcDecl = getRuntimeFunc("__molly_combuf_local_dataptr", voidPtrTy, tys);
   return irBuilder.CreateCall(funcDecl, combufvar);
 }
 
