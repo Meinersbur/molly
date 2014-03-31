@@ -16,28 +16,12 @@
 #include <assert.h>
 
 
-
-
-
 struct isl_space;
 
 namespace llvm {
   class raw_ostream;
 } // namespace llvm
 
-namespace isl {
-  class Ctx;
-  class Id;
-  class Set;
-  class BasicSet;
-  class Map;
-  class BasicMap;
-  class Int;
-  class Point;
-  class Constraint;
-  class AstBuild;
-  class Space;
-} // namespace isl
 
 
 namespace isl {
@@ -113,9 +97,9 @@ namespace isl {
 
 
 #pragma region Creational
-    static Space createMapSpace(const Ctx *ctx, unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
-    static Space createParamsSpace(const Ctx *ctx, unsigned nparam);
-    static Space createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
+    static MapSpace createMapSpace(const Ctx *ctx, unsigned nparam/*params*/, unsigned n_in/*domain*/, unsigned n_out/*range*/);
+    static ParamSpace createParamsSpace(const Ctx *ctx, unsigned nparam);
+    static SetSpace createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
 
     static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
     static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { return createMapFromDomainAndRange(domain.move(), range.copy()); }
@@ -132,13 +116,13 @@ namespace isl {
       compatibilize(self, range);
       return Space::enwrap(isl_space_map_from_domain_and_range(self.take(), range.take()));
     }
-    ISLPP_EXSITU_ATTRS Space mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION { return Space::enwrap(isl_space_map_from_domain_and_range(takeCopy(), isl_space_align_params(isl_space_set_alloc(isl_space_get_ctx(keep()), 0, nOut), getSpace().take()))); }
-    ISLPP_EXSITU_ATTRS Space mapsToItself() ISLPP_EXSITU_FUNCTION { assert(isSet()); return Space::createMapFromDomainAndRange(*this, *this); }
+    ISLPP_EXSITU_ATTRS MapSpace mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS MapSpace mapsToItself() ISLPP_EXSITU_FUNCTION;
 
       // If this is a param space
-    Space createSetSpace(count_t nDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_set_alloc(getCtx()->keep(), 0, nDims), takeCopy())); }
-    Space createMapSpace(count_t nDomainDims, count_t nRangeDims) const { assert(isParamsSpace()); return Space::enwrap(isl_space_align_params(isl_space_alloc(getCtx()->keep(), 0, nDomainDims, nRangeDims), takeCopy())); }
-    ISLPP_EXSITU_ATTRS Space createMapSpace(count_t nDomainDims, Space rangeSpace) ISLPP_EXSITU_FUNCTION;
+    SetSpace createSetSpace(count_t nDims) const;
+    MapSpace createMapSpace(count_t nDomainDims, count_t nRangeDims) const;
+    ISLPP_EXSITU_ATTRS MapSpace createMapSpace(count_t nDomainDims, Space rangeSpace) ISLPP_EXSITU_FUNCTION;
 #pragma endregion
 
 
@@ -282,9 +266,7 @@ namespace isl {
     }
 
 
-    bool matchesMapSpace(const Space &domainSpace, const Space &rangeSpace) const {
-      return isMap() && isl::matchesSpace(domain(), domainSpace) && isl::matchesSpace(range(), rangeSpace);
-    }
+    bool matchesMapSpace(Space domainSpace, Space rangeSpace) const;
 
 
     bool matchesMapSpace(const Space &that)  const {
@@ -329,28 +311,14 @@ namespace isl {
     Space unwrap() && { return Space::enwrap(isl_space_unwrap(take())); }
 #endif
 
-    Space domain() const { return Space::enwrap(isl_space_domain(takeCopy())); }
-    Space range() const { return Space::enwrap(isl_space_range(takeCopy())); }
-    Space params() const { return Space::enwrap(isl_space_params(takeCopy())); }
-    Space extractTuple(isl_dim_type type) const {
-      switch (type) {
-      case isl_dim_param:
-        return params(); //TODO: Does is return a set space?
-      case isl_dim_in:
-        return domain();
-      case isl_dim_out:
-        return range();
-      case isl_dim_all:
-        return copy();
-      default:
-        llvm_unreachable("Invalid dim type");
-        return Space();
-      }
-    }
+    SetSpace domain() const;
+    SetSpace range() const;
+    ParamSpace params() const;
+    Space extractTuple(isl_dim_type type) const;
 
-    Space getParamsSpace() const { return Space::enwrap(isl_space_params(takeCopy())); }
-    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(takeCopy())); }
-    Space getRangeSpace() const { return Space::enwrap(isl_space_range(takeCopy())); }
+    ParamSpace getParamsSpace() const;
+    SetSpace getDomainSpace() const;
+    SetSpace getRangeSpace() const;
 
     Space fromDomain() ISLPP_EXSITU_FUNCTION{ return Space::enwrap(isl_space_from_domain(takeCopy())); }
     Space fromRange() ISLPP_EXSITU_FUNCTION{ return Space::enwrap(isl_space_from_range(takeCopy())); }
@@ -381,8 +349,8 @@ namespace isl {
     LocalSpace asLocalSpace() const;
 
     ISLPP_DEPRECATED bool isNested(isl_dim_type type) const { return extractTuple(type).isWrapping(); }
-    ISLPP_DEPRECATED bool isNestedDomain() const { assert(isMapSpace()); return domain().isWrapping(); }
-    ISLPP_DEPRECATED bool isNestedRange() const { assert(isMapSpace()); return range().isWrapping(); }
+    ISLPP_DEPRECATED bool isNestedDomain() const;
+    ISLPP_DEPRECATED bool isNestedRange() const;
     ISLPP_DEPRECATED bool isNestedSet() const { assert(isSetSpace()); return isWrapping(); }
     //ISLPP_DEPRECATED Space getNested(isl_dim_type type) const { return isNested(type) ? extractTuple(type).unwrap() : Space(); }
     //ISLPP_DEPRECATED Space getNestedDomain() const { assert(isMapSpace()); return isNestedDomain() ? domain() : Space(); }
@@ -394,16 +362,7 @@ namespace isl {
 
     /// Set the nested spaces
     //ISLPP_DEPRECATED void setNested_inplace(isl_dim_type type, const Space &nest) ISLPP_INPLACE_FUNCTION { obj_give(setNested(type,nest)); } 
-    ISLPP_DEPRECATED Space setNested(isl_dim_type type, const Space &nest) const {
-      if (isSetSpace() && type == isl_dim_set)
-        return nest;
-      else if (isMapSpace() && type == isl_dim_in)
-        return Space::createMapFromDomainAndRange(nest, range());
-      else if (isMapSpace() && type == isl_dim_out)
-        return Space::createMapFromDomainAndRange(domain(), nest);
-      else
-        llvm_unreachable("unsupported type");
-    }
+    ISLPP_DEPRECATED Space setNested(isl_dim_type type, const Space &nest) const;
     //ISLPP_DEPRECATED void setInNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION { assert(isMapSpace()); setNested_inplace(isl_dim_in, nest); }
     //ISLPP_DEPRECATED Space setInNested(const Space &nest) const { assert(isMapSpace()); return setNested(isl_dim_in,nest); }
     //ISLPP_DEPRECATED void setOutNested_inplace(const Space &nest) ISLPP_INPLACE_FUNCTION {assert(isMapSpace()); setNested_inplace(isl_dim_out, nest); }
@@ -476,17 +435,7 @@ namespace isl {
     Space findNthSubspace(isl_dim_type type, unsigned pos) const { DimRange dummy; return findNthSubspace(type, pos, dummy); }
 
     /// Remove nesting and dim ids from non-param dimensions
-    ISLPP_EXSITU_ATTRS Space untyped() ISLPP_EXSITU_FUNCTION{
-      if (isParamsSpace())
-      return *this;
-
-      if (isSetSpace()) {
-        return params().createSetSpace(getSetDimCount());
-      }
-
-      assert(isMapSpace());
-      return params().createMapSpace(getInDimCount(), getOutDimCount());
-    }
+    ISLPP_EXSITU_ATTRS Space untyped() ISLPP_EXSITU_FUNCTION;
 
       ISLPP_EXSITU_ATTRS Space selfMap() ISLPP_EXSITU_FUNCTION{
       auto norm = normalizeWrapped();

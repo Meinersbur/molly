@@ -11,6 +11,7 @@
 #include <isl/multi.h>
 #include <llvm/Support/ErrorHandling.h>
 #include "Obj.h"
+#include "ParamSpace.h"
 
 // isl/aff_type.h
 struct isl_multi_pw_aff;

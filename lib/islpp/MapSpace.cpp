@@ -6,7 +6,7 @@
 
 using namespace isl;
 
-
+#if 0
 void MapSpace::print(llvm::raw_ostream &out) const {
   auto printer = isl::Printer::createToStr(getCtx());
   printer.print(*this);
@@ -27,3 +27,4 @@ ISLPP_PROJECTION_ATTRS Ctx *MapSpace::getCtx() ISLPP_PROJECTION_FUNCTION {
 MapSpace::operator Space() const { 
   return Space::enwrap(takeCopy());
 }
+#endif

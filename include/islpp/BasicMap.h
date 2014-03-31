@@ -16,6 +16,8 @@
 #include "Mat.h"
 #include "MultiAff.h"
 #include "Constraint.h"
+#include "MapSpace.h"
+#include "SetSpace.h"
 
 #include <isl/map.h>
 #include <isl/constraint.h>
@@ -36,7 +38,7 @@ namespace isl {
 
 
 namespace isl {
-  class BasicMap : public Obj<BasicMap, struct isl_basic_map>, public Spacelike<BasicMap> {
+  class BasicMap : public Obj<BasicMap, struct isl_basic_map>, public SetSpacelike<BasicMap>, public Spacelike<BasicMap> {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
@@ -62,7 +64,7 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_basic_map_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION { return MapSpace::enwrap(isl_basic_map_get_space(keep())); }
     ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION { return getLocalSpace(); }
 
     ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
@@ -290,8 +292,8 @@ namespace isl {
     void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
     BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
 
-    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_basic_map_get_space(takeCopy())) ); }
-    Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_basic_map_get_space(takeCopy())) ); }
+    SetSpace getDomainSpace() const { return SetSpace::enwrap(isl_space_domain(isl_basic_map_get_space(takeCopy())) ); }
+    SetSpace getRangeSpace() const { return SetSpace::enwrap(isl_space_range(isl_basic_map_get_space(takeCopy())) ); }
 
     Map domainProduct(const Map &that) const;
     Map rangeProduct(const Map &that) const;

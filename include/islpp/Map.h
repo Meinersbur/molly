@@ -18,6 +18,8 @@
 #include "Spacelike.h" // class Spacelike (baseclass of Map)
 #include "MultiPwAff.h"
 #include "MapSpacelike.h"
+#include "MapSpace.h"
+#include "ParamSpace.h"
 
 #include <isl/map.h>
 #include <isl/deprecated/map_int.h>
@@ -81,7 +83,7 @@ namespace isl {
 
 
   // Or Pw<BasicMap>
-  class Map : public Obj<Map,isl_map>, public MapSpacelike<Map> {
+  class Map : public Obj<Map,isl_map>, public Spacelike<Map>, public MapSpacelike<Map> {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
@@ -106,8 +108,8 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_map_get_space(keep())); }
-    ISLPP_PROJECTION_ATTRS Space getSpacelike() ISLPP_PROJECTION_FUNCTION { return getSpace(); }
+    ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION { return MapSpace::enwrap(isl_map_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS MapSpace getSpacelike() ISLPP_PROJECTION_FUNCTION{ return getSpace(); }
 
     ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
     ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return false; }
@@ -221,10 +223,10 @@ namespace isl {
 
     //Space getSpace() const { return Space::wrap(isl_map_get_space(keep())); }
     //Space getSpacelike() const { return getSpace(); }
-    Space getParamsSpace() const { return Space::enwrap(isl_space_params(isl_map_get_space(keep()))); }
-    Space getDomainSpace() const { return Space::enwrap(isl_space_domain(isl_map_get_space(keep()))); }
-    Space getRangeSpace() const { return Space::enwrap(isl_space_range(isl_map_get_space(keep()))); }
-    Space getTupleSpace(isl_dim_type type ) const {
+    ParamSpace getParamsSpace() const { return ParamSpace::enwrap(isl_space_params(isl_map_get_space(keep()))); }
+    SetSpace getDomainSpace() const { return SetSpace::enwrap(isl_space_domain(isl_map_get_space(keep()))); }
+    SetSpace getRangeSpace() const { return SetSpace::enwrap(isl_space_range(isl_map_get_space(keep()))); }
+    Space getTupleSpace(isl_dim_type type) const {
       switch (type) {
       case isl_dim_param:
         return getParamsSpace();

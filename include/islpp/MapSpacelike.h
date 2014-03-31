@@ -8,7 +8,7 @@
 namespace isl {
 
   template <typename D>
-  class MapSpacelike : public Spacelike<Map>/*TODO: get rid of this*/ {
+  class MapSpacelike /*: public Spacelike<Map>*/ {
     typedef D SpaceTy;
 
   private:
@@ -21,14 +21,14 @@ namespace isl {
     //ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION;
     //ISLPP_PROJECTION_ATTRS Space/MapSpace/LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION;
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return derived().getSpacelike().dim(type); }
+    //ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return derived().getSpacelike().dim(type); }
 #pragma endregion
 
   public:
-    ISLPP_PROJECTION_ATTRS count_t getParamDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_param); }
-    ISLPP_PROJECTION_ATTRS count_t getInDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_in); }
+    //ISLPP_PROJECTION_ATTRS count_t getParamDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_param); }
+    //ISLPP_PROJECTION_ATTRS count_t getInDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_in); }
     ISLPP_PROJECTION_ATTRS count_t getDomainDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_in); }
-    ISLPP_PROJECTION_ATTRS count_t getOutDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_out); }
+    //ISLPP_PROJECTION_ATTRS count_t getOutDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_out); }
     ISLPP_PROJECTION_ATTRS count_t getRangeDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_out); }
 
 

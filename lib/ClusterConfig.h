@@ -14,6 +14,7 @@
 #include "islpp/Islfwd.h"
 #include "islpp/Id.h"
 #include "islpp/BasicSet.h"
+#include "islpp/ParamSpace.h"
 #include "molly/Mollyfwd.h"
 
 

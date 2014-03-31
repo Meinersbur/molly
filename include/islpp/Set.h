@@ -11,6 +11,8 @@
 #include "Ctx.h"
 #include "BasicSet.h"
 #include "SetSpacelike.h"
+#include "SetSpace.h" // class SetSpace
+#include "ParamSpace.h"
 
 #include <isl/space.h> // enum isl_dim_type;
 #include <isl/lp.h> // enum isl_lp_result;
@@ -54,7 +56,7 @@ namespace isl {
 
 
   // or Pw<BasicSet>
-  class Set : public Obj<Set, isl_set>, public SetSpacelike<Set> {
+  class Set : public Obj<Set, isl_set>, public Spacelike<Set>, public SetSpacelike<Set> {
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
   protected:
@@ -77,8 +79,9 @@ namespace isl {
 
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
+    friend class isl::SetSpacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_set_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS SetSpace getSpace() ISLPP_PROJECTION_FUNCTION { return SetSpace::enwrap(isl_set_get_space(keep())); }
     ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION { return getSpace(); }
 
     ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
@@ -113,7 +116,7 @@ namespace isl {
 #pragma endregion
 
 
-    Space getParamsSpace() const { return getSpace().getParamsSpace(); }
+    ParamSpace getParamsSpace() const { return getSpace().getParamsSpace(); }
 
     bool hasTupleId() const { return isl_set_has_tuple_id(keep()); }
     const char *getTupleName() const {  return isl_set_get_tuple_name(keep()); }

@@ -47,6 +47,7 @@ const LocalSpace &LocalSpace::operator=(Space that) {
 }
 
 
+
 void LocalSpace::dump() const {
   isl_local_space_dump(keep());
 }

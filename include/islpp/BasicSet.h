@@ -16,6 +16,8 @@
 #include <functional>
 #include "Islfwd.h"
 #include <isl/deprecated/set_int.h>
+#include "SetSpacelike.h"
+#include "SetSpace.h"
 
 struct isl_basic_set;
 struct isl_constraint;
@@ -28,7 +30,7 @@ namespace llvm {
 namespace isl {
   typedef int (*ConstraintCallback)(isl_constraint *c, void *user);
 
-  class BasicSet : public Obj<BasicSet,isl_basic_set>, public Spacelike<BasicSet> {
+  class BasicSet : public Obj<BasicSet,isl_basic_set>, public SetSpacelike<BasicSet>, public Spacelike<BasicSet> {
 
 #pragma region isl::Obj
     friend class isl::Obj<ObjTy, StructTy>;
@@ -55,7 +57,7 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS Space getSpace() ISLPP_PROJECTION_FUNCTION { return Space::enwrap(isl_basic_set_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS SetSpace getSpace() ISLPP_PROJECTION_FUNCTION { return SetSpace::enwrap(isl_basic_set_get_space(keep())); }
     ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION { return getLocalSpace(); }
 
     ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }

@@ -9,7 +9,7 @@
 namespace isl {
 
   template <typename D>
-  class SetSpacelike : public Spacelike<Set>/*TODO: get rid of this*/ {
+  class SetSpacelike /*: public Spacelike<D>*/ {
     typedef D SpaceTy;
 
   private:
@@ -18,18 +18,38 @@ namespace isl {
     SpaceTy &derived() { return *static_cast<D*>(this); }
     const SpaceTy &derived() const { return *static_cast<const D*>(this); }
 
-#pragma region To be implementend by Derived
-    //ISLPP_PROJECTION_ATTRS SetSpace getSpace() ISLPP_PROJECTION_FUNCTION;
-    //ISLPP_PROJECTION_ATTRS Space/SetSpace/LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION;
-
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return derived().getSpacelike().dim(type); }
-#pragma endregion
 
   public:
-    ISLPP_PROJECTION_ATTRS count_t getParamDimCount() ISLPP_PROJECTION_FUNCTION{ return derived().dim(isl_dim_param); }
-    ISLPP_PROJECTION_ATTRS count_t getDimCount() ISLPP_PROJECTION_FUNCTION { return derived().dim(isl_dim_set); }
-    }; // class SetSpacelike
+    //ISLPP_PROJECTION_ATTRS count_t getParamDimCount() ISLPP_PROJECTION_FUNCTION{ return derived().dim(isl_dim_param); }
+    ISLPP_PROJECTION_ATTRS count_t getDimCount() ISLPP_PROJECTION_FUNCTION{ return derived().dim(isl_dim_set); }
 
-  } // namespace molly
+    ISLPP_PROJECTION_ATTRS Id getTupleId() ISLPP_PROJECTION_FUNCTION{ return derived().getTupleId(isl_dim_set); }
+
+    ISLPP_PROJECTION_ATTRS const char* getTupleName() ISLPP_PROJECTION_FUNCTION{ return derived().getTupleName(isl_dim_set); }
+
+
+    ISLPP_EXSITU_ATTRS SpaceTy setTupleId(Id id) ISLPP_EXSITU_FUNCTION{ auto result = derived().copy(); result.setTupleId_inplace(id); return result; }
+    ISLPP_INPLACE_ATTRS void setTupleId_inplace(Id id) ISLPP_INPLACE_FUNCTION{ derived().setTupleId_inplace(isl_dim_set, std::move(id)); }
+    ISLPP_CONSUME_ATTRS SpaceTy setTupleId_consume(Id id) ISLPP_CONSUME_FUNCTION{ setTupleId_inplace(id); return move(*this); }
+
+
+
+    //ISLPP_PROJECTION_ATTRS Id getParamDimId(pos_t pos) ISLPP_PROJECTION_FUNCTION{ return derived().getDimId(isl_dim_param, pos); }
+
+#if 0
+    ISLPP_INPLACE_ATTRS Dim addParamDim_inplace() ISLPP_INPLACE_FUNCTION{ return addDim_inplace(isl_dim_param); }
+      ISLPP_INPLACE_ATTRS Dim addParamDim_inplace(Id id) ISLPP_INPLACE_FUNCTION{
+      assert(findDimById(isl_dim_param, id) == -1);
+      auto result = derived().addDim_inplace(isl_dim_param);
+      derived().setDimId_inplace(result.getType(), result.getPos(), id.move());
+      return result;
+    }
+#endif
+
+    //ISLPP_EXSITU_ATTRS SpaceTy addDims(count_t count) ISLPP_EXSITU_FUNCTION{ return derived().addDims(isl_dim_set, count); }
+    //ISLPP_INPLACE_ATTRS DimRange addDims_inplace(count_t count) ISLPP_INPLACE_FUNCTION{ return derived().addDims_inplace(isl_dim_set, count); }
+  }; // class SetSpacelike
+
+} // namespace molly
 
 #endif /* ISLPP_SETSPACELIKE_H */

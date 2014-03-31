@@ -6,7 +6,7 @@
 
 using namespace isl;
 
-
+#if 0
 void SetSpace::print(llvm::raw_ostream &out) const {
   auto printer = isl::Printer::createToStr(getCtx());
   printer.print(*this);
@@ -22,8 +22,8 @@ void SetSpace::dump() const {
 ISLPP_PROJECTION_ATTRS Ctx *SetSpace::getCtx() ISLPP_PROJECTION_FUNCTION{
   return Ctx::enwrap(isl_space_get_ctx(keep()));
 }
+#endif
 
-
-SetSpace::operator Space() const {
-  return Space::enwrap(takeCopy());
-}
+//SetSpace::operator Space() const {
+//  return Space::enwrap(takeCopy());
+//}

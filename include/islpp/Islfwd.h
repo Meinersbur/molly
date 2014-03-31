@@ -56,6 +56,15 @@ namespace isl {
   // Space.h
   class Space;
 
+  // ParamSpace.h
+  class ParamSpace;
+
+  // SetSpace.h
+  class SetSpace;
+
+  // MapSpace.h
+  class MapSpace;
+
   // LocalSpace.h
   class LocalSpace;
 

@@ -5,6 +5,7 @@
 #include "Multi.h"
 #include "Pw.h"
 #include "Spacelike.h"
+#include "ParamSpace.h"
 
 #include <isl/aff.h>
 #include <isl/multi.h>

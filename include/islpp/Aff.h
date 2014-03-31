@@ -12,6 +12,7 @@
 #include "Space.h"
 #include "LocalSpace.h"
 #include "Int.h"
+#include "SetSpace.h"
 #include <isl/deprecated/aff_int.h>
 
 struct isl_aff;
