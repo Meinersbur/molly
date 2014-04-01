@@ -106,6 +106,7 @@ namespace molly {
 
 
 extern "C" void waitToAttach() {
+#ifndef NDEBUG
   static int i = 0;
   if (i)
     return; // Already attached
@@ -124,6 +125,7 @@ extern "C" void waitToAttach() {
 #endif
     //std::cerr << '.';
   }
+#endif /* NEBUG */
 }
 
 
@@ -683,7 +685,9 @@ extern "C" int __molly_main(int argc, char *argv[], char *envp[], uint64_t nClus
   MOLLY_DEBUG_FUNCTION_ARGS(argc, argv, nClusterDims, clusterShape, clusterPeriodic)
     assert(&__molly_orig_main && "Must be compiled using mollycc");
 
+#ifndef NDEBUG
   std::cerr << "## __molly_main #############################################################################\n";
+#endif 
 
   //TODO: We could change the communicator dynamically using argc,argv or getenv()
   communicator = new MPICommunicator();
@@ -936,6 +940,7 @@ extern "C" void __molly_begin_marker(const char *str) {
   MOLLY_DEBUG("BEGIN " << str);
 }
 extern "C" void __molly_begin_marker_coord(const char *str, int64_t count, int64_t *vals) {
+#ifndef NDEBUG
   if (std::string(str) == std::string("flow local write 'body3_fstore0'source")) {
     assert(count >= 2);
     if (vals[0] == 2 && vals[1] == 0) {
@@ -943,7 +948,6 @@ extern "C" void __molly_begin_marker_coord(const char *str, int64_t count, int64
       int a = 0;
     }
   }
-
 
   std::ostringstream os;
   for (auto i = count - count; i < count; i += 1) {
@@ -953,12 +957,14 @@ extern "C" void __molly_begin_marker_coord(const char *str, int64_t count, int64
   }
 
   MOLLY_DEBUG("BEGIN " << str << " (" << os.str() << ")");
+#endif /* NDEBUG */
 }
 
 extern "C" void __molly_end_marker(const char *str) {
   MOLLY_DEBUG("END   " << str);
 }
 extern "C" void __molly_end_marker_coord(const char *str, int64_t count, int64_t *vals) {
+#ifndef NDEBUG
   std::ostringstream os;
   for (auto i = count - count; i < count; i += 1) {
     if (i>0)
@@ -967,6 +973,7 @@ extern "C" void __molly_end_marker_coord(const char *str, int64_t count, int64_t
   }
 
   MOLLY_DEBUG("END   " << str << " (" << os.str() << ")");
+#endif /* NDEBUG */
 }
 
 extern "C" void *__molly_combuf_local_alloc(int64_t count, int64_t eltSize) { MOLLY_DEBUG_FUNCTION_ARGS(count, eltSize)

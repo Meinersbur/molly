@@ -87,7 +87,7 @@ endmacro(add_molly_executable)
 
 
 option(MOLLYRT_DEBUG "Compile Debug version of MollyRT" ON)
-if (MOLLYCC_DEBUG)
+if (MOLLYRT_DEBUG)
 message("MollyRT Debug build")
   set(MOLLYRT_DEBUG_FLAGS -O0 -g)
 else ()
