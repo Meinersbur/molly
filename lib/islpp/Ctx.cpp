@@ -117,7 +117,7 @@ Space Ctx::createParamsSpace(unsigned nparam) {
 }
 
 
-Space Ctx::createSetSpace(unsigned nparam, unsigned dim) {
+SetSpace Ctx::createSetSpace(unsigned nparam, unsigned dim) {
   return Space::createSetSpace(this, nparam, dim);
 }
 
@@ -185,8 +185,14 @@ isl::Map isl::Ctx::readMap( const std::string &str ) {
 }
 
 
-isl::Space isl::Ctx::createSetSpace(unsigned dim) {
+isl::SetSpace isl::Ctx::createSetSpace(unsigned dim) {
   return createSetSpace(0, dim);
+}
+
+
+isl::MultiAff isl::Ctx::createIdentityMultiAff(count_t dims) {
+  auto space = isl_space_alloc(keep(), 0, dims, dims);
+  return MultiAff::enwrap(isl_multi_aff_identity(space));
 }
 
 

@@ -41,14 +41,16 @@ FieldLayout *molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterCo
   assert(relation.domain() >= logicalSpan);
   relation.intersectDomain_inplace(logicalSpan);
   auto nodeRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().domain());
+  assert(nodeRel.getRangeDimCount() == clusterConf->getClusterDims() && "Layout must match cluster dimensions" );
   nodeRel.castRange_inplace(clusterConf->getClusterSpace());
   nodeRel.intersectRange_inplace(clusterConf->getClusterShape());
   auto localRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().range());
+  assert(localRel.getRangeDimCount() == fty->getNumDimensions() && "Layout must match field dimensions");
   localRel.resetOutTupleId_inplace();
   auto mappedNodeSpan = nodeRel.domain();
   auto mappedLocalSpan = localRel;
 
-  relation = rangeProduct(nodeRel, localRel);
+  relation = rangeProduct(nodeRel, localRel).coalesce();
   auto linearizer = RectangularMapping::createRectangualarHullMapping(relation.range().unwrap());
   return new FieldLayout(fty, relation, linearizer);
 }

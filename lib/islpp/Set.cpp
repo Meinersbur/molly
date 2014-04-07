@@ -1116,6 +1116,11 @@ ISLPP_EXSITU_ATTRS PwMultiAff isl::Set::chainSubspace(PwMultiAff pma) ISLPP_EXSI
 }
 
 
+ISLPP_INPLACE_ATTRS void isl::Set::coalesce_inplace() ISLPP_INPLACE_FUNCTION {
+  give(isl_set_coalesce(take()));
+}
+
+
 ISLPP_CONSUME_ATTRS PwMultiAff Set::chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION{
   return chainSubspace(std::move(pma));
 }

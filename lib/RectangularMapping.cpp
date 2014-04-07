@@ -39,13 +39,13 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map m
  //}
 
 
-llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domain, const isl::MultiPwAff &coords) {
+llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const isl::MultiPwAff &domain, const isl::MultiPwAff &coords) {
   auto nDims = lengths.getOutDimCount();
   assert(nDims == coords.getOutDimCount());
   assert(nDims == offsets.getOutDimCount());
   auto &irBuilder = codegen.getIRBuilder();
 
-  auto myoffsets = domain.isValid() ? offsets.pullback(domain) : offsets;
+  auto myoffsets = domain.isValid() ? offsets.pullback(domain) : offsets; // TODO: Instead of this pullback (case explosion), we can also generate the llvm::Value* for domain first, then use it for offsets and length
   auto mylengths = domain.isValid() ? lengths.pullback(domain) : lengths;
   //assert(matchesSpace(coords, mylengths));
   //assert(matchesSpace(coords, myoffsets));
@@ -73,7 +73,7 @@ llvm::Value *RectangularMapping::codegenIndex(MollyCodeGenerator &codegen, const
 }
 
 
-llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domain) {
+llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const isl::MultiPwAff &domain) {
   auto nDims = lengths.getOutDimCount();
   auto &irBuilder = codegen.getIRBuilder();
 
@@ -88,7 +88,7 @@ llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const 
 }
 
 
-llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator) {
+llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, const isl::MultiPwAff &domaintranslator) {
   //domaintranslator; // { [domain] -> srcNode[cluster],dstNode[cluster] }
   //lengths; // { [chunk],srcNode[cluster],dstNode[cluster] -> field[indexset] }
 

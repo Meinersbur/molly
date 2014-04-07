@@ -116,21 +116,28 @@ void isl::Multi<Aff>::dump() const {
 }
 
 
-
-
-ISLPP_CONSUME_ATTRS BasicMap isl::Multi<Aff>::reverse_consume() ISLPP_CONSUME_FUNCTION
-{
+ISLPP_CONSUME_ATTRS BasicMap isl::Multi<Aff>::reverse_consume() ISLPP_CONSUME_FUNCTION {
   return BasicMap::enwrap(isl_basic_map_reverse(isl_basic_map_from_multi_aff(take())));
 }
 
 
-ISLPP_EXSITU_ATTRS BasicMap isl::Multi<Aff>::reverse() ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS BasicMap isl::Multi<Aff>::reverse() ISLPP_EXSITU_FUNCTION {
   return copy().reverse_consume();
 }
 
 
+ISLPP_EXSITU_ATTRS MultiAff isl::Multi<Aff>::embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION {
+  auto subspace = getDomainSpace();
+  auto myspace = getSpace();
+  auto range = myspace.findSubspace(isl_dim_in, subspace);
+  auto islctx = getCtx();
 
+  auto before = islctx->createSetSpace(range.getCountBefore()).createIdentityMultiAff();
+  auto after = islctx->createSetSpace(range.getCountAfter()).createIdentityMultiAff();
+  auto prod = isl::product(before, *this, after);
+  auto targetSpace = framedomainspace.replaceSubspace(getDomainSpace(), getRangeSpace());
+  return prod.cast(framedomainspace, targetSpace);
+}
 
 
 void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {

@@ -54,6 +54,7 @@ add_molly_library(Islpp
     ParamSpacelike.cpp
     SetSpacelike.cpp
     MapSpacelike.cpp
+    Mapping.cpp
     
     # deprecated; use AffExpr instead
     Expr.cpp 

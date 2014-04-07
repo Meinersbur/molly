@@ -45,6 +45,10 @@ namespace isl {
     }
 
 
+#pragma region Create affine maps
+    MultiAff createIdentityMultiAff(count_t dims);
+#pragma endregion
+
   }; // class ParamSpace
 
 } // namespace molly

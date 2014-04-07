@@ -35,9 +35,9 @@ namespace molly {
     static RectangularMapping *createRectangualarHullMapping(isl::Map map);
     // static RectangularMapping *createRectangualarHullMapping(isl::Set set);
 
-    llvm::Value *codegenIndex(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator, const isl::MultiPwAff &coords);
-    llvm::Value *codegenSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator);
-    llvm::Value *codegenMaxSize(MollyCodeGenerator &codegen, const isl::PwMultiAff &domaintranslator);
+    llvm::Value *codegenIndex(MollyCodeGenerator &codegen, const isl::MultiPwAff &domaintranslator, const isl::MultiPwAff &coords);
+    llvm::Value *codegenSize(MollyCodeGenerator &codegen, const isl::MultiPwAff &domaintranslator);
+    llvm::Value *codegenMaxSize(MollyCodeGenerator &codegen, const isl::MultiPwAff &domaintranslator);
 
     /// The dimensions the rectangle may depend on
     /// Typical: current node, current chunk

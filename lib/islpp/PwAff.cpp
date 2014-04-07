@@ -44,20 +44,18 @@ PwAff PwAff::readFromStr(Ctx *ctx, const char *str) {
 }
 
 
-Map PwAff::toMap() const { 
-  return Map::enwrap(isl_map_from_pw_aff(takeCopy())) ;
+Map PwAff::toMap() const {
+  return Map::enwrap(isl_map_from_pw_aff(takeCopy()));
 }
 
 
-MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_FUNCTION {
+MultiPwAff PwAff::toMultiPwAff() ISLPP_EXSITU_FUNCTION{
   return MultiPwAff::enwrap(isl_multi_pw_aff_from_pw_aff(takeCopy()));
 }
 
 
-PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_FUNCTION {
-  //auto result = getSpace().createEmptyPwMultiAff();
-  //result.setPwAff_inplace(0, this->copy());
-  return PwMultiAff::enwrap(isl_pw_multi_aff_from_map(isl_map_from_pw_aff(takeCopy())));
+PwMultiAff PwAff::toPwMultiAff() ISLPP_EXSITU_FUNCTION{
+  return PwMultiAff::enwrap(isl_pw_multi_aff_from_pw_aff(takeCopy()));
 }
 
 
@@ -103,12 +101,11 @@ void PwAff::mod(const Int &mod) {
   give(isl_pw_aff_mod(take(), mod.keep()));
 }
 
+
 void PwAff::intersectParams(Set &&set) {
   give(isl_pw_aff_intersect_params(take(), set.take()));
 }
-void PwAff::intersetDomain(Set &&set) {
-  give(isl_pw_aff_intersect_domain(take(), set.take()));
-}
+
 
 void PwAff::scale(const Int &f) {
   give(isl_pw_aff_scale(take(), f.keep()));
@@ -127,9 +124,12 @@ void PwAff::dropDims(isl_dim_type type, unsigned first, unsigned n) {
   give(isl_pw_aff_drop_dims(take(), type, first, n));
 }
 
-void PwAff::coalesce(){
+
+ISLPP_INPLACE_ATTRS void PwAff::coalesce_inplace() ISLPP_INPLACE_FUNCTION{
   give(isl_pw_aff_coalesce(take()));
 }
+
+
 void PwAff::gist(Set &&context) {
   give(isl_pw_aff_gist(take(), context.take()));
 }
@@ -143,25 +143,24 @@ PwAff PwAff::pullback(const MultiAff &maff) const {
 }
 
 
-void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_FUNCTION { 
-  give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy())); 
+void PwAff::pullback_inplace(const MultiAff &maff) ISLPP_INPLACE_FUNCTION{
+  give(isl_pw_aff_pullback_multi_aff(take(), maff.takeCopy()));
 }
 
 
 PwAff PwAff::pullback(const PwMultiAff &pmaff) const {
-  return PwAff::enwrap(isl_pw_aff_pullback_pw_multi_aff(takeCopy(), pmaff.takeCopy())); 
+  return PwAff::enwrap(isl_pw_aff_pullback_pw_multi_aff(takeCopy(), pmaff.takeCopy()));
 }
 
 
-void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_FUNCTION {
+void PwAff::pullback_inplace(const PwMultiAff &pma) ISLPP_INPLACE_FUNCTION{
   give(isl_pw_aff_pullback_pw_multi_aff(take(), pma.takeCopy()));
 }
 
 
-
 #if 0
 PwAff PwAff::pullback(const MultiPwAff &mpa) ISLPP_EXSITU_QUALIFIER {
-  return pullbac
+
 }
 
 
@@ -169,37 +168,40 @@ void PwAff::pullback_inplace(const MultiPwAff &mpa) ISLPP_INPLACE_QUALIFIER {
 }
 #endif
 
+
 int PwAff::nPiece() const {
   return isl_pw_aff_n_piece(keep());
 }
 
+
 static int piececallback(isl_set *set, isl_aff *aff, void *user) {
-  auto fn = *static_cast<std::function<bool(Set,Aff)>*>(user);
+  auto fn = *static_cast<std::function<bool(Set, Aff)>*>(user);
   auto retval = fn(Set::enwrap(set), Aff::enwrap(aff));
   return retval ? -1 : 0;
 }
-bool PwAff::foreachPiece(std::function<bool(Set,Aff)> fn) const {
+bool PwAff::foreachPiece(std::function<bool(Set, Aff)> fn) const {
   auto retval = isl_pw_aff_foreach_piece(keep(), piececallback, &fn);
-  return (retval!=0);
+  return (retval != 0);
 }
 
 
 static int enumPiecesCallback(__isl_take isl_set *set, __isl_take isl_aff *aff, void *user) {
-  auto list = static_cast< std::vector<std::pair<Set,Aff>> *>(user);
+  auto list = static_cast<std::vector<std::pair<Set, Aff>> *>(user);
   list->push_back(std::make_pair(Set::enwrap(set), Aff::enwrap(aff)));
   return 0;
 }
-std::vector<std::pair<Set,Aff>> PwAff::getPieces() const {
-  std::vector<std::pair<Set,Aff>> result(isl_pw_aff_n_piece(keep()));
+std::vector<std::pair<Set, Aff>> PwAff::getPieces() const {
+  std::vector<std::pair<Set, Aff>> result;
+  result.reserve(isl_pw_aff_n_piece(keep()));
   auto retval = isl_pw_aff_foreach_piece(keep(), enumPiecesCallback, &result);
-  assert(retval==0);
+  assert(retval == 0);
   return result;
 }
 
 
-ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS Aff PwAff::singletonAff() ISLPP_EXSITU_FUNCTION{
   Aff result;
-  foreachPiece([&result] (Set set, Aff aff) -> bool {
+  foreachPiece([&result](Set set, Aff aff) -> bool {
     if (result.isValid()) {
       result.reset();
       return true; // break with error; no singleton pw
@@ -288,7 +290,7 @@ PwAff isl::sub(const PwAff &pwaff1, PwAff &&pwaff2) {
 PwAff isl::sub(PwAff &&pwaff1, const PwAff &pwaff2) {
   return PwAff::enwrap(isl_pw_aff_sub(pwaff1.take(), pwaff2.takeCopy()));
 }
-PwAff isl::sub(const PwAff &pwaff1,const  PwAff &pwaff2) {
+PwAff isl::sub(const PwAff &pwaff1, const  PwAff &pwaff2) {
   return PwAff::enwrap(isl_pw_aff_sub(pwaff1.takeCopy(), pwaff2.takeCopy()));
 }
 PwAff isl::sub(PwAff &&lhs, int rhs) {
@@ -341,7 +343,7 @@ Set isl::gtSet(PwAff &&pwaff1, PwAff &&pwaff2){
 }
 
 
-ISLPP_EXSITU_ATTRS PwAff isl::PwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS PwAff isl::PwAff::cast(Space space) ISLPP_EXSITU_FUNCTION{
   assert(dim(isl_dim_in) == space.dim(isl_dim_in));
   assert(dim(isl_dim_out) == space.dim(isl_dim_out));
 
@@ -350,7 +352,7 @@ ISLPP_EXSITU_ATTRS PwAff isl::PwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   auto transformDomain = transfromDomainSpace.createUniverseBasicMap();
 
   auto result = space.createEmptyPwAff();
-  foreachPiece([&result,&domainSpace,&transformDomain](Set set, Aff aff) {
+  foreachPiece([&result, &domainSpace, &transformDomain](Set set, Aff aff) {
     //aff.pullback_inplace(transformDomain);
     aff.castDomain_inplace(domainSpace);
     set.apply_inplace(transformDomain);
@@ -361,7 +363,7 @@ ISLPP_EXSITU_ATTRS PwAff isl::PwAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
 }
 
 
-ISLPP_INPLACE_ATTRS void PwAff:: castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION { 
+ISLPP_INPLACE_ATTRS void PwAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION{
   assert(dim(isl_dim_in) == domainSpace.getSetDimCount());
 
   auto transfromDomainSpace = Space::createMapFromDomainAndRange(domainSpace, getDomainSpace());
@@ -371,11 +373,16 @@ ISLPP_INPLACE_ATTRS void PwAff:: castDomain_inplace(Space domainSpace) ISLPP_INP
 }
 
 
-ISLPP_EXSITU_ATTRS Map isl::PwAff::reverse() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS Map isl::PwAff::reverse() ISLPP_EXSITU_FUNCTION{
   return toMap().reverse();
 }
 
 
-ISLPP_EXSITU_ATTRS PwAff isl::PwAff::mod(Val divisor) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS PwAff isl::PwAff::mod(Val divisor) ISLPP_EXSITU_FUNCTION{
   return PwAff::enwrap(isl_pw_aff_mod_val(takeCopy(), divisor.take()));
+}
+
+
+void isl::Pw<Aff>::dump() const {
+  isl_pw_aff_dump(keep());
 }

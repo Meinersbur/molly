@@ -91,32 +91,32 @@ Int Aff::getDenominator() const {
 void Aff::setConstant_inplace(const Int &v)  ISLPP_INPLACE_FUNCTION {
   give(isl_aff_set_constant(take(), v.keep())); 
 }
-void Aff::setCoefficient(isl_dim_type type, unsigned pos, int v) {
+ISLPP_INPLACE_ATTRS void Aff::setCoefficient_inplace(isl_dim_type type, unsigned pos, int v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_set_coefficient_si(take(), type, pos, v));
 }
-void Aff::setCoefficient(isl_dim_type type, unsigned pos, const Int &v) {
+ISLPP_INPLACE_ATTRS void Aff::setCoefficient_inplace(isl_dim_type type, unsigned pos, const Int &v)ISLPP_INPLACE_FUNCTION{
   give(isl_aff_set_coefficient(take(), type, pos, v.keep()));
 }
-void Aff::setDenominator(const Int &v) {
+ISLPP_INPLACE_ATTRS void Aff::setDenominator_inplace(const Int &v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_set_denominator(take(), v.keep()));
 }
 
-void Aff::addConstant(const Int &v) {
+ISLPP_INPLACE_ATTRS void Aff::addConstant_inplace(const Int &v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_constant(take(), v.keep()));
 }
-void Aff::addConstant(int v) {
+ISLPP_INPLACE_ATTRS void Aff::addConstant_inplace(int v)  ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_constant_si(take(), v));
 }
-void Aff::addConstantNum(const Int &v) {
+ISLPP_INPLACE_ATTRS void Aff::addConstantNum_inplace(const Int &v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_constant_num(take(), v.keep()));
 }
-void Aff::addConstantNum(int v) {
+ISLPP_INPLACE_ATTRS void Aff::addConstantNum_inplace(int v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_constant_num_si(take(), v));
 }
-void Aff::addCoefficient(isl_dim_type type, unsigned pos, int v) {
+ISLPP_INPLACE_ATTRS void Aff::addCoefficient_inplace(isl_dim_type type, unsigned pos, int v)  ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_coefficient_si(take(), type, pos, v));
 }
-void Aff::addCoefficient(isl_dim_type type, unsigned pos, const Int &v) {
+ISLPP_INPLACE_ATTRS void Aff::addCoefficient_inplace(isl_dim_type type, unsigned pos, const Int &v) ISLPP_INPLACE_FUNCTION{
   give(isl_aff_add_coefficient(take(), type, pos, v.keep()));
 }
 
@@ -190,7 +190,7 @@ PwAff Aff::pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
   pma.foreachPiece([&result,this](Set &&set, MultiAff &&maff) -> bool {
     auto backpulled = this->pullback(maff);
     result.unionMin_inplace(PwAff::create(set, backpulled));
-  return false;
+    return false;
   });
 
   return result;
@@ -225,18 +225,77 @@ ISLPP_INPLACE_ATTRS void Aff::castDomain_inplace(Space domainSpace) ISLPP_INPLAC
 }
 
 
-ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_FUNCTION
-{
+ISLPP_EXSITU_ATTRS MultiAff isl::Aff::toMultiAff() ISLPP_EXSITU_FUNCTION {
   return MultiAff::enwrap(isl_multi_aff_from_aff(takeCopy()));
 }
 
-ISLPP_EXSITU_ATTRS PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_FUNCTION
-{
+
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Aff::toPwMultiAff() ISLPP_EXSITU_FUNCTION {
   return PwMultiAff::enwrap(isl_pw_multi_aff_from_multi_aff(isl_multi_aff_from_aff(takeCopy())));
 }
 
 
+void isl::Aff::dump() const {
+  isl_aff_dump(keep());
+}
 
+
+
+static void addRoundedCoefficients(Aff &target, const Aff &div, const Int &globalNom, const Int &globalDenom, bool ceil) {
+  if (globalNom.isZero()) 
+    return;
+  auto denom = globalDenom * div.getDenominator();
+
+  auto nParamDims = isl_aff_dim(div.keep(), isl_dim_param);
+  for (auto i = nParamDims - nParamDims; i < nParamDims; i += 1) {
+    auto coeff = div.getCoefficient(isl_dim_param, i);
+    auto addCoeff = ceil ? ceild(globalNom * coeff, denom) : floord(globalNom * coeff, denom);
+    target.addCoefficient_inplace(isl_dim_param, i, addCoeff);
+  }
+
+  auto nInDims = isl_aff_dim( div.keep(), isl_dim_in);
+  for (auto i = nInDims - nInDims; i < nInDims; i += 1) {
+   auto coeff = div.getCoefficient(isl_dim_in, i);
+   auto addCoeff = ceil ? ceild(globalNom * coeff, denom) : floord(globalNom * coeff, denom);
+   target.addCoefficient_inplace(isl_dim_in, i, addCoeff);
+  }
+
+  auto nDivDims = isl_aff_dim(div.keep(), isl_dim_div);
+  for (auto i = nDivDims - nDivDims; i < nDivDims; i += 1) {
+    auto coeff = div.getCoefficient(isl_dim_div, i);
+    if (coeff.isZero())
+      continue;
+
+    // nested divs seem rather odd; we'll know if something is wrong if this is an endless recursion
+    auto innerDiv = Aff::enwrapCopy(isl_aff_get_div(div.keep(), i));
+    addRoundedCoefficients(target, innerDiv, globalNom * coeff, denom, ceil);
+  }
+}
+
+ISLPP_INPLACE_ATTRS void Aff::removeDivsUsingFloor_inplace() ISLPP_INPLACE_FUNCTION {
+  auto nDivs = isl_aff_dim(keep(), isl_dim_div);
+  for (auto i = nDivs - nDivs; i<nDivs; i += 1) {
+    auto coeff = getCoefficient(isl_dim_div, i);
+    auto div = Aff::enwrap(isl_aff_get_div(keep(), i));
+    addRoundedCoefficients(*this, div, coeff, 1, false);
+  }
+  for (auto i = nDivs-nDivs; i<nDivs; i += 1) {
+    setCoefficient_inplace(isl_dim_div, i, 0);
+  }
+}
+
+
+ISLPP_INPLACE_ATTRS void Aff::removeDivsUsingCeil_inplace() ISLPP_INPLACE_FUNCTION{
+  auto nDivs = isl_aff_dim(keep(), isl_dim_div);
+  for (auto i = nDivs - nDivs; i < nDivs; i += 1) {
+    auto coeff = getCoefficient(isl_dim_div, i);
+    auto div = Aff::enwrap(isl_aff_get_div(keep(), i));
+    addRoundedCoefficients(*this, div, coeff, 1, true);
+  }
+  for (auto i = nDivs - nDivs; i < nDivs; i += 1) {
+    setCoefficient_inplace(isl_dim_div, i, 0);
+  }
+}
 
 
 

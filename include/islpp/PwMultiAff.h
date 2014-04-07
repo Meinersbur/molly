@@ -173,7 +173,8 @@ namespace isl {
 
     bool foreachPiece(const std::function<bool(Set &&, MultiAff &&)> &) const;
     //bool foreachPiece(const std::function<void(Set ,MultiAff , bool &stop)> &) const;
-    unsigned nPieces() const { unsigned result = 0;  foreachPiece([&result](Set&&, MultiAff&&)->bool { result += 1; return true; }); return result; }
+    unsigned nPieces() const;
+    ISLPP_EXSITU_ATTRS std::vector<std::pair<Set, MultiAff>> getPieces() ISLPP_EXSITU_FUNCTION;
 
     Map reverse() const;
     PwMultiAff neg() const;
@@ -194,14 +195,15 @@ namespace isl {
     ISLPP_EXSITU_ATTRS PwMultiAff sublist(Space subspace) ISLPP_EXSITU_FUNCTION;
 
     ISLPP_EXSITU_ATTRS PwMultiAff cast(Space space) ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS PwMultiAff cast(Space domainSpace, Space rangeSpace) ISLPP_EXSITU_FUNCTION{ return cast(Space::createMapFromDomainAndRange(domainSpace, rangeSpace)); }
     void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION{ give(cast(space).take()); }
 
     ISLPP_EXSITU_ATTRS PwMultiAff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION;
     ISLPP_INPLACE_ATTRS void castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION;
     ISLPP_EXSITU_ATTRS PwMultiAff castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION;
-    ISLPP_INPLACE_ATTRS void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION { obj_give(castRange(rangeSpace)); }
+    ISLPP_INPLACE_ATTRS void castRange_inplace(Space rangeSpace) ISLPP_INPLACE_FUNCTION{ obj_give(castRange(rangeSpace)); }
 
-    //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
+      //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
 
     void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
     void dumpExplicit(int maxElts, bool newlines, bool formatted) const;
@@ -211,17 +213,24 @@ namespace isl {
 
     std::string toString() const;
 
-    ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take())); }
-    ISLPP_INPLACE_ATTRS void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION { give(isl_pw_multi_aff_intersect_domain(take(), set.take())); }
-    ISLPP_CONSUME_ATTRS PwMultiAff intersectDomain_consume(Set domain) ISLPP_CONSUME_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(take(), domain.take())); }
+    ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set domain) ISLPP_EXSITU_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(takeCopy(), domain.take())); }
+    ISLPP_INPLACE_ATTRS void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_intersect_domain(take(), set.take())); }
+    ISLPP_CONSUME_ATTRS PwMultiAff intersectDomain_consume(Set domain) ISLPP_CONSUME_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(take(), domain.take())); }
 
     ISLPP_PROJECTION_ATTRS Set range() ISLPP_PROJECTION_FUNCTION;
 
-    ISLPP_EXSITU_ATTRS PwMultiAff coalesce() ISLPP_EXSITU_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_coalesce(takeCopy())); }
+    ISLPP_EXSITU_ATTRS PwMultiAff coalesce() ISLPP_EXSITU_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_coalesce(takeCopy())); }
     ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_coalesce(take())); }
-    ISLPP_CONSUME_ATTRS PwMultiAff coalesce_consume() ISLPP_CONSUME_FUNCTION { return PwMultiAff::enwrap(isl_pw_multi_aff_coalesce(take())); }
+    ISLPP_CONSUME_ATTRS PwMultiAff coalesce_consume() ISLPP_CONSUME_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_coalesce(take())); }
 
-      ISLPP_PROJECTION_ATTRS bool isEmpty() ISLPP_PROJECTION_FUNCTION { return getDomain().isEmpty(); }
+    ISLPP_PROJECTION_ATTRS bool isEmpty() ISLPP_PROJECTION_FUNCTION{ return getDomain().isEmpty(); }
+
+      /// this: B[] -> D[]
+      /// framedomainspace: A[] B[] C[]
+      /// result: (A[] B[] C[]) -> (A[] D[] C[]) 
+      /// MultiAff::embedAsSubspace
+    ISLPP_EXSITU_ATTRS  PwMultiAff embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION;
+
   }; // class Pw<MultiAff>
 
 
@@ -239,10 +248,14 @@ namespace isl {
 
   static inline PwMultiAff rangeProduct(PwMultiAff pma1, PwMultiAff pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_range_product(pma1.take(), pma2.take())); }
   static inline PwMultiAff flatRangeProduct(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_flat_range_product(pma1.take(), pma2.take())); }
-  static inline PwMultiAff product(PwMultiAff &&pma1, PwMultiAff &&pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_product(pma1.take(), pma2.take())); }
+
+  static inline PwMultiAff product(PwMultiAff pma1, PwMultiAff pma2) { return PwMultiAff::enwrap(isl_pw_multi_aff_product(pma1.take(), pma2.take())); }
+
 
   static inline PwMultiAff intersectParams(PwMultiAff pma, Set set) { return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_params(pma.take(), set.take())); }
   static inline PwMultiAff intersectDomain(PwMultiAff pma, Set set) { return PwMultiAff::enwrap(isl_pw_multi_aff_intersect_domain(pma.take(), set.take())); }
+
+  //PwMultiAff operator/(PwMultiAff pma, const Int &divisor);
 
 } // namespace isl
 #endif /* ISLPP_PWMULTIAFF_H */

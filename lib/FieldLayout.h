@@ -46,8 +46,8 @@ namespace molly {
       assert(fty);
       assert(linearizer);
 
-      // FIXME: There are way better algos for chosing a primary
-      primary = relation.uncurry().domain().unwrap().lexmaxPwMultiAff();
+      // FIXME: There are way better algos for choosing a primary
+      primary = relation.uncurry().domain().unwrap().anyElement();
     }
 
   public:

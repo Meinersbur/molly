@@ -122,7 +122,7 @@ set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/incl
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing)
+set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
 set(MOLLYCC_COMMON_LDLAGS )
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
@@ -135,10 +135,15 @@ set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
 #set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev)
-set(MOLLYCC_VERBOSE_FLAGS -v -debug -mllvm -debug-only=molly)
+set(MOLLYCC_VERBOSE_FLAGS -v)
 set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 
+option(MOLLYCC_DEBUG_OUTPUT "Debug output while compiling with mollycc" OFF)
+if (MOLLYCC_DEBUG_OUTPUT)
+  #list(APPEND MOLLYCC_VERBOSE_FLAGS -mllvm -debug -mllvm -debug-only=molly -fdiagnostics-show-category=name -Weverything)
+  list(APPEND MOLLYCC_VERBOSE_FLAGS -mllvm -debug -mllvm -debug-only=molly)
+endif ()
 
 
 

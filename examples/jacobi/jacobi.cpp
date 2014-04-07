@@ -11,12 +11,12 @@
 #include <cmath>
 
 
-#define LX 6
-#define LY 3
-#define ITERATIONS 2
+#define LX 8
+#define LY 8
+#define ITERATIONS 3
 
-//#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
-#pragma molly transform("{ [x,y] -> [node[px] -> local[x,y]] : px=floor(x/3) }")
+#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
+//#pragma molly transform("{ [x,y] -> [node[px] -> local[x,y]] : px=floor(x/3) }")
 molly::array<double, LX, LY> source, sink;
 
 typedef int64_t coord_t;

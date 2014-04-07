@@ -47,6 +47,9 @@ namespace isl {
     unsigned getEnd() const { assert(isValid()); return first+count;}
     unsigned getLast() const { assert(isValid()); assert(count >= 1); return first+count-1;}
 
+    count_t getCountBefore() const { assert(isValid()); return first; }
+    count_t getCountAfter() const { assert(isValid()); return isl_space_dim(space, type) - first - count; }
+
     unsigned relativePos(unsigned i) const { 
       assert(isValid()); 
       assert(first <= i && i < first+count); 

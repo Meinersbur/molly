@@ -361,3 +361,158 @@ isl::Set isl::Map::map(Vec vec) const {
   return map(vec.toBasicSet());
 }
 
+
+/// returns a function that maps to only one element per domain vector; it is undefined which element it is
+/// The methods lexminPwMultiAff(), lexmaxPwMultiAff() already do this, but their return value can be quite complex
+ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
+  // Wasteful algorithm to find least complicated function that maps all domain vectors to some vector in the map
+  // The runtime of everything using this function depends on the complexity, so it is worth spending some time here
+  // Unfortunately, I lack ideas how to find such more efficiently
+
+  auto nDims = getOutDimCount();
+  auto space = getSpace();
+  auto zeroaff = space.createZeroMultiAff();
+
+  auto lexmin = lexminPwMultiAff();
+  lexmin.coalesce_inplace(); // Does it anything?
+  auto lexmax = lexmaxPwMultiAff();
+  lexmax.coalesce_inplace(); // Does it anything?
+
+#if 0
+  // worth it?
+  auto lexmid = space.createEmptyPwMultiAff();
+  for (auto &minpair : lexmin.getPieces()) {
+    auto &minset = minpair.first;
+    auto &minma = minpair.second;
+
+    for (auto &maxpair : lexmin.getPieces()) {
+      auto &maxset = maxpair.first;
+      auto &maxma = maxpair.second;
+
+      auto midset = isl::intersect(minset, maxset);
+      auto divs = space.createZeroMultiAff();
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto lexdimmid = (maxma[i] + minma[i]) / 2;
+        divs[i] = lexdimmid;
+      }
+      lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset),std::move(divs)) ); // add_piece nor disjoint_add are private API
+    }
+  }
+#endif
+
+    SmallVector<MultiAff, 16 > complexeCandidates;
+    complexeCandidates.reserve(2 * lexmin.nPieces()*lexmax.nPieces() + lexmin.nPieces() + lexmax.nPieces());
+    for (auto &pair : lexmin.getPieces()) {
+      complexeCandidates.push_back(pair.second);
+    }
+    for (auto &pair : lexmax.getPieces()) {
+      complexeCandidates.push_back(pair.second);
+    }
+#if 1
+    auto lexmid = space.createEmptyPwMultiAff();
+    for (auto &minpair : lexmin.getPieces()) {
+      auto &minset = minpair.first;
+      auto &minma = minpair.second;
+
+      for (auto &maxpair : lexmax.getPieces()) {
+        auto &maxset = maxpair.first;
+        auto &maxma = maxpair.second;
+
+        auto divdown = zeroaff;
+        auto divup = zeroaff;
+        for (auto i = nDims - nDims; i < nDims; i += 1) {
+          auto lexdimmid = (maxma[i] + minma[i]) / 2;
+          divdown[i] = lexdimmid;
+          divup[i] = (maxma[i] + minma[i] + 1) / 2;
+        }
+        //lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset), std::move(divs))); // add_piece nor disjoint_add are private API
+        complexeCandidates.push_back(divdown);
+        complexeCandidates.push_back(divup);
+      }
+    }
+#else
+    for (auto &pair : lexmid.getPieces()) {
+      candidates.push_back(pair.second);
+    }
+#endif
+
+    SmallVector<MultiAff, 16> candidates;
+    for (const auto &candid : complexeCandidates) { // Try first with less-complicated terms
+      auto simpleUp = zeroaff;
+      auto simpleDown = zeroaff;
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto aff = candid[i];
+        simpleDown[i] = aff.removeDivsUsingFloor();  
+        simpleUp[i] = aff.removeDivsUsingCeil();
+      }
+      candidates.push_back(simpleDown);
+      candidates.push_back(simpleUp);
+    }
+    for (const auto &candid : complexeCandidates) {
+      candidates.push_back(candid);
+    }
+
+
+    // TODO: May remove double candidates
+    // TODO: Sort candidates by expression complexity
+
+
+    auto result = space.createEmptyPwMultiAff();
+    auto uncovered = getDomain();
+    while (true) {
+      //uncovered.coalesce_inplace();
+      if (uncovered.isEmpty())
+        break;
+      auto nUncovered = uncovered.getBasicSetCount();
+      auto nCandidates = candidates.size();
+      assert(nCandidates >= 1);
+      MultiAff best;
+      unsigned bestPos;
+      int bestNCovered;
+      int bestNRemaining;
+      Set bestCovered;
+      Set bestRemaining;
+      for (auto i = nCandidates - nCandidates; i < nCandidates; ) {
+        auto &candidate = candidates[i];
+        auto covers = isl::intersect(candidate,*this).domain();
+        auto covered = isl::intersect(uncovered, covers);
+        if (covered.isEmpty()) {
+          // This candidate is useless; remove it from candidates
+          candidates.erase(candidates.begin() + i); 
+          nCandidates -=1;
+          continue;
+        }
+
+        auto remainingUncovered = isl::subtract(uncovered,covers);
+        auto nCovered = covered.getBasicSetCount();
+        auto nRemainingUncovered = remainingUncovered.getBasicSetCount();
+        if (best.isNull() || (bestNRemaining > nRemainingUncovered) || (bestNRemaining == nRemainingUncovered && bestNCovered > nCovered)) { //TODO: Some evaluation on basic set/aff complexity
+          best = candidate;
+          bestPos = i;
+          bestNCovered = nCovered;
+          bestNRemaining = nRemainingUncovered;
+          bestRemaining = remainingUncovered;
+          bestCovered = covered;
+          if (bestNRemaining == 0 && bestNCovered<=1) break; // Ideal solution
+        }
+        i+=1;
+      }
+
+      assert(best.isValid());
+      auto piece = PwMultiAff::create(std::move(bestCovered), std::move(best));
+      result.unionAdd_inplace(piece);
+      uncovered = bestRemaining;
+
+      candidates.erase(candidates.begin() + bestPos);
+      nCandidates -= 1;
+    }
+
+
+    if (result.nPieces() > lexmin.nPieces()) {
+      result = lexmin; // Is this even possible to happen?
+    }
+    if (result.nPieces() > lexmax.nPieces()) {
+      result = lexmax; // Is this even possible to happen?
+    }
+    return result;
+}

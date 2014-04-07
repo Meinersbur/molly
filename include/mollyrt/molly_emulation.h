@@ -28,6 +28,33 @@ namespace molly {
   }; //class  __storage_type
 #pragma endregion
 
+#if 0
+#pragma region __storage_type_but_one
+  template<typename T, int64_t... __L>
+  class __storage_type_but_one;
+
+  template<typename T, int64_t Lfirst>
+  class __storage_type_but_one<T,Lfirst> {
+  public:
+    typedef T type;
+  }; //class  __storage_type_but_one
+
+  template<typename T, int64_t Lfirst, int64_t... __L>
+  class __storage_type_but_one<T, Lfirst, __L...> {
+  public:
+    typedef typename __storage_type_but_one<T, __L...>::type type[Lfirst];
+  }; //class  __storage_type_but_one
+#pragma endregion
+#else
+  template<typename T, int64_t... __L>
+  class __storage_type_but_one;
+
+  template<typename T, int64_t Lfirst, int64_t... __L>
+  class __storage_type_but_one<T, Lfirst, __L...> {
+  public:
+    typedef typename __storage_type<T, __L...>::type type;
+  }; //class  __storage_type_but_one
+#endif
 
 #pragma region _select
   static inline int _select(int i); // Forward declaration
@@ -57,7 +84,9 @@ namespace molly {
     storageTy data;
 
   public:
-    decltype(data[0]) &operator[](int64_t idx) {
+    //decltype(data[0])
+   typename  __storage_type_but_one<T,__L...>::type
+      &operator[](int64_t idx) {
       return data[idx];
     }
 

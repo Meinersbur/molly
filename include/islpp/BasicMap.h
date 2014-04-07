@@ -64,47 +64,47 @@ namespace isl {
 #pragma region isl::Spacelike
     friend class isl::Spacelike<ObjTy>;
   public:
-    ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION { return MapSpace::enwrap(isl_basic_map_get_space(keep())); }
-    ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION { return getLocalSpace(); }
+    ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION{ return MapSpace::enwrap(isl_basic_map_get_space(keep())); }
+    ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION{ return getLocalSpace(); }
 
-    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION { return false; }
-    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION { return false; }
-    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION { return true; }
+    ISLPP_PROJECTION_ATTRS bool isParams() ISLPP_PROJECTION_FUNCTION{ return false; }
+    ISLPP_PROJECTION_ATTRS bool isSet() ISLPP_PROJECTION_FUNCTION{ return false; }
+    ISLPP_PROJECTION_ATTRS bool isMap() ISLPP_PROJECTION_FUNCTION{ return true; }
 
-    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_basic_map_dim(keep(), type); }
-    //ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_basic_map_find_dim_by_id(keep(), type, id.keep()); }
+    ISLPP_PROJECTION_ATTRS count_t dim(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return isl_basic_map_dim(keep(), type); }
+      //ISLPP_PROJECTION_ATTRS pos_t findDimById(isl_dim_type type, const Id &id) ISLPP_PROJECTION_FUNCTION { return isl_basic_map_find_dim_by_id(keep(), type, id.keep()); }
 
-    //ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_tuple_name(keep(), type)); }
-    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return isl_basic_map_get_tuple_name(keep(), type); }
-    ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_tuple_name(take(), type, s)); }
-    //ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_tuple_id(keep(), type)); }
-    //ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_basic_map_get_tuple_id(keep(), type)); }
-    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_tuple_id(take(), type, id.take())); }
-    //ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_reset_tuple_id(take(), type)); }
+      //ISLPP_PROJECTION_ATTRS bool        hasTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_tuple_name(keep(), type)); }
+    ISLPP_PROJECTION_ATTRS const char *getTupleName(isl_dim_type type) ISLPP_PROJECTION_FUNCTION{ return isl_basic_map_get_tuple_name(keep(), type); }
+    ISLPP_INPLACE_ATTRS    void        setTupleName_inplace(isl_dim_type type, const char *s) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_set_tuple_name(take(), type, s)); }
+      //ISLPP_PROJECTION_ATTRS bool        hasTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_tuple_id(keep(), type)); }
+      //ISLPP_PROJECTION_ATTRS Id          getTupleId(isl_dim_type type) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_basic_map_get_tuple_id(keep(), type)); }
+    ISLPP_INPLACE_ATTRS    void        setTupleId_inplace(isl_dim_type type, Id id) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_set_tuple_id(take(), type, id.take())); }
+      //ISLPP_INPLACE_ATTRS    void        resetTupleId_inplace(isl_dim_type type) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_reset_tuple_id(take(), type)); }
 
-    //ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_dim_name(keep(), type, pos)); }
-    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return isl_basic_map_get_dim_name(keep(), type, pos); }
-    ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_dim_name(take(), type, pos, s)); }
-    ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_dim_id(keep(), type, pos)); }
-    //ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_basic_map_get_dim_id(keep(), type, pos)); }
-    //ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_dim_id(take(), type, pos, id.take())); }
-    ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { 
+      //ISLPP_PROJECTION_ATTRS bool hasDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return checkBool(isl_basic_map_has_dim_name(keep(), type, pos)); }
+    ISLPP_PROJECTION_ATTRS const char *getDimName(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION{ return isl_basic_map_get_dim_name(keep(), type, pos); }
+    ISLPP_INPLACE_ATTRS void setDimName_inplace(isl_dim_type type, pos_t pos, const char *s) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_set_dim_name(take(), type, pos, s)); }
+    ISLPP_PROJECTION_ATTRS bool hasDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION{ return checkBool(isl_basic_map_has_dim_id(keep(), type, pos)); }
+      //ISLPP_PROJECTION_ATTRS Id getDimId(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION { return Id::enwrap(isl_basic_map_get_dim_id(keep(), type, pos)); }
+      //ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_set_dim_id(take(), type, pos, id.take())); }
+      ISLPP_INPLACE_ATTRS void setDimId_inplace(isl_dim_type type, pos_t pos, Id id) ISLPP_INPLACE_FUNCTION{
       auto space = getSpace();
       space.setDimId_inplace(type, pos, std::move(id));
       cast_inplace(space);
     }
-    //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_reset_dim_id(take(), type, pos)); }
+      //ISLPP_INPLACE_ATTRS void resetDimId_inplace(isl_dim_type type, pos_t pos) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_reset_dim_id(take(), type, pos)); }
 
   protected:
     //ISLPP_INPLACE_ATTRS void addDims_internal(isl_dim_type type, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_add_dims(take(), type, count)); }
-    ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_insert_dims(take(), type, pos, count)); }
+    ISLPP_INPLACE_ATTRS void insertDims_internal(isl_dim_type type, pos_t pos, count_t count) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_insert_dims(take(), type, pos, count)); }
   public:
-    ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_remove_dims(take(), type, first, count)); }
+    ISLPP_INPLACE_ATTRS void moveDims_inplace(isl_dim_type dst_type, pos_t dst_pos, isl_dim_type src_type, pos_t src_pos, count_t count) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    ISLPP_INPLACE_ATTRS void removeDims_inplace(isl_dim_type type, pos_t first, count_t count) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_remove_dims(take(), type, first, count)); }
 #pragma endregion
 
 
-    ISLPP_PROJECTION_ATTRS LocalSpace getLocalSpace() ISLPP_PROJECTION_FUNCTION { return LocalSpace::enwrap(isl_basic_map_get_local_space(keep())); }
+    ISLPP_PROJECTION_ATTRS LocalSpace getLocalSpace() ISLPP_PROJECTION_FUNCTION{ return LocalSpace::enwrap(isl_basic_map_get_local_space(keep())); }
 
 
 #pragma region Conversion
@@ -193,42 +193,42 @@ namespace isl {
 #pragma endregion
 
 
-    void finalize_inplace() ISLPP_INPLACE_FUNCTION { give(isl_basic_map_finalize(take())); }
+    void finalize_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_finalize(take())); }
     void extend(unsigned nparam, unsigned n_in, unsigned n_out, unsigned extra, unsigned n_eq, unsigned n_ineq) { give(isl_basic_map_extend(take(), nparam, n_in, n_out, extra, n_eq, n_ineq)); }
     void extendConstraints(unsigned n_eq, unsigned n_ineq) { give(isl_basic_map_extend_constraints(take(), n_eq, n_ineq)); }
 
-    void removeRedundancies() { give(isl_basic_map_remove_redundancies(take())); } 
+    void removeRedundancies() { give(isl_basic_map_remove_redundancies(take())); }
 
-    void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
+    void intersect_inplace(const BasicMap &bmap) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_intersect(take(), bmap.takeCopy())); }
     BasicMap intersect(const BasicMap &bmap) const { return BasicMap::enwrap(isl_basic_map_intersect(takeCopy(), bmap.takeCopy())); }
 
     ISLPP_EXSITU_ATTRS Map intersect(Map &&that) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS Map intersect(const Map &that) ISLPP_EXSITU_FUNCTION;
 
-    BasicMap intersectDomain(const BasicSet &bset) ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
+    BasicMap intersectDomain(const BasicSet &bset) ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_intersect_domain(takeCopy(), bset.takeCopy())); }
     Map intersectDomain(const Set &set) ISLPP_EXSITU_FUNCTION;
-    BasicMap intersectRange(const BasicSet &bset) ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_intersect_range(takeCopy(), bset.takeCopy())); }
+    BasicMap intersectRange(const BasicSet &bset) ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_intersect_range(takeCopy(), bset.takeCopy())); }
     Map intersectRange(const Set &set) ISLPP_EXSITU_FUNCTION;
 
     void affineHull() { give(isl_basic_map_affine_hull(take())); }
     void reverse_inplace() { give(isl_basic_map_reverse(take())); }
-    ISLPP_EXSITU_ATTRS BasicMap reverse() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_reverse(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicMap reverse() ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_reverse(takeCopy())); }
 
-    ISLPP_EXSITU_ATTRS BasicSet domain() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
-    ISLPP_EXSITU_ATTRS BasicSet range() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
-    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_FUNCTION { return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet domain() ISLPP_EXSITU_FUNCTION{ return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet getDomain() ISLPP_EXSITU_FUNCTION{ return BasicSet::wrap(isl_basic_map_domain(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet range() ISLPP_EXSITU_FUNCTION{ return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
+    ISLPP_EXSITU_ATTRS BasicSet getRange() ISLPP_EXSITU_FUNCTION{ return BasicSet::wrap(isl_basic_map_range(takeCopy())); }
 
-    void removeDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_remove_dims(take(), type, first, n));  }
+    void removeDims(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_remove_dims(take(), type, first, n)); }
     void eliminate(isl_dim_type type, unsigned first, unsigned n) { give(isl_basic_map_eliminate(take(), type, first, n)); }
 
-    BasicMap simplify() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_simplify(takeCopy())); }
-    BasicMap detectEqualities() ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_detect_equalities(takeCopy())); }
+    BasicMap simplify() ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_simplify(takeCopy())); }
+    BasicMap detectEqualities() ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_detect_equalities(takeCopy())); }
 
-    //    void dump() const;
+      //    void dump() const;
     void print(FILE *out, int indent, const char *prefix, const char *suffix, unsigned output_format) const { isl_basic_map_print(keep(), out, indent, prefix, suffix, output_format); }
 
-    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_fix_si(take(), type, pos, value)); }
+    void fix_inplace(isl_dim_type type, unsigned pos, int value) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_fix_si(take(), type, pos, value)); }
     BasicMap fix(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_fix_si(takeCopy(), type, pos, value)); }
 
     BasicMap lowerBound(isl_dim_type type, unsigned pos, int value) const { return BasicMap::enwrap(isl_basic_map_lower_bound_si(takeCopy(), type, pos, value)); }
@@ -259,13 +259,13 @@ namespace isl {
     bool canUncurry() const { return isl_basic_map_can_uncurry(keep()); }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_basic_map_involves_dims(keep(), type, first, n); }
 
-    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1,c2,c3,c4,c5)); }
-    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1,c2,c3,c4,c5)); }
+    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1, c2, c3, c4, c5)); }
+    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1, c2, c3, c4, c5)); }
 
-    void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_add_constraint(take(), constraint.take()));  }
-    void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_add_constraint(take(), constraint.takeCopy()));  }
-    BasicMap addContraint(Constraint &&constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.take())); } 
-    BasicMap addContraint(const Constraint &constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.takeCopy())); } 
+    void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_add_constraint(take(), constraint.take())); }
+    void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_add_constraint(take(), constraint.takeCopy())); }
+    BasicMap addContraint(Constraint &&constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.take())); }
+    BasicMap addContraint(const Constraint &constraint) const { return BasicMap::enwrap(isl_basic_map_add_constraint(takeCopy(), constraint.takeCopy())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     BasicMap addContraint(Constraint &&constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.take())); } 
     BasicMap addContraint(const Constraint &constraint) && { return BasicMap::enwrap(isl_basic_map_add_constraint(take(), constraint.takeCopy())); } 
@@ -275,42 +275,42 @@ namespace isl {
     bool foreachConstraint(const std::function<bool(Constraint)> &func) const;
     std::vector<Constraint> getConstraints() const;
 
-    void cast_inplace( Space space) ISLPP_INPLACE_FUNCTION;
+    void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION;
     BasicMap cast(Space space) const { auto result = copy(); result.cast_inplace(space.move()); return result; }
 
-    void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_equate(take(), type1, pos1, type2, pos2)); }
+    void equate_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_equate(take(), type1, pos1, type2, pos2)); }
     BasicMap equate(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), type1, pos1, type2, pos2)); }
-    void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
+    void equate_inplace(Dim dim1, Dim dim2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
     BasicMap equate(Dim dim1, Dim dim2) const { return BasicMap::enwrap(isl_basic_map_equate(takeCopy(), dim1.getType(), dim1.getPos(), dim2.getType(), dim2.getPos())); }
 
-    void orderGt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_order_gt(take(), type1, pos1, type2, pos2)); }
+    void orderGt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_order_gt(take(), type1, pos1, type2, pos2)); }
     BasicMap orderGt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type1, pos1, type2, pos2)); }
-    void orderGe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_order_ge(take(), type1, pos1, type2, pos2)); }
+    void orderGe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_order_ge(take(), type1, pos1, type2, pos2)); }
     BasicMap orderGe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type1, pos1, type2, pos2)); }
-    void orderLt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_order_gt(take(), type2, pos2, type1, pos1)); }
+    void orderLt_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_order_gt(take(), type2, pos2, type1, pos1)); }
     BasicMap orderLt(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_gt(takeCopy(), type2, pos2, type1, pos1)); }
-    void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
+    void orderLe_inplace(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_order_ge(take(), type2, pos2, type1, pos1)); }
     BasicMap orderLe(isl_dim_type type1, int pos1, isl_dim_type type2, int pos2) const { return BasicMap::enwrap(isl_basic_map_order_ge(takeCopy(), type2, pos2, type1, pos1)); }
 
-    SetSpace getDomainSpace() const { return SetSpace::enwrap(isl_space_domain(isl_basic_map_get_space(takeCopy())) ); }
-    SetSpace getRangeSpace() const { return SetSpace::enwrap(isl_space_range(isl_basic_map_get_space(takeCopy())) ); }
+    SetSpace getDomainSpace() const { return SetSpace::enwrap(isl_space_domain(isl_basic_map_get_space(takeCopy()))); }
+    SetSpace getRangeSpace() const { return SetSpace::enwrap(isl_space_range(isl_basic_map_get_space(takeCopy()))); }
 
     Map domainProduct(const Map &that) const;
     Map rangeProduct(const Map &that) const;
 
-     ISLPP_INPLACE_ATTRS void applyDomain_inplace(BasicMap that) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_apply_domain(take(), that.take())); }
-   ISLPP_EXSITU_ATTRS BasicMap applyDomain(BasicMap that) ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_apply_domain(takeCopy(), that.take())); }
+    ISLPP_INPLACE_ATTRS void applyDomain_inplace(BasicMap that) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_apply_domain(take(), that.take())); }
+    ISLPP_EXSITU_ATTRS BasicMap applyDomain(BasicMap that) ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_apply_domain(takeCopy(), that.take())); }
     Map applyDomain(const Map &that) const;
 
-    ISLPP_INPLACE_ATTRS void applyRange_inplace(BasicMap that) ISLPP_INPLACE_FUNCTION { give(isl_basic_map_apply_range(take(), that.take())); }
-   ISLPP_EXSITU_ATTRS BasicMap applyRange(BasicMap that) ISLPP_EXSITU_FUNCTION { return BasicMap::enwrap(isl_basic_map_apply_range(takeCopy(), that.take())); }
+    ISLPP_INPLACE_ATTRS void applyRange_inplace(BasicMap that) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_apply_range(take(), that.take())); }
+    ISLPP_EXSITU_ATTRS BasicMap applyRange(BasicMap that) ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_basic_map_apply_range(takeCopy(), that.take())); }
     Map applyRange(const Map &that) const;
 
     ISLPP_EXSITU_ATTRS Aff dimMin(pos_t pos) ISLPP_EXSITU_FUNCTION;
     ISLPP_EXSITU_ATTRS Aff dimMax(pos_t pos) ISLPP_EXSITU_FUNCTION;
 
-    ISLPP_PROJECTION_ATTRS bool imageIsBounded() ISLPP_PROJECTION_FUNCTION { // isBoundedRange
-      return checkBool(isl_basic_map_image_is_bounded(keep())); 
+    ISLPP_PROJECTION_ATTRS bool imageIsBounded() ISLPP_PROJECTION_FUNCTION{ // isBoundedRange
+      return checkBool(isl_basic_map_image_is_bounded(keep()));
     }
 
     ISLPP_EXSITU_ATTRS  BasicSet      wrap()ISLPP_EXSITU_ATTRS{ return BasicSet::enwrap(isl_basic_map_wrap(takeCopy())); }
@@ -337,10 +337,10 @@ namespace isl {
   //static inline BasicMap floordiv(BasicMap &&bmap, const Int &d) { return BasicMap::enwrap(isl_basic_map_floordiv(bmap.take(), d.keep())); }
 
   static inline bool isEqual(BasicMap &&bmap1, BasicMap &&bmap2) { return isl_basic_map_is_equal(bmap1.take(), bmap2.take()); }
-  Map partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty) ;
-  Map partialLexmin(BasicMap &&bmap, BasicSet &&dom, Set &empty) ;
-  Map lexmin(BasicMap &&bmap) ; 
-  Map lexmax(BasicMap &&bmap) ;
+  Map partialLexmax(BasicMap &&bmap, BasicSet &&dom, Set &empty);
+  Map partialLexmin(BasicMap &&bmap, BasicSet &&dom, Set &empty);
+  Map lexmin(BasicMap &&bmap);
+  Map lexmax(BasicMap &&bmap);
 
   PwMultiAff partialLexminPwMultiAff(BasicMap &&bmap, BasicSet &&dom, Set &empty);
   PwMultiAff partialLexmaxPwMultiAff(BasicMap &&bmap, BasicSet &&dom, Set &empty);

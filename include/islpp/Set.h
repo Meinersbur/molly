@@ -212,7 +212,7 @@ namespace isl {
 
     /// Simplify the representation of a set or relation by trying to combine pairs of basic sets or relations into a single basic set or relation.
    ISLPP_EXSITU_ATTRS Set coalesce() ISLPP_EXSITU_FUNCTION { return Set::enwrap(isl_set_coalesce(takeCopy())); }
-   ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION { give(isl_set_coalesce(take())); }
+   ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION;
    ISLPP_CONSUME_ATTRS Set coalesce_consume() ISLPP_CONSUME_FUNCTION { return Set::enwrap(isl_set_coalesce(take())); }
 
     /// Simplify the representation of a set or relation by detecting implicit equalities.

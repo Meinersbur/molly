@@ -1,26 +1,28 @@
 #ifndef ISLPP_ISLFWD_H
 #define ISLPP_ISLFWD_H
 
+#include <utility> // std::move
+
 
 #pragma region Forward declarations for original isl
 extern "C" {
 
-// #include <isl/ctx.h>
-struct isl_ctx;
+  // #include <isl/ctx.h>
+  struct isl_ctx;
 
-// #include <isl/id.h>
-struct isl_id;
+  // #include <isl/id.h>
+  struct isl_id;
 
-// #include <isl/map_type.h>
-struct isl_basic_map;
-struct isl_map;
-struct isl_basic_set;
-struct isl_set;
+  // #include <isl/map_type.h>
+  struct isl_basic_map;
+  struct isl_map;
+  struct isl_basic_set;
+  struct isl_set;
 
-// #include <isl/val.h>
-struct isl_val;
-struct isl_multi_val;
-struct isl_val_list;
+  // #include <isl/val.h>
+  struct isl_val;
+  struct isl_multi_val;
+  struct isl_val_list;
 
 } // extern "C"
 #pragma endregion
@@ -30,7 +32,7 @@ struct isl_val_list;
 namespace isl {
 
   // Obj.h
-  template<typename,typename> class Obj;
+  template<typename, typename> class Obj;
 
   // Spacelike.h
   template<typename> class Spacelike;
@@ -111,7 +113,7 @@ namespace isl {
   template<typename T> class Pw;
 
   // PwAff.h
-  template<> class Pw<Aff>; 
+  template<> class Pw<Aff>;
   typedef Pw<Aff> PwAff;
 
   // List.h
@@ -189,5 +191,49 @@ namespace isl {
 } // namespace isl
 #pragma endregion
 
+
+#pragma region Variadic isl::product
+namespace isl {
+  static MultiAff product(MultiAff maff1, MultiAff maff2);
+  static PwMultiAff product(PwMultiAff pma1, PwMultiAff pma2);
+
+  //TODO: make a macro to use with several functions
+  template<typename... T>
+  class __product_impl;
+
+  template<typename TFirst>
+  class __product_impl<TFirst> {
+  public:
+    static TFirst product(TFirst arg) { return std::move(arg); }
+  }; // class class __product_impl<TFirst>
+
+  template<typename TFirst, typename TSecond>
+  class __product_impl<TFirst, TSecond> {
+  public:
+    static auto product(TFirst arg1, TSecond arg2) -> decltype(::isl::product(std::move(arg1), std::move(arg2))) {
+      return ::isl::product(std::move(arg1), std::move(arg2));
+    }
+  }; // class  __product_impl<TFirst, TSecond>
+
+  template<typename TFirst, typename... T>
+  class __product_impl<TFirst, T...> {
+  public:
+    static auto product(TFirst arg1, T... args) -> decltype(::isl::product(std::move(arg1), isl::product(args...))) {
+      return ::isl::product(std::move(arg1), isl::product(args...)); // right-associative (easier to implement)
+    }
+  }; // class __product_impl<TFirst, T...> 
+
+  template<typename U>
+  static inline U product(U arg1) {
+    return std::move(arg1);
+  }
+
+  // Do not provide a two-element overload, it has to be provided by the libraries; offering one risks endless recursion
+  template<typename U, typename V, typename W, typename... T>
+  static inline auto product(U arg1, V arg2, W arg3, T... args) ->decltype(__product_impl<U, V, W, T...>::product(std::move(arg1), std::move(arg2), std::move(arg3), std::move(args)...)) {
+    return __product_impl<U, V, W, T...>::product(std::move(arg1), std::move(arg2), std::move(arg3), std::move(args)...);
+  }
+} // namespace isl
+#pragma endregion
 
 #endif /* ISLPP_ISLFWD_H */

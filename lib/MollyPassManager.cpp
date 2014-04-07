@@ -1531,8 +1531,13 @@ namespace {
         if (func->isDeclaration())
           continue;
 
-        if (func->getName() == "HoppingMatrix") {
+        auto funcName = func->getName();
+        if (funcName == "HoppingMatrix") {
           int a = 0;
+        } else if (funcName == "init") {
+          int b = 0;
+        } else if (funcName == "reduce") {
+          int c = 0;
         }
 
         auto funcCtx = getFuncContext(func);
@@ -1544,8 +1549,9 @@ namespace {
 
       std::string infoDummy;
       auto OSisolated = new raw_fd_ostream("4_isolated.ll", infoDummy, sys::fs::F_Text);
-      runModulePass(llvm::createPrintModulePass(*OSisolated, "After isolation\n\n"));
-
+      auto printIsolatedPass = llvm::createPrintModulePass(*OSisolated, "After isolation\n\n");
+      runModulePass(printIsolatedPass);
+      removePass(printIsolatedPass); // Because runModulePass complains that "PrintModulePass" has already been executed
 
       for (auto &f : *module) {
         auto func = &f;
@@ -1574,6 +1580,8 @@ namespace {
         if (!scopCtx->hasFieldAccess())
           continue;
 
+        auto func = scopCtx->getParentFunction();
+        //DEBUG(llvm::dbgs() << "MOLLY: GenCommunication of SCoP in " << func.getName() << "\n");
         scopCtx->validate();
 
         // Decide on which node(s) a ScopStmt should execute 
@@ -1594,8 +1602,9 @@ namespace {
 
 
       auto OScommunication = new raw_fd_ostream("6_communication.ll", infoDummy, sys::fs::F_Text);
-      runModulePass(llvm::createPrintModulePass(*OScommunication, "After communication generation\n\n"));
-
+      auto printCommunicationPass = llvm::createPrintModulePass(*OScommunication, "After communication generation\n\n");
+      runModulePass(printCommunicationPass);
+      removePass(printCommunicationPass);
 
       // Create some SCoPs that init the combufs
       //addCallToCombufInit();
@@ -1623,7 +1632,9 @@ namespace {
 
 
       auto OSpollycodegen = new raw_fd_ostream("7_pollycodegen.ll", infoDummy, sys::fs::F_Text);
-      runModulePass(llvm::createPrintModulePass(*OSpollycodegen, "After Polly's code generation\n\n"));
+      auto printPollyCodegenPass = llvm::createPrintModulePass(*OSpollycodegen, "After Polly's code generation\n\n");
+      runModulePass(printPollyCodegenPass);
+      removePass(printPollyCodegenPass);
 
 
       // Generate access functions

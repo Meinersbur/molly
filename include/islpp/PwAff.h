@@ -56,7 +56,7 @@ namespace isl {
 
     Ctx *getCtx() const { return Ctx::enwrap(isl_pw_aff_get_ctx(keep())); }
     void print(llvm::raw_ostream &out) const;
-    void dump() const { isl_pw_aff_dump(keep()); }
+    void dump() const;
 #pragma endregion
 
 
@@ -147,7 +147,9 @@ namespace isl {
     ISLPP_EXSITU_ATTRS  PwAff mod(Val divisor) ISLPP_EXSITU_FUNCTION;
 
     void intersectParams(Set &&set);
-    void intersetDomain(Set &&set);
+    ISLPP_EXSITU_ATTRS PwAff intersectDomain(Set set) ISLPP_EXSITU_FUNCTION{ return PwAff::enwrap(isl_pw_aff_intersect_domain(takeCopy(), set.take())); }
+    ISLPP_INPLACE_ATTRS void intersectDomain_inplace(Set set) ISLPP_INPLACE_FUNCTION{ give(isl_pw_aff_intersect_domain(take(), set.take())); }
+    ISLPP_CONSUME_ATTRS PwAff intersectDomain_consume(Set set) ISLPP_CONSUME_FUNCTION{ return PwAff::enwrap(isl_pw_aff_intersect_domain(take(), set.take())); }
 
     void scale(const Int &f);
     void scaleDown(const Int &f);
@@ -156,7 +158,7 @@ namespace isl {
     void addDims(isl_dim_type type, unsigned n);
     void dropDims(isl_dim_type type, unsigned first, unsigned n);
 
-    void coalesce();
+    ISLPP_INPLACE_ATTRS void coalesce_inplace() ISLPP_INPLACE_FUNCTION;
     void gist(Set &&context);
     void gistParams(Set &&context);
 
@@ -214,7 +216,6 @@ namespace isl {
 #endif
 
     ISLPP_EXSITU_ATTRS Map reverse() ISLPP_EXSITU_FUNCTION;
-
   }; // class PwAff
 
 
@@ -275,6 +276,11 @@ namespace isl {
 
   static inline const PwAff operator*(const PwAff &lhs, const PwAff &rhs) { return PwAff::enwrap(isl_pw_aff_mul(lhs.takeCopy(), rhs.takeCopy())); }
   static inline const PwAff &operator*=(PwAff &lhs, const PwAff &rhs) { lhs.mul_inplace(rhs); return lhs; }
+  static inline PwAff operator/(PwAff divident, Int divisor) {
+    auto affdivisor = divident.getSpace().createConstantAff(divisor).toPwAff();
+    return PwAff::enwrap(isl_pw_aff_div(divident.take(), affdivisor.take()));
+  }
+
 
   PwAff tdivQ(PwAff &&pa1, PwAff &&pa2);
   PwAff tdivR(PwAff &&pa1, PwAff &&pa2);

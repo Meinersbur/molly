@@ -46,7 +46,7 @@ namespace isl {
     }
 #endif
 
-    //ISLPP_EXSITU_ATTRS SpaceTy addDims(count_t count) ISLPP_EXSITU_FUNCTION{ return derived().addDims(isl_dim_set, count); }
+    ISLPP_EXSITU_ATTRS SpaceTy addDims(count_t count) ISLPP_EXSITU_FUNCTION{ return derived().addDims(isl_dim_set, count); }
     //ISLPP_INPLACE_ATTRS DimRange addDims_inplace(count_t count) ISLPP_INPLACE_FUNCTION{ return derived().addDims_inplace(isl_dim_set, count); }
   }; // class SetSpacelike
 

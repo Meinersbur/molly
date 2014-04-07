@@ -53,7 +53,7 @@ namespace isl {
 
   public:
     Ctx *getCtx() const { return Ctx::enwrap(isl_aff_get_ctx(getDerived().keep())); }
-    void dump() const { isl_aff_dump(getDerived().keep()); }
+    //void dump() const { isl_aff_dump(getDerived().keep()); }
 #pragma endregion
 
   public:
@@ -80,6 +80,7 @@ namespace isl {
     const ObjTy &operator=(const ObjTy &that) { obj_reset(that); return *this; }
 
     void print(llvm::raw_ostream &out) const;
+    void dump() const;
 #pragma endregion
 
 
@@ -171,16 +172,16 @@ namespace isl {
 
     Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); } 
     void setConstant_inplace(const Int &) ISLPP_INPLACE_FUNCTION;
-    void setCoefficient(isl_dim_type type, unsigned pos, int);
-    void setCoefficient(isl_dim_type type, unsigned pos, const Int &);
-    void setDenominator(const Int &);
+    ISLPP_INPLACE_ATTRS void setCoefficient_inplace(isl_dim_type type, unsigned pos, int) ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void setCoefficient_inplace(isl_dim_type type, unsigned pos, const Int &) ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void setDenominator_inplace(const Int &) ISLPP_INPLACE_FUNCTION;
 
-    void addConstant(const Int &);
-    void addConstant(int);
-    void addConstantNum(const Int &);
-    void addConstantNum(int);
-    void addCoefficient(isl_dim_type type, unsigned pos, int);
-    void addCoefficient(isl_dim_type type, unsigned pos, const Int &);
+    ISLPP_INPLACE_ATTRS void addConstant_inplace(const Int &)ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void addConstant_inplace(int)ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void addConstantNum_inplace(const Int &)ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void addConstantNum_inplace(int)ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void addCoefficient_inplace(isl_dim_type type, unsigned pos, int)ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS  void addCoefficient_inplace(isl_dim_type type, unsigned pos, const Int &)ISLPP_INPLACE_FUNCTION;
 
     bool isCst() const;
 
@@ -232,7 +233,13 @@ namespace isl {
     ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(this->cast(isl::move(space))); }
 
     ISLPP_EXSITU_ATTRS Aff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(domainSpace); return result; }
-       ISLPP_INPLACE_ATTRS void castDomain_inplace(Space space) ISLPP_INPLACE_FUNCTION;
+    ISLPP_INPLACE_ATTRS void castDomain_inplace(Space space) ISLPP_INPLACE_FUNCTION;
+
+    ISLPP_EXSITU_ATTRS Aff removeDivsUsingFloor()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingFloor_inplace(); return result; }
+    ISLPP_INPLACE_ATTRS void removeDivsUsingFloor_inplace() ISLPP_INPLACE_FUNCTION;
+
+    ISLPP_EXSITU_ATTRS Aff removeDivsUsingCeil()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingCeil_inplace(); return result; }
+    ISLPP_INPLACE_ATTRS void removeDivsUsingCeil_inplace() ISLPP_INPLACE_FUNCTION;
   }; // class Aff
 
 

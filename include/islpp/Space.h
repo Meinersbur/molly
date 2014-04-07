@@ -101,11 +101,8 @@ namespace isl {
     static ParamSpace createParamsSpace(const Ctx *ctx, unsigned nparam);
     static SetSpace createSetSpace(const Ctx *ctx, unsigned nparam, unsigned dim);
 
-    static Space createMapFromDomainAndRange(Space &&domain, Space &&range);
-    static Space createMapFromDomainAndRange(Space &&domain, const Space &range) { return createMapFromDomainAndRange(domain.move(), range.copy()); }
-    static Space createMapFromDomainAndRange(const Space &domain, Space &&range) { return createMapFromDomainAndRange(domain.copy(), range.move()); }
-    static Space createMapFromDomainAndRange(const Space &domain, const Space &range) { return createMapFromDomainAndRange(domain.copy(), range.copy()); }
-    static Space createMapFromDomainAndRange(count_t domainDims, Space rangeSpace) { auto islctx = rangeSpace.getCtx(); return Space::enwrap(isl_space_map_from_domain_and_range(isl_space_set_alloc(islctx->keep(), 0, domainDims), rangeSpace.take())); }
+    static MapSpace createMapFromDomainAndRange(Space domain, Space range);
+     static Space createMapFromDomainAndRange(count_t domainDims, Space rangeSpace) { auto islctx = rangeSpace.getCtx(); return Space::enwrap(isl_space_map_from_domain_and_range(isl_space_set_alloc(islctx->keep(), 0, domainDims), rangeSpace.take())); }
     static Space createMapFromDomainAndRange(Space domainSpace, count_t rangeDims) { auto islctx = domainSpace.getCtx(); return Space::enwrap(isl_space_map_from_domain_and_range(domainSpace.take(), isl_space_set_alloc(islctx->keep(), 0, rangeDims))); }
 #pragma endregion
 
@@ -117,7 +114,7 @@ namespace isl {
       return Space::enwrap(isl_space_map_from_domain_and_range(self.take(), range.take()));
     }
     ISLPP_EXSITU_ATTRS MapSpace mapsTo(count_t nOut) ISLPP_EXSITU_FUNCTION;
-    ISLPP_EXSITU_ATTRS MapSpace mapsToItself() ISLPP_EXSITU_FUNCTION;
+    ISLPP_EXSITU_ATTRS MapSpace mapsToItself() ISLPP_EXSITU_FUNCTION; // double implmentationL selfMap()
 
       // If this is a param space
     SetSpace createSetSpace(count_t nDims) const;
@@ -437,10 +434,7 @@ namespace isl {
     /// Remove nesting and dim ids from non-param dimensions
     ISLPP_EXSITU_ATTRS Space untyped() ISLPP_EXSITU_FUNCTION;
 
-      ISLPP_EXSITU_ATTRS Space selfMap() ISLPP_EXSITU_FUNCTION{
-      auto norm = normalizeWrapped();
-      return createMapFromDomainAndRange(norm, norm);
-    }
+      ISLPP_EXSITU_ATTRS MapSpace selfMap() ISLPP_EXSITU_FUNCTION;
   }; // class Space
 
 
@@ -468,9 +462,7 @@ namespace isl {
   /// Create spaceNesting from valid subspaces
   Space combineSpaces(const Space &lhs, const Space &rhs);
 
-  static inline Space operator>>(const Space &domainSpace, const Space &rangeSpace) {
-    return isl::Space::createMapFromDomainAndRange(domainSpace.normalizeWrapped(), rangeSpace.normalizeWrapped());
-  }
+  Space operator>>(Space domainSpace, Space rangeSpace);
 
   template<typename T, typename S>
   static inline bool matchesSpace(const Spacelike<T> &lhs, const Spacelike<S> &rhs) {

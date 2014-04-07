@@ -4,7 +4,7 @@ add_molly_example(flow flow.cpp)
 
 add_custom_target(run-flow
    COMMAND "$<TARGET_FILE:flow>" 
-   COMMENT "Running ref jacobi..."
+   COMMENT "Running ref flow..."
 )
 
 

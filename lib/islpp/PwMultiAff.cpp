@@ -280,3 +280,46 @@ ISLPP_PROJECTION_ATTRS Set isl::Pw<MultiAff>::range() ISLPP_PROJECTION_FUNCTION 
 ISLPP_EXSITU_ATTRS Map isl::Pw<MultiAff>::applyDomain(Map map) ISLPP_EXSITU_FUNCTION {
   return toMap().applyDomain(map);
 }
+
+
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Pw<MultiAff>::embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION {
+  auto subspace = getDomainSpace();
+  auto myspace = getSpace();
+  auto range = myspace.findSubspace(isl_dim_in, subspace);
+  auto islctx = getCtx();
+
+  auto before = islctx->createSetSpace(range.getCountBefore()).createIdentityMultiAff();
+  auto after = islctx->createSetSpace(range.getCountAfter()).createIdentityMultiAff();
+  return isl::product(before, *this, after).cast(framedomainspace, framedomainspace.replaceSubspace(getDomainSpace(), getRangeSpace()));
+}
+
+
+static int countPiecesCallback(__isl_take isl_set *set, __isl_take isl_multi_aff *aff, void *user) {
+  auto count = static_cast<unsigned *>(user);
+  *count += 1;
+  return 0;
+}
+unsigned isl::Pw<MultiAff>::nPieces() const {
+  unsigned result = 0;
+  auto retval = isl_pw_multi_aff_foreach_piece(keep(), countPiecesCallback, &result);
+  assert(retval == 0);
+  return result;
+}
+
+
+static int enumPiecesCallback(__isl_take isl_set *set, __isl_take isl_multi_aff *aff, void *user) {
+  auto list = static_cast<std::vector<std::pair<Set, MultiAff>> *>(user);
+  list->push_back(std::make_pair(Set::enwrap(set), MultiAff::enwrap(aff)));
+  return 0;
+}
+std::vector<std::pair<Set, MultiAff>> PwMultiAff::getPieces() const {
+  std::vector<std::pair<Set, MultiAff>> result;
+  result.reserve(this->nPieces());
+  auto retval = isl_pw_multi_aff_foreach_piece(keep(), enumPiecesCallback, &result);
+  assert(retval == 0);
+  return result;
+}
+
+
+
+//isl::PwMultiAff isl::operator/(PwMultiAff pma, const Int &divisor)

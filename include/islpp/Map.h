@@ -314,6 +314,8 @@ namespace isl {
     }
 
 
+    ISLPP_EXSITU_ATTRS PwMultiAff anyElement() ISLPP_EXSITU_FUNCTION;
+
 #if 0
     // This is internal, use unite() instead
     void addBasicMap_inplace(BasicMap &&bmap) ISLPP_INPLACE_QUALIFIER { give(isl_map_add_basic_map(take(), bmap.take())); }

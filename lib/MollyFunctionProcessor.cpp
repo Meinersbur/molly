@@ -1090,7 +1090,7 @@ namespace {
         auto acc = facc.getAccessor();
         //gep->moveBefore(acc); // Let IndependentBlocks move it; llvm.memcpy has a bitcast in between accessor and llvm.molly.ptr
 
-        auto splitPt1 = gep;
+        auto splitPt1 = acc;
         auto splitPt2 = acc->getNextNode();
 
         BasicBlock *before;

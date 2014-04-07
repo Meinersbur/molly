@@ -81,13 +81,15 @@ namespace isl {
     Space createMapSpace(unsigned n_in, const Space &range);
 
     Space createParamsSpace(unsigned nparam);
-    Space createSetSpace(unsigned nparam, unsigned dim);
-    Space createSetSpace(unsigned dim);
+    SetSpace createSetSpace(unsigned nparam, unsigned dim);
+    SetSpace createSetSpace(unsigned dim);
 #pragma endregion
 
 
 #pragma region Create affine expressions
     Aff createZeroAff(LocalSpace &&space);
+
+    MultiAff createIdentityMultiAff(count_t dims);
 #pragma endregion
 
     //#pragma region Create local spaces

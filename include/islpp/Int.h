@@ -4,8 +4,8 @@
 #include "islpp_common.h"
 #include <isl/deprecated/int.h>
 #include <llvm/Support/raw_ostream.h>
-#include <ostream>
 #include <llvm/Support/raw_os_ostream.h>
+#include <ostream>
 
 
 namespace isl {
@@ -17,30 +17,30 @@ namespace isl {
   /// - Implement refcounting ourselves
   class Int {
   private:
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
     std::string _printed;
 #endif
     isl_int val;
 
 #pragma region Low-level functions
-  public :
+  public:
     /*const (isl does not use const) */ isl_int &keep() const { return const_cast<isl_int&>(val); }
-    isl_int *change() { 
-#ifndef NDEBUG
+    isl_int *change() {
+#ifdef ISLPP_OBJPRINTED
       _printed.clear(); /*do not control what happens after return*/ 
 #endif
-      return &val; 
+      return &val;
     }
-    void give(const isl_int &val) { 
-      isl_int_set(this->val, val); 
-#ifndef NDEBUG
+    void give(const isl_int &val) {
+      isl_int_set(this->val, val);
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
     }
 
     void updated() {
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -52,7 +52,7 @@ namespace isl {
   public:
     Int() {
       isl_int_init(this->val);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -60,34 +60,34 @@ namespace isl {
     /* implicit */ Int(const Int &v) {
       isl_int_init(this->val);
       isl_int_set(this->val, v.keep());
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       this->_printed = v._printed;
 #endif
     }
     /* implicit */ Int(Int &&v) {
       isl_int_init(this->val);
       isl_int_swap(this->val, v.val);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(v._printed);
 #endif
     }
     ~Int() {
       isl_int_clear(val);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       _printed.clear();
 #endif
     }
 
     const Int &operator=(const Int &v) {
       isl_int_set(this->val, v.val);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       this->_printed = v._printed;
 #endif
       return *this;
     }
     const Int &operator=(Int &&v) {
       isl_int_swap(this->val, v.keep());
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(v._printed);
 #endif
       return *this;
@@ -96,7 +96,7 @@ namespace isl {
     /* implicit */ Int(signed long int v) {
       isl_int_init(this->val);
       isl_int_set_si(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -104,7 +104,7 @@ namespace isl {
     const Int &operator=(signed long int v) {
       isl_int_set_si(this->val, v);
       return *this;
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -113,14 +113,14 @@ namespace isl {
     /* implicit */ Int(unsigned long int v) {
       isl_int_init(this->val);
       isl_int_set_ui(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
     }
     const Int &operator=(unsigned long int v) {
       isl_int_set_ui(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -131,14 +131,14 @@ namespace isl {
     /* implicit */ Int(int v) {
       isl_int_init(this->val);
       isl_int_set_si(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
     }
     const Int &operator=(int v) {
       isl_int_set_si(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -148,14 +148,14 @@ namespace isl {
     /*implicit*/ Int(unsigned int v) {
       isl_int_init(this->val);
       isl_int_set_ui(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
     }
     const Int &operator=(unsigned int v) {
       isl_int_set_ui(this->val, v);
-#ifndef NDEBUG
+#ifdef ISLPP_OBJPRINTED
       llvm::raw_string_ostream os(_printed);
       print(os);
 #endif
@@ -189,22 +189,22 @@ namespace isl {
       isl_int_abs(val, val);
     }
 
-    bool isZero() {
+    ISLPP_PROJECTION_ATTRS bool isZero() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_zero(val);
     }
 
-    bool isOne() {
+      ISLPP_PROJECTION_ATTRS  bool isOne() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_one(val);
     }
 
-    bool isNeg() {
+      ISLPP_PROJECTION_ATTRS   bool isNeg() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_neg(val);
     }
 
-    Int &operator+=(const Int &that) {
-      isl_int_add(this->val, this->val, that.val);
-      this->updated();
-      return *this;
+      Int &operator+=(const Int &that) {
+        isl_int_add(this->val, this->val, that.val);
+        this->updated();
+        return *this;
     }
 
     Int &operator-=(const Int &that) {
@@ -220,17 +220,17 @@ namespace isl {
     return isl_int_eq(lhs.keep(), rhs.keep());
   }
 
-  static inline bool operator==(const Int &lhs, int rhs) { 
+  static inline bool operator==(const Int &lhs, int rhs) {
     return isl_int_cmp_si(lhs.keep(), rhs) == 0;
   }
-  static inline bool operator!=(const Int &lhs, int rhs) { 
+  static inline bool operator!=(const Int &lhs, int rhs) {
     return isl_int_cmp_si(lhs.keep(), rhs) != 0;
   }
 
 
   static inline Int abs(const Int &arg) {
     Int result;
-    mpz_abs(*result.change(), arg.keep());
+    isl_int_abs(*result.change(), arg.keep());
     result.updated();
     return result;
   }
@@ -254,17 +254,22 @@ namespace isl {
   }
 
 
+
   static inline Int operator/(const Int &lhs, unsigned long int rhs) {
     Int result;
-    mpz_tdiv_q_ui(*result.change(), lhs.keep(), rhs);
+    isl_int divisor;
+    isl_int_init(divisor);
+    isl_int_set_ui(divisor, rhs);
+    isl_int_tdiv_q(*result.change(), lhs.keep(), divisor);
+    isl_int_clear(divisor);
     result.updated();
     return result;
   }
 
 
-    static inline Int operator*(const Int &lhs, const Int &rhs) {
+  static inline Int operator*(const Int &lhs, const Int &rhs) {
     Int result;
-    isl_int_mul(*result.change(), lhs.keep(), rhs.keep()); 
+    isl_int_mul(*result.change(), lhs.keep(), rhs.keep());
     result.updated();
     return result;
   }
@@ -272,7 +277,7 @@ namespace isl {
 
   static inline Int operator*(const Int &lhs, unsigned long int rhs) {
     Int result;
-    isl_int_mul_ui(*result.change(), lhs.keep(), rhs); 
+    isl_int_mul_ui(*result.change(), lhs.keep(), rhs);
     result.updated();
     return result;
   }
@@ -288,6 +293,24 @@ namespace isl {
     val.print(out);
     return out;
   }
+
+
+  /// floored division (round to -Inf)
+  static inline Int floord(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_fdiv_q(*result.change(), lhs.keep(), rhs.keep());
+    result.updated();
+    return result; // NRVO
+  }
+
+  static inline Int ceild(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_cdiv_q(*result.change(), lhs.keep(), rhs.keep());
+    result.updated();
+    return result; // NRVO
+  }
+
+
 
 } // namespace isl
 
