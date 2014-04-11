@@ -10,9 +10,12 @@ molly::array<bool,LENGTH,LENGTH> habitat2;
 #include <iostream>
 #include <mpi.h>
 
+uint64_t counter = 0;
+
 
 
 [[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_SCOPE
+  counter += 1;
   if (prevHasLife)
     return 2 <= neighbors && neighbors <= 3;
   return neighbors == 3;
@@ -82,6 +85,8 @@ int main(int argc, char *argv[], char *envp[]) { MOLLY_DEBUG_FUNCTION_SCOPE
   }
   auto stoptime = MPI_Wtime();
   auto duration = stoptime - starttime;
+  
+   std::cerr << "Stencils on this rank: " << counter << std::endl;
   
   if (__molly_cluster_mympirank()==PRINTRANK) {
       auto lup = 1.0*(LENGTH-2)*(LENGTH-2)*ITERATIONS*TESTS;

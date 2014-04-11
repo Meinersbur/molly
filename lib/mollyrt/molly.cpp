@@ -440,6 +440,7 @@ namespace {
       MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
 
       this->initialized = true;
+      dump();
     }
 
     void *getDataPtr() { // MOLLY_DEBUG_FUNCTION_SCOPE
@@ -468,7 +469,8 @@ namespace {
 
 #ifndef NDEBUG
       auto count = get_MPI_count(&status);
-      MOLLY_VAR(count,sending,status.count,status.cancelled,status.MPI_SOURCE,status.MPI_TAG,status.MPI_ERROR);
+      //MOLLY_VAR(count,sending,status.count,status.cancelled,status.MPI_SOURCE,status.MPI_TAG,status.MPI_ERROR);
+      MOLLY_VAR(count,sending);
       //assert(count > 0 && "must receive something");
 #endif
     }
@@ -588,6 +590,7 @@ namespace {
     
       // Get to ready state immediately
       MPI_CHECK(MPI_Start(&request));
+      dump();
     }
 
     void *getDataPtr() { MOLLY_DEBUG_FUNCTION_SCOPE

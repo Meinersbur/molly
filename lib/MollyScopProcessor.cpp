@@ -33,7 +33,9 @@
 #include <polly/Accesses.h>
 #include <polly/RegisterPasses.h>
 #include <polly/LinkAllPasses.h>
+#include <polly/CodeGen/CodeGeneration.h>
 
+#include <llvm/Transforms/Vectorize.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/Analysis/ScalarEvolutionExpander.h>
 #include <llvm/Analysis/LoopInfo.h>

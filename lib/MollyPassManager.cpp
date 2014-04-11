@@ -1124,6 +1124,10 @@ namespace {
 
       auto base = facc.getBaseField();
       auto globalbase = dyn_cast<GlobalVariable>(base);
+      if (!globalbase) {
+    	  base->dump();
+    	  //base->getParent()->dump();
+      }
       assert(globalbase && "Currently only global fields supported");
       auto gvar = getFieldVariable(globalbase);
       assert(gvar);
