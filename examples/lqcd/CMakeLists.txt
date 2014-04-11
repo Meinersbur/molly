@@ -14,9 +14,9 @@ add_custom_target(run-lqcd
 get_filename_component(lqcd_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}lqcd-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${lqcd_a_path}"
   SOURCES "lqcd.cpp"
-  FLAGS -mllvm -shape=3x3x3x3 -mllvm -polly-only-marked
+  FLAGS -mllvm -shape=2x2x2x2 -mllvm -polly-only-marked
   COMMENT "mollycc molly.a lqcd.cpp..."
-)
+) 
 
 add_custom_target(lqcd-mollycc-a
   DEPENDS "${lqcd_a_path}"
@@ -27,7 +27,7 @@ set_target_properties(lqcd-mollycc-a PROPERTIES FOLDER "Molly")
 
 
 add_custom_target(run-lqcd-mollycc-a
-  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 81 ${MPIEXEC_POSTFLAGS} "${lqcd_a_path}"
+  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 16 ${MPIEXEC_POSTFLAGS} "${lqcd_a_path}"
   DEPENDS "${lqcd_a_path}"
   COMMENT "Running lqcd-mollycc-a..."
   VERBATIM

@@ -869,8 +869,8 @@ namespace {
         }
       }
 
-
       // Stmts producing scalars that are used after the SCoP must be executed everywhere, since every node requires the up-to-date data; 
+      //TODO: Broadcasting this value to the other nodes instead might be better, but what if it is a pointer? Might come for free with automatic promotion of arrays to fields
       for (auto outSet : nonfieldOutputFlow.getSets()) { // { [domain] }
         auto stmt = getScopStmtContext(outSet);
 
@@ -1059,12 +1059,24 @@ namespace {
 
       // Disable all write accesses; all of them have been replaced by communication-writes (or even by multiple if there are multiple statement that read them)
       for (auto const & writeAcc : writeAccesses.getMaps()) {
-        auto writeStmt = getScopStmtContext(writeAcc.getInTupleId());
+        auto id = writeAcc.getInTupleId();
+        if (id == prologueId)
+          continue;
+        auto writeStmt = getScopStmtContext(id);
         auto emptyWhere = writeStmt->getDomainSpace().mapsTo(nodeSpace).emptyMap();
         writeStmt->setWhere(emptyWhere);
       }
 
-
+#ifndef NDEBUG
+      for (const auto &readAcc : readAccesses.getMaps()) {
+        auto id = readAcc.getInTupleId();
+        if (id == epilogueId) 
+        continue;
+        auto readStmt = getScopStmtContext(id);
+        auto where = readStmt->getWhere();
+        assert(where.isEmpty()); // Any of those should have been replaced
+      }
+#endif
       //TODO: For every may-write, copy the original value into that the target memory (unless they are the same), so we copy the correct values into the buffers
       // i.e. treat ever may write as, write original value if not written
     }
@@ -1691,8 +1703,10 @@ namespace {
 
         auto sameNodeChunks = localChunks.reorganizeSubspaces(readDomain.getSpace() >> writeDomain.getSpace() >> indexsetSpace, writeNodeShape.getSpace()).setOutTupleId(clusterTupleId).wrap(); // { readStmt[domain], writeStmt[domain], field[indexset], node[cluster] }
         auto layout = fvar->getLayout();
-        auto storageAvailable = layout->getIndexableIndices().castRange(fvar->getAccessSpace()); // { node[cluster] -> fty[indexset] }
         auto storageRequired = sameNodeChunks.reorderSubspaces(clusterSpace, indexsetSpace); // { node[cluster] -> fty[indexset] }
+#if 0
+        auto storageAvailable = layout->getIndexableIndices(); // { node[cluster] -> fty[phys_indexset] }
+
         if (storageAvailable >= storageRequired) {
           int a = 0;
           // No need to allocate more memory, everything can be put into the field's local storage
@@ -1741,6 +1755,7 @@ namespace {
           }
 #endif
         }
+#endif
 
         // Allocate stack space for these
         auto mapper = RectangularMapping::createRectangualarHullMapping(storageRequired);

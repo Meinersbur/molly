@@ -2,10 +2,6 @@
 #define ISLPP_AFF_H
 
 #include "islpp_common.h"
-#include <cassert>
-#include <string>
-#include <isl/space.h> // enum isl_dim_type;
-#include <isl/aff.h>
 #include "Obj.h"
 #include "Spacelike.h"
 #include "Ctx.h"
@@ -13,7 +9,13 @@
 #include "LocalSpace.h"
 #include "Int.h"
 #include "SetSpace.h"
+
+#include <isl/space.h> // enum isl_dim_type;
+#include <isl/aff.h>
 #include <isl/deprecated/aff_int.h>
+
+#include <cassert>
+#include <string>
 
 struct isl_aff;
 
@@ -57,7 +59,7 @@ namespace isl {
 #pragma endregion
 
   public:
-    Int getConstant() const {  
+    Int getConstant() const {
       Int result;
       isl_aff_get_constant(getDerived().keep(), result.change());
       return result;
@@ -92,17 +94,17 @@ namespace isl {
     LocalSpace getSpacelike() const { return getLocalSpace(); }
 
   protected:
-    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_tuple_id(take(), type, id.take())); }
-    //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
-    //  assert(type==isl_dim_in);
-    //  cast_inplace(getSpace().setTupleId(type, std::move(id)));
-    //}
-    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION { give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
+    void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION{ give(isl_aff_set_tuple_id(take(), type, id.take())); }
+      //void setTupleId_internal(isl_dim_type type, Id &&id) ISLPP_INPLACE_FUNCTION {
+      //  assert(type==isl_dim_in);
+      //  cast_inplace(getSpace().setTupleId(type, std::move(id)));
+      //}
+    void setDimId_internal(isl_dim_type type, unsigned pos, Id &&id) ISLPP_INPLACE_FUNCTION{ give(isl_aff_set_dim_id(take(), type, pos, id.take())); }
 
   public:
-    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_insert_dims(take(), type, pos, count)); }
-    //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
-    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_drop_dims(take(), type, first, count)); }
+    void insertDims_inplace(isl_dim_type type, unsigned pos, unsigned count) ISLPP_INPLACE_FUNCTION{ give(isl_aff_insert_dims(take(), type, pos, count)); }
+      //void moveDims_inplace(isl_dim_type dst_type, unsigned dst_pos, isl_dim_type src_type, unsigned src_pos, unsigned count) ISLPP_INPLACE_QUALIFIER { give(isl_aff_move_dims(take(), dst_type, dst_pos, src_type, src_pos, count)); }
+    void removeDims_inplace(isl_dim_type type, unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION{ give(isl_aff_drop_dims(take(), type, first, count)); }
 
     bool isMap() const { return true; }
     bool isSet() const { return false; }
@@ -121,7 +123,7 @@ namespace isl {
     //Id getDimId(isl_dim_type type, unsigned pos) const { return Id::enwrap(isl_aff_get_dim_id(keep(), type, pos)); }
     //void setDimName_inplace(isl_dim_type type, unsigned pos, const char *s) ISLPP_INPLACE_QUALIFIER { give(isl_aff_set_dim_name(take(), type, pos, s)); }
 
-    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION { give(isl_aff_add_dims(take(), type, count)); }
+    void addDims_inplace(isl_dim_type type, unsigned count) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_dims(take(), type, count)); }
 #pragma endregion
 
 
@@ -158,19 +160,19 @@ namespace isl {
     //Space getSpace() const;
     LocalSpace getDomainLocalSpace() const;
     //LocalSpace getLocalSpace() const;
-    ISLPP_EXSITU_ATTRS Space getRangeSpace() ISLPP_EXSITU_FUNCTION { 
+    ISLPP_EXSITU_ATTRS Space getRangeSpace() ISLPP_EXSITU_FUNCTION{
       auto space = getSpace();
-      if (space.isMapSpace()) 
+      if (space.isMapSpace())
         return space.getRangeSpace();
       return space;
     }
 
-    //const char *getDimName( isl_dim_type type, unsigned pos) const;
+      //const char *getDimName( isl_dim_type type, unsigned pos) const;
 
     Int getCoefficient(isl_dim_type type, unsigned pos) const;
     Int getDenominator() const;
 
-    Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); } 
+    Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); }
     void setConstant_inplace(const Int &) ISLPP_INPLACE_FUNCTION;
     ISLPP_INPLACE_ATTRS void setCoefficient_inplace(isl_dim_type type, unsigned pos, int) ISLPP_INPLACE_FUNCTION;
     ISLPP_INPLACE_ATTRS void setCoefficient_inplace(isl_dim_type type, unsigned pos, const Int &) ISLPP_INPLACE_FUNCTION;
@@ -196,7 +198,7 @@ namespace isl {
     void floor();
     void mod(const Int &mod);
 
-    Aff divBy(const Aff &divisor) const {  return Aff::enwrap(isl_aff_div(takeCopy(), divisor.takeCopy())); }
+    Aff divBy(const Aff &divisor) const { return Aff::enwrap(isl_aff_div(takeCopy(), divisor.takeCopy())); }
     Aff divBy(Aff &&divisor) const { return Aff::enwrap(isl_aff_div(takeCopy(), divisor.take())); }
 #if ISLPP_HAS_RVALUE_THIS_QUALIFIERS
     Aff divBy(const Aff &divisor) && { return wrap(isl_aff_div(take(), divisor.takeCopy()));  }
@@ -222,7 +224,7 @@ namespace isl {
     void gist(Set &&context);
     void gistParams(Set &&context);
 
-    Aff pullback(const MultiAff &maff) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.pullback_inplace(maff); return result; }
+    Aff pullback(const MultiAff &maff) ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.pullback_inplace(maff); return result; }
     void pullback_inplace(const MultiAff &) ISLPP_INPLACE_FUNCTION;
     PwAff pullback(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION;
 
@@ -230,9 +232,9 @@ namespace isl {
     //PwAff pullback(const MultiPwAff &pma) ISLPP_EXSITU_QUALIFIER;
 
     ISLPP_EXSITU_ATTRS Aff cast(Space space) ISLPP_EXSITU_FUNCTION;
-    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION { obj_give(this->cast(isl::move(space))); }
+    ISLPP_INPLACE_ATTRS void cast_inplace(Space space) ISLPP_INPLACE_FUNCTION{ obj_give(this->cast(isl::move(space))); }
 
-    ISLPP_EXSITU_ATTRS Aff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION { auto result = copy(); result.castDomain_inplace(domainSpace); return result; }
+    ISLPP_EXSITU_ATTRS Aff castDomain(Space domainSpace) ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.castDomain_inplace(domainSpace); return result; }
     ISLPP_INPLACE_ATTRS void castDomain_inplace(Space space) ISLPP_INPLACE_FUNCTION;
 
     ISLPP_EXSITU_ATTRS Aff removeDivsUsingFloor()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingFloor_inplace(); return result; }
@@ -240,6 +242,11 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS Aff removeDivsUsingCeil()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingCeil_inplace(); return result; }
     ISLPP_INPLACE_ATTRS void removeDivsUsingCeil_inplace() ISLPP_INPLACE_FUNCTION;
+
+    ISLPP_INPLACE_ATTRS const Aff & operator+=(Aff arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add(take(), arg.take())); return *this; }
+    ISLPP_INPLACE_ATTRS const Aff & operator-=(Aff arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_sub(take(), arg.take())); return *this; }
+    ISLPP_INPLACE_ATTRS const Aff & operator+=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), arg.keep())); return *this; }
+    ISLPP_INPLACE_ATTRS const Aff & operator-=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), (-arg).keep())); return *this; }
   }; // class Aff
 
 
@@ -250,7 +257,7 @@ namespace isl {
   static inline bool isPlainEqual(const Aff &aff1, const Aff &aff2)  { return isl_aff_plain_is_equal(aff1.keep(), aff2.keep()); }
   static inline Aff mul(Aff &&aff1, Aff &&aff2) { return enwrap(isl_aff_mul(aff1.take(), aff2.take())); }
   static inline Aff div(Aff aff1, Aff aff2) { return enwrap(isl_aff_div(aff1.take(), aff2.take())); }
-  static inline Aff div(Aff aff1, int divisor) {  return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
+  static inline Aff div(Aff aff1, int divisor) { return div(std::move(aff1), aff1.getDomainSpace().createConstantAff(Int(divisor))); }
   static inline Aff add(Aff aff1, Aff aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
   static inline Aff sub(Aff aff1, Aff aff2) { return enwrap(isl_aff_sub(aff1.take(), aff2.take())); }
 
@@ -266,13 +273,20 @@ namespace isl {
   static inline Aff operator+(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return add(aff.move(), ls.createConstantAff(v)); }
   static inline Aff operator-(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_sub(lhs.take(), rhs.take())); }
   static inline Aff operator-(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return sub(aff.move(), ls.createConstantAff(v)); }
-  
+
   static inline Aff operator*(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_mul(lhs.take(), rhs.take())); }
-  static inline Aff operator*(Aff lhs, int v) { auto ls = lhs.getDomainLocalSpace(); return add(lhs.move(), ls.createConstantAff(v)); }
+  static inline Aff operator*(Aff lhs, signed long v) { auto ls = lhs.getDomainLocalSpace(); return add(lhs.move(), ls.createConstantAff(v)); }
+  static inline Aff operator*(signed long lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(std::move(rhs), ls.createConstantAff(lhs)); }
+  static inline Aff operator*(const Int &lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(std::move(rhs), ls.createConstantAff(lhs)); }
 
 
   static inline Aff operator/(Aff lhs, Aff rhs) { return div(std::move(lhs), std::move(rhs)); }
-  static inline Aff operator/(Aff lhs, int v) { return div(lhs.move(), v); }
+  static inline Aff operator/(Aff lhs, signed long v) { return div(lhs.move(), v); }
+
+  // Warning: plain only!
+  static inline bool operator==(const Aff &lhs, const Aff &rhs) {
+    return checkBool(isl_aff_plain_is_equal(lhs.keep(), rhs.keep()));
+  }
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

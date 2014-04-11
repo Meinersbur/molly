@@ -368,6 +368,8 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
   // Wasteful algorithm to find least complicated function that maps all domain vectors to some vector in the map
   // The runtime of everything using this function depends on the complexity, so it is worth spending some time here
   // Unfortunately, I lack ideas how to find such more efficiently
+  // This method is very inefficient
+  // Actually, I have some idea how to do better: For any BasicMap, iterate through the constraints and fullfil constraints successively by converting the constraint to an Aff and pullbacking it to a global solution, dropping conflicting ones
 
   auto nDims = getOutDimCount();
   auto space = getSpace();

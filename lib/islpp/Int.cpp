@@ -12,3 +12,8 @@ void isl::Int::print(llvm::raw_ostream &out, int base /*= 10*/) const {
   out << s;
   isl_int_free_str(s);
 }
+
+
+void isl::Int::dump() const {
+  print(llvm::errs());
+}

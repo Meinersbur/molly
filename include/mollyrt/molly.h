@@ -467,9 +467,10 @@ public:
   DebugFunctionScope(const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
     //std::cerr << "varnames=" <<varnames << "\n";
-    if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)
+    auto myrank = __molly_cluster_mympirank();
+    if (PRINTRANK >= 0 && myrank != PRINTRANK)
       return;
-    std::cerr << __molly_cluster_mympirank() << ")";
+    std::cerr << myrank << ")";
     for (int i = _debugindention; i > 0; i -= 1) {
       std::cerr << "  ";
     }
@@ -481,9 +482,10 @@ public:
   template<typename... T>
   DebugFunctionScope(void *self, const char *funcname, const char *file, int line, const char *varnames, const T&... vars)
     : funcname(funcname) {
-    if (PRINTRANK >= 0 && __molly_cluster_mympirank() != PRINTRANK)
+    auto myrank = __molly_cluster_mympirank();
+    if (PRINTRANK >= 0 && myrank != PRINTRANK)
       return;
-    std::cerr << __molly_cluster_mympirank() << ")";
+    std::cerr << myrank << ")";
     for (int i = _debugindention; i > 0; i -= 1) {
       //fprintf(stderr,"  ");
       std::cerr << "  ";
@@ -841,7 +843,7 @@ namespace molly {
     size_t localelts;
     T *localdata;
 
-    void init(uint64_t countElts) LLVM_OVERRIDE { MOLLY_DEBUG_FUNCTION_SCOPE
+    void init(uint64_t countElts) LLVM_OVERRIDE{ MOLLY_DEBUG_METHOD_ARGS(countElts, sizeof(T))
       assert(!localdata && "No double-initialization");
       localdata = new T[countElts];
       localelts = countElts;

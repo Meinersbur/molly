@@ -386,3 +386,267 @@ ISLPP_EXSITU_ATTRS PwAff isl::PwAff::mod(Val divisor) ISLPP_EXSITU_FUNCTION{
 void isl::Pw<Aff>::dump() const {
   isl_pw_aff_dump(keep());
 }
+
+
+/// Given that all coefficients of maff and baff are equal, but not the constants; find a common expression that safisfies maff on mset and baff on bset
+/// True is returned if succeeded and maff contains the common aff
+/// If failing, returns false. maff is undefined in this case
+template<typename BasicSet>
+static bool tryCombineConstant(Set mset, Aff &maff, BasicSet bset, Aff baff, isl_dim_type type, bool tryDivs) {
+  Int mval, bval; // For reuse
+  auto nDims = maff.dim(type);
+
+  auto affspace = maff.getSpace();
+  auto mcst = maff.getConstant();
+  auto bcst = baff.getConstant();
+  if (mcst == bcst)
+    return true;
+
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto mcoeff = maff.getCoefficient(type, i);
+    auto bcoeff = baff.getCoefficient(type, i);
+
+    if (!bset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, bval)) // TODO: Can also work with fixed range bounds that div to different constants
+      continue;
+    if (!mset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, mval))
+      continue;
+    if (bval == mval)
+      continue; // No chance to make a difference
+
+    // goal: find coeff s.t.
+    // new_mcst + coeff*mval = mcst 
+    // new_bcst + coeff*bval = bcst 
+    // new_mcst = new_bcst <=> mcst - coeff*mval = bcst - coeff*bval
+    // <=> mcst - bcst = coeff*mval - coeff*bval <=> mcst - bcst = coeff*(mval - bval)
+    // <=> coeff = (mcst - bcst)/(mval - bval) 
+    auto dcst = mcst - bcst;
+    auto dval = mval - bval;
+    if (mcoeff.isZero() && bcoeff.isZero() && isDivisibleBy(dcst, dval)) {
+      auto coeff = divexact(dcst, dval);
+      maff.setCoefficient_inplace(type, i, coeff);
+      maff.addConstant_inplace(-coeff*mval);
+#ifndef NDEBUG
+      baff.setCoefficient_inplace(type, i, coeff);
+      baff.addConstant_inplace(-coeff*bval);
+      assert(maff == baff);
+#endif /* NDEBUG */
+      return true;
+    }
+    //TODO: Non-div solution might be possible using multiple such dimensions
+
+    assert(!"Untested code!");
+    if (!tryDivs)
+      continue;
+
+    if (mval > 0 && bval >= 0 && mval > bval) {
+      // floord(mval,mval)==1 but floord(bval,mval)==0
+      auto divisoraff = affspace.createVarAff(type, i);
+      auto floordiv = divisoraff.divBy(mval);
+      auto dfloordiv = dcst*floordiv;
+      maff -= dfloordiv;
+      maff += dcst;
+#ifndef NDEBUG
+      baff -= floordiv;
+      baff += dcst;
+      assert(maff == baff); // Might fail
+#endif
+      return true;
+    }
+
+    if (bval > 0 && mval >= 0 && bval > mval) {
+      // floord(bval,bval)==1 but floord(mval,bval)==0
+      auto divisoraff = affspace.createVarAff(type, i);
+      auto floordiv = divisoraff.divBy(bval);
+      auto dfloordiv = dcst*floordiv;
+      maff += dfloordiv;
+      maff -= dcst;
+#ifndef NDEBUG
+      baff += floordiv;
+      baff -= dcst;
+      assert(maff == baff); // Might fail
+#endif
+      return true;
+    }
+
+    // TODO: Add cases for negative
+  }
+
+  return false;
+}
+
+
+/// Given two affine expressions, try unifying the coefficients of the the type dimensions s.t. the expression results are still the same on their dimensions
+/// Returns true if succeeded, maff and baff contains the changed expressions in this case, with the tuple coefficients equal, the other coefficients unchanged, but the the constant offset might be changed
+/// If failed, returns false; maff and baff are undefined
+template<typename BasicSet>
+static bool tryConstantCombineTuple(Set mset, Aff &maff, BasicSet bset, Aff &baff, isl_dim_type type) {
+  Int val; // For reuse
+  auto nDims = maff.dim(type);
+
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto mcoeff = maff.getCoefficient(type, i);
+    auto bcoeff = baff.getCoefficient(type, i);
+    if (mcoeff == bcoeff)
+      continue; // Already equal, Nothing to do
+
+    if (bcoeff.isZero() && bset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
+      // baff is available for change
+      baff.setCoefficient_inplace(type, i, mcoeff);
+
+      // Adapt the constant
+      baff.addConstant_inplace(-mcoeff*val);
+      continue;
+    }
+
+    if (mcoeff.isZero() && mset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
+      // maff is available for change
+      maff.setCoefficient_inplace(type, i, bcoeff);
+
+      // Adapt the constant
+      maff.addConstant_inplace(-bcoeff*val);
+      continue;
+    }
+    return false;
+  }
+
+  return true;
+}
+
+
+/// Try to unify two affine expression, s.t. their result on their domain sets do not change
+/// If tryDivs is true, it may add additional div dimensions
+/// Return true if succeeds; mset and maff contain the combined expression
+/// Returns false if failed; mset and ,aff are undefied in this case
+template<typename BasicSet>
+static bool tryConstantCombine(Set &mset, Aff &maff, BasicSet bset, Aff baff, bool tryDivs) {
+  if (maff.keep() == baff.keep()) {
+    // These are the same!
+    mset.unite_inplace(bset);
+    return true;
+  }
+
+  auto mls = maff.getLocalSpace();
+  auto bls = baff.getLocalSpace();
+  if (mls != bls) {
+    // Different divs; cannot handle yet
+    return false;
+  }
+
+  if (!tryConstantCombineTuple(mset, maff, bset, baff, isl_dim_param))
+    return false;
+
+  if (!tryConstantCombineTuple(mset, maff, bset, baff, isl_dim_in))
+    return false;
+
+  auto mcst = maff.getConstant();
+  auto bcst = baff.getConstant();
+
+  do {
+    if (mcst == bcst)
+      break;
+    if (tryCombineConstant(mset, maff, bset, baff, isl_dim_param, tryDivs))
+      break;
+    if (tryCombineConstant(mset, maff, bset, baff, isl_dim_in, tryDivs))
+      break;
+    return false; // Failed to make constant of both affs equal
+  } while (0);
+
+  mset.unite_inplace(bset);
+  return true;
+}
+
+
+/// Merge as many affine pieces as possible
+/// Greedy algorithm
+template<typename BasicSet>
+static void combineAffs(std::vector<std::pair<Set, Aff>> &merged, std::vector<std::pair<BasicSet, Aff>> &affs, bool tryDivs) {
+  auto n = affs.size();
+  merged.reserve(n);
+  while (n) {
+    assert(n == affs.size());
+    Set set = affs[n - 1].first;
+    auto aff = affs[n - 1].second;
+    affs.pop_back();
+    n -= 1;
+
+    auto ip = n;
+    while (ip) {
+      auto i = ip - 1;
+      auto bset = affs[i].first;
+      auto baff = affs[i].second;
+
+      auto maff = aff;
+      auto mset = set;
+      if (tryConstantCombine(mset, maff, bset, baff, tryDivs)) {
+        aff = maff;
+        set = mset;
+
+        affs.erase(affs.begin() + i);
+        n -= 1;
+      }
+      ip -= 1;
+    }
+
+    merged.emplace_back(set, aff);
+  }
+}
+
+
+/// Remove unnecessary complexities from aff, 
+static void normalizeDim(const BasicSet &set, Aff &aff, isl_dim_type type) {
+  Int val;
+  auto nDims = aff.dim(type);
+
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto coeff = aff.getCoefficient(type, i);
+    if (coeff.isZero())
+      continue;
+
+    if (set.isFixed(type==isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
+      aff.addConstant_inplace(val * coeff);
+      aff.setCoefficient_inplace(type, i, 0);
+      //TODO: also set to zero in divs; currently we consider different divs unmergable, so this would make merging them more difficult
+    }
+    // TODO: For divs, even a range of input value may result to the same value
+    // e.g. { [i] -> [(floor(i/2)) : 0 <= i and i < 2 ] }
+  }
+}
+
+
+/// Similar to isl_pw_aff_coalesce, but more thorough
+ISLPP_EXSITU_ATTRS PwAff isl::Pw<Aff>::simplify() ISLPP_EXSITU_FUNCTION{
+  auto nParamDims = getParamDimCount();
+  auto nDomainDims = getInDimCount();
+  
+
+  // Normalize affs
+  std::vector<pair<BasicSet, Aff>> affs;
+  for (const auto &pair : getPieces()) {
+    auto set = pair.first;
+    auto aff = pair.second;
+
+    for (auto &bset : set.getBasicSets()){
+      auto normalizedAff = aff;
+      bset.detectEqualities_inplace(); // make isl_basic_set_is_fixed work
+      normalizeDim(bset, normalizedAff, isl_dim_param);
+      normalizeDim(bset, normalizedAff, isl_dim_in);
+      affs.emplace_back(bset, normalizedAff);
+    }
+  }
+
+  // Try to merge without divs
+  std::vector<pair<Set, Aff>> merged;
+  combineAffs(merged, affs, false);
+  std::vector<pair<Set, Aff>> divmerged;
+  combineAffs(divmerged, merged, true);
+
+  auto result = getSpace().createEmptyPwAff();
+  for (auto &pair : divmerged) {
+    auto &set = pair.first; 
+    set.coalesce_inplace();
+    auto &aff = pair.second;
+    result.unionAdd_inplace(PwAff::create(std::move(set), std::move(aff)));
+  }
+
+  return result; // NRVO
+}

@@ -111,7 +111,7 @@ extern "C" void waitToAttach() {
   if (i)
     return; // Already attached
   auto rank = __molly_cluster_mympirank();
-  if (rank!=1)
+  if (rank!=0)
     return;
 
   std::ostringstream os; // Buffer to avoid this is scattered in output between other rank output  
@@ -123,9 +123,9 @@ extern "C" void waitToAttach() {
 #else
     sleep(2);
 #endif
-    //std::cerr << '.';
+    std::cerr << '.';
   }
-#endif /* NEBUG */
+#endif /* NDEBUG */
 }
 
 
@@ -739,13 +739,13 @@ extern "C" uint64_t __molly_cluster_current_coordinate(uint64_t d) { //MOLLY_DEB
 }
 
 #pragma endregion
-
-
+ 
+  
 #pragma region Local Storage
 
 /// Initialize the local part of a field
 /// The field's array object is used for this
-extern "C" void __molly_local_init(void *localbuf, uint64_t count) { MOLLY_DEBUG_FUNCTION_SCOPE
+extern "C" void __molly_local_init(void *localbuf, uint64_t count, void *rankFunc, void *eltFunc) { MOLLY_DEBUG_FUNCTION_ARGS(localbuf, count, rankFunc, eltFunc)
   assert(localbuf);
   assert(count > 0);
   auto ls = static_cast<LocalStore*>(localbuf); // i.e. LocalStore MUST be first base class
@@ -974,6 +974,13 @@ extern "C" void __molly_end_marker_coord(const char *str, int64_t count, int64_t
 
   MOLLY_DEBUG("END   " << str << " (" << os.str() << ")");
 #endif /* NDEBUG */
+}
+extern "C" void __molly_marker_int(const char *str, int64_t val) {
+  MOLLY_DEBUG("MARKER " << str << " (" << val << ")");
+ //if (__molly_cluster_mympirank() != 0)      
+ //  return;                                         
+ //std::cerr << __molly_cluster_mympirank() << ")";
+ // std::cerr << "MARKER " << str << " (" << val << ")\n";
 }
 
 extern "C" void *__molly_combuf_local_alloc(int64_t count, int64_t eltSize) { MOLLY_DEBUG_FUNCTION_ARGS(count, eltSize)

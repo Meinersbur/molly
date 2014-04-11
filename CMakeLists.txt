@@ -136,7 +136,7 @@ set(MOLLYRT_VERBOSE_LDFLAGS )
 
 #set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev)
 set(MOLLYCC_VERBOSE_FLAGS -v)
-set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info)
+set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -molly-mark-stmts)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 
 option(MOLLYCC_DEBUG_OUTPUT "Debug output while compiling with mollycc" OFF)

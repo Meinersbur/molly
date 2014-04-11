@@ -213,8 +213,6 @@ ISLPP_EXSITU_ATTRS MultiPwAff isl::Multi<PwAff>::pullback(MultiPwAff that) ISLPP
   }
 
 
-
-
     ISLPP_INPLACE_ATTRS void isl::Multi<PwAff>::pullback_inplace(MultiAff ma) ISLPP_INPLACE_FUNCTION{
     give(isl_multi_pw_aff_pullback_multi_aff(take(), ma.take()));
   }
@@ -252,6 +250,11 @@ ISLPP_EXSITU_ATTRS MultiPwAff isl::Multi<PwAff>::pullback(MultiPwAff that) ISLPP
 
     ISLPP_EXSITU_ATTRS Map isl::Multi<PwAff>::applyRange(Map map) ISLPP_EXSITU_FUNCTION{
     return toMap().applyRange(map);
+  }
+
+
+    ISLPP_EXSITU_ATTRS PwMultiAff isl::Multi<PwAff>::applyRange(PwMultiAff pma) ISLPP_EXSITU_FUNCTION{
+    return pma.pullback(*this);
   }
 
 

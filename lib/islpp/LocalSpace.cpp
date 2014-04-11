@@ -36,8 +36,8 @@ LocalSpace::~LocalSpace() {
 #endif
 
 
-LocalSpace::LocalSpace(Space that) 
-  : Obj(isl_local_space_from_space(that.take())) {
+LocalSpace::LocalSpace(Space that)
+: Obj(isl_local_space_from_space(that.take())) {
 }
 
 
@@ -54,19 +54,19 @@ void LocalSpace::dump() const {
 
 
 BasicSet LocalSpace::emptyBasicSet() const {
-  return BasicSet::enwrap(isl_basic_set_empty(isl_local_space_get_space( takeCopy())));
+  return BasicSet::enwrap(isl_basic_set_empty(isl_local_space_get_space(takeCopy())));
 }
 
 BasicSet LocalSpace::universeBasicSet() const {
-  return BasicSet::enwrap(isl_basic_set_universe(isl_local_space_get_space( takeCopy())));
+  return BasicSet::enwrap(isl_basic_set_universe(isl_local_space_get_space(takeCopy())));
 }
 
 BasicMap LocalSpace::emptyBasicMap() const {
-  return BasicMap::enwrap(isl_basic_map_empty(isl_local_space_get_space( takeCopy())));
+  return BasicMap::enwrap(isl_basic_map_empty(isl_local_space_get_space(takeCopy())));
 }
 
 BasicMap LocalSpace::universeBasicMap() const {
-  return BasicMap::enwrap(isl_basic_map_universe(isl_local_space_get_space( takeCopy())));
+  return BasicMap::enwrap(isl_basic_map_universe(isl_local_space_get_space(takeCopy())));
 }
 
 
@@ -151,10 +151,17 @@ void LocalSpace::dropDims(isl_dim_type type, unsigned first, unsigned n) {
 }
 
 
-void isl::LocalSpace::print( llvm::raw_ostream &out ) const {
+void isl::LocalSpace::print(llvm::raw_ostream &out) const {
   auto printer = isl::Printer::createToStr(getCtx());
   printer.print(*this);
   printer.print(out);
+}
+
+
+ISLPP_EXSITU_ATTRS Aff isl::LocalSpace::createConstantAff(const Int &val) ISLPP_EXSITU_FUNCTION{
+  auto result = isl_aff_zero_on_domain(takeCopy());
+  result = isl_aff_set_constant(result, val.keep());
+  return Aff::enwrap(result);
 }
 
 
@@ -164,10 +171,10 @@ BasicMap isl::lifting(LocalSpace &&ls) {
 
 
 bool isl::isEqual(const LocalSpace &ls1, const LocalSpace &ls2) {
-  return isl_local_space_is_equal(ls1.keep(), ls2.keep());       
+  return isl_local_space_is_equal(ls1.keep(), ls2.keep());
 }
 
 
-LocalSpace isl:: intersect( LocalSpace &&ls1,  LocalSpace &&ls2) {
+LocalSpace isl::intersect(LocalSpace &&ls1, LocalSpace &&ls2) {
   return LocalSpace::enwrap(isl_local_space_intersect(ls1.take(), ls2.take()));
 }

@@ -2,8 +2,10 @@
 
 #include "RectangularMapping.h"
 #include "ClusterConfig.h"
-#include "islpp/PwMultiAff.h"
+#include "Codegen.h"
 #include "FieldType.h"
+
+#include "islpp/PwMultiAff.h"
 #include "islpp/Map.h"
 
 using namespace molly;
@@ -15,20 +17,18 @@ molly::FieldLayout::~FieldLayout() {
 }
 
 
-llvm::Value *FieldLayout::codegenLocalIndex(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator, isl::MultiPwAff coords) {
+llvm::Value *FieldLayout::codegenLocalIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator/* { ??? -> rank[cluster] } */, isl::MultiPwAff logicalCoords/* { ??? -> logical[indexset] } */) {
   assert(linearizer);
-  return linearizer->codegenIndex(codegen, domaintranslator, coords);
-
-  //auto physicalcoords = relation.map(logicalCoord);
-
-  // Pick one physical coordinate
-  //auto picked = physicalcoords.lexmin();
-
-  //return linearizer->codegenIndex(codegen, domaintranslator, physicalcoords);
+  auto physMap = getPhysicalLocal(); // { logical[coords], rank[cluster] -> physical[local] }
+  auto place = rangeProduct(logicalCoords, domaintranslator).castRange(physMap.getDomainSpace()); /* { ??? -> logical[indexset],rank[cluster] } */
+  auto physicalCoords = place.applyRange(physMap); /* { ??? -> physical[local] } */
+  auto val = linearizer->codegenIndex(codegen, domaintranslator/* { ??? -> rank[cluster] } */, physicalCoords/* { ??? -> logical[indexset] } */);
+  codegen.marker("local index", val);
+  return val;
 }
 
 
-llvm::Value *FieldLayout::codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator) {
+llvm::Value *FieldLayout::codegenLocalSize(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator) {
   assert(linearizer);
   return linearizer->codegenSize(codegen, domaintranslator);
 }
@@ -41,11 +41,11 @@ FieldLayout *molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterCo
   assert(relation.domain() >= logicalSpan);
   relation.intersectDomain_inplace(logicalSpan);
   auto nodeRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().domain());
-  assert(nodeRel.getRangeDimCount() == clusterConf->getClusterDims() && "Layout must match cluster dimensions" );
+  assert(nodeRel.getRangeDimCount() == clusterConf->getClusterDims() && "Layout must match cluster dimensions");
   nodeRel.castRange_inplace(clusterConf->getClusterSpace());
-  nodeRel.intersectRange_inplace(clusterConf->getClusterShape());
+  assert(nodeRel.range() <= clusterConf->getClusterShape() && "Map to nodes in the cluster only!"); 
+  //nodeRel.intersectRange_inplace(clusterConf->getClusterShape());
   auto localRel = relation.wrap().reorderSubspaces(relation.getDomainSpace(), relation.getRangeSpace().unwrap().range());
-  assert(localRel.getRangeDimCount() == fty->getNumDimensions() && "Layout must match field dimensions");
   localRel.resetOutTupleId_inplace();
   auto mappedNodeSpan = nodeRel.domain();
   auto mappedLocalSpan = localRel;
@@ -56,7 +56,7 @@ FieldLayout *molly::FieldLayout::create(FieldType *fty, ClusterConfig *clusterCo
 }
 
 
-llvm::Value *molly::FieldLayout::codegenLocalMaxSize( MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator) {
+llvm::Value *molly::FieldLayout::codegenLocalMaxSize(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator) {
   return linearizer->codegenMaxSize(codegen, domaintranslator);
 }
 
@@ -66,6 +66,8 @@ isl::Space molly::FieldLayout::getLogicalIndexsetSpace() const {
   return relation.getDomainSpace();
 }
 
-isl::Map molly::FieldLayout::getIndexableIndices() const {
-  return linearizer->getIndexableIndices();
-}
+
+//isl::Map molly::FieldLayout::getIndexableIndices() const {
+//  auto physIndexable = linearizer->getIndexableIndices();
+//  return physIndexable;
+//}

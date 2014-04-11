@@ -919,7 +919,19 @@ void MollyCodeGenerator::codegenAssign(const AnnotatedPtr &dst, const AnnotatedP
     stInstr = irBuilder.CreateStore(bbVal, dstPtr, "assignvalreg");
   } else {
     auto srcPtr = src.getPtr();
-    assert(ty == srcPtr->getType()->getPointerElementType());
+    auto srcTy = srcPtr->getType()->getPointerElementType();
+   do {
+      if (ty == srcTy)
+        break;
+      
+      // By SROA, may remove encapsulation of structs
+      auto tySize = ConstantExpr::getSizeOf(ty);
+      auto srcTySize = ConstantExpr::getSizeOf(srcTy);
+      if (tySize == srcTySize)
+        break;
+
+      llvm_unreachable("Incompatible assignment");
+   } while (0);
 
     if (ty->isSingleValueType()) {
       ldInstr = irBuilder.CreateLoad(srcPtr, "assignval");
@@ -1281,6 +1293,25 @@ string compatName(StringRef arg) {
   }
 
   return result.str();
+}
+
+
+void MollyCodeGenerator::marker(StringRef str, llvm::Value *val) {
+  if (!MollyMarkStmts)
+    return;
+
+  auto &llvmContext = getLLVMContext();
+  auto voidTy = Type::getVoidTy(llvmContext);
+  auto intTy = Type::getInt64Ty(llvmContext);
+  auto strTy = PointerType::getUnqual(Type::getInt8Ty(llvmContext));
+  Type *argTys[] = { strTy, intTy };
+
+  auto strConst = ConstantDataArray::getString(llvmContext, str);
+  auto strGlob = new GlobalVariable(*getModule(), strConst->getType(), true, GlobalValue::PrivateLinkage, strConst, compatName(str));
+  llvm::Value *args[] = { irBuilder.CreatePointerCast(strGlob, strTy), val };
+
+  auto markerDecl = getRuntimeFunc("__molly_marker_int", voidTy, argTys);
+  irBuilder.CreateCall(markerDecl, args);
 }
 
 

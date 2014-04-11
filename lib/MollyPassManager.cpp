@@ -808,6 +808,29 @@ namespace {
     }
 
   private:
+    void codegenFieldInit(MollyCodeGenerator &codegen, MollyFunctionProcessor*funcCtx, FieldVariable *fvar) {
+      auto &llvmContext = getLLVMContext();
+      auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
+      auto clusterconf = getClusterConfig();
+      auto clusterContext = clusterconf->getClusterParamShape();
+
+      auto &builder = codegen.getIRBuilder();
+
+      //auto fval = call->getArgOperand(0);
+      //auto fvar = pm->getFieldVariable(fval);
+      //if (fvar) {
+      //auto fty = fvar->getFieldType();
+      //auto fty = pm->getFieldType(cast<StructType>(fval->getType()->getPointerElementType()));
+
+      auto layout = fvar->getLayout();
+      auto sizeVal = layout->codegenLocalSize(codegen, funcCtx->getCurrentNodeCoordinate()/* {  -> node[cluster] } */);
+
+      auto rankFunc = emitFieldRankofFunc(layout);
+      auto indexFunc = emitLocalIndexofFunc(layout);
+
+      codegen.callRuntimeLocalInit(fvar->getVariable(), sizeVal, rankFunc, indexFunc);
+    }
+
     void emitMollyInit() {
       auto &llvmContext = getLLVMContext();
       auto voidTy = Type::getVoidTy(llvmContext);
@@ -825,7 +848,7 @@ namespace {
 
       for (auto &fvarpair : fvars) {
         auto fvar = fvarpair.second;
-        // Currently done in ctor
+        codegenFieldInit(codegen, funcCtx, fvar);
       }
 
       for (auto locbuf : localbufs) {

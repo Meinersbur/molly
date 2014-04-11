@@ -309,6 +309,8 @@ namespace {
 
 
     void replaceFieldInit(CallInst *call, Function *called) {
+      // Node coordinate not known at this point, i.e. it is impossible to know the local size!!!!
+#if 0
       auto &llvmContext = func->getContext();
       auto module = func->getParent();
       auto voidPtrTy = Type::getInt8PtrTy(llvmContext);
@@ -334,7 +336,8 @@ namespace {
       //} else {
       // Constructor should have been inlined; let's assume this is the non-inlined version that will never be called since we have no way to find out to which 
       //}
-
+#endif
+      // TODO: Remove intrinsic entrirely
       call->eraseFromParent();
     }
 

@@ -137,10 +137,8 @@ namespace isl {
 
 #pragma region Conversion
     // From BasicSet
-    /* implicit */ Set(BasicSet &&set) : Obj(isl_set_from_basic_set(set.take())) {}
-    /* implicit */ Set(const BasicSet &set) : Obj(isl_set_from_basic_set(set.takeCopy())) {}
-    const Set &operator=(BasicSet &&that) { give(isl_set_from_basic_set(that.take())); return *this; }
-    const Set &operator=(const BasicSet &that) { give(isl_set_from_basic_set(that.takeCopy())); return *this; }
+    /* implicit */ Set(BasicSet set) : Obj(set.isNull() ? nullptr : isl_set_from_basic_set(set.take())) {}
+    const Set &operator=(BasicSet that) { reset(that.isNull() ? nullptr : isl_set_from_basic_set(that.take())); return *this; }
 #pragma endregion
 
 
@@ -182,6 +180,7 @@ namespace isl {
     std::vector<Point> getPoints() const;
 
     int getBasicSetCount() const;
+    ISLPP_EXSITU_ATTRS std::vector<BasicSet> getBasicSets() ISLPP_EXSITU_FUNCTION;
 
     int getInvolvedDims(isl_dim_type, unsigned first, unsigned n) const;
     bool dimHasAnyLowerBound(isl_dim_type, unsigned pos) const;
@@ -330,7 +329,15 @@ namespace isl {
      std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false);
 
      std::string toString()  const;
+
+     ISLPP_PROJECTION_ATTRS bool isFixed(isl_dim_type type, unsigned pos, Int &val) ISLPP_PROJECTION_FUNCTION{
+       // There is no set variant; use the fact that in the implementation, a isl_set is a isl_map in disguise
+       auto result = isl_map_plain_is_fixed((isl_map*)keep(), type, pos, val.change());
+       val.updated();
+       return result;
+     }
   }; // class Set
+
 
 
   static inline Set enwrap(isl_set *obj) { return Set::enwrap(obj); }

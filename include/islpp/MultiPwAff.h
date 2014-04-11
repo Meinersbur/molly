@@ -212,6 +212,19 @@ namespace isl {
     ISLPP_EXSITU_ATTRS Set getRange() ISLPP_EXSITU_FUNCTION;
 
     ISLPP_EXSITU_ATTRS Map applyRange(Map map) ISLPP_EXSITU_FUNCTION;
+
+    ISLPP_EXSITU_ATTRS MultiPwAff applyRange(MultiPwAff mpa) ISLPP_EXSITU_FUNCTION{ return mpa.pullback(*this); }
+    ISLPP_EXSITU_ATTRS PwMultiAff applyRange(PwMultiAff pma) ISLPP_EXSITU_FUNCTION;
+
+    ISLPP_INPLACE_ATTRS void simplify_inplace() ISLPP_INPLACE_FUNCTION{
+      auto nDims = getOutDimCount();
+        for (auto i = nDims - nDims; i < nDims; i += 1) {
+          auto aff = getPwAff(i);
+          aff.simplify_inplace();
+          setPwAff_inplace(i, std::move(aff));
+        }
+    }
+    ISLPP_EXSITU_ATTRS MultiPwAff simplify() ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.simplify_inplace(); return result; }
   }; // class MultiAff
 
 

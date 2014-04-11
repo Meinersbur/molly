@@ -5,16 +5,18 @@
 #include "Multi.h"
 #include "Pw.h"
 #include "Id.h"
-#include <cassert>
-#include <string>
-#include <functional>
-#include <isl/space.h> // enum isl_dim_type;
-#include <isl/aff.h>
 #include "Obj.h"
 #include "Spacelike.h"
 #include "Ctx.h"
 #include "Space.h"
 #include "Set.h"
+
+#include <isl/space.h> // enum isl_dim_type;
+#include <isl/aff.h>
+
+#include <cassert>
+#include <string>
+#include <functional>
 
 struct isl_pw_aff;
 
@@ -216,6 +218,9 @@ namespace isl {
 #endif
 
     ISLPP_EXSITU_ATTRS Map reverse() ISLPP_EXSITU_FUNCTION;
+
+    ISLPP_EXSITU_ATTRS PwAff simplify() ISLPP_EXSITU_FUNCTION;
+    ISLPP_INPLACE_ATTRS void simplify_inplace() ISLPP_INPLACE_FUNCTION{ give(simplify().take());    }
   }; // class PwAff
 
 
@@ -238,8 +243,8 @@ namespace isl {
 
   static inline PwAff add(PwAff &&pwaff1, PwAff &&pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.take(), pwaff2.take())); }
   static inline PwAff add(PwAff &&pwaff1, const PwAff &pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.take(), pwaff2.takeCopy())); }
-  static inline  PwAff add(const PwAff &pwaff1, PwAff &&pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.take())); }
-  static inline   PwAff add(const PwAff &pwaff1, const PwAff &pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.takeCopy())); }
+  static inline PwAff add(const PwAff &pwaff1, PwAff &&pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.take())); }
+  static inline PwAff add(const PwAff &pwaff1, const PwAff &pwaff2) { return PwAff::enwrap(isl_pw_aff_add(pwaff1.takeCopy(), pwaff2.takeCopy())); }
   PwAff add(PwAff &&pwaff1, int pwaff2);
   static inline PwAff add(const PwAff &lhs, int rhs) {  return add(lhs.copy(), rhs);  }
   static inline PwAff add(int lhs, PwAff && rhs) {  return add(std::move(rhs), lhs);  }

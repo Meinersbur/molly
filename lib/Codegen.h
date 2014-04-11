@@ -353,7 +353,7 @@ namespace molly {
     }
 #endif
 
-
+    void marker(StringRef str, llvm::Value *val);
     void markBlock(StringRef str);
     void markBlock(StringRef str, isl::MultiPwAff coord);
   }; // class MollyCodeGenerator

@@ -11,8 +11,8 @@
 
 namespace isl {
 
-  class enum mapping_type {
-    NULL,
+  enum class mapping_type {
+    NONE,
     //BASICMAP, represented as Map with one element
     MAP,
     //AFF, represented as MultiAff with one range dimension
@@ -32,8 +32,8 @@ namespace isl {
     void *obj;
 
   protected:
-    mapping_type getType() { return static_cast<uintptr_t>(obj)& 0x07; }
-    void *getObj() { return static_cast<void*>(static_cast<uintptr_t>(obj) & static_cast<uintptr_t>(0x07)); }
+    mapping_type getType() { return static_cast<mapping_type>(reinterpret_cast<uintptr_t>(obj)& 0x07u); }
+    void *getObj() { return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(obj)& 0x07u); }
     isl_map *getMap() { assert(getType() == mapping_type::MAP); return static_cast<isl_map*>(getObj()); }
     isl_pw_multi_aff *getPwMultiAff() { assert(getType() == mapping_type::PWMULTIAFF); return static_cast<isl_pw_multi_aff*>(getObj()); }
     isl_multi_pw_aff *getMultiPwAff() { assert(getType() == mapping_type::MULTIPWAFF); return static_cast<isl_multi_pw_aff*>(getObj()); }
@@ -58,13 +58,13 @@ namespace isl {
         isl_pw_multi_aff_free(getPwMultiAff());
         break;
       case mapping_type::MULTIPWAFF:
-        isl_pw_multi_aff_free(getMultiPwAff());
+        isl_multi_pw_aff_free(getMultiPwAff());
         break;
       default:
         assert(false);
       }
     }
-    StructTy *addref() const { return isl_map_copy(keepOrNull()); }
+    //StructTy *addref() const { return isl_map_copy(keepOrNull()); }
 
   public:
     static Mapping enwrap(isl_basic_map *bmap) {

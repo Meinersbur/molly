@@ -121,13 +121,13 @@ void BasicSet::eliminate(isl_dim_type type, unsigned first, unsigned n){
   give(isl_basic_set_eliminate(take(), type, first, n));
 }
 
-void BasicSet::detectEqualities() {
+ISLPP_INPLACE_ATTRS void BasicSet::detectEqualities_inplace()ISLPP_INPLACE_FUNCTION{
   give(isl_basic_set_detect_equalities(take()));
 }
-void BasicSet::removeRedundancies() {
+ISLPP_INPLACE_ATTRS void BasicSet::removeRedundancies_inplace()ISLPP_INPLACE_FUNCTION{
   give(isl_basic_set_remove_redundancies(take()));
 }
-void BasicSet::affineHull() {
+ISLPP_INPLACE_ATTRS void BasicSet::affineHull_inplace() ISLPP_INPLACE_FUNCTION{
   give(isl_basic_set_affine_hull(take())); 
 }
 

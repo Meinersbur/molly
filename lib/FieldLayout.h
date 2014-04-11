@@ -35,6 +35,10 @@ namespace molly {
     // TODO: select a primary remote for every node, so traffic is load-balanced
     isl::PwMultiAff primary;
 
+    /// For every node, the physical coordinate
+    /// { logical[indexset] -> physical[local] }
+    isl::PwMultiAff localPhysical;
+
     /// To make a single, ordered index out of a local coordinate
     /// Inputs: physical[cluster], physical[local]
     /// Output: ordinal
@@ -46,8 +50,9 @@ namespace molly {
       assert(fty);
       assert(linearizer);
 
-      // FIXME: There are way better algos for choosing a primary
-      primary = relation.uncurry().domain().unwrap().anyElement();
+      // FIXME: There are way better algorithms for choosing a primary
+      this->primary = relation.uncurry().domain().unwrap().anyElement();
+      this->localPhysical = relation.uncurry().toPwMultiAff(); // No multiple location on the same node supported yet
     }
 
   public:
@@ -82,17 +87,19 @@ namespace molly {
       return relation.wrap().reorganizeSubspaces(getLogicalIndexsetSpace(), getPhysicalNodeSpace());
     }
 
-    isl::Map getPhysicalLocal() const {
-      return relation.wrap().reorganizeSubspaces(getLogicalIndexsetSpace(), getPhysicalLocalSpace());
+    isl::PwMultiAff getPhysicalLocal() const {
+      //return relation.wrap().reorganizeSubspaces(getLogicalIndexsetSpace(), getPhysicalLocalSpace());
+      return localPhysical;
     }
 
-    llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
-    llvm::Value *codegenLocalMaxSize(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator);
-    llvm::Value *codegenLocalIndex(MollyCodeGenerator &codegen, isl::PwMultiAff domaintranslator, isl::MultiPwAff logicalCoord);
+    llvm::Value *codegenLocalSize(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator);
+    llvm::Value *codegenLocalMaxSize(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator);
+    llvm::Value *codegenLocalIndex(MollyCodeGenerator &codegen, isl::MultiPwAff domaintranslator, isl::MultiPwAff logicalCoord);
 
     /// { cluster[nodecoord] -> fty[indexset] }
     /// Difference to other getPhysicalXYZ() is that it also returns the elements that are not contained in this->relation, but memory is allocated for because of overapproximation
-    isl::Map getIndexableIndices() const;
+    // Disabled because it doesn't handle localPhysical
+    //isl::Map getIndexableIndices() const;
   }; // class FieldLayout
 
 } // namespace molly

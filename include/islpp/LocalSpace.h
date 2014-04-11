@@ -102,6 +102,7 @@ namespace isl {
 
     Aff createZeroAff() const;
     Aff createConstantAff(int) const;
+    ISLPP_EXSITU_ATTRS Aff createConstantAff(const Int &val) ISLPP_EXSITU_FUNCTION;
 
     Constraint createEqualityConstraint() const;
     Constraint createInequalityConstraint() const;
@@ -158,5 +159,12 @@ namespace isl {
   bool isEqual(const LocalSpace &ls1, const LocalSpace &ls2);
   LocalSpace intersect( LocalSpace &&ls1,  LocalSpace &&ls2);
 
-} // namepsace isl
+  static inline bool operator==(const LocalSpace &ls1, const LocalSpace &ls2) {
+    return checkBool(isl_local_space_is_equal(ls1.keep(), ls2.keep()));
+  }
+  static inline bool operator!=(const LocalSpace &ls1, const LocalSpace &ls2) {
+    return !operator==(ls1,ls2);
+  }
+
+} // namespace isl
 #endif /* ISLPP_LOCALSPACE_H */

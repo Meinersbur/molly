@@ -78,6 +78,10 @@ void Set::print(llvm::raw_ostream &out) const {
 
 
 void Set::dump() const {
+  if (isNull()) {
+    llvm::errs() << "NULL";
+    return;
+  }
   isl_set_dump(keep());
 }
 
@@ -1123,6 +1127,19 @@ ISLPP_INPLACE_ATTRS void isl::Set::coalesce_inplace() ISLPP_INPLACE_FUNCTION {
 
 ISLPP_CONSUME_ATTRS PwMultiAff Set::chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION{
   return chainSubspace(std::move(pma));
+}
+
+
+static int enumBasicSetsCallback(__isl_take isl_basic_set *set, void *user) {
+  auto list = static_cast<std::vector<BasicSet> *>(user);
+  list->push_back(BasicSet::enwrap(set));
+  return 0;
+}
+ISLPP_EXSITU_ATTRS std::vector<BasicSet> Set::getBasicSets() ISLPP_EXSITU_FUNCTION {
+  std::vector<BasicSet> result;
+  auto retval = isl_set_foreach_basic_set(keep(), enumBasicSetsCallback, &result);
+  assert(retval == 0);
+  return result;
 }
 
 

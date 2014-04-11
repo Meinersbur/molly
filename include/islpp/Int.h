@@ -172,9 +172,7 @@ namespace isl {
       llvm::raw_string_ostream stream(buf);
       return stream.str();
     }
-    void dump() const {
-      print(llvm::errs());
-    }
+    void dump() const;
 
 
     signed long int asSi() const {
@@ -213,18 +211,31 @@ namespace isl {
       return *this;
     }
 
+    ISLPP_EXSITU_ATTRS Int operator-() ISLPP_EXSITU_FUNCTION{
+      Int result;
+      isl_int_neg(*result.change(), keep());
+      result.updated();
+      return result; // NRVO
+    }
   }; // class Int
 
 
   static inline bool operator==(const Int &lhs, const Int &rhs) {
-    return isl_int_eq(lhs.keep(), rhs.keep());
+    return checkBool(isl_int_eq(lhs.keep(), rhs.keep()));
+  }
+  static inline bool operator!=(const Int &lhs, const Int &rhs) {
+    return !operator==(lhs,rhs);
   }
 
-  static inline bool operator==(const Int &lhs, int rhs) {
+  static inline bool operator==(const Int &lhs, signed long rhs) {
     return isl_int_cmp_si(lhs.keep(), rhs) == 0;
   }
-  static inline bool operator!=(const Int &lhs, int rhs) {
+  static inline bool operator!=(const Int &lhs, signed long rhs) {
     return isl_int_cmp_si(lhs.keep(), rhs) != 0;
+  }
+
+  static inline bool operator>=(const Int &lhs, signed long rhs) {
+    return isl_int_cmp_si(lhs.keep(), rhs)>=0;
   }
 
 
@@ -246,6 +257,12 @@ namespace isl {
   }
 
 
+  static inline Int operator+(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_add(*result.change(), lhs.keep(), rhs.keep());
+    result.updated();
+    return result;
+  }
   static inline Int operator-(const Int &lhs, const Int &rhs) {
     Int result;
     isl_int_sub(*result.change(), lhs.keep(), rhs.keep());
@@ -310,6 +327,16 @@ namespace isl {
     return result; // NRVO
   }
 
+
+  static inline bool isDivisibleBy(const Int &divident, const Int &divisor) {
+    return checkBool(isl_int_is_divisible_by(divident.keep(), divisor.keep()));
+  }
+  static inline Int divexact(const Int &divident, const Int &divisor) {
+    Int result;
+    isl_int_divexact(*result.change(), divident.keep(), divisor.keep());
+    result.updated();
+    return result; // NRVO
+  }
 
 
 } // namespace isl
