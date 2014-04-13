@@ -126,6 +126,11 @@ namespace isl {
     return val;
   }
 
+  static inline int checkInt(int val) {
+    assert(val >= 0);
+    return val;
+  }
+
 
   /// Some isl functions do not use unsigned int, this is a check to not miss anything
   static inline count_t to_count_t(int n) { assert(n>=0); return n; } 

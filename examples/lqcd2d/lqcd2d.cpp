@@ -1,3 +1,4 @@
+
 #ifdef WITH_MOLLY
 #include <molly.h>
 #else /* WITH_MOLLY */
@@ -205,14 +206,12 @@ MOLLY_ATTR(pure) halfspinor_t operatormul(int64_t t, int64_t x, int64_t y, int64
   return halfspinor_t(m*v[0], m*v[1]);
 }
 
-
 MOLLY_ATTR(pure) double norm(su3vector_t vec) {
   double result = 0;
   for (auto i = 0; i < 3; i += 1)
     result += norm(vec[i]);
   return result;
 }
-
 
 MOLLY_ATTR(pure) double norm(fullspinor_t spinor) {
   double result = 0;
@@ -290,98 +289,21 @@ MOLLY_ATTR(pure) fullspinor_t expand_ZDN(halfspinor_t weyl) {
 typedef int64_t coord_t;
 
 
-#if 1
-#if 1
-#define L  8
-#define LT L
-#define LX L
-#define LY L
-#define LZ L
-  
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4)] -> local[floor(t/2),x,y,z,t%2]] }")
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4)] -> local[floor(t/2),x,y,z,t%2]] }")
-#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[floor(t/2),x,y,z,t%2]] }")
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[t,x,y,z]] }")
-molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-//spinor_t xsource[LT][LX][LY][LZ];
-//spinor_t xsink[LT][LX][LY][LZ];
-
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : pt=floor(t/4) or (pt=floor(((t+1)%8)/4)) }")
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(t/4)) or (pt=floor(((t+1)%8)/4) and px=floor(x/4)) or (pt=floor(t/4) and px=floor(((x+1)%8)/4)) }")
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(((t+1)%8)/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(((x+1)%8)/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(((y+1)%8)/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(((z+1)%8)/4)) }")
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4) }")
-molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
-//su3matrix_t xgauge[LT][LX][LY][LZ][4];
-
-#if 0
-// cheating, no wraparound
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt] -> local[t,x,y,z,d]] : pt=floor(t/4) or (pt<8 and pt=floor((t+1)/4)) }")
-molly::array<su3matrix_t, LT+1, LX+1, LY+1, LZ+1, 4> gauge;
-#endif
-
-#else
-
-#define LT 6
+#define L  6
+#define LT 8
 #define LX 6
-#define LY 1
-#define LZ 1
-
-#pragma molly transform("{ [t,x,y,z] -> [node[pt,px] -> local[t,x,y,z]] : pt=floor(t/3) and px=floor(x/3) }")
-molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] :  (pt=floor(t/3) and px=floor(x/3)) or (pt=floor((t-1)/3) and px=floor((x-1)/3)) }")
-molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
-#endif
-
-#if 1
-extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
-  for (coord_t t = 0; t < source.length(0); t += 1)
-    for (coord_t x = 0; x < source.length(1); x += 1)
-      for (coord_t y = 0; y < source.length(2); y += 1)
-        for (coord_t z = 0; z < source.length(3); z += 1) {
-          
-          // T+
-          auto result = expand_TUP(gauge[t][x][y][z][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x][y][z]));
-
-          // T-
-          result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][y][z][DIM_T] * project_TDN( source[molly::mod(t - 1, LT)][x][y][z]));
-
-          // X+
-          result += expand_XUP(gauge[t][x][y][z][DIM_X] * project_XUP(source[t][molly::mod(x + 1, LX)][y][z]));
-
-          // X-
-          result += expand_XDN(gauge[t][molly::mod(x - 1, LX)][y][z][DIM_X] * project_XDN(source[t][molly::mod(x - 1, LX)][y][z]));
-
-          // Y+
-          result += expand_YUP(gauge[t][x][y][z][DIM_Y] * project_YUP(source[t][x][molly::mod(y + 1, LY)][z]));
-
-          // Y-
-          result += expand_YDN(gauge[t][x][molly::mod(y - 1, LY)][z][DIM_Y] * project_YDN(source[t][x][molly::mod(y - 1, LY)][z]));
-
-          // Z+
-          result += expand_ZUP(gauge[t][x][y][z][DIM_Z] * project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]));
-
-          // Z-
-          result += expand_ZDN(gauge[t][x][y][molly::mod(z - 1, LZ)][DIM_Z] * project_ZDN(source[t][x][y][molly::mod(z + 1, LZ)]));
 
 
-          // Writeback
-          sink[t][x][y][z] = result;
-        }
-} // void HoppingMatrix()
-#endif
-#else
-
-#define LT 6
-#define LX 4
-
-#pragma molly transform("{ [t,x] -> [node[pt] -> local[t,x]] : pt=floor(t/3) }")
+//#pragma molly transform("{ [t,x] -> [node[floor(t/3),floor(x/3)] -> local[t,x]] }")
+#pragma molly transform("{ [t,x] -> [node[floor(t/4),floor(x/3)] -> local[floor(t/2),x,t%2]] }")
 molly::array<spinor_t, LT, LX> source, sink;
 
-#pragma molly transform("{ [t,x,d] -> [node[pt] -> local[t,x,d]] : pt=floor(t/3) or pt=floor((t-1)/3) }")
-molly::array<su3matrix_t, LT, LX, 2> gauge;
+//#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : pt=floor(t/4) and px=floor(x/3) }")
+#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : (pt=floor(t/4) and px=floor(x/3)) or (pt=floor(((t+1)%8)/4) and px=floor(x/3)) }")
+molly::array<su3matrix_t, LT, LX, 4> gauge;
 
-extern "C" void HoppingMatrix() {
+
+extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1) {
 
@@ -391,100 +313,65 @@ extern "C" void HoppingMatrix() {
       // T-
       result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
 
+
       // Writeback
       sink[t][x] = result;
     }
 } // void HoppingMatrix()
 
-#endif
 
 
-
-MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x, coord_t y, coord_t z) {
-  //return spinor_t(su3vector_t(t+2, 1, t+2), su3vector_t(x+2, x+2, 1), su3vector_t(y+2, 1, y+2), su3vector_t(z+2, z+2, 1));
-  
-  if (t==0&&x==0&&y==0&&z==0)
+MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x) {
+  if (t == 0 && x == 0)
     return spinor_t(su3vector_t::one_b(), su3vector_t::zero(), su3vector_t::zero(), su3vector_t::zero());
 
   return spinor_t::zero();
 }
 
 
-MOLLY_ATTR(pure) su3matrix_t initGaugeVal(coord_t t, coord_t x, coord_t y, coord_t z, direction_t dir) {
-  //return su3matrix_t::allone();
-
-  if (t == 0 && x == 0 && y == 0 && z == 0)
+MOLLY_ATTR(pure) su3matrix_t initGaugeVal(coord_t t, coord_t x, direction_t dir) {
+  if (t == 0 && x == 0)
     return su3matrix_t::mone();
 
   return su3matrix_t::zero();
 }
 
 
-MOLLY_ATTR(pure) void checkSpinorVal(coord_t t, coord_t x, coord_t y, coord_t z, spinor_t val) {
-  auto c = val[0][0];
-  if (c != complex(t)) {
-    std::cerr << "Wrong t (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
-  }
-   c = val[1][0];
-  if (c != complex(x)) {
-    std::cerr << "Wrong x (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
-  }
-   c = val[2][0];
-  if (c != complex(y)) {
-    std::cerr << "Wrong y (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
-  }
-   c = val[3][0];
-  if (c != complex(z)) {
-    std::cerr << "Wrong z (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
-  }
+MOLLY_ATTR(pure) void checkSpinorVal(coord_t t, coord_t x, spinor_t val) {
 }
 
 
-#if 1
 extern "C" MOLLY_ATTR(process) void init() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
-      for (coord_t y = 0; y < source.length(2); y += 1)
-        for (coord_t z = 0; z < source.length(3); z += 1)
-          source[t][x][y][z] = initSpinorVal(t, x, y, z);
+      source[t][x] = initSpinorVal(t, x);
 
-#if 1
+
   for (coord_t t = 0; t < gauge.length(0); t += 1)
     for (coord_t x = 0; x < gauge.length(1); x += 1)
-      for (coord_t y = 0; y < gauge.length(2); y += 1)
-        for (coord_t z = 0; z < gauge.length(3); z += 1)
-          for (coord_t d = 0; d < gauge.length(4); d += 1)
-            gauge[t][x][y][z][d] = initGaugeVal(t, x, y, z, static_cast<direction_t>(2 * d));
-#endif
+      for (coord_t d = 0; d < gauge.length(2); d += 1)
+        gauge[t][x][d] = initGaugeVal(t, x, static_cast<direction_t>(2 * d));
 }
-#endif
 
 
 
-#if 1
+
 extern "C" MOLLY_ATTR(process) double reduce() {
-#if 0
   for (coord_t t = 0; t < sink.length(0); t += 1)
     for (coord_t x = 0; x < sink.length(1); x += 1)
-      for (coord_t y = 0; y < sink.length(2); y += 1)
-        for (coord_t z = 0; z < sink.length(3); z += 1)
-          checkSpinorVal(t, x, y, z, source[t][x][y][z]);
-#endif
+      checkSpinorVal(t, x, source[t][x]);
 
-  double result = 0; 
+  double result = 0;
   for (coord_t t = 0; t < sink.length(0); t += 1)
     for (coord_t x = 0; x < sink.length(1); x += 1)
-      for (coord_t y = 0; y < sink.length(2); y += 1)
-        for (coord_t z = 0; z < sink.length(3); z += 1)
-          result += norm(sink[t][x][y][z]);
+      result += norm(sink[t][x]);
   return result;
 }
-#endif
+
 
 int main(int argc, char *argv[]) {
   init();
 
-  //waitToAttach();
   HoppingMatrix();
 
   auto result = reduce();

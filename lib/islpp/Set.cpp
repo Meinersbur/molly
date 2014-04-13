@@ -1224,3 +1224,37 @@ isl::Map isl::alltoall(Set domainSet, Set rangeSet) {
 isl::Map isl::alltoall(Space domainUniverse, Set rangeSet) {
   return alltoall(domainUniverse.universeBasicSet(), std::move(rangeSet));
 }
+
+
+ISLPP_PROJECTION_ATTRS uint64_t Set::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  uint32_t pieces = 0;
+  uint32_t basic = 0;
+
+  for (const auto &bset : getBasicSets()) {
+    pieces += bset.getComplexity();
+    basic += 1; // logical or
+  }
+
+  uint64_t result = pieces;
+  result <<= 32;
+  result |= basic;
+
+  return result;
+}
+
+
+ISLPP_PROJECTION_ATTRS uint64_t Set::getOpComplexity() ISLPP_PROJECTION_FUNCTION{
+  uint64_t complexity = 0;
+
+  for (const auto &bset : getBasicSets()) {
+    complexity += bset.getComplexity();
+    complexity += 1; // logical or
+  }
+
+  if (complexity==0)
+    return 0; // No basic sets: set is empty
+
+  complexity -= 1; // logical or only between basic sets, so we added one too much
+
+  return complexity;
+}

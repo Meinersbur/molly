@@ -336,6 +336,9 @@ namespace isl {
        val.updated();
        return result;
      }
+
+     ISLPP_PROJECTION_ATTRS uint64_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+     ISLPP_PROJECTION_ATTRS uint64_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class Set
 
 

@@ -234,6 +234,9 @@ namespace isl {
       val.updated();
       return checkBool(result);
     }
+
+      ISLPP_PROJECTION_ATTRS uint32_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+      ISLPP_PROJECTION_ATTRS uint32_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class BasicSet
 
 

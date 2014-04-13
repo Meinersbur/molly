@@ -168,3 +168,28 @@ void isl::BasicMap::cast_inplace(  Space space ) ISLPP_INPLACE_FUNCTION {
   applyDomain_inplace(domainMap.move());
   applyRange_inplace(rangeMap.move());
 }
+
+
+ISLPP_PROJECTION_ATTRS int isl::BasicMap::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto eqMat = Mat::enwrap(isl_basic_map_equalities_matrix(keep(), isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div));
+  auto ineqMat = Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div));
+  assert(eqMat.cols() == ineqMat.cols());
+  auto neqs = eqMat.rows();
+  auto ineqs = ineqMat.rows();
+
+  int complexity = eqMat.cols() + 2 * ineqMat.cols();
+  auto nDivDims = dim(isl_dim_div);
+  auto nTotalDims = eqMat.cols();
+  for (auto i = nTotalDims - nDivDims; i < nTotalDims; i += 1) {
+    for (auto j = neqs - neqs; j < neqs; j += 1) {
+      if (!eqMat[j][i].isZero())
+        complexity +=1;
+    }
+    for (auto j = ineqs - ineqs; j < ineqs; j += 1) {
+      if (!ineqMat[j][i].isZero())
+        complexity += 2;
+    }
+  }
+
+  return complexity;
+}

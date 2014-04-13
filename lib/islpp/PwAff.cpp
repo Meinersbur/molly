@@ -650,3 +650,50 @@ ISLPP_EXSITU_ATTRS PwAff isl::Pw<Aff>::simplify() ISLPP_EXSITU_FUNCTION{
 
   return result; // NRVO
 }
+
+
+ISLPP_PROJECTION_ATTRS uint64_t PwAff::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  uint32_t nBsets = 0;
+  uint32_t affComplexity=0;
+  uint32_t bsetComplexity=0;
+
+  for (const auto &pair : getPieces()) {
+    auto &set = pair.first;
+    auto &aff = pair.second;
+    
+    // The impact of the expression itself is actually very minor and only one really needs to be evaluated. We assume the most complex one
+    affComplexity = std::max(affComplexity, aff.getComplexity());
+
+    for (auto const &bset : set.getBasicSets()) {// for an input vector need to determine in which bset it is; which aff it resolves to is of minor importance
+      nBsets += 1;
+      bsetComplexity += bset.getComplexity();
+    }
+  }
+
+  uint64_t result = nBsets;
+  result <<= 32;
+  result |= bsetComplexity + affComplexity;
+  return result;
+}
+
+
+ISLPP_PROJECTION_ATTRS uint64_t PwAff::getOpComplexity() ISLPP_PROJECTION_FUNCTION{
+  uint64_t complexity = 0;
+  int nPieces = 0;
+
+  for (const auto &pair : getPieces()) {
+    auto &set = pair.first;
+    auto &aff = pair.second;
+
+    complexity += set.getOpComplexity();
+    complexity += aff.getOpComplexity();
+    nPieces += 1;
+  }
+
+  if (nPieces==0)
+    return 0;
+
+  complexity += nPieces - 1; // select for matching piece; just last one doesn't need a select
+
+  return complexity;
+}

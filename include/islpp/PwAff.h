@@ -221,6 +221,19 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS PwAff simplify() ISLPP_EXSITU_FUNCTION;
     ISLPP_INPLACE_ATTRS void simplify_inplace() ISLPP_INPLACE_FUNCTION{ give(simplify().take());    }
+
+  
+      /// Evaluate the complexity of the expression
+      /// the complexity actually consists of two numbers: the number of pieces (disjunctions) and the number of conditions (conjunctions)
+      /// Disjunction complexity is stored in the upper halfs, therefore conjunctions are only considered if the number of disjuctions are equal
+      /// This is because most algorithms (intersections, isl_pw_multi_aff_from_multi_pw_aff, ...) are produce exponential number of pieces in the result
+    ISLPP_PROJECTION_ATTRS uint64_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    /// Evaluate the complexity of the expression
+    /// OpComplexity is the estimated number of machine instructions required to evaluate the expression represented by this PwAff
+    /// Possible optimizations are not considered
+    /// Different pieces are chosen using select instructions (cmov), not branches
+    ISLPP_PROJECTION_ATTRS uint64_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class PwAff
 
 

@@ -314,6 +314,8 @@ namespace isl {
     }
 
     ISLPP_EXSITU_ATTRS  BasicSet      wrap()ISLPP_EXSITU_ATTRS{ return BasicSet::enwrap(isl_basic_map_wrap(takeCopy())); }
+
+      ISLPP_PROJECTION_ATTRS  int getComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class BasicMap
 
 

@@ -6,6 +6,7 @@ add_custom_target(run-lqcd
    COMMAND "$<TARGET_FILE:lqcd>" 
    COMMENT "Running ref LQCD..."
 )
+set_target_properties(run-lqcd PROPERTIES FOLDER "Molly")
 
 
 

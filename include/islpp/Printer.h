@@ -124,6 +124,7 @@ namespace isl {
     void print(const PwAffList &);
     void print(const AffList &);
     void print(const ValList &);
+    void print(const Mat &);
 
     void flush();
   }; // class Printer

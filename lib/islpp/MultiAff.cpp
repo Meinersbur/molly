@@ -227,3 +227,23 @@ ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION {
 ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION {
   return toBasicMap().getRange();
 }
+
+
+ISLPP_PROJECTION_ATTRS uint32_t  isl::MultiAff::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDims = getOutDimCount();
+  uint32_t result = 0;
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    result+= getAff(i).getComplexity();
+  }
+  return result;
+}
+
+
+ISLPP_PROJECTION_ATTRS uint32_t  isl::MultiAff::getOpComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDims = getOutDimCount();
+  uint32_t result = 0;
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    result += getAff(i).getOpComplexity();
+  }
+  return result;
+}

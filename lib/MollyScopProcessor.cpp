@@ -468,7 +468,7 @@ namespace {
   public:
     void genCommunication() {
       auto funcName = func->getName();
-      DEBUG(llvm::dbgs() << "run ScopFieldCodeGen on " << scop->getNameStr() << " in func " << funcName << "\n");
+      DEBUG(llvm::dbgs() << "GenCommunication in " << funcName <<  " on SCoP " << scop->getNameStr() << "\n");
       if (funcName == "test") {
         int a = 0;
       } else if (funcName == "HoppingMatrix") {
@@ -894,7 +894,7 @@ namespace {
         auto homeAcc = accessedButNotyetExecuted.applyRange(fieldHome); // { stmt[domain] -> [cluster] }
         stmtCtx->addWhere(homeAcc); // homeAcc is not a function; TODO: Execute on ALL these nodes?
 
-        notyetExecuted.substract_inplace(accessedButNotyetExecuted.domain());
+        notyetExecuted.substract_inplace(homeAcc.domain());
         localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
       }
 
@@ -1041,21 +1041,29 @@ namespace {
 
       /////////////////////////////////////////////////
 
-
+      int inpCnt = 1;
       for (auto inp : inputFlow.getSets()) {
         // Value source is outside this scop 
         // Value must be read from home location
+        DEBUG(llvm::dbgs() << "InputCommunication " << inpCnt << " of " << inputFlow.nSet() << ": "; inp.print(llvm::dbgs()); llvm::dbgs() << "\n");
         genInputCommunication(inp);
+        inpCnt+=1;
       }
 
+      int flowCnt = 1;
       for (auto dep : dataFlow.getMaps()) { /* dep: { write_acc[domain] -> read_acc[domain] } */
+        DEBUG(llvm::dbgs() << "FlowCommunication " << flowCnt << " of " << dataFlow.getNumMaps() << ": "; dep.print(llvm::dbgs()); llvm::dbgs() << "\n");
         genFlowCommunication(dep);
+        flowCnt+=1;
       }
 
+      int outCnt = 1;
       for (auto out : outputFlow.getSets()) {
+        DEBUG(llvm::dbgs() << "OutputCommunication " << outCnt << " of " << outputFlow.nSet() << ": "; out.print(llvm::dbgs()); llvm::dbgs() << "\n");
         // This means the data is visible outside the scop and must be written to its home location
         // There is no explicit read access
         genOutputCommunication(out);
+        outCnt+=1;
       }
 
 
@@ -1104,11 +1112,11 @@ namespace {
       }
 
       // By construction, addWhere adds redundant instances again and again; remove them here
-      for (auto map : nonfieldDataFlowClosure.getMaps()) {
-        auto source = map.getInTupleId();
-        auto stmtCtx = getScopStmtContext(source);
-        stmtCtx->setWhere(stmtCtx->getWhere().removeRedundancies_consume().coalesce_consume());
-      }
+      //for (auto map : nonfieldDataFlowClosure.getMaps()) {
+     //   auto source = map.getInTupleId();
+      //  auto stmtCtx = getScopStmtContext(source);
+      //  stmtCtx->setWhere(stmtCtx->getWhere().removeRedundancies_consume().coalesce_consume());
+      //}
     }
 
 
@@ -1988,6 +1996,8 @@ namespace {
 
 
     void genOutputCommunication(const isl::Set &outSet/* { writeStmt[domain] } */) {
+      //DEBUG(llvm::dbgs() << "OutputCommunication: "; outSet.print(llvm::dbgs()); llvm::dbgs() << "\n");
+
       auto writeDomainTuple = outSet.getTupleId();
       //auto writeStmt = tupleToStmt[writeDomainTuple.keep()];
       auto writeStmtCtx = getScopStmtContext(outSet);

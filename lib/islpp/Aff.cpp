@@ -11,10 +11,12 @@
 #include "islpp/BasicSet.h"
 #include "islpp/PwAff.h"
 #include "islpp/PwMultiAff.h"
+#include "islpp/Map.h"
 
 #include <isl/aff.h>
+
 #include <llvm/Support/raw_ostream.h>
-#include <islpp/Map.h>
+#include <llvm/ADT/SmallBitVector.h>
 
 using namespace isl;
 using namespace llvm;
@@ -310,4 +312,72 @@ BasicSet isl::leBasicSet(Aff &aff1, Aff &aff2) {
 }
 BasicSet isl::geBasicSet(Aff &aff1, Aff &aff2) { 
   return BasicSet::wrap(isl_aff_ge_basic_set(aff1.take(),aff2.take()));
+}
+
+
+static int linearOps(const Aff &aff, bool countMuls, llvm::SmallBitVector &divUsed) {
+  // if !countMuls, only count nonzero coefficients (and fdiv_q)
+  auto nParmDims = aff.dim(isl_dim_param);
+  auto nInDims = aff.dim(isl_dim_in);
+  auto nDivDims = aff.dim(isl_dim_div);
+
+  int ops = 0;
+
+  Int cst = aff.getConstant();
+  if (!cst.isZero())
+    ops += 1; // add/sub
+  for (auto i = nParmDims - nParmDims; i < nParmDims; i += 1) {
+    Int coeff = aff.getCoefficient(isl_dim_param, i);
+    if (coeff.isZero())
+      continue;
+    if (countMuls && !coeff.isAbsOne())
+      ops += 1; // mul
+    ops += 1; // add/sub
+  }
+  for (auto i = nInDims - nInDims; i < nInDims; i += 1) {
+    Int coeff = aff.getCoefficient(isl_dim_in, i);
+    if (coeff.isZero())
+      continue;
+    if (countMuls && !coeff.isAbsOne())
+      ops += 1; // mul
+    ops += 1; // add/sub
+  }
+  for (auto i = nDivDims - nDivDims; i < nDivDims; i += 1) {
+    Int coeff = aff.getCoefficient(isl_dim_div, i);
+    if (coeff.isZero())
+      continue;
+    if (!divUsed[i]) {
+      divUsed[i] = true;
+   auto div = Aff::enwrap(isl_aff_get_div(aff.keep(), i));
+   ops += linearOps(div, false, divUsed);
+    }
+    if (countMuls && !coeff.isAbsOne())
+      ops += 1; // mul
+    ops += 1; // add/sub
+  }
+
+  if (countMuls && ops>0)
+    ops -= 1; // Only additions/subtraction between, so we added one too much
+
+  Int denom = aff.getDenominator();
+  if (!denom.isAbsOne()) 
+    ops += 6; // fdiv_q; this is an expensive operation so it costs multiple operations: (divident < 0) ? (-(-divident+divisor-1)/divisor) : (divident/divisor); TODO: 2^n divisions are cheaper
+
+  return ops;
+}
+
+
+ISLPP_PROJECTION_ATTRS uint32_t Aff::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDivDims = dim(isl_dim_div);
+  llvm::SmallBitVector divsUsed;
+  divsUsed.resize(nDivDims);
+  return linearOps(*this, false, divsUsed);
+}
+
+
+ISLPP_PROJECTION_ATTRS uint32_t Aff::getOpComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDivDims = dim(isl_dim_div);
+  llvm::SmallBitVector divsUsed;
+  divsUsed.resize(nDivDims);
+  return linearOps(*this, true, divsUsed);
 }

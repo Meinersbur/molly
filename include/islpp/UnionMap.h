@@ -1,9 +1,7 @@
 #ifndef ISLPP_UNIONMAP_H
 #define ISLPP_UNIONMAP_H
 
-#include <cassert>
-#include <llvm/Support/raw_ostream.h>
-#include <isl/union_map.h>
+#include "islpp_common.h"
 #include "BasicMap.h"
 #include "Map.h"
 #include "Space.h"
@@ -12,12 +10,18 @@
 #include "Set.h"
 #include "UnionSet.h"
 #include "Int.h"
-#include <functional>
 #include "Obj.h"
 #include "Union.h"
+
 #include <isl/flow.h>
-#include <vector>
+#include <isl/union_map.h>
 #include <isl/deprecated/union_map_int.h>
+
+#include <llvm/Support/raw_ostream.h>
+
+#include <cassert>
+#include <functional>
+#include <vector>
 
 struct isl_union_map;
 

@@ -362,6 +362,51 @@ isl::Set isl::Map::map(Vec vec) const {
 }
 
 
+static bool isRhsBetter(int nUncovered, const MultiAff &lhs, int lhsComplexity, int lhsRemainingBSets, int lhsCoverBSets, const MultiAff &rhs, int rhsComplexity, int rhsRemainingBSets, int rhsCoverBSets) {
+  if (lhs.keep() == rhs.keep())
+    return false;
+
+  auto lhsReduction = nUncovered - lhsRemainingBSets;
+  auto rhsReduction = nUncovered - rhsRemainingBSets;
+
+  if (lhsReduction > 0 && rhsReduction > 0) {
+    // Both reduce at least one
+    // Reducing number of bsets becomes less important, but take care to limit complexity
+    auto lhsPiecesPerCover = (lhsCoverBSets + lhsReduction - 1) / lhsReduction;
+    auto rhsPiecesPerCover = (rhsCoverBSets + rhsReduction - 1) / rhsReduction;
+
+    if (rhsPiecesPerCover < lhsPiecesPerCover)
+      return true;
+    if (rhsPiecesPerCover > lhsPiecesPerCover)
+      return false;
+  } else {
+    if (rhsRemainingBSets < lhsRemainingBSets)
+      return true;
+    if (rhsRemainingBSets > lhsRemainingBSets)
+      return false;
+  }
+
+  if (rhsCoverBSets < lhsCoverBSets)
+    return true;
+  if (rhsCoverBSets > lhsCoverBSets)
+    return false;
+
+  if (rhsComplexity < lhsComplexity)
+    return true;
+  if (rhsComplexity >lhsComplexity)
+    return false;
+
+  // Test might have been skipped above
+  if (rhsRemainingBSets < lhsRemainingBSets)
+    return true;
+  if (rhsRemainingBSets > lhsRemainingBSets)
+    return false;
+
+  // Not measurable difference between the two
+  return false;
+}
+
+
 /// returns a function that maps to only one element per domain vector; it is undefined which element it is
 /// The methods lexminPwMultiAff(), lexmaxPwMultiAff() already do this, but their return value can be quite complex
 ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
@@ -376,9 +421,9 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
   auto zeroaff = space.createZeroMultiAff();
 
   auto lexmin = lexminPwMultiAff();
-  lexmin.coalesce_inplace(); // Does it anything?
+  //lexmin.coalesce_inplace(); // Does it anything?
   auto lexmax = lexmaxPwMultiAff();
-  lexmax.coalesce_inplace(); // Does it anything?
+  //lexmax.coalesce_inplace(); // Does it anything?
 
 #if 0
   // worth it?
@@ -397,124 +442,151 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
         auto lexdimmid = (maxma[i] + minma[i]) / 2;
         divs[i] = lexdimmid;
       }
-      lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset),std::move(divs)) ); // add_piece nor disjoint_add are private API
+      lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset), std::move(divs))); // add_piece nor disjoint_add are private API
     }
   }
 #endif
 
-    SmallVector<MultiAff, 16 > complexeCandidates;
-    complexeCandidates.reserve(2 * lexmin.nPieces()*lexmax.nPieces() + lexmin.nPieces() + lexmax.nPieces());
-    for (auto &pair : lexmin.getPieces()) {
-      complexeCandidates.push_back(pair.second);
-    }
-    for (auto &pair : lexmax.getPieces()) {
-      complexeCandidates.push_back(pair.second);
-    }
-#if 1
-    auto lexmid = space.createEmptyPwMultiAff();
-    for (auto &minpair : lexmin.getPieces()) {
-      auto &minset = minpair.first;
-      auto &minma = minpair.second;
+  //SmallVector<MultiAff, 16 > complexeCandidates;
+  //complexeCandidates.reserve(2 * lexmin.nPieces()*lexmax.nPieces() + lexmin.nPieces() + lexmax.nPieces());
+  //for (auto &pair : lexmin.getPieces()) {
+  //  complexeCandidates.push_back(pair.second);
+  //}
+  //for (auto &pair : lexmax.getPieces()) {
+  //  complexeCandidates.push_back(pair.second);
+  //}
+  //auto lexmid = space.createEmptyPwMultiAff();
+  SmallVector<MultiAff, 16 > midUpCandidates;
+  SmallVector<MultiAff, 16 > midDnCandidates;
+  midUpCandidates.reserve(lexmin.nPieces() * lexmax.nPieces());
+  midDnCandidates.reserve(lexmin.nPieces() * lexmax.nPieces());
+  for (auto &minpair : lexmin.getPieces()) {
+    auto &minset = minpair.first;
+    auto &minma = minpair.second;
 
-      for (auto &maxpair : lexmax.getPieces()) {
-        auto &maxset = maxpair.first;
-        auto &maxma = maxpair.second;
+    for (auto &maxpair : lexmax.getPieces()) {
+      auto &maxset = maxpair.first;
+      auto &maxma = maxpair.second;
 
-        auto divdown = zeroaff;
-        auto divup = zeroaff;
-        for (auto i = nDims - nDims; i < nDims; i += 1) {
-          auto lexdimmid = (maxma[i] + minma[i]) / 2;
-          divdown[i] = lexdimmid;
-          divup[i] = (maxma[i] + minma[i] + 1) / 2;
-        }
-        //lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset), std::move(divs))); // add_piece nor disjoint_add are private API
-        complexeCandidates.push_back(divdown);
-        complexeCandidates.push_back(divup);
-      }
-    }
-#else
-    for (auto &pair : lexmid.getPieces()) {
-      candidates.push_back(pair.second);
-    }
-#endif
-
-    SmallVector<MultiAff, 16> candidates;
-    for (const auto &candid : complexeCandidates) { // Try first with less-complicated terms
-      auto simpleUp = zeroaff;
-      auto simpleDown = zeroaff;
+      auto divdown = zeroaff;
+      auto divup = zeroaff;
       for (auto i = nDims - nDims; i < nDims; i += 1) {
-        auto aff = candid[i];
-        simpleDown[i] = aff.removeDivsUsingFloor();  
-        simpleUp[i] = aff.removeDivsUsingCeil();
+
+        divdown[i] = (maxma[i] + minma[i]) / 2;
+        divup[i] = (maxma[i] + minma[i] + 1) / 2;
       }
-      candidates.push_back(simpleDown);
-      candidates.push_back(simpleUp);
+      midDnCandidates.push_back(divdown);
+      midUpCandidates.push_back(divup);
     }
-    for (const auto &candid : complexeCandidates) {
-      candidates.push_back(candid);
+  }
+
+  SmallVector<MultiAff, 16> candidates;
+  candidates.reserve(2 * midDnCandidates.size() + 2 * midUpCandidates.size() + 2 * lexmin.nPieces() + 2 * lexmax.nPieces());
+  for (const auto &candid : midUpCandidates) {
+    candidates.push_back(candid.removeDivsUsingFloor());
+  }
+  for (const auto &candid : midDnCandidates) {
+    candidates.push_back(candid.removeDivsUsingCeil());
+  }
+  for (auto &minpair : lexmin.getPieces()) {
+    candidates.push_back(minpair.second.removeDivsUsingCeil());
+  }
+  for (auto &maxpair : lexmax.getPieces()) {
+    candidates.push_back(maxpair.second.removeDivsUsingFloor());
+  }
+  for (const auto &candid : midUpCandidates) {
+    candidates.push_back(candid);
+  }
+  for (const auto &candid : midDnCandidates) {
+    candidates.push_back(candid);
+  }
+  for (auto &minpair : lexmin.getPieces()) {
+    candidates.push_back(minpair.second);
+  }
+  for (auto &maxpair : lexmax.getPieces()) {
+    candidates.push_back(maxpair.second);
+  }
+
+
+  auto nCandidates = candidates.size();
+  for (auto i = nCandidates - nCandidates; i < nCandidates; i += 1) {
+    auto candid1 = candidates[i];
+    for (auto j = i + 1; j < nCandidates;) {
+      auto candid2 = candidates[j];
+      if (candid1 == candid2) {
+        candidates.erase(candidates.begin() + j);
+        nCandidates -= 1;
+        continue;
+      }
+      j += 1;
     }
+  }
 
 
-    // TODO: May remove double candidates
-    // TODO: Sort candidates by expression complexity
+  // TODO: Sort candidates by expression complexity
 
 
-    auto result = space.createEmptyPwMultiAff();
-    auto uncovered = getDomain();
-    while (true) {
-      //uncovered.coalesce_inplace();
-      if (uncovered.isEmpty())
-        break;
-      auto nUncovered = uncovered.getBasicSetCount();
-      auto nCandidates = candidates.size();
-      assert(nCandidates >= 1);
-      MultiAff best;
-      unsigned bestPos;
-      int bestNCovered;
-      int bestNRemaining;
-      Set bestCovered;
-      Set bestRemaining;
-      for (auto i = nCandidates - nCandidates; i < nCandidates; ) {
-        auto &candidate = candidates[i];
-        auto covers = isl::intersect(candidate,*this).domain();
-        auto covered = isl::intersect(uncovered, covers);
-        if (covered.isEmpty()) {
-          // This candidate is useless; remove it from candidates
-          candidates.erase(candidates.begin() + i); 
-          nCandidates -=1;
-          continue;
-        }
-
-        auto remainingUncovered = isl::subtract(uncovered,covers);
-        auto nCovered = covered.getBasicSetCount();
-        auto nRemainingUncovered = remainingUncovered.getBasicSetCount();
-        if (best.isNull() || (bestNRemaining > nRemainingUncovered) || (bestNRemaining == nRemainingUncovered && bestNCovered > nCovered)) { //TODO: Some evaluation on basic set/aff complexity
-          best = candidate;
-          bestPos = i;
-          bestNCovered = nCovered;
-          bestNRemaining = nRemainingUncovered;
-          bestRemaining = remainingUncovered;
-          bestCovered = covered;
-          if (bestNRemaining == 0 && bestNCovered<=1) break; // Ideal solution
-        }
-        i+=1;
+  auto result = space.createEmptyPwMultiAff();
+  auto uncovered = getDomain();
+  while (true) {
+    //uncovered.coalesce_inplace();
+    if (uncovered.isEmpty())
+      break;
+    auto nUncovered = uncovered.getBasicSetCount();
+    auto nCandidates = candidates.size();
+    assert(nCandidates >= 1);
+    MultiAff best;
+    unsigned bestPos;
+    int bestNCovered;
+    int bestNRemaining;
+    Set bestCovered;
+    Set bestRemaining;
+    uint32_t bestComplexity;
+    for (auto i = nCandidates - nCandidates; i < nCandidates;) {
+      auto &candidate = candidates[i];
+      auto covers = isl::intersect(candidate, *this).domain();
+      auto covered = isl::intersect(uncovered, covers);
+      if (covered.isEmpty()) {
+        // This candidate is useless; remove it from candidates
+        candidates.erase(candidates.begin() + i);
+        nCandidates -= 1;
+        continue;
       }
 
-      assert(best.isValid());
-      auto piece = PwMultiAff::create(std::move(bestCovered), std::move(best));
-      result.unionAdd_inplace(piece);
-      uncovered = bestRemaining;
+      auto remainingUncovered = isl::subtract(uncovered, covers);
+      auto nCovered = covered.getBasicSetCount();
+      auto nRemainingUncovered = remainingUncovered.getBasicSetCount();
+      auto complexity = candidate.getComplexity();
+      if (best.isNull() || isRhsBetter(nUncovered, best, bestComplexity, bestNRemaining, bestNCovered, candidate, complexity, nRemainingUncovered, nCovered)) {
+        best = candidate;
+        bestPos = i;
 
-      candidates.erase(candidates.begin() + bestPos);
-      nCandidates -= 1;
+        // Remember best stats to avoid recomputing them
+        bestComplexity = complexity;
+        bestNCovered = nCovered;
+        bestNRemaining = nRemainingUncovered;
+        bestRemaining = remainingUncovered;
+        bestCovered = covered;
+        //if (bestNRemaining == 0 && bestNCovered<=1) break; // Ideal solution
+      }
+      i += 1;
     }
 
+    assert(best.isValid());
+    auto piece = PwMultiAff::create(std::move(bestCovered), std::move(best));
+    result.unionAdd_inplace(piece);
+    uncovered = bestRemaining;
 
-    if (result.nPieces() > lexmin.nPieces()) {
-      result = lexmin; // Is this even possible to happen?
-    }
-    if (result.nPieces() > lexmax.nPieces()) {
-      result = lexmax; // Is this even possible to happen?
-    }
-    return result;
+    candidates.erase(candidates.begin() + bestPos);
+    nCandidates -= 1;
+  }
+
+
+  if (result.nPieces() > lexmin.nPieces()) {
+    result = lexmin; // Is this even possible to happen?
+  }
+  if (result.nPieces() > lexmax.nPieces()) {
+    result = lexmax; // Is this even possible to happen?
+  }
+  return result;
 }

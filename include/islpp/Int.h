@@ -199,6 +199,14 @@ namespace isl {
       return isl_int_is_neg(val);
     }
 
+      ISLPP_PROJECTION_ATTRS   bool isNegOne() ISLPP_PROJECTION_FUNCTION{
+      return checkBool(isl_int_is_negone(val));
+    }
+
+      ISLPP_PROJECTION_ATTRS   bool isAbsOne() ISLPP_PROJECTION_FUNCTION{
+      return checkBool(isl_int_cmpabs_ui(val, 1) == 0);
+    }
+
       Int &operator+=(const Int &that) {
         isl_int_add(this->val, this->val, that.val);
         this->updated();

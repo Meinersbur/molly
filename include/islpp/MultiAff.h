@@ -207,6 +207,31 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS BasicMap reverse() ISLPP_EXSITU_FUNCTION;
     ISLPP_CONSUME_ATTRS BasicMap reverse_consume() ISLPP_CONSUME_FUNCTION;
+
+    ISLPP_PROJECTION_ATTRS uint32_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+    ISLPP_PROJECTION_ATTRS uint32_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    ISLPP_INPLACE_ATTRS void removeDivsUsingFloor_inplace()ISLPP_INPLACE_FUNCTION{
+      auto nDims = getOutDimCount();
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto aff = getAff(i);
+        aff.removeDivsUsingFloor_inplace();
+        setAff_inplace(i, std::move(aff));
+      }
+    }
+    ISLPP_EXSITU_ATTRS MultiAff removeDivsUsingFloor()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingFloor_inplace(); return result; }
+
+      ISLPP_INPLACE_ATTRS void removeDivsUsingCeil_inplace()ISLPP_INPLACE_FUNCTION{
+      auto nDims = getOutDimCount();
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto aff = getAff(i);
+        aff.removeDivsUsingCeil_inplace();
+        setAff_inplace(i, std::move(aff));
+      }
+    }
+    ISLPP_EXSITU_ATTRS MultiAff removeDivsUsingCeil()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingCeil_inplace(); return result; }
+
+
   }; // class MultiAff
 
 
@@ -254,6 +279,20 @@ namespace isl {
 
   static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::enwrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
   static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::enwrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
+
+  static inline bool operator==(const MultiAff &lhs, const MultiAff &rhs) { 
+    auto nDims = lhs.getOutDimCount();
+    if (nDims != rhs.getOutDimCount() )
+      return false;
+
+    for (auto i = nDims - nDims; i < nDims; i += 1) {
+      if (!isl_aff_plain_is_equal(lhs[i].keep(), rhs[i].keep()))
+        return false;
+    }
+    
+    return true;
+  }
+
 } // namespace isl
 
 #endif /* ISLPP_MULTIAFF_H */

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <cassert>
 
 #define MOLLY_ATTR(X) 
 #define MOLLY_PRAGMA(X)
@@ -67,6 +68,7 @@ namespace molly {
   }
 
    static inline int _select(int i) { // overload for compiler-time termination, should never be called
+     assert(false);
 #ifdef _MSC_VER
       __assume(false);
 #else

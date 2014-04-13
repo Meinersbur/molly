@@ -1641,7 +1641,9 @@ namespace {
         auto scopCtx = it.second;
         if (!scopCtx->hasFieldAccess())
           continue;
-
+        auto func = scopCtx->getParentFunction();
+        auto funcName = func->getName();
+        DEBUG(llvm::dbgs() << "ApplyWhere on " << funcName << "\n");
         assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
         for (auto stmt : *scop) {
           auto stmtCtx = getScopStmtContext(stmt);
@@ -1652,6 +1654,7 @@ namespace {
         assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));
 
         // Let polly optimize and and codegen the scops
+        DEBUG(llvm::dbgs() << "PollyCodegen on " << funcName << "\n");
         //scopCtx->pollyOptimize();
         scopCtx->pollyCodegen();
         assert(!verifyFunction(*scopCtx->getParentFunction(), &llvm::errs()));

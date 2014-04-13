@@ -262,3 +262,8 @@ void Printer::print(const ValList &list) {
 void Printer::flush(){
   give(isl_printer_flush(take()));
 }
+
+
+void Printer::print(const Mat &map){
+  llvm_unreachable("There is no isl_printer_print_map");
+}

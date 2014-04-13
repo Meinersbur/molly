@@ -17,6 +17,8 @@
 #include "cstdiofile.h"
 
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/ADT/SmallBitVector.h>
+
 #include <isl/set.h>
 #include <isl/map.h>
 #include <isl/vertices.h>
@@ -300,6 +302,102 @@ Set isl::lexmax(BasicSet &&bset) {
   return Set::enwrap(isl_basic_set_lexmax(bset.take()));
 }
 
+
 Point isl::samplePoint(BasicSet &&bset){
   return Point::enwrap(isl_basic_set_sample_point(bset.take()));
+}
+
+
+static uint32_t complexity(const BasicSet &bset, bool opcount, llvm::SmallBitVector &divsUsed) {
+  if (bset.isUniverse())
+    return 0;
+  if (bset.isEmpty())
+    return 0;
+
+  auto eqMat = Mat::enwrap(isl_basic_set_equalities_matrix(bset.keep(), isl_dim_cst, isl_dim_param, isl_dim_set, isl_dim_div));
+  auto ineqMat = Mat::enwrap(isl_basic_set_inequalities_matrix(bset.keep(), isl_dim_cst, isl_dim_param, isl_dim_set, isl_dim_div));
+  assert(eqMat.cols() == ineqMat.cols());
+  auto neqs = eqMat.rows();
+  auto ineqs = ineqMat.rows();
+
+  auto nTotalDims = bset.dim(isl_dim_all);
+  assert(nTotalDims == ineqMat.cols());
+  assert(nTotalDims == eqMat.cols());
+  auto nDivDims = bset.dim(isl_dim_div);
+  auto nOtherDims = nTotalDims - nDivDims - 1;
+
+  uint32_t ops = 0;
+
+  // We compare to a constant, therefore it does not need to be added to the expression (assuming there is an instruction to compare to any constant, not just zero)
+ 
+  for (auto j = neqs - neqs; j < neqs; j += 1) {
+    auto i = 1;
+    for (; i < nOtherDims; i += 1) {
+      Int coeff = eqMat[j][i];
+      if (coeff.isZero())
+        continue;
+      if (opcount && !coeff.isAbsOne())
+        ops += 1; // mul
+      ops += 1; // add/cmp
+    }
+    for (; i < nTotalDims; i += 1) {
+      Int coeff = eqMat[j][i];
+      if (coeff.isZero())
+        continue;
+      if (!divsUsed[i]) {
+        divsUsed[i] = true;
+        auto div = Aff::enwrap(isl_basic_set_get_div(bset.keep(), i));
+        ops += opcount ? div.getOpComplexity() : div.getComplexity();
+      }
+      if (opcount && !coeff.isAbsOne())
+        ops += 1; // mul
+      ops += 1; // add/cmp
+    }
+  }
+  for (auto j = ineqs - ineqs; j < ineqs; j += 1) {
+    auto i = 1;
+    for (; i < nOtherDims; i += 1) {
+      Int coeff = ineqMat[j][i];
+      if (coeff.isZero())
+        continue;
+      if (opcount && !coeff.isAbsOne())
+        ops += 1; // mul
+      ops += 1; // add/cmp
+    }
+    for (; i < nTotalDims; i += 1) {
+      Int coeff = ineqMat[j][i];
+      if (coeff.isZero())
+        continue;
+      if (!divsUsed[i]) {
+        divsUsed[i] = true;
+        auto div = Aff::enwrap(isl_basic_set_get_div(bset.keep(), i));
+        ops += opcount ? div.getOpComplexity() : div.getComplexity();
+      }
+      if (opcount && !coeff.isAbsOne())
+        ops += 1; // mul
+      ops += 1; // add/cmp
+    }
+  }
+
+  if (opcount) {
+    ops += neqs + ineqs - 1; // For the logical ands between conditions
+  }
+
+  return ops;
+}
+
+
+ISLPP_PROJECTION_ATTRS uint32_t isl::BasicSet::getComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDivDims = dim(isl_dim_div);
+  llvm::SmallBitVector divsUsed;
+  divsUsed.resize(nDivDims);
+  return complexity(*this, false, divsUsed);
+}
+
+
+ISLPP_PROJECTION_ATTRS uint32_t isl::BasicSet::getOpComplexity() ISLPP_PROJECTION_FUNCTION{
+  auto nDivDims = dim(isl_dim_div);
+  llvm::SmallBitVector divsUsed;
+  divsUsed.resize(nDivDims);
+  return complexity(*this, true, divsUsed);
 }

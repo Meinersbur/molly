@@ -231,6 +231,8 @@ namespace isl {
       /// MultiAff::embedAsSubspace
     ISLPP_EXSITU_ATTRS  PwMultiAff embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION;
 
+    ISLPP_PROJECTION_ATTRS uint64_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+    ISLPP_PROJECTION_ATTRS uint64_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class Pw<MultiAff>
 
 

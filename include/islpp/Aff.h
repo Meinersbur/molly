@@ -247,6 +247,9 @@ namespace isl {
     ISLPP_INPLACE_ATTRS const Aff & operator-=(Aff arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_sub(take(), arg.take())); return *this; }
     ISLPP_INPLACE_ATTRS const Aff & operator+=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), arg.keep())); return *this; }
     ISLPP_INPLACE_ATTRS const Aff & operator-=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), (-arg).keep())); return *this; }
+
+    ISLPP_PROJECTION_ATTRS uint32_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+    ISLPP_PROJECTION_ATTRS uint32_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
   }; // class Aff
 
 
