@@ -299,19 +299,25 @@ typedef int64_t coord_t;
 molly::array<spinor_t, LT, LX> source, sink;
 
 //#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : pt=floor(t/4) and px=floor(x/3) }")
-#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : (pt=floor(t/4) and px=floor(x/3)) or (pt=floor(((t+1)%8)/4) and px=floor(x/3)) }")
-molly::array<su3matrix_t, LT, LX, 4> gauge;
+//#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : (pt=floor(t/4) and px=floor(x/3)) or ( pt=floor(((t-1)%8)/4) and px=floor(x/3) ) or ( pt=floor(t/4) and px=floor(((x-1)%6)/3) ) }")
+//#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : (pt=floor(t/4) and px=floor(x/3)) or ( pt=floor(((t-1)%8)/4) and px=floor(x/3) ) or ( pt=floor(t/4) and px=floor(((x-1)%6)/3) ) or ( pt=floor(((t-1)%8)/4) and px=floor(((x-1)%6)/3) ) }")
+//molly::array<su3matrix_t, LT, LX, 4> gauge;
+//#define GAUGE_MOD(divident,divisor) molly::mod(divident,divisor)
 
+//#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : (pt<2 and px<2 and pt=floor(t/4) and px=floor(x/3)) or (pt>=0 and px<2 and pt=floor((t-1)/4) and px=floor(x/3) ) or (pt<2 and px>=0 and pt=floor(t/4) and px=floor((x-1)/3) ) or (pt>=0 and px>=0 and pt=floor((t-1)/4) and px=floor((x-1)/3) ) }")
+#pragma molly transform("{ [t,x,d] -> [node[pt,px] -> local[t,x,d]] : 0<=pt and pt<2 and 0<=px and px<2 and 4pt<=t and t<=4*(pt+1) and 3px<=x and x<=3*(px+1) }")
+molly::array<su3matrix_t, LT + 1, LX + 1, 4> gauge;
+#define GAUGE_MOD(divident,divisor) divident
 
 extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1) {
 
       // T+
-      auto result = expand_TUP(gauge[t][x][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x]));
+      auto result = expand_TUP(gauge[GAUGE_MOD(t + 1, LT)][x][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x]));
 
       // T-
-      result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
+      result += expand_TDN(gauge[t][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
 
 
       // Writeback
@@ -330,6 +336,9 @@ MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x) {
 
 
 MOLLY_ATTR(pure) su3matrix_t initGaugeVal(coord_t t, coord_t x, direction_t dir) {
+  t = molly::mod(t,LT);
+  x = molly::mod(x,LX);
+
   if (t == 0 && x == 0)
     return su3matrix_t::mone();
 

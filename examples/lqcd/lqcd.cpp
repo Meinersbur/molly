@@ -278,7 +278,7 @@ MOLLY_ATTR(pure) fullspinor_t expand_YUP(halfspinor_t weyl) {
 MOLLY_ATTR(pure) fullspinor_t expand_YDN(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
-
+ 
 MOLLY_ATTR(pure) fullspinor_t expand_ZUP(halfspinor_t weyl) {
   return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
 }
@@ -298,20 +298,22 @@ typedef int64_t coord_t;
 #define LY L
 #define LZ L
   
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4)] -> local[floor(t/2),x,y,z,t%2]] }")
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4)] -> local[floor(t/2),x,y,z,t%2]] }")
 #pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[floor(t/2),x,y,z,t%2]] }")
 //#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[t,x,y,z]] }")
 molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 //spinor_t xsource[LT][LX][LY][LZ];
 //spinor_t xsink[LT][LX][LY][LZ];
 
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : pt=floor(t/4) or (pt=floor(((t+1)%8)/4)) }")
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(t/4)) or (pt=floor(((t+1)%8)/4) and px=floor(x/4)) or (pt=floor(t/4) and px=floor(((x+1)%8)/4)) }")
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(((t+1)%8)/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(((x+1)%8)/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(((y+1)%8)/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(((z+1)%8)/4)) }")
+//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(((t-1)%8)/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(((x-1)%8)/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(((y-1)%8)/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(((z-1)%8)/4)) }")
 //#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4) }")
-molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
-//su3matrix_t xgauge[LT][LX][LY][LZ][4];
+//molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
+//#define GAUGE_MOD(divident,divisor) molly::mod(divident,divisor)
+
+
+
+#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : 0<=pt and pt<2 and 0<=px and px<2 and 0<=py and py<2 and 0<=pz and pz<2 and 4pt<=t and t<=4*(pt+1) and 4px<=x and x<=4*(px+1) and 4py<=y and y<=4*(py+1) and 4pz<=z and z<=4*(pz+1) }")
+molly::array<su3matrix_t, LT + 1, LX + 1, LY + 1, LZ + 1, 4> gauge;
+#define GAUGE_MOD(divident,divisor) divident
 
 #if 0
 // cheating, no wraparound
@@ -341,28 +343,28 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
         for (coord_t z = 0; z < source.length(3); z += 1) {
           
           // T+
-          auto result = expand_TUP(gauge[t][x][y][z][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x][y][z]));
+          auto result = expand_TUP(gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x][y][z]));
 
           // T-
-          result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][y][z][DIM_T] * project_TDN( source[molly::mod(t - 1, LT)][x][y][z]));
+          result += expand_TDN(gauge[x][x][y][z][DIM_T] * project_TDN( source[molly::mod(t - 1, LT)][x][y][z]));
 
           // X+
-          result += expand_XUP(gauge[t][x][y][z][DIM_X] * project_XUP(source[t][molly::mod(x + 1, LX)][y][z]));
+          result += expand_XUP(gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * project_XUP(source[t][molly::mod(x + 1, LX)][y][z]));
 
           // X-
-          result += expand_XDN(gauge[t][molly::mod(x - 1, LX)][y][z][DIM_X] * project_XDN(source[t][molly::mod(x - 1, LX)][y][z]));
+          result += expand_XDN(gauge[t][x][y][z][DIM_X] * project_XDN(source[t][molly::mod(x - 1, LX)][y][z]));
 
           // Y+
-          result += expand_YUP(gauge[t][x][y][z][DIM_Y] * project_YUP(source[t][x][molly::mod(y + 1, LY)][z]));
+          result += expand_YUP(gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * project_YUP(source[t][x][molly::mod(y + 1, LY)][z]));
 
           // Y-
-          result += expand_YDN(gauge[t][x][molly::mod(y - 1, LY)][z][DIM_Y] * project_YDN(source[t][x][molly::mod(y - 1, LY)][z]));
+          result += expand_YDN(gauge[t][x][y][z][DIM_Y] * project_YDN(source[t][x][molly::mod(y - 1, LY)][z]));
 
           // Z+
-          result += expand_ZUP(gauge[t][x][y][z][DIM_Z] * project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]));
+          result += expand_ZUP(gauge[t][x][y][GAUGE_MOD(z + 1, LZ)][DIM_Z] * project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]));
 
           // Z-
-          result += expand_ZDN(gauge[t][x][y][molly::mod(z - 1, LZ)][DIM_Z] * project_ZDN(source[t][x][y][molly::mod(z + 1, LZ)]));
+          result += expand_ZDN(gauge[t][x][y][z][DIM_Z] * project_ZDN(source[t][x][y][molly::mod(z + 1, LZ)]));
 
 
           // Writeback
@@ -411,6 +413,11 @@ MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x, coord_t y, coord_t
 
 
 MOLLY_ATTR(pure) su3matrix_t initGaugeVal(coord_t t, coord_t x, coord_t y, coord_t z, direction_t dir) {
+  t = molly::mod(t, LT);
+  x = molly::mod(x, LX);
+  y = molly::mod(y, LY);
+  z = molly::mod(z, LZ);
+
   //return su3matrix_t::allone();
 
   if (t == 0 && x == 0 && y == 0 && z == 0)
