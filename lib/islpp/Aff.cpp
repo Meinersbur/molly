@@ -557,7 +557,7 @@ static Aff makeIndicatorFunction(const LocalSpace &ls, isl_dim_type type, pos_t 
     assert(mLength>0);
     if (bLength >= mLength) {
       // second range is longer, use it as divisor
-      result = -floord(midbased, bLength);
+      result = 1+floord(midbased, bLength);
     } else {
       // first range is longer, use it as divisor
       result = -floord(-1 - midbased, mLength);
@@ -582,7 +582,7 @@ static Aff makeIndicatorFunction(const LocalSpace &ls, isl_dim_type type, pos_t 
     assert(bLength > 0);
     if (mLength >= bLength) {
       // m range is longer, use it as divisor
-      result = 1 + floord(midbased, mLength);
+      result = -floord(midbased, mLength);
     } else {
       // b range is longer, use it as divisor
       auto g = -1 - midbased;

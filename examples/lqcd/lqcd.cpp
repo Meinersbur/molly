@@ -292,29 +292,48 @@ typedef int64_t coord_t;
 
 #if 1
 #if 1
+
+#define _STR(X) #X
+#define STR(X) _STR(X)
+
+
 #define L  16
 #define LT L
 #define LX L
 #define LY L
 #define LZ L
-  
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(((t-1)%8)/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(((x-1)%8)/4) and py=floor(y/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(((y-1)%8)/4) and pz=floor(z/4)) or (pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(((z-1)%8)/4)) }")
-//#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : pt=floor(t/4) and px=floor(x/4) and py=floor(y/4) and pz=floor(z/4) }")
-//molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
-//#define GAUGE_MOD(divident,divisor) molly::mod(divident,divisor)
+ 
+#define B 8
+#define BT B
+#define BX B
+#define BY B
+#define BZ B
 
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : 0<=pt and pt<4 and 0<=px and px<4 and 0<=py and py<4 and 0<=pz and pz<4 and 4pt<=t and t<=4*(pt+1) and 4px<=x and x<=4*(px+1) and 4py<=y and y<=4*(py+1) and 4pz<=z and z<=4*(pz+1) }")
+#define P 2
+#define PT P
+#define PX P
+#define PY P
+#define PZ P
+
+#define sBT STR(BT)
+#define sBX STR(BX)
+#define sBY STR(BY)
+#define sBZ STR(BZ)
+
+#define sPT STR(PT)
+#define sPX STR(PX)
+#define sPY STR(PY)
+#define sPZ STR(PZ)
+
+
+
+#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : 0<=pt<" sPT" and 0<=px<" sPX" and 0<=py<" sPY" and 0<=pz<" sPZ" and " sBT"pt<=t<=" sBT"*(pt+1) and " sBX"px<=x<=" sBX"*(px+1) and " sBY"py<=y<=" sBY"*(py+1) and " sBZ"pz<=z<=" sBZ"*(pz+1) }")
 molly::array<su3matrix_t, LT + 1, LX + 1, LY + 1, LZ + 1, 4> gauge;
 #define GAUGE_MOD(divident,divisor) divident
 
 
-
-#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[floor(t/2),x,y,z,t%2]] }")
-//#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/4),floor(x/4),floor(y/4),floor(z/4)] -> local[t,x,y,z]] }")
+#pragma molly transform("{ [t,x,y,z] -> [node[floor(t/" sBT"),floor(x/" sBX"),floor(y/" sBY"),floor(z/" sBZ")] -> local[floor(t/2),x,y,z,t%2]] }")
 molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-//spinor_t xsource[LT][LX][LY][LZ];
-//spinor_t xsink[LT][LX][LY][LZ];
-
 
 
 
@@ -493,6 +512,7 @@ extern "C" MOLLY_ATTR(process) double reduce() {
           result += norm(sink[t][x][y][z]);
   return result;
 #endif
+  return 0;
 }
 
 
