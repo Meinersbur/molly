@@ -831,6 +831,7 @@ namespace {
       codegen.callRuntimeLocalInit(fvar->getVariable(), sizeVal, rankFunc, indexFunc);
     }
 
+
     void emitMollyInit() {
       auto &llvmContext = getLLVMContext();
       auto voidTy = Type::getVoidTy(llvmContext);
@@ -858,7 +859,6 @@ namespace {
       for (auto combuf : combufs) {
         combuf->codegenInit(codegen, this, funcCtx);
       }
-
     }
 
 
@@ -1539,6 +1539,7 @@ namespace {
       // PollyContext
       // Need one isl_ctx to combine isl objects from different SCoPs 
       this->islctx = isl::Ctx::create();
+      islctx->setCoalesceBoundedWrapping(false);
 
       // Cluster configuration
       this->clusterConf.reset(new ClusterConfig(islctx));

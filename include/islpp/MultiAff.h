@@ -150,7 +150,8 @@ namespace isl {
 #endif
 
     void gistParams(Set &&context) { give(isl_multi_aff_gist_params(take(), context.take())); }
-    void gist(Set &&context) { give(isl_multi_aff_gist(take(), context.take())); }
+    ISLPP_INPLACE_ATTRS void gist_inplace(Set context) ISLPP_INPLACE_FUNCTION{ give(isl_multi_aff_gist(take(), context.take())); }
+    ISLPP_EXSITU_ATTRS MultiAff gist(Set context) ISLPP_EXSITU_FUNCTION{ return MultiAff::enwrap(isl_multi_aff_gist(takeCopy(), context.take())); }
     void lift() { give(isl_multi_aff_lift(take(), nullptr)); }
     LocalSpace lift(LocalSpace &context) {
       isl_local_space *ls = nullptr;
@@ -160,8 +161,8 @@ namespace isl {
 
 
 #pragma region Derived
-    PwMultiAff restrictDomain(Set &&set) const;
-    PwMultiAff restrictDomain(const Set &set) const;
+    //PwMultiAff restrictDomain(Set &&set) const;
+    //PwMultiAff restrictDomain(const Set &set) const;
 #pragma endregion
 
 
@@ -231,7 +232,10 @@ namespace isl {
     }
     ISLPP_EXSITU_ATTRS MultiAff removeDivsUsingCeil()ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.removeDivsUsingCeil_inplace(); return result; }
 
+    ISLPP_INPLACE_ATTRS void normalizeDivs_inplace() ISLPP_INPLACE_FUNCTION;
 
+    ISLPP_EXSITU_ATTRS PwMultiAff intersectDomain(Set set) ISLPP_EXSITU_FUNCTION;
+    ISLPP_CONSUME_ATTRS PwMultiAff intersectDomain_consume(Set set) ISLPP_CONSUME_FUNCTION;
   }; // class MultiAff
 
 
@@ -280,18 +284,20 @@ namespace isl {
   static inline Set lexLeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::enwrap(isl_multi_aff_lex_le_set(maff1.take(), maff2.take())); }
   static inline Set lexGeSet(Multi<Aff> &&maff1, Multi<Aff> &&maff2) { return Set::enwrap(isl_multi_aff_lex_ge_set(maff1.take(), maff2.take())); }
 
-  static inline bool operator==(const MultiAff &lhs, const MultiAff &rhs) { 
+  static inline bool operator==(const MultiAff &lhs, const MultiAff &rhs) {
     auto nDims = lhs.getOutDimCount();
-    if (nDims != rhs.getOutDimCount() )
+    if (nDims != rhs.getOutDimCount())
       return false;
 
     for (auto i = nDims - nDims; i < nDims; i += 1) {
       if (!isl_aff_plain_is_equal(lhs[i].keep(), rhs[i].keep()))
         return false;
     }
-    
+
     return true;
   }
+
+  bool tryCombineMultiAff(Set lhsContext, MultiAff lhsAff, Set rhsContext, MultiAff rhsAff, bool tryCoeffs, bool tryDivs, Set &resultContext, MultiAff &resultAff);
 
 } // namespace isl
 

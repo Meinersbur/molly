@@ -15,7 +15,7 @@ set_target_properties(run-lqcd PROPERTIES FOLDER "Molly")
 get_filename_component(lqcd_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}lqcd-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${lqcd_a_path}"
   SOURCES "lqcd.cpp"
-  FLAGS -mllvm -shape=2x2x2x2 -mllvm -polly-only-marked
+  FLAGS -mllvm -shape=4x4x4x4 -mllvm -polly-only-marked
   COMMENT "mollycc molly.a lqcd.cpp..."
 ) 
 

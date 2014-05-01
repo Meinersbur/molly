@@ -133,14 +133,14 @@ namespace isl {
 
     UnionMap createEmptyUnionMap();
     UnionSet createEmptyUnionSet();
-    //AstBuild createAstBuild();
-   
-
 
     Id createId(const char *name = nullptr, const void *user = nullptr);
-      Id createId(const std::string &name, const void *user = nullptr);
+    Id createId(const std::string &name, const void *user = nullptr);
     Id createId(llvm::StringRef name, const void *user = nullptr);
     Id createId(const llvm::Twine& name, const void *user = nullptr);
+
+    bool getCoalesceBoundedWrapping() const { return isl_options_get_coalesce_bounded_wrapping(keep()); }
+    void setCoalesceBoundedWrapping(bool val) { isl_options_set_coalesce_bounded_wrapping(keep(), val); }
   }; // class Ctx
 
   static inline Ctx *enwrap(isl_ctx *ctx) { return Ctx::enwrap(ctx); }

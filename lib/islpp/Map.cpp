@@ -5,10 +5,12 @@
 #include "islpp/UnionMap.h"
 #include "islpp/MultiPwAff.h"
 #include "islpp/DimRange.h"
+#include "islpp/Point.h"
+#include "islpp/Mat.h"
 
 #include <isl/map.h>
 #include <llvm/Support/raw_ostream.h>
-#include "islpp/Point.h"
+
 
 using namespace isl;
 using namespace llvm;
@@ -254,8 +256,8 @@ Map isl::naturalJoin(const Set &domain, const Set &range) {
 }
 
 
-void isl::Map::dumpExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/) const {
-  printExplicit(llvm::dbgs(), maxElts, newlines, formatted);
+void isl::Map::dumpExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/, bool sorted) const {
+  printExplicit(llvm::dbgs(), maxElts, newlines, formatted, sorted);
   llvm::dbgs() << "\n";
 }
 
@@ -265,13 +267,15 @@ void isl::Map::dumpExplicit()const{
 }
 
 
-void isl::Map::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/) const{
+void isl::Map::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/, bool sorted /*= false*/) const{
   auto wrapped = wrap();
+  auto nParamDims = getParamDimCount();
   auto nInDims = getInDimCount();
   auto nOutDims = getOutDimCount();
-
   int count = 0;
-  auto omittedsome = wrapped.foreachPoint([&count, maxElts, &os, nInDims, nOutDims, newlines, formatted](Point p) -> bool {
+  bool omittedsome;
+
+  auto lambda = [&count, maxElts, &os, nInDims, nOutDims, newlines, formatted](Point p) -> bool {
     if (count >= maxElts)
       return true;
 
@@ -309,7 +313,43 @@ void isl::Map::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool ne
 
     count += 1;
     return false;
-  });
+  };
+
+  if (sorted) {
+    std::vector<Point> points;
+    points.reserve(maxElts);
+    omittedsome = wrapped.foreachPoint([&points, maxElts](Point p) -> bool {
+      if (points.size() >= maxElts)
+        return true;
+      points.push_back(p);
+      return false;
+    });
+    std::sort(points.begin(), points.end(), [nParamDims, nInDims, nOutDims](const Point &p1, const Point &p2) -> bool {
+      for (auto i = nParamDims - nParamDims; i < nParamDims; i += 1) {
+        auto c1 = p1.getCoordinate(isl_dim_param, i);
+        auto c2 = p2.getCoordinate(isl_dim_param, i);
+        auto cmp = isl_int_cmp(c1.keep(), c2.keep());
+        if (!cmp)
+          continue;
+        return cmp < 0;
+      }
+      for (auto i = 0; i < nInDims + nOutDims; i += 1) {
+        auto c1 = p1.getCoordinate(isl_dim_set, i);
+        auto c2 = p2.getCoordinate(isl_dim_set, i);
+        auto cmp = isl_int_cmp(c1.keep(), c2.keep());
+        if (!cmp)
+          continue;
+        return cmp < 0;
+      }
+      return 0;
+    });
+    for (const auto &p : points) {
+      if (lambda(p))
+        break;
+    }
+  } else {
+    omittedsome = wrapped.foreachPoint(lambda);
+  }
 
   if (count == 0) {
     if (omittedsome) {
@@ -327,10 +367,10 @@ void isl::Map::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool ne
 }
 
 
-std::string isl::Map::toStringExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/) {
+std::string isl::Map::toStringExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= true*/, bool sorted) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  printExplicit(os, maxElts, newlines, formatted);
+  printExplicit(os, maxElts, newlines, formatted, sorted);
   os.flush();
   return str; // NRVO
 }
@@ -407,6 +447,253 @@ static bool isRhsBetter(int nUncovered, const MultiAff &lhs, int lhsComplexity, 
 }
 
 
+
+
+// exponential in number of (in)equalities (or dimensions)! May mark condistions as used to make each condition appear in just one
+//TODO: Instead of such a long parameter list, make a record that contains the params that do not change and pass a pointer to it
+static void inferFromConditions_backtracking(std::vector<MultiAff> &affs, const LocalSpace &ls, Mat &eqs, Mat &ineqs, std::vector<Aff> &stack) {
+  auto nParamDims = ls.getParamDimCount();
+  auto nInputDims = ls.getInDimCount();
+  auto nOutputDims = ls.getOutDimCount();
+  auto nDivDims = ls.getDivDimCount();
+  auto lookingFor = stack.size();
+  auto lookingForDim = 1 + nParamDims + nInputDims + lookingFor;
+
+  if (lookingFor >= nOutputDims) {
+    // Stack is complete
+    auto sol = ls.getSpace().createZeroMultiAff();
+    for (auto k = nOutputDims - nOutputDims; k < nOutputDims; k += 1) {
+      auto solaff = stack[k];
+      assert(solaff.isValid());
+      sol.setAff_inplace(k, std::move(solaff));
+    }
+    affs.push_back(std::move(sol));
+    return;
+  }
+
+  auto nEqs = eqs.rows();
+  auto nIneqs = ineqs.rows();
+  assert(eqs.cols() == ineqs.cols());
+  auto nDims = eqs.cols();
+  assert(nDims == 1 + nParamDims + nInputDims + nOutputDims + nDivDims);
+  bool someUnderdefined = false; bool someDefined = false;
+
+  auto affls = ls.domain();
+  //affls.removeDims_inplace(isl_dim_out, 0, lookingFor);
+  //affls.removeDims_inplace(isl_dim_out, 1, nOutputDims - lookingFor - 1);
+
+  for (int useIneqs = false; useIneqs < 2; useIneqs += 1) {
+    Mat &mat = useIneqs ? ineqs : eqs;
+    auto rows = mat.rows();
+    for (auto i = rows - rows; i < rows; i += 1) {
+
+      Int lookingCoeff = mat[i][lookingForDim];
+      if (lookingCoeff.isZero())
+        continue; // Quick skip; does not influence the dimension looked for
+
+      bool skip = false;
+      for (auto j = lookingFor + 1; j < nOutputDims; j += 1) {
+        auto d = 1 + nParamDims + nInputDims + j;
+        Int coeff = mat[i][d];
+        if (coeff.isZero())
+          continue;
+        // Condition is underdefined
+        someUnderdefined = true;
+        skip = true;
+        break;
+      }
+      if (skip)
+        continue;
+
+      // Construct aff
+      // eq: c + a1*x1 + a2*x2 + ... + au*xu = 0
+      // => xu = (-c - a1*x1 - a2*x2 ...)/au
+
+      Int cst = mat[i][0];
+      auto aff = affls.createConstantAff(cst);
+      for (auto j = nParamDims - nParamDims; j < nParamDims; j += 1) {
+        auto d = 1 + j;
+        Int coeff = mat[i][d];
+        aff.addCoefficient_inplace(isl_dim_param, j, -coeff);
+      }
+      for (auto j = nInputDims - nInputDims; j < nInputDims; j += 1) {
+        auto d = 1 + nParamDims + j;
+        Int coeff = mat[i][d];
+        aff.addCoefficient_inplace(isl_dim_in, j, coeff);
+      }
+      for (auto j = lookingFor - lookingFor; j < lookingFor; j += 1) {
+        auto d = 1 + nParamDims + nInputDims + j;
+        Int coeff = mat[i][d];
+        if (coeff.isZero())
+          continue;
+        auto multipleof = stack[j];
+        assert(multipleof.isValid());
+        aff += coeff*multipleof;
+      }
+      for (auto j = nDivDims - nDivDims; j < nDivDims; j += 1) {
+        auto d = 1 + nParamDims + nInputDims + nOutputDims + j;
+        Int coeff = mat[i][d];
+        if (coeff.isZero())
+          continue;
+        auto multipleof = floor(affls.getDiv(j));
+        assert(multipleof.isValid());
+        aff += coeff*multipleof;
+      }
+      if (lookingCoeff.isNeg()) {
+        lookingCoeff.abs_inplace();
+      } else {
+        aff.neg_inplace();
+      }
+      if (!lookingCoeff.isOne()) {
+        aff.setDenominator_inplace(lookingCoeff);
+        aff.floor_inplace();
+      }
+
+      someDefined = true;
+      stack.push_back(aff);
+      inferFromConditions_backtracking(affs, ls, eqs, ineqs, stack);
+      stack.pop_back();
+    }
+  }
+
+  if (someUnderdefined && !someDefined) {
+    // Some condition could not be applied because at least two variables it uses do not have a value
+    // We arbitrarily define one of them and continue
+
+    auto aff = affls.createConstantAff(0);
+    stack.push_back(aff);
+    inferFromConditions_backtracking(affs, ls, eqs, ineqs, stack);
+    stack.pop_back();
+  }
+}
+
+
+static void inferFromConditions2_backtracking(std::vector<MultiAff> &affs, const Space &solspace, const LocalSpace &ls, Mat &eqs, Mat &ineqs, int start, count_t nParamDims, count_t nInputDims, count_t nOutputDims, count_t nDivDims, isl::Aff sols[], int nUndefined) {
+  if (nUndefined == 0) {
+    // We have a solution!
+    auto sol = solspace.createZeroMultiAff();
+    for (auto k = nOutputDims - nOutputDims; k < nOutputDims; k += 1) {
+      auto solaff = sols[k];
+      assert(solaff.isValid());
+      sol.setAff_inplace(k, std::move(solaff));
+    }
+    affs.push_back(sol);
+    return; // No more rules to discover
+  }
+
+  auto nEqs = eqs.rows();
+  auto nIneqs = ineqs.rows();
+  assert(eqs.cols() == ineqs.cols());
+  auto nDims = eqs.cols();
+  assert(nDims == 1 + nParamDims + nInputDims + nOutputDims + nDivDims);
+  int someUnderdefinedDim;
+  int someUnderdefinedRule = -1;
+
+  int i;
+  int useIneqs;
+  if (start >= nEqs) {
+    i = start - nEqs;
+    useIneqs = true;
+  } else {
+    i = 0;
+    useIneqs = false;
+  }
+
+  for (; useIneqs < 2; useIneqs += 1) {
+    Mat &mat = useIneqs ? ineqs : eqs;
+    auto rows = mat.rows();
+
+    for (; i < rows; i += 1, start += 1) {
+      int nOpen = 0;
+      pos_t undefined;
+      for (auto j = nOutputDims - nOutputDims; j < nOutputDims; j += 1) {
+        auto d = 1 + nParamDims + nInputDims + j;
+        if (sols[j].isValid())
+          continue;
+
+        Int coeff = mat[i][d];
+        if (coeff.isZero())
+          continue;
+        nOpen += 1;
+
+        if (nOpen >= 2) {
+          if (someUnderdefinedRule < 0) {
+            someUnderdefinedRule = start;
+            someUnderdefinedDim = undefined;
+          }
+          break; // underdefined
+        }
+        undefined = d;
+      }
+
+      if (nOpen == 1) {
+        // eq: c + a1*x1 + a2*x2 + ... + au*xu = 0
+        // => xu = (-c - a1*x1 - a2*x2 ...)/au
+
+        Int cst = mat[i][0];
+        auto aff = ls.createConstantAff(cst);
+        for (auto j = nParamDims - nParamDims; j < nParamDims; j += 1) {
+          auto d = 1 + j;
+          Int coeff = mat[i][d];
+          aff.addCoefficient_inplace(isl_dim_param, d, -coeff);
+        }
+        for (auto j = nInputDims - nInputDims; j < nInputDims; j += 1) {
+          auto d = 1 + nParamDims + j;
+          Int coeff = mat[i][d];
+          aff.addCoefficient_inplace(isl_dim_in, d, coeff);
+        }
+        for (auto j = nOutputDims - nOutputDims; j < nOutputDims; j += 1) {
+          auto d = 1 + nParamDims + nInputDims + j;
+          if (d == undefined)
+            continue; // Handled below
+          Int coeff = mat[i][d];
+          if (coeff.isZero())
+            continue;
+          auto multipleof = sols[j];
+          assert(multipleof.isValid());
+          aff += coeff*multipleof;
+        }
+        for (auto j = nDivDims - nDivDims; j < nDivDims; j += 1) {
+          auto d = 1 + nParamDims + nInputDims + nOutputDims + j;
+          Int coeff = mat[i][d];
+          if (coeff.isZero())
+            continue;
+          auto multipleof = ls.getDiv(j);
+          assert(multipleof.isValid());
+          aff += coeff*multipleof;
+        }
+        Int denom = mat[i][undefined];
+        auto j = undefined - (1 + nParamDims + nInputDims);
+        assert(!denom.isZero());
+        if (denom.isNeg()) {
+          denom.abs_inplace();
+        } else {
+          aff.neg_inplace();
+        }
+        aff.setDenominator_inplace(denom);
+        assert(sols[j].isNull());
+        sols[j] = std::move(aff);
+
+        inferFromConditions2_backtracking(affs, solspace, ls, eqs, ineqs, start + 1, nParamDims, nInputDims, nOutputDims, nDivDims, sols, nUndefined - 1);
+
+        // Undo for next possibility
+        sols[j].reset();
+      }
+    }
+  }
+
+  // Went through all conditions; if it is still underdefined, just try with some constant and redo from there
+  if (someUnderdefinedRule >= 0) {
+    auto j = someUnderdefinedDim - (1 + nParamDims + nInputDims);
+    auto aff = ls.createConstantAff(0);
+    sols[j] = std::move(aff);
+    inferFromConditions2_backtracking(affs, solspace, ls, eqs, ineqs, someUnderdefinedRule, nParamDims, nInputDims, nOutputDims, nDivDims, sols, nUndefined - 1);
+    // Undo so parent does need to
+    sols[j].reset();
+  }
+}
+
+
 /// returns a function that maps to only one element per domain vector; it is undefined which element it is
 /// The methods lexminPwMultiAff(), lexmaxPwMultiAff() already do this, but their return value can be quite complex
 ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
@@ -425,39 +712,22 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
   auto lexmax = lexmaxPwMultiAff();
   //lexmax.coalesce_inplace(); // Does it anything?
 
-#if 0
-  // worth it?
-  auto lexmid = space.createEmptyPwMultiAff();
-  for (auto &minpair : lexmin.getPieces()) {
-    auto &minset = minpair.first;
-    auto &minma = minpair.second;
+  std::vector<MultiAff> inferedCandidates;
+#if 1
+  for (const auto &bmap : detectEqualities().getBasicMaps()) { //TODO: We may increase the chances to cover multiple BasicSets at once if we combine conditions from different BasicSets
+    auto eqs = bmap.equalitiesMatrix();
+    auto ineqs = bmap.inequalitiesMatrix();
+    auto nOutputDims = bmap.getOutDimCount();
 
-    for (auto &maxpair : lexmin.getPieces()) {
-      auto &maxset = maxpair.first;
-      auto &maxma = maxpair.second;
-
-      auto midset = isl::intersect(minset, maxset);
-      auto divs = space.createZeroMultiAff();
-      for (auto i = nDims - nDims; i < nDims; i += 1) {
-        auto lexdimmid = (maxma[i] + minma[i]) / 2;
-        divs[i] = lexdimmid;
-      }
-      lexmid.unionAdd_inplace(PwMultiAff::create(std::move(midset), std::move(divs))); // add_piece nor disjoint_add are private API
-    }
+    vector<Aff> stack;
+    stack.reserve(nOutputDims);
+    inferFromConditions_backtracking(inferedCandidates, bmap.getLocalSpace(), eqs, ineqs, stack);
   }
 #endif
 
-  //SmallVector<MultiAff, 16 > complexeCandidates;
-  //complexeCandidates.reserve(2 * lexmin.nPieces()*lexmax.nPieces() + lexmin.nPieces() + lexmax.nPieces());
-  //for (auto &pair : lexmin.getPieces()) {
-  //  complexeCandidates.push_back(pair.second);
-  //}
-  //for (auto &pair : lexmax.getPieces()) {
-  //  complexeCandidates.push_back(pair.second);
-  //}
-  //auto lexmid = space.createEmptyPwMultiAff();
   SmallVector<MultiAff, 16 > midUpCandidates;
   SmallVector<MultiAff, 16 > midDnCandidates;
+#if 0
   midUpCandidates.reserve(lexmin.nPieces() * lexmax.nPieces());
   midDnCandidates.reserve(lexmin.nPieces() * lexmax.nPieces());
   for (auto &minpair : lexmin.getPieces()) {
@@ -479,9 +749,12 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
       midUpCandidates.push_back(divup);
     }
   }
-
+#endif
   SmallVector<MultiAff, 16> candidates;
-  candidates.reserve(2 * midDnCandidates.size() + 2 * midUpCandidates.size() + 2 * lexmin.nPieces() + 2 * lexmax.nPieces());
+  candidates.reserve(inferedCandidates.size() + 2 * midDnCandidates.size() + 2 * midUpCandidates.size() + 2 * lexmin.nPieces() + 2 * lexmax.nPieces());
+  for (const auto &candid : inferedCandidates) {
+    candidates.push_back(candid);
+  }
   for (const auto &candid : midUpCandidates) {
     candidates.push_back(candid.removeDivsUsingFloor());
   }
@@ -581,12 +854,18 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
     nCandidates -= 1;
   }
 
+  assert(result.domain() == this->domain());
+  assert(result.toMap() <= *this);
 
+  result.simplify_inplace();
   if (result.nPieces() > lexmin.nPieces()) {
     result = lexmin; // Is this even possible to happen?
   }
   if (result.nPieces() > lexmax.nPieces()) {
     result = lexmax; // Is this even possible to happen?
   }
+  
+  assert(result.domain() == this->domain());
+  assert(result.toMap() <= *this);
   return result;
 }

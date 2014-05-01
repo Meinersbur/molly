@@ -131,10 +131,25 @@ namespace isl {
     return val;
   }
 
-
   /// Some isl functions do not use unsigned int, this is a check to not miss anything
-  static inline count_t to_count_t(int n) { assert(n>=0); return n; } 
+  static inline count_t to_count_t(int n) { assert(n >= 0); return n; }
   static inline count_t to_count_t(count_t n) { return n; }
- 
+
+
+
+  enum class Accuracy {
+    /// Always returns "don't know" (or only tests for object identity)
+    None,
+
+    /// Whatever ISL means by "plain" (constant execution time?)
+    Plain,
+
+    /// Use simpler algorithm, but do not always return correct result
+    Fast,
+
+    /// Always returns correct result
+    Exact
+  };
+
 } // namespace isl
 #endif /* ISLPP_ISLPP_COMMON_H */

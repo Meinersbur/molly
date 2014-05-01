@@ -149,8 +149,9 @@ namespace isl {
 
     //void alignParams(Space &&model) { give(isl_multi_pw_aff_align_params(take(), model.take())); }
     //void gistParams(Set &&context) { give(isl_multi_pw_aff_gist_params(take(), context.take())); }
-    //void gist(Set &&context) { give(isl_multi_pw_aff_gist(take(), context.take())); }
-    //void lift() { give(isl_multi_pw_aff_lift(take(), nullptr)); }
+    ISLPP_INPLACE_ATTRS void gist_inplace(Set context)ISLPP_INPLACE_FUNCTION{ give(isl_multi_pw_aff_gist(take(), context.take())); }
+    ISLPP_EXSITU_ATTRS MultiPwAff gist(Set context) ISLPP_EXSITU_FUNCTION{ return MultiPwAff::enwrap(isl_multi_pw_aff_gist(takeCopy(), context.take())); }
+      //void lift() { give(isl_multi_pw_aff_lift(take(), nullptr)); }
 
 
     //EltType operator[](unsigned pos) const { return getPwAff(pos); } 
@@ -225,6 +226,19 @@ namespace isl {
         }
     }
     ISLPP_EXSITU_ATTRS MultiPwAff simplify() ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.simplify_inplace(); return result; }
+
+
+    ISLPP_PROJECTION_ATTRS uint64_t getComplexity() ISLPP_PROJECTION_FUNCTION;
+    ISLPP_PROJECTION_ATTRS uint64_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    ISLPP_INPLACE_ATTRS void gistUndefined_inplace() ISLPP_INPLACE_FUNCTION;
+    ISLPP_EXSITU_ATTRS MultiPwAff gistUndefined() ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.gistUndefined_inplace(); return result; }
+
+      void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = true) const;
+    void dumpExplicit(int maxElts, bool newlines, bool formatted, bool sorted) const;
+    void dumpExplicit() const;
+    std::string toStringExplicit(int maxElts, bool newlines, bool formatted, bool sorted) const;
+    std::string toStringExplicit() const;
   }; // class MultiAff
 
 
@@ -281,7 +295,8 @@ namespace isl {
 
   MultiPwAff operator+(MultiPwAff lhs, MultiPwAff rhs);
 
-  static inline bool operator==(const MultiPwAff &lhs, const MultiPwAff &rhs) {    return checkBool(isl_multi_pw_aff_is_equal(lhs.keep(), rhs.keep())); }
+  static inline bool operator==(const MultiPwAff &lhs, const MultiPwAff &rhs) { return checkBool(isl_multi_pw_aff_is_equal(lhs.keep(), rhs.keep())); }
+  static inline bool operator!=(const MultiPwAff &lhs, const MultiPwAff &rhs) { return !operator==(lhs,rhs); }
 
 } // namespace isl
 #endif /* ISLPP_MULTIPWAFF_H */

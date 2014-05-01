@@ -91,6 +91,7 @@ namespace molly {
     virtual std::vector<llvm::Value *> getDomainValues() = 0;
     virtual isl::MultiAff getDomainMultiAff() = 0;
     virtual isl::MultiAff getClusterMultiAff() = 0;
+    virtual isl::PwMultiAff getClusterPwMultiAff() = 0;
 
     //virtual void identifyDomainDims() = 0;
     virtual MollyCodeGenerator makeCodegen() = 0;

@@ -370,19 +370,29 @@ namespace {
 
 
     isl::MultiAff getClusterMultiAff() override {
-      auto clusterShape = getClusterShape();
-      auto nClusterDims = clusterShape.getDimCount();
+      //auto clusterShape = getClusterShape();
+      //auto nClusterDims = clusterShape.getDimCount();
       auto domainSpace = getDomainSpace();
 
       auto scopCtx = getScopProcessor();
       auto aff = scopCtx->getCurrentNodeCoordinate();
 
-      auto resultSpace = isl::Space::createMapFromDomainAndRange(domainSpace, aff.getRangeSpace());
+      //auto resultSpace = isl::Space::createMapFromDomainAndRange(domainSpace, aff.getRangeSpace());
       auto translateSpace = isl::Space::createMapFromDomainAndRange(domainSpace, aff.getDomainSpace());
 
       auto result = aff.pullback(translateSpace.createZeroMultiAff());
       return result;
     }
+
+
+    isl::PwMultiAff getClusterPwMultiAff() override {
+      //auto clusterShape = getClusterShape();
+      auto domain = getDomain();
+      auto result = getClusterMultiAff().toPwMultiAff();
+      result.intersectDomain_inplace(domain);
+      return result;
+    }
+
 
 
     void dump() const override;

@@ -1026,7 +1026,7 @@ Set Set::reorganizeSubspaces(const Space &space, bool mustExist) ISLPP_EXSITU_FU
 }
 
 
-Set Set::cast(Space space) ISLPP_EXSITU_FUNCTION {
+Set Set::cast(Space space) ISLPP_EXSITU_FUNCTION{
   assert(space.getSetDimCount() == this->getDimCount());
 
   // No inbuilt cast is ISL
@@ -1041,20 +1041,23 @@ ISLPP_EXSITU_ATTRS Map isl::Set::reorderSubspaces(const Space &domainSpace, cons
 }
 
 
-void isl::Set::dumpExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) const {
-  printExplicit(llvm::dbgs(), maxElts, newlines, formatted);
+void isl::Set::dumpExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/, bool sorted) const {
+  printExplicit(llvm::dbgs(), maxElts, newlines, formatted, sorted);
   llvm::dbgs() << "\n";
 }
 
 
 void isl::Set::dumpExplicit() const {
-  dumpExplicit(8, false, false);
+  dumpExplicit(8, false, false, true);
 }
 
 
-void isl::Set::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) const {
+void isl::Set::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/, bool sorted) const {
+  auto nParamDims = getParamDimCount();
+  auto nDims = getDimCount();
+
   int count = 0;
-  auto omittedsome = this->foreachPoint([&count, maxElts, &os, newlines, formatted](Point p) -> bool {
+  auto lambda = [&count, maxElts, &os, newlines, formatted](Point p) -> bool {
     if (count >= maxElts)
       return true;
 
@@ -1070,7 +1073,44 @@ void isl::Set::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool ne
 
     count += 1;
     return false;
-  });
+  };
+
+  bool omittedsome;
+  if (sorted) {
+    std::vector<Point> points;
+    points.reserve(maxElts);
+    omittedsome = foreachPoint([&points, maxElts](Point p) -> bool {
+      if (points.size() >= maxElts)
+        return true;
+      points.push_back(p);
+      return false;
+    });
+    std::sort(points.begin(), points.end(), [nParamDims, nDims](const Point &p1, const Point &p2) -> bool {
+      for (auto i = nParamDims - nParamDims; i < nParamDims; i += 1) {
+        auto c1 = p1.getCoordinate(isl_dim_param, i);
+        auto c2 = p2.getCoordinate(isl_dim_param, i);
+        auto cmp = isl_int_cmp(c1.keep(), c2.keep());
+        if (!cmp)
+          continue;
+        return cmp < 0;
+      }
+      for (auto i = nDims - nDims; i < nDims; i += 1) {
+        auto c1 = p1.getCoordinate(isl_dim_set, i);
+        auto c2 = p2.getCoordinate(isl_dim_set, i);
+        auto cmp = isl_int_cmp(c1.keep(), c2.keep());
+        if (!cmp)
+          continue;
+        return cmp < 0;
+      }
+      return 0;
+    });
+    for (const auto &p : points) {
+      if (lambda(p))
+        break;
+    }
+  } else {
+    omittedsome = this->foreachPoint(lambda);
+  }
 
   if (count == 0) {
     if (omittedsome) {
@@ -1087,10 +1127,10 @@ void isl::Set::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/, bool ne
   }
 }
 
-std::string isl::Set::toStringExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/) {
+std::string isl::Set::toStringExplicit(int maxElts /*= 8*/, bool newlines /*= false*/, bool formatted /*= false*/, bool sorted) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  printExplicit(os, maxElts, newlines);
+  printExplicit(os, maxElts, newlines, sorted);
   os.flush();
   return str; // NRVO
 }
@@ -1101,28 +1141,65 @@ std::string isl::Set::toString() const {
 }
 
 
-void isl::Set::intersect_inplace(UnionSet that) ISLPP_INPLACE_FUNCTION {
+void isl::Set::intersect_inplace(UnionSet that) ISLPP_INPLACE_FUNCTION{
   intersect_inplace(that.extractSet(getSpace()));
 }
 
 
-ISLPP_EXSITU_ATTRS PwMultiAff isl::Set::chainSubspace(PwMultiAff pma) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Set::chainSubspace(PwMultiAff pma) ISLPP_EXSITU_FUNCTION{
   auto domainSpace = getSpace();
   auto middleSpace = pma.getDomainSpace();
   auto id = MultiAff::createIdentity(domainSpace.mapsToItself());
- 
+
   isl::Space subspace;
   auto range = domainSpace.findSubspace(isl_dim_set, middleSpace); assert(range.isValid());
   id.removeDims_inplace(isl_dim_out, range.getEnd(), id.getOutDimCount() - range.getEnd());
   id.removeDims_inplace(isl_dim_out, 0, range.getFirst());
-  auto restricted = id.castRange(middleSpace).restrictDomain(copy());
+  auto restricted = id.castRange(middleSpace).intersectDomain(copy());
   return restricted.applyRange(std::move(pma));
 }
 
 
-ISLPP_INPLACE_ATTRS void isl::Set::coalesce_inplace() ISLPP_INPLACE_FUNCTION {
+ISLPP_INPLACE_ATTRS void isl::Set::coalesce_inplace() ISLPP_INPLACE_FUNCTION{
   give(isl_set_coalesce(take()));
 }
+
+ISLPP_PROJECTION_ATTRS isl::HasBounds isl::Set::getDimBounds(isl_dim_type type, pos_t pos, Int &lowerBound, Int &upperBound)ISLPP_PROJECTION_FUNCTION{
+  HasBounds result = HasBounds::Empty;
+  int cnt = 0;
+  for (auto bset : getBasicSets()) {
+    if (cnt == 0) {
+      result = bset.getDimBounds(type, pos, lowerBound, upperBound);
+    } else {
+      Int bsetLowerBound;
+      Int bsetUpperBound;
+      auto bsetHasBounds = bset.getDimBounds(type, pos, bsetLowerBound, bsetUpperBound);
+      if (!flags(bsetHasBounds & HasBounds::LowerBound)) {
+        result &= ~HasBounds::LowerBound;
+      }
+      if (flags(bsetHasBounds & HasBounds::LowerBound) && flags(result & HasBounds::LowerBound)) {
+        lowerBound = isl::min(lowerBound, bsetLowerBound);
+      }
+      if (!flags(bsetHasBounds & HasBounds::UpperBound)) {
+        result &= ~HasBounds::UpperBound;
+      }
+      if (flags(bsetHasBounds & HasBounds::UpperBound) && flags(result & HasBounds::UpperBound)) {
+        upperBound = isl::min(lowerBound, bsetLowerBound);
+      }
+    }
+    cnt += 1;
+  }
+  if (cnt >= 2) {
+    if (flags(result & HasBounds::LowerBound) && flags(result & HasBounds::UpperBound)) {
+      if (lowerBound == upperBound)
+        return HasBounds::Fixed;
+      if (lowerBound > upperBound)
+        return HasBounds::Impossible;
+    }
+  }
+  return result;
+}
+
 
 
 ISLPP_CONSUME_ATTRS PwMultiAff Set::chainSubspace_consume(PwMultiAff pma) ISLPP_CONSUME_FUNCTION{
@@ -1135,7 +1212,7 @@ static int enumBasicSetsCallback(__isl_take isl_basic_set *set, void *user) {
   list->push_back(BasicSet::enwrap(set));
   return 0;
 }
-ISLPP_EXSITU_ATTRS std::vector<BasicSet> Set::getBasicSets() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS std::vector<BasicSet> Set::getBasicSets() ISLPP_EXSITU_FUNCTION{
   std::vector<BasicSet> result;
   auto retval = isl_set_foreach_basic_set(keep(), enumBasicSetsCallback, &result);
   assert(retval == 0);
@@ -1251,10 +1328,526 @@ ISLPP_PROJECTION_ATTRS uint64_t Set::getOpComplexity() ISLPP_PROJECTION_FUNCTION
     complexity += 1; // logical or
   }
 
-  if (complexity==0)
+  if (complexity == 0)
     return 0; // No basic sets: set is empty
 
   complexity -= 1; // logical or only between basic sets, so we added one too much
 
   return complexity;
 }
+
+
+AllBounds Set::getAllBounds() const {
+  AllBounds bounds;
+  int cnt = 0;
+
+  for (const auto &bset : getBasicSets()) {
+    if (cnt == 0) {
+      bounds.init(bset.getLocalSpace());
+      bounds.searchAllBounds(bset);
+      bounds.scrapDivDims();
+    } else {
+      auto bsetBounds = bset.getAllBounds();
+      bsetBounds.scrapDivDims();
+      bounds.disjunctiveMerge(bsetBounds);
+    }
+    cnt += 1;
+  }
+
+  return bounds; // NRVO
+}
+
+#if 0
+static void dimToTypePos(size_t d, count_t nParamDims, count_t nDims, count_t  isl_dim_type &type, pos_t &pos) {
+  if (d < nParamDims) {
+    type = isl_dim_param;
+    pos = d;
+    return;
+  }
+  d -= nParamDims;
+
+  if (d < nDims) {
+    type = isl_dim_set;
+
+  }
+}
+#endif
+
+static Aff makeAffFromRow(const LocalSpace &ls, const Mat &eqs, int row, int d) {
+  auto aff = ls.createConstantAff(eqs[row][0]);
+  auto nDims = eqs.cols() - 1;
+  assert(ls.getParamDimCount() + ls.getSetDimCount() == nDims);
+
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    if (i == d)
+      continue;
+
+    isl_dim_type type;
+    pos_t pos;
+    ls.matrixTypePos(i + 1, type, pos);
+    Int coeff = eqs[row][i + 1];
+    aff.setCoefficient_inplace(type, pos, coeff);
+  }
+
+  Int coeff = eqs[row][d + 1];
+  if (coeff >= 0) {
+    aff.neg_inplace();
+    aff.setDenominator_inplace(coeff);
+  } else {
+    aff.setDenominator_inplace(-coeff);
+  }
+  return aff;
+}
+
+
+/// Check if makeAffFromRow(eqs, j, jd) == makeAffFromRow(eqs, i, jd)
+static bool areAreSameConditionsForDimenstions(const Mat &eqs, size_t i, size_t j, pos_t id, pos_t jd) {
+  assert(i != j);
+  assert(id != jd);
+  auto cols = eqs.cols();
+
+  if (!eqs[i][jd].isZero())
+    return false;
+  if (!eqs[j][id].isZero())
+    return false;
+
+  auto idCoeff = eqs[i][id];
+  auto jdCoeff = eqs[j][jd];
+  if (!isAbsEqual(idCoeff, jdCoeff))
+    return false; // One could still be a multiple of the other, but we assume this has been normalized away
+  auto factor = idCoeff.sgn()*jdCoeff.sgn();
+
+  for (auto d = cols - cols; d < cols; d += 1) {
+    if (d == id)
+      continue;
+    if (d == jd)
+      continue;
+
+    auto iCoeff = eqs[i][d];
+    auto jCoeff = eqs[j][d];
+    auto factor = iCoeff.sgn()*jCoeff.sgn();
+
+    iCoeff *= factor;
+    if (iCoeff != jCoeff)
+      return false;
+  }
+  return true;
+}
+
+
+static void findEqualDimensions(SmallVectorImpl<Aff> &list, const LocalSpace &commonls, const LocalSpace &ls, const Mat &eqs, pos_t i, pos_t id) {
+  auto neqs = eqs.rows();
+  auto nDims = eqs.cols() - 1;
+
+  const Int &iCoeff = eqs[i][id];
+  assert(!iCoeff.isZero());
+
+  int candidate = -1;
+  for (auto j = neqs - neqs; j < neqs; j += 1) {
+    if (j == i)
+      continue;
+
+    for (auto jd = 1; id < nDims + 1; id += 1) {
+      if (jd == id)
+        continue;
+
+      if (areAreSameConditionsForDimenstions(eqs, i, j, id, jd)) {
+        isl_dim_type type;
+        pos_t pos;
+        ls.matrixTypePos(jd, type, pos);
+        auto aff = ls.createVarAff(type, pos);
+        aff.alignDivs_inplace(commonls);
+        list.push_back(aff);
+      }
+    }
+  }
+}
+
+
+static void collectEquals(SmallVectorImpl<Aff> &list, const LocalSpace &commonls, const LocalSpace &ls, const Mat &eqs, pos_t d) {
+  auto neqs = eqs.rows();
+  auto cols = eqs.cols();
+
+  for (auto ik = neqs - neqs; ik < neqs; ik += 1) {
+    Int coeff = eqs[ik][d];
+    if (!coeff.isAbsOne())
+      continue;
+
+    auto aff = makeAffFromRow(ls, eqs, ik, d);
+    aff.alignDivs_inplace(commonls);
+    list.push_back(aff);
+
+    findEqualDimensions(list, commonls, ls, eqs, ik, d);
+  }
+}
+
+
+static Aff findCommonAffForDim(const LocalSpace &ils, const Mat &ieqs, const LocalSpace &jls, const Mat &jeqs, size_t d){
+  auto ineqs = ieqs.rows();
+  auto jneqs = jeqs.rows();
+  auto commonls = isl::intersect(ils, jls);
+  //auto nDims = commonls.getParamDimCount()+commonls.getInDimCount();
+  auto nParamDims = commonls.getParamDimCount();
+  auto iDims = ieqs.cols();
+  auto jDims = jeqs.cols();
+
+  // Stuff dimension d equals to in their BasicSet
+  SmallVector<Aff, 4> iEquals;
+  collectEquals(iEquals, commonls, ils, ieqs, d);
+
+  SmallVector<Aff, 4> jEquals;
+  collectEquals(jEquals, commonls, jls, jeqs, d);
+
+
+  for (const auto &iaff : iEquals) {
+    for (const auto &jaff : jEquals) {
+      if (iaff == jaff) {
+        return iaff;
+      }
+    }
+  }
+
+
+#if 0
+  for (auto ik = ineqs - ineqs; ik < ineqs; ik += 1) {
+    Int icoeff = ieqs[ik][d + 1];
+    if (!icoeff.isAbsOne())
+      continue;
+    auto iaff = makeAffFromRow(ils, ieqs, ik, d);
+    iaff.alignDivs_inplace(commonls);
+
+    for (auto jk = jneqs - jneqs; jk < jneqs; jk += 1) {
+      Int jcoeff = ieqs[ik][d + 1];
+      if (!jcoeff.isAbsOne())
+        continue;
+      auto jaff = makeAffFromRow(jls, jeqs, jk, d);
+      jaff.alignDivs_inplace(commonls);
+
+      if (iaff == jaff) 
+        return iaff;
+
+#pragma region X
+      for (auto il = ineqs - ineqs; il < ineqs; il += 1) {
+        if (il == ik)
+          continue;
+
+        int iCandidate = -1;
+        bool condidneg ;
+        for (auto id = iDims-iDims;id<iDims;id+=1) {
+          if (ieqs[])
+        }
+
+      }
+#pragma endregion
+
+    }
+  }
+
+  //auto iBounds = ibset.getAllBounds();
+  //auto jBounds = jbset.getAllBounds();
+
+  for (auto ik = ineqs - ineqs; ik < ineqs; ik += 1) {
+    Int icoeff = ieqs[ik][d + 1];
+    if (!icoeff.isAbsOne())
+      continue;
+    auto iaff = makeAffFromRow(ils, ieqs, ik, d);
+
+    for (auto il = ik+1; il < ineqs; il += 1) {
+    }
+  }
+#endif
+
+  return Aff();
+}
+
+
+static BasicSet tryCoalesceBSets(const BasicSet &origibset, const BasicSet &origjbset) {
+  auto origspace = origibset.getSpace();
+  assert(origspace == origjbset.getSpace());
+  auto islctx = origibset.getCtx();
+
+  auto ibset = origibset.moveDims(isl_dim_in, 0, isl_dim_param, 0, origibset.getParamDimCount());
+  auto jbset = origjbset.moveDims(isl_dim_in, 0, isl_dim_param, 0, origjbset.getParamDimCount());
+  auto restore = ibset.getSpace().mapsToItself().createIdentityMultiAff(); // { reduced[] -> space[] }
+
+  auto ils = ibset.getLocalSpace();
+  auto ieqs = ibset.equalitiesMatrix();
+
+  auto jls = jbset.getLocalSpace();
+  auto jeqs = jbset.equalitiesMatrix();
+
+  auto nDims = ibset.getDimCount();
+  assert(nDims == jbset.getDimCount());
+  bool somereduction = false;
+  auto red = 0;
+  auto nred = nDims;
+  while (red < nred) {
+    auto replacement = findCommonAffForDim(ils, ieqs, jls, jeqs, red);
+    if (replacement.isValid()) {
+      somereduction = true;
+      assert(replacement.getCoefficient(isl_dim_in, red).isZero());
+      replacement.removeDims_inplace(isl_dim_in, red, 1);
+      ibset.projectOut_inplace(isl_dim_set, red, 1);
+      jbset.projectOut_inplace(isl_dim_set, red, 1);
+      auto restspace = islctx->createMapSpace(nred - 1, nred);
+      auto restsinglepace = restspace.getDomainSpace();
+      auto rest = restspace.createZeroMultiAff();
+      // auto restsingle = restspace.getDomainSpace().createZeroAff();
+      for (auto k = red - red; k < red; k += 1) {
+        auto aff = restsinglepace.createAffOnVar(red);
+        rest.setAff_inplace(k, std::move(aff));
+      }
+      rest.setAff_inplace(red, replacement);
+      for (auto k = red + 1; k < nred; k += 1) {
+        auto aff = restsinglepace.createAffOnVar(red - 1);
+        rest.setAff_inplace(k, std::move(aff));
+      }
+      restore.pullback_inplace(rest);
+
+      ieqs = ibset.equalitiesMatrix();
+      ils = ibset.getLocalSpace();
+      jeqs = jbset.equalitiesMatrix();
+      jls = jbset.getLocalSpace();
+
+      nred -= 1;
+    } else {
+      red += 1;
+    }
+  }
+
+  BasicSet result;
+  Set redset;
+  if (!somereduction) {
+    redset = isl::unite(origibset, origjbset);
+  } else {
+    redset = isl::unite(ibset, jbset);
+  }
+
+  redset.coalesce_inplace();
+  if (redset.getBasicSetCount() == 1) {
+    result = redset.anyBasicSet();
+    if (somereduction) {
+      result.preimage_inplace(restore);
+      result.moveDims_inplace(isl_dim_param, 0, isl_dim_set, 0, origspace.getParamDimCount());
+      result.cast_inplace(origspace);
+    }
+  }
+  return result; // NRVO
+}
+
+#if 0
+ISLPP_EXSITU_ATTRS Set Set::coalesceEx() ISLPP_EXSITU_FUNCTION{
+  if (getBasicSetCount() <= 1)
+  return *this;
+
+  auto space = getSpace();
+  auto bsets = detectEqualities().getBasicSets();
+  auto n = bsets.size();
+  //auto cmp =  coalesce();
+
+  auto i = n - 2;
+  while (i < n) {
+    auto j = i + 1;
+
+    while (j < n) {
+      auto &ibset = bsets[i];
+      const auto &jbset = bsets[j];
+
+      auto coalesced = tryCoalesceBSets(ibset, jbset);
+      if (coalesced.isValid()) {
+        ibset = coalesced;
+        bsets.erase(bsets.begin() + j);
+        n -= 1;
+        j = i + 1;
+      } else {
+        j += 1;
+      }
+    }
+
+    i -= 1;
+  }
+
+  Set result = space.emptySet();
+  for (auto i = n - n; i < n; i += 1) {
+    const BasicSet &bset = bsets[i];
+    result.unite_inplace(bset);
+  }
+
+  return result;
+}
+#endif
+
+
+ISLPP_EXSITU_ATTRS BasicSet Set::anyBasicSet() ISLPP_EXSITU_FUNCTION{
+  BasicSet result;
+  foreachBasicSet([&result](BasicSet bset) ->bool {
+    result = bset;
+    return true;
+  });
+  return result;
+}
+
+static bool hasDependent(const Mat &eqs, size_t offset) {
+  auto nEqs = eqs.rows();
+  auto cols = eqs.cols();
+  for (auto i = nEqs - nEqs; i < nEqs; i += 1) {
+    Int coeff = eqs[i][offset];
+    if (coeff.isZero())
+      continue;
+
+    if (!coeff.isAbsOne())
+      return false; // Some div conditions we do not handle
+
+    for (auto d = 1; d < cols; d += 1) {
+      if (d == offset)
+        continue;
+      Int c = eqs[i][d];
+      if (c.isZero())
+        continue;
+      return false;
+    }
+
+    //involvingConditions += 1;
+  }
+}
+
+static bool isIndependentDimension(const BasicSet &bset, isl_dim_type type, pos_t pos) {
+  auto offset = bset.matrixOffset(type, pos);
+
+  auto eqs = bset.equalitiesMatrix();
+  if (hasDependent(eqs, offset))
+    return false;
+
+  auto ineqs = bset.inequalitiesMatrix();
+  if (hasDependent(ineqs, offset))
+    return false;
+
+  return true;
+}
+
+
+static void extractAdjacentDims(BasicSet &ibset, const AllBounds &iBounds, BasicSet &jbset, const AllBounds &jBounds, isl_dim_type type, BasicSet &intervals, int &numAdjacent) {
+  auto nDims = ibset.dim(type);
+  auto space = ibset.getSpace();
+
+  for (auto d = nDims - nDims; d < nDims; d += 1) {
+    auto iInterval = iBounds.getInterval(type, d);
+    auto jInterval = jBounds.getInterval(type, d);
+    if (!unitable(iInterval, jInterval))
+      continue;
+    // We now know that there is no gap between the dimensions (.i.a are overlapping or adjacent)
+
+    if (!isIndependentDimension(ibset, type, d))
+      continue;
+    if (!isIndependentDimension(jbset, type, d))
+      continue;
+
+    // We now know that those dimensions are independent of the other dimensions
+    // Also, are not involved in any divs
+
+    auto interval = unite(iInterval, jInterval);
+    if (interval.hasLower) {
+      auto c = space.createGeConstraint(space.createVarAff(type, d), space.createConstantAff(interval.lower));
+      intervals.addConstraint_inplace(c);
+    }
+    if (interval.hasUpper) {
+      auto c = space.createLeConstraint(space.createVarAff(type, d), space.createConstantAff(interval.upper));
+      intervals.addConstraint_inplace(c);
+    }
+
+    // Remove the conditions from the sets
+    // Do this by removing the dimension and adding it again
+    ibset.removeDims_inplace(type, d, 1);
+    if (type != isl_dim_param) { // Params jest ge re-align again when necessary
+      ibset.insertDims_inplace(type, d, 1);
+    }
+
+    jbset.removeDims_inplace(type, d, 1);
+    if (type != isl_dim_param) {
+      jbset.insertDims_inplace(type, d, 1);
+    }
+
+    numAdjacent += 1;
+  }
+}
+
+
+static BasicSet tryCoalesce(BasicSet ibset, const AllBounds &iBounds, BasicSet jbset, const AllBounds &jBounds) {
+  int numAdjacent = 0;
+
+  auto space = ibset.getSpace();
+  auto intervals = space.universeBasicSet();
+
+  extractAdjacentDims(ibset, iBounds, jbset, jBounds, isl_dim_param, intervals, numAdjacent);
+  extractAdjacentDims(ibset, iBounds, jbset, jBounds, isl_dim_set, intervals, numAdjacent);
+
+  // isl_basic_set can handle zero or one adjacent dimensions itself
+  if (numAdjacent <= 1)
+    return BasicSet();
+
+  auto both = isl::unite(ibset, jbset);
+  both.coalesce_inplace();
+
+  if (both.getBasicSetCount() == 1) {
+    auto result = both.anyBasicSet();
+
+    // re-add the interval constraints
+    result.intersect_inplace(intervals);
+    result.cast_inplace(space);
+    return result;
+  }
+
+  return BasicSet();
+}
+
+#if 0
+ISLPP_EXSITU_ATTRS Set Set::coalesceEx() ISLPP_EXSITU_FUNCTION{ 
+  // Handle a special case isl_set_coalesce cannot handle:
+  // Two dimensions that are adjacent to each other
+  // We can only handle the case when those dimensions do not influence the other dims
+  auto space = getSpace();
+  auto bsets = getBasicSets();
+  auto n = bsets.size();
+
+  SmallVector<AllBounds,4> bounds;
+  bounds.reserve(n);
+  for (auto i = n - n; i < n; i += 1) {
+    const auto &bset = bsets[i];
+    bounds.push_back(bset.getAllBounds());
+  }
+
+  auto i = n - 2;
+  while (i < n) {
+    auto j = i + 1;
+
+    while (j < n) {
+      auto &ibset = bsets[i];
+      const auto &jbset = bsets[j];
+
+      auto coalesced = tryCoalesce(ibset, bounds[i] ,jbset, bounds[j]);
+      if (coalesced.isValid()) {
+        ibset = coalesced;
+        bounds[i].disjunctiveMerge(bounds[j]);
+        bsets.erase(bsets.begin() + j);
+        bounds.erase(bounds.begin()+j);
+        n -= 1;
+        j = i + 1;
+      } else {
+        j += 1;
+      }
+    }
+
+    i -= 1;
+  }
+
+  Set result = space.emptySet();
+  for (i = n - n; i < n; i += 1) {
+    auto bset = bsets[i];
+    result.unite_inplace(bset);
+  }
+
+  // coalesce all the rest
+  result.coalesce_inplace();
+  return result; // NRVO
+}
+#endif

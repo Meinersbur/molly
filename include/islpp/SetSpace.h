@@ -58,6 +58,44 @@ namespace isl {
 
   public:
     //operator Space() const;
+
+    void matrixTypePos(size_t offset, isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type &type, pos_t &pos)const {
+      auto n1 = dim(c1);
+      if (offset < n1) {
+        type = c1;
+        pos = offset;
+        return;
+      }
+      offset -= n1;
+
+      auto n2 = dim(c2);
+      if (offset < n2) {
+        type = c2;
+        pos = offset;
+        return;
+      }
+      offset -= n2;
+
+      auto n3 = dim(c3);
+      if (offset < n3) {
+        type = c3;
+        pos = offset;
+        return;
+      }
+      offset -= n3;
+
+      auto n4 = dim(c4);
+      if (offset < n4) {
+        type = c4;
+        pos = offset;
+        return;
+      }
+      offset -= n4;
+      llvm_unreachable("out of range");
+    }
+    void matrixTypePos(size_t offset, isl_dim_type &type, pos_t &pos) const {
+      matrixTypePos(offset, isl_dim_cst, isl_dim_param, isl_dim_set, isl_dim_div, type, pos);
+    }
   }; // class SetSpace
 
 } // namespace molly

@@ -23,12 +23,32 @@ RectangularMapping *RectangularMapping::createRectangualarHullMapping(isl::Map m
     auto length = max - min + 1;
 
     auto zeroLen = lengths[i];
-    lengths.setPwAff_inplace(i, unionMax(zeroLen, length));
+    auto zeroIfUndef = unionMax(zeroLen, length);
+
+    zeroIfUndef.simplify_inplace();
+    //zeroIfUndef.gistUndefined_inplace();  /* have to keep lengths domain bounded for codegenMaxSize() */
+    lengths.setPwAff_inplace(i, zeroIfUndef);
+
+    min.simplify_inplace();
+    min.gistUndefined_inplace();
     offsets.setPwAff_inplace(i, min);
   }
 
-  lengths.simplify_inplace();
-  offsets.simplify_inplace();
+  //lengths.gistUndefined_inplace();
+  //lengths.simplify_inplace();
+  //lengths.gistUndefined_inplace();
+
+  //offsets.simplify_inplace();
+  //offsets.gistUndefined_inplace();
+
+  assert(lengths.toMap().imageIsBounded());
+#if 0
+  auto d = lengths.getDomain();
+ auto sample = d.sample();
+auto x= lengths.toMap().intersectDomain(sample);
+assert(x.imageIsBounded());
+#endif
+
   return new RectangularMapping(lengths.move(), offsets.move());
 }
 
@@ -83,17 +103,10 @@ llvm::Value *RectangularMapping::codegenSize(MollyCodeGenerator &codegen, const 
 llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, const isl::MultiPwAff &domaintranslator) {
   //domaintranslator; // { [domain] -> srcNode[cluster],dstNode[cluster] }
   //lengths; // { [chunk],srcNode[cluster],dstNode[cluster] -> field[indexset] }
-
+  assert(lengths.toMap().imageIsBounded());
   auto mylengths = lengths.toMap().wrap().reorderSubspaces(domaintranslator.getRangeSpace(), lengths.getRangeSpace()); // { srcNode[cluster],dstNode[cluster] -> field[indexset] }
+  assert(mylengths.imageIsBounded());
   auto lenout = domaintranslator.applyRange(mylengths); // { [domain] -> field[indexset] }
-
-
-  //auto wantedSpace = lengths.getDomainSpace();
-  //auto underdefined = domaintranslator.toMultiPwAff().embedIntoRangeSpace(wantedSpace); // { [A,C] -> [A,B,C] } 
-  //auto mylengths = lengths.pullback(underdefined.toPwMultiAff()); // { [A,C] -> len[] }, now get the max size of all [A,B]
-
-  //auto lenout = mylengths.projectOut(isl_dim_in, 0, mylengths.getInDimCount()); // { -> len[] }
-  //auto lengthsMap = mylengths.reverse(); // { len[] -> [A,C] }
 
   // We cannot optimize over the non-linear size function, so we do it per dimension which hence is an overapproximation
   auto nDims = mylengths.getOutDimCount();
@@ -101,6 +114,7 @@ llvm::Value *RectangularMapping::codegenMaxSize(MollyCodeGenerator &codegen, con
   Value *result = ConstantInt::get(codegen.getIntTy(), 1, true);
   for (auto i = nDims - nDims; i < nDims; i += 1) {
     auto max = lenout.dimMax(i);
+    max.simplify_inplace();
     auto term = codegen.codegenAff(max);
     result = irBuilder.CreateNSWMul(result, term, "size");
   }

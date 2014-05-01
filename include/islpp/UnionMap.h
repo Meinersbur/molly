@@ -181,10 +181,10 @@ namespace isl {
       exact = tmp;
     } 
 
-    ISLPP_EXSITU_ATTRS UnionMap transitiveClosure() ISLPP_EXSITU_FUNCTION {return UnionMap::enwrap(   isl_union_map_transitive_closure(takeCopy(), nullptr));    }
+    ISLPP_EXSITU_ATTRS UnionMap transitiveClosure() ISLPP_EXSITU_FUNCTION {return UnionMap::enwrap(isl_union_map_transitive_closure(takeCopy(), nullptr)); }
     ISLPP_EXSITU_ATTRS UnionMap transitiveClosure(/*out*/Approximation &approximation) ISLPP_EXSITU_FUNCTION {
       int exact=-1;
-      auto result = UnionMap::enwrap(   isl_union_map_transitive_closure(takeCopy(), &exact));   
+      auto result = UnionMap::enwrap(isl_union_map_transitive_closure(takeCopy(), &exact));   
       assert(exact!=-1);
       approximation = exact ? Approximation::Exact : Approximation::Over;
       return result;

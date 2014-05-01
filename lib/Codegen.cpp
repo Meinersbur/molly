@@ -389,6 +389,11 @@ llvm::Value *MollyCodeGenerator::codegenAff(const isl::PwAff &aff) {
   // 2. Create a ad-hoc function that contains the case distinction; meant to be inlined later by llvm optimization passes
   // 3. Create new ScopStmts for each peace, let Polly generate code to distinguish them
 
+  auto complexity = aff.getComplexity();
+  if (complexity >= 16*(uint64_t)1<<32) {
+    int a = 0;
+  }
+
   auto &llvmContext = getLLVMContext();
   auto intTy = Type::getInt64Ty(llvmContext);
 

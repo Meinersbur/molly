@@ -91,8 +91,8 @@ namespace isl {
 
 
 #pragma region Creational 
-    static PwMultiAff create(const Set &set, const MultiAff &maff) { return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), maff.takeCopy())); }
-    static PwMultiAff create(Set &&set, MultiAff &&maff);
+      /// Use with care; isl_pw_multi_aff_alloc does not check if spaces match
+    static PwMultiAff create(Set set, MultiAff maff) { return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), maff.takeCopy())); }
     static PwMultiAff createIdentity(Space &&space);
     static PwMultiAff createFromMultiAff(MultiAff &&maff);
 
@@ -156,7 +156,8 @@ namespace isl {
     void alignParams_inplace(Space model) ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_align_params(take(), model.take())); }
 
     PwMultiAff gistParams(Set &&set) const { return enwrap(isl_pw_multi_aff_gist_params(takeCopy(), set.take())); }
-    PwMultiAff gist(Set &&set) const { return enwrap(isl_pw_multi_aff_gist(takeCopy(), set.take())); }
+    ISLPP_INPLACE_ATTRS void gist_inplace(Set context)ISLPP_INPLACE_FUNCTION{ give(isl_pw_multi_aff_gist(take(), context.take())); }
+    ISLPP_EXSITU_ATTRS PwMultiAff gist(Set context) ISLPP_EXSITU_FUNCTION{ return PwMultiAff::enwrap(isl_pw_multi_aff_gist(takeCopy(), context.take())); }
 
     /// this(ma(x))
     PwMultiAff pullback(MultiAff ma) const { return enwrap(isl_pw_multi_aff_pullback_multi_aff(takeCopy(), ma.take())); }
@@ -205,10 +206,10 @@ namespace isl {
 
       //void flatRangeProduct_inplace(PwMultiAff that) ISLPP_INPLACE_QUALIFIER { give(isl_pw_multi_aff_flat_range_product(take(), )); }
 
-    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
-    void dumpExplicit(int maxElts, bool newlines, bool formatted) const;
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = true) const;
+    void dumpExplicit(int maxElts, bool newlines, bool formatted, bool sorted) const;
     void dumpExplicit() const; // In order do be callable without arguments from debugger
-    std::string toStringExplicit(int maxElts, bool newlines, bool formatted) const;
+    std::string toStringExplicit(int maxElts, bool newlines, bool formatted, bool sorted) const;
     std::string toStringExplicit() const;
 
     std::string toString() const;
@@ -233,6 +234,12 @@ namespace isl {
 
     ISLPP_PROJECTION_ATTRS uint64_t getComplexity() ISLPP_PROJECTION_FUNCTION;
     ISLPP_PROJECTION_ATTRS uint64_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    ISLPP_EXSITU_ATTRS PwMultiAff simplify() ISLPP_EXSITU_FUNCTION;
+    ISLPP_INPLACE_ATTRS void simplify_inplace() ISLPP_INPLACE_FUNCTION{ give(simplify().take()); }
+
+    ISLPP_INPLACE_ATTRS void gistUndefined_inplace() ISLPP_INPLACE_FUNCTION;
+    ISLPP_EXSITU_ATTRS PwMultiAff gistUndefined() ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.gistUndefined_inplace(); return result; }
   }; // class Pw<MultiAff>
 
 

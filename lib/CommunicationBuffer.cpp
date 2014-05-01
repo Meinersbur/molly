@@ -171,13 +171,14 @@ void CommunicationBuffer::codegenInit(MollyCodeGenerator &codegen, MollyPassMana
       auto sendCodegen = sendStmtCtx->makeCodegen();
       auto &sendBuilder = sendCodegen.getIRBuilder();
 
-      auto sendSrcAff = sendStmtCtx->getClusterMultiAff().castRange(srcRankSpace);
+      auto sendSrcAff = sendStmtCtx->getClusterPwMultiAff().castRange(srcRankSpace);
       auto combufSend = sendCodegen.createScalarLoad(getVariableSend(), "combuf_send");
       //sendCodegen.addScalarLoadAccess()
       //auto combufSend = sendCodegen.materialize();
-      auto sendDstAff = sendStmtEd.getCurrentIteration().castRange(dstRankSpace); /* { [domain] -> dstNode[cluster] } */
+      auto curIteration = sendStmtEd.getCurrentIteration().intersectDomain_consume(sendStmtCtx->getDomain());
+      auto sendDstAff = curIteration.castRange(dstRankSpace); /* { [domain] -> dstNode[cluster] } */
       //auto sendDstRank = clusterConf->codegenRank(sendCodegen, sendDstAff); //TODO: this is a global rank, but we actually need one indexed from (0..maxdst]
-      // auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
+      //auto sendDstRank = sendbufMapping->codegenIndex(sendCodegen, sendSrcAff, sendDstAff);
       auto sendDstRank = codegenSendbufDstIndex(sendCodegen, sendSrcAff, sendDstAff);
       auto sendWhat = rangeProduct(sendSrcAff, sendDstAff);
       auto sendSize = mapping->codegenMaxSize(sendCodegen, sendWhat); // Max over all chunks

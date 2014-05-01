@@ -565,6 +565,19 @@ namespace isl {
     ISLPP_EXSITU_ATTRS SpaceTy resetSetTupleId() ISLPP_EXSITU_FUNCTION{ assert(getDerived()->isSet()); return getDerived()->resetTupleId(isl_dim_set); }
     ISLPP_INPLACE_ATTRS void resetSetTupleId_inplace() ISLPP_INPLACE_FUNCTION{ assert(getDerived()->isSet()); getDerived()->resetTupleId_inplace(isl_dim_set); }
     ISLPP_CONSUME_ATTRS SpaceTy resetSetTupleId_consume() ISLPP_CONSUME_FUNCTION{ assert(getDerived()->isSet()); return getDerived()->resetTupleId_consume(isl_dim_set); }
+
+      ISLPP_PROJECTION_ATTRS bool isValidDim(isl_dim_type type, pos_t pos) ISLPP_PROJECTION_FUNCTION{
+      switch (type) {
+      case isl_dim_cst:
+      case isl_dim_param:
+      case isl_dim_in:
+      case isl_dim_out:
+      case isl_dim_div: // Only for local spaces?
+        return 0 <= pos && pos < dim(type);
+      default:
+        return false;
+      }
+    }
   }; // class Spacelike
 
 

@@ -25,9 +25,8 @@ PwAff PwAff::createFromAff(Aff &&aff){
 PwAff PwAff::createEmpty(Space &&space) {
   return PwAff::enwrap(isl_pw_aff_empty(space.take()));
 }
-PwAff PwAff::create(Set &&set, Aff &&aff) {
-  return PwAff::enwrap(isl_pw_aff_alloc(set.take(), aff.take()));
-}
+
+
 PwAff PwAff::createZeroOnDomain(LocalSpace &&space) {
   return PwAff::enwrap(isl_pw_aff_zero_on_domain(space.take()));
 }
@@ -130,9 +129,6 @@ ISLPP_INPLACE_ATTRS void PwAff::coalesce_inplace() ISLPP_INPLACE_FUNCTION{
 }
 
 
-void PwAff::gist(Set &&context) {
-  give(isl_pw_aff_gist(take(), context.take()));
-}
 void PwAff::gistParams(Set &&context) {
   give(isl_pw_aff_gist_params(take(), context.take()));
 }
@@ -230,8 +226,7 @@ void isl::PwAff::printExplicit(llvm::raw_ostream &os, int maxElts /*= 8*/) const
 }
 
 
-std::string isl::PwAff::toStringExplicit(int maxElts /*= 8*/)
-{
+std::string isl::PwAff::toStringExplicit(int maxElts /*= 8*/) {
   std::string str;
   llvm::raw_string_ostream os(str);
   printExplicit(os, maxElts);
@@ -388,184 +383,18 @@ void isl::Pw<Aff>::dump() const {
 }
 
 
-/// Given that all coefficients of maff and baff are equal, but not the constants; find a common expression that safisfies maff on mset and baff on bset
-/// True is returned if succeeded and maff contains the common aff
-/// If failing, returns false. maff is undefined in this case
-template<typename BasicSet>
-static bool tryCombineConstant(Set mset, Aff &maff, BasicSet bset, Aff baff, isl_dim_type type, bool tryDivs) {
-  Int mval, bval; // For reuse
-  auto nDims = maff.dim(type);
-
-  auto affspace = maff.getSpace();
-  auto mcst = maff.getConstant();
-  auto bcst = baff.getConstant();
-  if (mcst == bcst)
-    return true;
-
-  for (auto i = nDims - nDims; i < nDims; i += 1) {
-    auto mcoeff = maff.getCoefficient(type, i);
-    auto bcoeff = baff.getCoefficient(type, i);
-
-    if (!bset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, bval)) // TODO: Can also work with fixed range bounds that div to different constants
-      continue;
-    if (!mset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, mval))
-      continue;
-    if (bval == mval)
-      continue; // No chance to make a difference
-
-    // goal: find coeff s.t.
-    // new_mcst + coeff*mval = mcst 
-    // new_bcst + coeff*bval = bcst 
-    // new_mcst = new_bcst <=> mcst - coeff*mval = bcst - coeff*bval
-    // <=> mcst - bcst = coeff*mval - coeff*bval <=> mcst - bcst = coeff*(mval - bval)
-    // <=> coeff = (mcst - bcst)/(mval - bval) 
-    auto dcst = mcst - bcst;
-    auto dval = mval - bval;
-    if (mcoeff.isZero() && bcoeff.isZero() && isDivisibleBy(dcst, dval)) {
-      auto coeff = divexact(dcst, dval);
-      maff.setCoefficient_inplace(type, i, coeff);
-      maff.addConstant_inplace(-coeff*mval);
-#ifndef NDEBUG
-      baff.setCoefficient_inplace(type, i, coeff);
-      baff.addConstant_inplace(-coeff*bval);
-      assert(maff == baff);
-#endif /* NDEBUG */
-      return true;
-    }
-    //TODO: Non-div solution might be possible using multiple such dimensions
-
-    assert(!"Untested code!");
-    if (!tryDivs)
-      continue;
-
-    if (mval > 0 && bval >= 0 && mval > bval) {
-      // floord(mval,mval)==1 but floord(bval,mval)==0
-      auto divisoraff = affspace.createVarAff(type, i);
-      auto floordiv = divisoraff.divBy(mval);
-      auto dfloordiv = dcst*floordiv;
-      maff -= dfloordiv;
-      maff += dcst;
-#ifndef NDEBUG
-      baff -= floordiv;
-      baff += dcst;
-      assert(maff == baff); // Might fail
-#endif
-      return true;
-    }
-
-    if (bval > 0 && mval >= 0 && bval > mval) {
-      // floord(bval,bval)==1 but floord(mval,bval)==0
-      auto divisoraff = affspace.createVarAff(type, i);
-      auto floordiv = divisoraff.divBy(bval);
-      auto dfloordiv = dcst*floordiv;
-      maff += dfloordiv;
-      maff -= dcst;
-#ifndef NDEBUG
-      baff += floordiv;
-      baff -= dcst;
-      assert(maff == baff); // Might fail
-#endif
-      return true;
-    }
-
-    // TODO: Add cases for negative
-  }
-
-  return false;
-}
-
-
-/// Given two affine expressions, try unifying the coefficients of the the type dimensions s.t. the expression results are still the same on their dimensions
-/// Returns true if succeeded, maff and baff contains the changed expressions in this case, with the tuple coefficients equal, the other coefficients unchanged, but the the constant offset might be changed
-/// If failed, returns false; maff and baff are undefined
-template<typename BasicSet>
-static bool tryConstantCombineTuple(Set mset, Aff &maff, BasicSet bset, Aff &baff, isl_dim_type type) {
-  Int val; // For reuse
-  auto nDims = maff.dim(type);
-
-  for (auto i = nDims - nDims; i < nDims; i += 1) {
-    auto mcoeff = maff.getCoefficient(type, i);
-    auto bcoeff = baff.getCoefficient(type, i);
-    if (mcoeff == bcoeff)
-      continue; // Already equal, Nothing to do
-
-    if (bcoeff.isZero() && bset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
-      // baff is available for change
-      baff.setCoefficient_inplace(type, i, mcoeff);
-
-      // Adapt the constant
-      baff.addConstant_inplace(-mcoeff*val);
-      continue;
-    }
-
-    if (mcoeff.isZero() && mset.isFixed(type == isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
-      // maff is available for change
-      maff.setCoefficient_inplace(type, i, bcoeff);
-
-      // Adapt the constant
-      maff.addConstant_inplace(-bcoeff*val);
-      continue;
-    }
-    return false;
-  }
-
-  return true;
-}
-
-
-/// Try to unify two affine expression, s.t. their result on their domain sets do not change
-/// If tryDivs is true, it may add additional div dimensions
-/// Return true if succeeds; mset and maff contain the combined expression
-/// Returns false if failed; mset and ,aff are undefied in this case
-template<typename BasicSet>
-static bool tryConstantCombine(Set &mset, Aff &maff, BasicSet bset, Aff baff, bool tryDivs) {
-  if (maff.keep() == baff.keep()) {
-    // These are the same!
-    mset.unite_inplace(bset);
-    return true;
-  }
-
-  auto mls = maff.getLocalSpace();
-  auto bls = baff.getLocalSpace();
-  if (mls != bls) {
-    // Different divs; cannot handle yet
-    return false;
-  }
-
-  if (!tryConstantCombineTuple(mset, maff, bset, baff, isl_dim_param))
-    return false;
-
-  if (!tryConstantCombineTuple(mset, maff, bset, baff, isl_dim_in))
-    return false;
-
-  auto mcst = maff.getConstant();
-  auto bcst = baff.getConstant();
-
-  do {
-    if (mcst == bcst)
-      break;
-    if (tryCombineConstant(mset, maff, bset, baff, isl_dim_param, tryDivs))
-      break;
-    if (tryCombineConstant(mset, maff, bset, baff, isl_dim_in, tryDivs))
-      break;
-    return false; // Failed to make constant of both affs equal
-  } while (0);
-
-  mset.unite_inplace(bset);
-  return true;
-}
-
 
 /// Merge as many affine pieces as possible
 /// Greedy algorithm
 template<typename BasicSet>
-static void combineAffs(std::vector<std::pair<Set, Aff>> &merged, std::vector<std::pair<BasicSet, Aff>> &affs, bool tryDivs) {
+static void combineAffs(std::vector<std::pair<Set, Aff>> &merged, std::vector<std::pair<BasicSet, Aff>> &affs, bool tryCoeffs, bool tryDivs) {
   auto n = affs.size();
   merged.reserve(n);
   while (n) {
     assert(n == affs.size());
     Set set = affs[n - 1].first;
     auto aff = affs[n - 1].second;
+   
     affs.pop_back();
     n -= 1;
 
@@ -575,9 +404,9 @@ static void combineAffs(std::vector<std::pair<Set, Aff>> &merged, std::vector<st
       auto bset = affs[i].first;
       auto baff = affs[i].second;
 
-      auto maff = aff;
-      auto mset = set;
-      if (tryConstantCombine(mset, maff, bset, baff, tryDivs)) {
+      Aff maff;
+      Set mset;
+      if (isl::tryCombineAff(set, aff, bset, baff, tryCoeffs, tryDivs, mset, maff)) {
         aff = maff;
         set = mset;
 
@@ -592,24 +421,16 @@ static void combineAffs(std::vector<std::pair<Set, Aff>> &merged, std::vector<st
 }
 
 
-/// Remove unnecessary complexities from aff, 
-static void normalizeDim(const BasicSet &set, Aff &aff, isl_dim_type type) {
-  Int val;
-  auto nDims = aff.dim(type);
-
-  for (auto i = nDims - nDims; i < nDims; i += 1) {
-    auto coeff = aff.getCoefficient(type, i);
-    if (coeff.isZero())
-      continue;
-
-    if (set.isFixed(type==isl_dim_param ? isl_dim_param : isl_dim_set, i, val)) {
-      aff.addConstant_inplace(val * coeff);
-      aff.setCoefficient_inplace(type, i, 0);
-      //TODO: also set to zero in divs; currently we consider different divs unmergable, so this would make merging them more difficult
-    }
-    // TODO: For divs, even a range of input value may result to the same value
-    // e.g. { [i] -> [(floor(i/2)) : 0 <= i and i < 2 ] }
+template<typename BasicSet>
+static PwAff fromList(const std::vector<pair<BasicSet, Aff>> &list) {
+  const auto &any = list[0];
+  auto result = any.second.getSpace().createEmptyPwAff();
+  for (const auto &pair : list) {
+    const auto &set = pair.first;
+    const auto &aff = pair.second;
+    result.unionAdd_inplace(PwAff::create(set, aff));
   }
+  return result;
 }
 
 
@@ -617,50 +438,103 @@ static void normalizeDim(const BasicSet &set, Aff &aff, isl_dim_type type) {
 ISLPP_EXSITU_ATTRS PwAff isl::Pw<Aff>::simplify() ISLPP_EXSITU_FUNCTION{
   auto nParamDims = getParamDimCount();
   auto nDomainDims = getInDimCount();
-  
 
   // Normalize affs
-  std::vector<pair<BasicSet, Aff>> affs;
-  for (const auto &pair : getPieces()) {
-    auto set = pair.first;
-    auto aff = pair.second;
+  // TODO: Because this is done per BasicSet -- not per piece -- the same aff can gist differently, leading to that those cannot be merged again
+  // one of those affs can be simpler than the other since its domain is more restrictive
+  // Still have to consider whether this is a bad thing since at least one of the expressions is simpler than before; the total number of BasicSets from all pieces does not worsen which is what matters
+  // There is an exception: If gist()/gistUndefined() is applied some time later, this possible inhibits the pieces extended outside context
+  std::vector<pair<Set, Aff>> affs;
+  for (auto &pair : getPieces()) {
+    auto &set = pair.first;
+    auto &aff = pair.second;
 
-    for (auto &bset : set.getBasicSets()){
-      auto normalizedAff = aff;
-      bset.detectEqualities_inplace(); // make isl_basic_set_is_fixed work
-      normalizeDim(bset, normalizedAff, isl_dim_param);
-      normalizeDim(bset, normalizedAff, isl_dim_in);
-      affs.emplace_back(bset, normalizedAff);
+    // Normalize the divs to the way they are added by isl_aff_floor
+    assert(aff.normalizeDivs() == aff);
+    aff.normalizeDivs_inplace();
+
+    aff.gist_inplace(set);
+    affs.emplace_back(set, std::move(aff));
+
+#if 0
+    // TODO: This may add more pieces, leaving the sets overlap would actually be cheaper
+    set.makeDisjoint_inplace();
+
+    for (const auto &bset : set.getBasicSets()) {
+      //bset.detectEqualities_inplace(); // make isl_basic_set_is_fixed work
+      auto normalizedAff = aff.gist(bset);
+
+      assert(PwAff::create(bset, aff) == PwAff::create(bset, normalizedAff));
+      affs.emplace_back(bset, std::move(normalizedAff));
     }
+#endif
   }
+#if 0
+  if (fromList(affs) != *this) {
+    auto ref = fromList(affs);
+    auto diff1 = ref - *this;
+    auto diffDom1 = ref.domain() - domain();
+    diff1.dump();
+    auto diff2 = *this - ref;
+    auto diffDom2 = domain() - ref.domain();
+    diff2.dump();
+    int a = 0;
+    //simplify();
+  }
+#endif
 
-  // Try to merge without divs
   std::vector<pair<Set, Aff>> merged;
-  combineAffs(merged, affs, false);
+  combineAffs(merged, affs, false, false);
+  std::vector<pair<Set, Aff>> coeffmerged;
+  combineAffs(coeffmerged, merged, true, false);
   std::vector<pair<Set, Aff>> divmerged;
-  combineAffs(divmerged, merged, true);
+  combineAffs(divmerged, coeffmerged, true, true);
 
   auto result = getSpace().createEmptyPwAff();
   for (auto &pair : divmerged) {
-    auto &set = pair.first; 
+    auto &set = pair.first;
     set.coalesce_inplace();
     auto &aff = pair.second;
     result.unionAdd_inplace(PwAff::create(std::move(set), std::move(aff)));
   }
 
+  auto beforeComplexity = getComplexity();
+  auto afterComplexity = result.getComplexity();
+#ifndef NDEBUG
+  auto beforeOpComplexity = getOpComplexity();
+  auto afterOpComplexity = result.getOpComplexity();
+
+  if (beforeComplexity < afterComplexity) {
+    int a = 0;
+    if ((beforeComplexity >> 32) < (afterComplexity >> 32)) {
+      int c = 0;
+    }
+    //auto tmp = simplify();
+  }
+  if (beforeOpComplexity < afterOpComplexity) {
+    int b = 0;
+  }
+#endif
+
+  if (beforeComplexity < afterComplexity) {
+    // It's not the idea to make it even more complicated
+    result = copy();
+  }
+
+  assert(*this == result);
   return result; // NRVO
 }
 
 
 ISLPP_PROJECTION_ATTRS uint64_t PwAff::getComplexity() ISLPP_PROJECTION_FUNCTION{
   uint32_t nBsets = 0;
-  uint32_t affComplexity=0;
-  uint32_t bsetComplexity=0;
+  uint32_t affComplexity = 0;
+  uint32_t bsetComplexity = 0;
 
   for (const auto &pair : getPieces()) {
     auto &set = pair.first;
     auto &aff = pair.second;
-    
+
     // The impact of the expression itself is actually very minor and only one really needs to be evaluated. We assume the most complex one
     affComplexity = std::max(affComplexity, aff.getComplexity());
 
@@ -670,7 +544,9 @@ ISLPP_PROJECTION_ATTRS uint64_t PwAff::getComplexity() ISLPP_PROJECTION_FUNCTION
     }
   }
 
-  uint64_t result = nBsets;
+  if (!nBsets)
+    return 0;
+  uint64_t result = (nBsets - 1); // Remove one because even the simplest (except the trivial) Pw have one piece
   result <<= 32;
   result |= bsetComplexity + affComplexity;
   return result;
@@ -690,10 +566,34 @@ ISLPP_PROJECTION_ATTRS uint64_t PwAff::getOpComplexity() ISLPP_PROJECTION_FUNCTI
     nPieces += 1;
   }
 
-  if (nPieces==0)
+  if (nPieces == 0)
     return 0;
 
   complexity += nPieces - 1; // select for matching piece; just last one doesn't need a select
 
   return complexity;
+}
+
+
+ISLPP_INPLACE_ATTRS void PwAff::gistUndefined_inplace() ISLPP_INPLACE_FUNCTION{
+  if (nPiece() == 1) {
+    // Extend the only piece to universe
+    auto piece = anyPiece();
+    obj_give(piece.second.toPwAff_consume());
+    return;
+  }
+
+  auto definedDomain = domain();
+  gist_inplace(std::move(definedDomain));
+}
+
+
+ISLPP_EXSITU_ATTRS std::pair<Set, Aff> PwAff::anyPiece() ISLPP_EXSITU_FUNCTION{
+  std::pair<Set, Aff> result;
+  foreachPiece([&result](Set set, Aff aff) -> bool {
+    result.first = std::move(set);
+    result.second = std::move(aff);
+    return true; // break, just need one piece
+  });
+  return result; // NRVO
 }

@@ -136,7 +136,7 @@ namespace {
   isl::Map relativeScatter(const isl::Map &mustBeRelativeTo/* { subdomain[domain] -> model[domain] } */, const isl::Map &modelScatter /* { model[domain] -> scattering[scatter] } */, int relative) {
     if (relative == 0)
       return modelScatter;
-
+    //assert(mustBeRelativeTo.getRange() >= modelScatter.getDomain());
     auto nScatterDims = modelScatter.getOutDimCount();
     auto subdomain = mustBeRelativeTo.getDomain();
     auto mustBeRelativeToScatter = mustBeRelativeTo.applyRange(modelScatter); // { subdomain[domain] -> model[scatter] }
@@ -164,6 +164,8 @@ namespace {
     auto referenceScatter = extreme.setPwAff(lastDim, extreme.getPwAff(lastDim) + relative); // { subdomain[domain] -> model[scatter] }
     //auto referenceBefore = scatterSpace.lexLtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
     //auto referenceAfter = scatterSpace.lexGtMap().applyDomain(reverseModelScatter).applyRange(referenceScatter.reverse());
+    referenceScatter.simplify_inplace();
+    //assert(referenceScatter.getDomain() >= subdomain);
 
 #if 0
     // Try to find another scatter that has the same ordering as referenceScatter
@@ -960,7 +962,7 @@ namespace {
           auto nonexecSpace = nonexec.getSpace();
           auto nonexecStmt = getScopStmtContext(nonexecSpace);
           if (nonexecStmt->isFieldAccess())
-            continue; // Field access do need to be executed for its own sake
+            continue; // Field access does need to be executed for its own sake
 
           // What does it depend on?
           auto depends = nonfieldDataFlowClosure.intersectRange(nonexec); // { producer[domain] -> nonexec[domain] }
@@ -1038,6 +1040,15 @@ namespace {
         int a = 0;
       }
 
+#if 0
+      for (auto it = scop->begin(), end = scop->end();it!=end;++it) {
+        auto stmt = *it;
+        auto stmtCtx = getScopStmtContext(stmt);
+        auto where = stmtCtx->getWhere();
+        where.coalesce_inplace();
+        stmtCtx->setWhere(where);
+      }
+#endif
 
       /////////////////////////////////////////////////
 
@@ -1095,7 +1106,7 @@ namespace {
 
 
     /// Make the data that is required to compute a ScopStmt (also) execute the value-computing ScopStmt
-    void localizeNonfieldFlowDeps(isl::UnionSet &notyetExecuted, isl::UnionMap nonfieldDataFlowClosure)    {
+    void localizeNonfieldFlowDeps(isl::UnionSet &notyetExecuted, const isl::UnionMap &nonfieldDataFlowClosure)    {
       // When a stmt reads a value from a nonfield, the producing stmt must also be executed on the same node; communication between nodes is possible with fields only
       for (auto itStmt = scop->begin(), endStmt = scop->end(); itStmt != endStmt; ++itStmt) {
         auto stmtCtx = getScopStmtContext(*itStmt);
@@ -1159,7 +1170,7 @@ namespace {
       auto readFvar = readStmt->getFieldVariable();
       auto readAccRel = readStmt->getAccessRelation().intersectDomain(readDomain); // { readStmt[domain] -> fvar[index] }
       assert(readAccRel.matchesMapSpace(readDomain.getSpace(), readFvar->getAccessSpace()));
-      auto readScatter = readStmt->getScattering().intersectDomain(readDomain); //  { readStmt[domain] -> scattering[scatter] }
+      auto readScatter = readStmt->getScattering(); //  { readStmt[domain] -> scattering[scatter] }
       assert(readScatter.matchesMapSpace(readDomain.getSpace(), scatterTupleId));
       auto readWhere = readStmt->getWhere().intersectDomain(readDomain).setOutTupleId(dstNodeId); // { stmtRead[domain] -> dstNode[cluster] }
       auto readEditor = readStmt->getEditor();
@@ -1174,19 +1185,21 @@ namespace {
       auto homeAff = fvar->getPhysicalNode().setOutTupleId(srcNodeId); // { fvar[indexset] -> srcNode[cluster] }
       auto indexsetSpace = homeAff.getDomainSpace(); // { fvar[indexset] }
 
-      auto transfer = readAccRel.intersectDomain(inp).chain(homeAff).wrap().chainSubspace(readWhere).wrap(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
+      auto transfer = readAccRel.intersectDomain(inp).chain(homeAff).wrap_consume().chainSubspace(readWhere).wrap_consume(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
       auto local = intersect(transfer, transfer.getSpace().equalBasicSet(dstNodeSpace, srcNodeSpace)); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
 
       auto locallyHandled = local.reorderSubspaces(dstNodeSpace >> indexsetSpace); // { dstNode[cluster], field[index] }
       //auto remoteTransfer = (transfer - local).coalesce(); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
-      auto localTransfer = local.reorganizeSubspaces(indexsetSpace >> (readDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (readDomainSpace >> clusterSpace)).wrap()).coalesce(); // { fvar[indexset], readStmt[domain], [cluster] }
+      auto localTransfer = local.reorganizeSubspaces(indexsetSpace >> (readDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (readDomainSpace >> clusterSpace)).wrap_consume()).coalesce_consume(); // { fvar[indexset], readStmt[domain], [cluster] }
 
       auto remotes = transfer - locallyHandled.reorganizeSubspaces(transfer.getSpace()); // { readStmt[domain], field[index], srcNode[cluster], dstNode[cluster] }
       //remoteTransfer.coalesce_inplace();
       auto primaryHome = fvar->getPrimaryPhysicalNode(); // { fvar[domain] -> node[cluster] }
       auto remoteTransferSrc = remotes.reorderSubspaces(readDomainSpace >> indexsetSpace >> dstNodeSpace).chainSubspace(primaryHome.setOutTupleId(srcNodeId)); // { readStmt[domain], field[index], dstNode[cluster] -> srcNode[cluster] } 
-      remoteTransferSrc.coalesce_inplace();
+      remoteTransferSrc.simplify_inplace();
       auto fvarname = fvar->getVariable()->getName();
+
+      DEBUG(llvm::dbgs() << "Complexity local=" << (localTransfer.getBasicSetCount()) << " remote=" << (remoteTransferSrc.getComplexity()>>32) << "\n");
 
       ScopEditor editor(scop, asPass());
 
@@ -1638,7 +1651,9 @@ namespace {
       // For every read, we need to select one write instance. It will decide from which node we will receive the data
       // TODO: This selection is arbitrary; preferable select data from local node and nodes we have to send data from anyways
       // { (readStmt[domain], node[cluster], field[index]) -> (writeStmt[domain], node[cluster]) }
-      auto sourceOfRead = depInstLoc.wrap().reorganizeSubspaces(readInstDomain.getSpace() >> indexsetSpace, writeInstDomain.getSpace()).anyElement();
+      auto producers = depInstLoc.wrap().reorganizeSubspaces(readInstDomain.getSpace() >> indexsetSpace, writeInstDomain.getSpace());
+      auto sourceOfRead = producers.anyElement();
+      assert(sourceOfRead.range() <= writeInstDomain);
 
       // Organize in chunks
       // { recv[domain] -> (readStmt[domain], node[cluster], field[index], writeStmt[domain], node[cluster]) }
@@ -1704,6 +1719,12 @@ namespace {
 
       //auto sendDstWhere = sendDstDomain.unwrap().rangeMap(); // { (writeStmt[domain], nodeDst[cluster]) -> nodeDst[cluster] }
       //auto recvSrcWhere = recvSrcDomain.unwrap().rangeMap(); // { (readStmt[domain], nodeSrc[cluster]) -> nodeSrc[cluster] }
+      localChunks.coalesce_inplace();
+      remoteChunks.coalesce_inplace();
+     
+      DEBUG(llvm::dbgs() << "Complexity local=" << (localChunks.getBasicSetCount()) << " remote=" << (remoteChunks.getBasicSetCount()) << "\n");
+
+
 
       ScopEditor editor(scop, asPass());
 
@@ -2062,18 +2083,19 @@ namespace {
 
       // Find unique src nodes for remote transfers
       auto remoteSrcNodeUnique = remoteSrcNode.anyElement(); // { (field[indexset], dstNode[cluster]) -> (srcNode[cluster], writeStmt[domain]) }
-      if (remoteSrcNode == remoteSrcNodeUnique.toMap()) {
+      //if (remoteSrcNode == remoteSrcNodeUnique.toMap()) {
         // Use less complex version
-        remoteSrcNodeUnique = remoteSrcNode.toPwMultiAff();
-      }
-      remoteSrcNodeUnique.coalesce_inplace();
+      //  remoteSrcNodeUnique = remoteSrcNode.toPwMultiAff();
+      //}
+      //remoteSrcNodeUnique.coalesce_inplace();
 
       //auto remoteTransfers = transfer - local;
      // auto localTransfers = local.reorderSubspaces(indexsetSpace >> (writeDomainSpace >> srcNodeSpace)).cast((indexsetSpace >> (writeDomainSpace >> clusterSpace)).normalizeWrapped()); // { (field[indexset], writeStmt[domain], node[cluster]) } 
 
       auto remoteTransfers = remoteSrcNodeUnique.wrap();
       auto localTransfers = localSrcNode.wrap().reorderSubspaces(indexsetSpace >> writeDomainSpace >> dstNodeSpace).cast((indexsetSpace >> writeDomainSpace >> clusterSpace).normalizeWrapped());  // { (field[indexset], writeStmt[domain], node[cluster]) } 
-
+      remoteTransfers.coalesce_inplace(); localTransfers.coalesce_inplace();
+      DEBUG(llvm::dbgs() << "Complexity local=" << (localTransfers.getBasicSetCount()) << " remote=" << (remoteTransfers.getBasicSetCount()) << "\n");
 
       ScopEditor editor(scop, asPass());
 

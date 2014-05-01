@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "ScopEditor.h"
 
 #include <polly/ScopInfo.h>
@@ -474,8 +475,12 @@ static BasicBlock* insertLoop(BasicBlock *into, Instruction *insertBefore, Value
 
 
 StmtEditor ScopEditor::createStmt(isl::Set domain, isl::Map scattering, isl::Map where, const std::string &name) {
-  assert(isSubset(domain, scattering.getDomain()));
-  assert(isSubset(domain, where.getDomain()));
+  //domain.dumpExplicit(16, true, true, true);
+  //where.dumpExplicit(16, true, true, true);
+  assert(domain <= scattering.getDomain());
+  assert(domain <= where.getDomain());
+
+  DEBUG(llvm::dbgs() << "createStmt2 " << name << " scatter complexity=" << scattering.getBasicMapCount() << " where complexity=" << where.getBasicMapCount() << "\n");
 
   auto &llvmContext = getLLVMContext();
   auto LI = getAnalysisIfAvailable<LoopInfo>();
@@ -639,6 +644,8 @@ StmtEditor StmtEditor::createStmt(const isl::Set &newdomain, const isl::Map &sub
   auto parentRegion = getRegionOf(this->stmt);
   auto intTy = Type::getInt64Ty(llvmContext);
 
+  DEBUG(llvm::dbgs() << "createStmt1 " << name << " scatter complexity=" << subscatter_.getBasicMapCount() << " where complexity=" << where.getBasicMapCount() << "\n");
+
   auto model = this;
   auto modelDomain = getIterationDomain().cast();
   auto subdomain = newdomain.projectOut(isl_dim_set, modelDomain.getDimCount(), newdomain.getDimCount() - modelDomain.getDimCount());
@@ -725,6 +732,7 @@ StmtEditor ScopEditor::replaceStmt(polly::ScopStmt *model, isl::Map &&replaceDom
   StmtEditor stmtEditor(stmt);
   replaceDomainWhere.setInTupleId_inplace(stmtEditor.getDomainTupleId());
   stmtEditor.setWhere(replaceDomainWhere.move());
+  DEBUG(llvm::dbgs() << "replaceStmt " << name << " scatter complexity=" << scattering.getBasicMapCount() << " where complexity=" << replaceDomainWhere.getBasicMapCount() << "\n");
   //stmt->setWhereMap(replaceDomainWhere.take());
   //auto result = createStmt(createdModelDomain.move(), scattering.move(), replaceDomainWhere.move(), name);
   model->setDomain(newModelDomain.take());

@@ -55,6 +55,7 @@ namespace isl {
 
     LocalSpace getLocalSpace() const;
     Int getCoefficient(isl_dim_type type, unsigned pos) const;
+  //  ISLPP_PROJECTION_ATTRS Int getCoefficient(Dim dim) ISLPP_PROJECTION_FUNCTION{ return Int::enwrap(isl_aff_get_coefficient(takeCopy(), dim.getType(), dim.getPos()); }
     Int getConstant() const;
 
     Expr &operator-=(const Expr &that);

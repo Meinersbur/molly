@@ -39,9 +39,9 @@ namespace isl {
     ISLPP_PROJECTION_ATTRS int rows() ISLPP_PROJECTION_FUNCTION{ return checkInt(isl_mat_rows(keep())); }
     ISLPP_PROJECTION_ATTRS int cols() ISLPP_PROJECTION_FUNCTION{ return checkInt(isl_mat_cols(keep())); }
 
-       void getElement(int row, int col, Int &val) {
-   checkBool(  isl_mat_get_element(keep(), row, col, val.change()));
-    val.updated();
+      void getElement(int row, int col, Int &val) {
+        checkBool(isl_mat_get_element(keep(), row, col, val.change()));
+        val.updated();
     }
 
     ISLPP_PROJECTION_ATTRS Int getElement(int row, int col) ISLPP_PROJECTION_FUNCTION{
@@ -55,48 +55,56 @@ namespace isl {
       give(isl_mat_set_element(take(), row, col, val.keep()));
     }
 
-      ISLPP_PROJECTION_ATTRS Val getElementVal(int row, int col) ISLPP_PROJECTION_FUNCTION {
-        return Val::enwrap(isl_mat_get_element_val(keep(), row, col));
+      ISLPP_PROJECTION_ATTRS Val getElementVal(int row, int col) ISLPP_PROJECTION_FUNCTION{
+      return Val::enwrap(isl_mat_get_element_val(keep(), row, col));
     }
 
-      class MatLvl2Subscript {
-        Mat &parent;
-        int row;
-        int col;
+    class MatLvl2Subscript {
+      Mat &parent;
+      int row;
+      int col;
 
-      private:
-        MatLvl2Subscript() LLVM_DELETED_FUNCTION;
+    private:
+      MatLvl2Subscript() LLVM_DELETED_FUNCTION;
 
-      public:
-        MatLvl2Subscript(Mat &parent, int row, int col) : parent(parent), row(row), col(col) {}
+    public:
+      MatLvl2Subscript(Mat &parent, int row, int col) : parent(parent), row(row), col(col) {}
 
-        operator Int() const { return parent.getElement(row, col); }
-        void operator=(const Int &arg) const { parent.setElement_inplace(row, col, std::move(arg)); }
+      operator Int() const { return parent.getElement(row, col); }
+      void operator=(const Int &arg) const { parent.setElement_inplace(row, col, std::move(arg)); }
 
-        bool isZero() const { return parent.getElement(row,col).isZero(); }
-        bool isOne() const { return parent.getElement(row, col).isOne(); }
-      }; // class MatLvl2Subscript
+      bool isZero() const { return parent.getElement(row, col).isZero(); }
+      bool isOne() const { return parent.getElement(row, col).isOne(); }
+    }; // class MatLvl2Subscript
 
-      class MatLvl1Subscript {
-        Mat &parent;
-        int row;
+    class MatLvl1Subscript {
+      Mat &parent;
+      int row;
 
-      private:
-        MatLvl1Subscript() LLVM_DELETED_FUNCTION;
+    private:
+      MatLvl1Subscript() LLVM_DELETED_FUNCTION;
 
-      public:
-        MatLvl1Subscript(Mat &parent, int row) : parent(parent), row(row) {}
-        MatLvl2Subscript   operator[](int col) const { return MatLvl2Subscript(parent,row,col); }
-      }; // class MatLvl1Subscript
+    public:
+      MatLvl1Subscript(Mat &parent, int row) : parent(parent), row(row) {}
+      MatLvl2Subscript   operator[](int col) const { return MatLvl2Subscript(parent, row, col); }
+    }; // class MatLvl1Subscript
 
-      MatLvl1Subscript operator[](int row) { return MatLvl1Subscript(*this, row); }
 
+    class ConstMatLvl1Subscript {
+      const Mat &parent;
+      int row;
+
+    private:
+      ConstMatLvl1Subscript() LLVM_DELETED_FUNCTION;
+
+    public:
+      ConstMatLvl1Subscript(const Mat &parent, int row) : parent(parent), row(row) {}
+      Int operator[](int col) const { return parent.getElement(row,col); }
+    }; // class ConstMatLvl1Subscript
+
+    MatLvl1Subscript operator[](int row) { return MatLvl1Subscript(*this, row); }
+    ConstMatLvl1Subscript operator[](int row) const { return ConstMatLvl1Subscript(*this, row); }
   }; // class Mat
-
-
-
-
-
 
   static inline Mat enwrap(__isl_take isl_mat *mat) { return Mat::enwrap(mat); }
   static inline Mat enwrapCopy(__isl_keep isl_mat *mat) { return Mat::enwrapCopy(mat); }

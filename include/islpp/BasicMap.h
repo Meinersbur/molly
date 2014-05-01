@@ -259,8 +259,10 @@ namespace isl {
     bool canUncurry() const { return isl_basic_map_can_uncurry(keep()); }
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_basic_map_involves_dims(keep(), type, first, n); }
 
-    Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1, c2, c3, c4, c5)); }
-    Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) { return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1, c2, c3, c4, c5)); }
+    ISLPP_EXSITU_ATTRS Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5)ISLPP_EXSITU_FUNCTION{ return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1, c2, c3, c4, c5)); }
+    ISLPP_EXSITU_ATTRS Mat equalitiesMatrix() ISLPP_EXSITU_FUNCTION { return equalitiesMatrix(isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div); }
+    ISLPP_EXSITU_ATTRS Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) ISLPP_EXSITU_FUNCTION{ return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1, c2, c3, c4, c5)); }
+    ISLPP_EXSITU_ATTRS Mat inequalitiesMatrix() ISLPP_EXSITU_FUNCTION{ return inequalitiesMatrix(isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div); }
 
     void addConstraint_inplace(Constraint &&constraint) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_add_constraint(take(), constraint.take())); }
     void addConstraint_inplace(const Constraint &constraint) ISLPP_INPLACE_FUNCTION{ give(isl_basic_map_add_constraint(take(), constraint.takeCopy())); }

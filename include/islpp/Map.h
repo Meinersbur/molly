@@ -49,19 +49,6 @@ namespace isl {
 
 namespace isl {
 
-  enum class Accuracy {
-    /// Always returns correct result
-    Exact,
-
-    /// Use simpler algorithm, but do not always return correct result
-    Fast,
-
-    /// Only queries some flag; constant execution time
-    Plain,
-
-    /// Always returns "don't know"
-    None
-  };
   enum class Approximation {
     Exact,
 
@@ -75,11 +62,10 @@ namespace isl {
     /// However, depending on the chosen accuracy, the it tries to be close to the exact result.
     Rough
   };
-
-  inline bool possiblyFalsePositives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Over; }
-  inline bool allPositivesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Over; }
-  inline bool possiblyFalseNegatives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Under; }
-  inline bool allNegativesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Under; }
+  static inline bool possiblyFalsePositives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Over; }
+  static inline bool allPositivesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Over; }
+  static inline bool possiblyFalseNegatives(Approximation approx) { return approx == Approximation::Rough || approx == Approximation::Under; }
+  static inline bool allNegativesFound(Approximation approx) { return approx == Approximation::Exact || approx == Approximation::Under; }
 
 
   // Or Pw<BasicMap>
@@ -543,6 +529,8 @@ namespace isl {
 
     bool foreachBasicMap(std::function<bool(BasicMap&&)> func) const;
     std::vector<BasicMap> getBasicMaps() const;
+    size_t nBasicMap() const { return checkInt(isl_set_n_basic_set( reinterpret_cast<isl_set*>(keep()) )); /* use the fact that internally, isl_map and isl_set are the same */ }
+    size_t getBasicMapCount() const{ return nBasicMap(); }
 
     void fixedPower(const Int &exp) { give(isl_map_fixed_power(take(), exp.keep())); }
     void power(const Int &exp, bool &exact) {
@@ -688,10 +676,10 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS BasicMap simpleHull() ISLPP_EXSITU_FUNCTION{ return BasicMap::enwrap(isl_map_simple_hull(takeCopy())); }
 
-    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false) const;
-    void dumpExplicit(int maxElts, bool newlines = false, bool formatted = false) const;
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = false) const;
+    void dumpExplicit(int maxElts, bool newlines = false, bool formatted = false, bool sorted = false) const;
     void dumpExplicit() const; // In order do be callable without arguments from debugger
-    std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false);
+    std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = false);
 
 #ifndef NDEBUG
     std::string toString() const; // Just to be callable from debugger, inherited from isl::Obj otherwise

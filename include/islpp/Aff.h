@@ -2,6 +2,7 @@
 #define ISLPP_AFF_H
 
 #include "islpp_common.h"
+#include "islpp/Islfwd.h"
 #include "Obj.h"
 #include "Spacelike.h"
 #include "Ctx.h"
@@ -36,6 +37,14 @@ namespace isl {
   template<typename T> class Multi;
   template<> class Multi<Aff>;
 } // namespace isl
+
+
+#if 0
+extern "C" {
+  // not public, but we require it for a more sensical defintition of equality for affs with different local space
+  __isl_give isl_aff *isl_aff_align_divs(__isl_take isl_aff *dst, __isl_keep isl_aff *src);
+} // extern "C"
+#endif
 
 
 namespace isl {
@@ -128,7 +137,8 @@ namespace isl {
 
 
 #pragma region Conversion
-    PwAff toPwAff() const;
+    ISLPP_EXSITU_ATTRS PwAff toPwAff() ISLPP_EXSITU_FUNCTION;
+    ISLPP_CONSUME_ATTRS PwAff toPwAff_consume() ISLPP_CONSUME_FUNCTION;
 
     ISLPP_EXSITU_ATTRS MultiAff toMultiAff() ISLPP_EXSITU_FUNCTION;
 
@@ -170,6 +180,12 @@ namespace isl {
       //const char *getDimName( isl_dim_type type, unsigned pos) const;
 
     Int getCoefficient(isl_dim_type type, unsigned pos) const;
+    ISLPP_PROJECTION_ATTRS Int getCoefficient(Dim dim) ISLPP_PROJECTION_FUNCTION{
+      Int result;
+      isl_aff_get_coefficient(takeCopy(), dim.getType(), dim.getPos(), result.change());
+      result.updated();
+      return result; // NRVO 
+    }
     Int getDenominator() const;
 
     Aff setConstant(const Int &v) const { return Aff::enwrap(isl_aff_set_constant(takeCopy(), v.keep())); }
@@ -193,9 +209,11 @@ namespace isl {
     bool isPlainZero() const;
     Aff getDiv(int pos) const;
 
-    Aff neg() const { return Aff::enwrap(isl_aff_neg(takeCopy())); }
+    ISLPP_EXSITU_ATTRS Aff neg() ISLPP_EXSITU_FUNCTION{ return Aff::enwrap(isl_aff_neg(takeCopy())); }
+    ISLPP_INPLACE_ATTRS void neg_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_aff_neg(take())); }
     void ceil();
-    void floor();
+    ISLPP_EXSITU_ATTRS Aff floor() ISLPP_EXSITU_FUNCTION{ return Aff::enwrap(isl_aff_floor(takeCopy())); }
+    ISLPP_INPLACE_ATTRS void floor_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_aff_floor(take())); }
     void mod(const Int &mod);
 
     Aff divBy(const Aff &divisor) const { return Aff::enwrap(isl_aff_div(takeCopy(), divisor.takeCopy())); }
@@ -221,7 +239,8 @@ namespace isl {
     void projectDomainOnParams();
 
     void alignParams(Space &&model);
-    void gist(Set &&context);
+    ISLPP_INPLACE_ATTRS void gist_inplace(Set context) ISLPP_INPLACE_FUNCTION;
+    ISLPP_EXSITU_ATTRS Aff gist(Set context) ISLPP_EXSITU_FUNCTION;
     void gistParams(Set &&context);
 
     Aff pullback(const MultiAff &maff) ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.pullback_inplace(maff); return result; }
@@ -246,14 +265,56 @@ namespace isl {
     ISLPP_INPLACE_ATTRS const Aff & operator+=(Aff arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add(take(), arg.take())); return *this; }
     ISLPP_INPLACE_ATTRS const Aff & operator-=(Aff arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_sub(take(), arg.take())); return *this; }
     ISLPP_INPLACE_ATTRS const Aff & operator+=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), arg.keep())); return *this; }
-    ISLPP_INPLACE_ATTRS const Aff & operator-=(const Int &arg) ISLPP_INPLACE_FUNCTION{ give(isl_aff_add_constant(take(), (-arg).keep())); return *this; }
+    ISLPP_INPLACE_ATTRS const Aff & operator-=(const Int &arg) ISLPP_INPLACE_FUNCTION{ 
+      Int &cheat = const_cast<Int&>(arg);//FIXME: Is this performance optimization worth it? arg may point to volatile/read-only memory
+      cheat.neg_inplace();
+      give(isl_aff_add_constant(take(), cheat.keep()));
+      cheat.neg_inplace(); // undo negate
+      return *this;
+    }
 
     ISLPP_PROJECTION_ATTRS uint32_t getComplexity() ISLPP_PROJECTION_FUNCTION;
     ISLPP_PROJECTION_ATTRS uint32_t getOpComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    /// Simplify this aff using the fact that this affine is never applied on inputs outside of this set
+    /// The result value outside of the domain may change
+    /// FIXME: Functionality of isl_aff_gist, is gist always better?
+    ISLPP_INPLACE_ATTRS void normalize_inplace(const BasicSet &domain) ISLPP_INPLACE_FUNCTION;
+    ISLPP_EXSITU_ATTRS Aff normalize(const BasicSet &domain)ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.normalize_inplace(domain); return result; }
+
+
+    ISLPP_PROJECTION_ATTRS Int getDivCoefficient(const Aff &aff) ISLPP_PROJECTION_FUNCTION;
+
+    ISLPP_INPLACE_ATTRS void normalizeDivs_inplace() ISLPP_INPLACE_FUNCTION;
+    ISLPP_EXSITU_ATTRS Aff normalizeDivs() ISLPP_EXSITU_FUNCTION{ auto result = copy(); result.normalizeDivs_inplace(); return result; }
+
+    ISLPP_EXSITU_ATTRS Aff operator-() ISLPP_EXSITU_FUNCTION{ return Aff::enwrap(isl_aff_neg(takeCopy())); }
+
+      // TODO: May use isl_aff_add() with zero aff
+    ISLPP_INPLACE_ATTRS void alignDivs_inplace(const Aff &that) ISLPP_INPLACE_FUNCTION{
+      alignDivs_inplace(that.getLocalSpace());
+      //give(isl_aff_align_divs(take(), that.take())); 
+    }
+    ISLPP_EXSITU_ATTRS Aff alignDivs(const Aff &that)ISLPP_EXSITU_FUNCTION{ 
+      return alignDivs(that.getLocalSpace());
+      //return Aff::enwrap(isl_aff_align_divs(takeCopy(), that.take()));
+    }
+
+      ISLPP_INPLACE_ATTRS void alignDivs_inplace(LocalSpace ls) ISLPP_INPLACE_FUNCTION{
+      auto tmp = ls.createZeroAff();
+      give(isl_aff_add(take(), tmp.take()));
+    }
+      ISLPP_EXSITU_ATTRS Aff alignDivs(LocalSpace ls)ISLPP_EXSITU_FUNCTION{
+      auto tmp = ls.createZeroAff();
+      return Aff::enwrap(isl_aff_add(takeCopy(), tmp.take()));
+    }
+
+    ISLPP_PROJECTION_ATTRS bool isLinearOnRange(Dim dim, const Int *lowerBound, const Int *upperBound, /*out*/Int &slope)ISLPP_PROJECTION_FUNCTION;
   }; // class Aff
 
 
   static inline Aff enwrap(__isl_take isl_aff *obj) { return Aff::enwrap(obj); }
+  static inline Aff enwrapCopy(__isl_keep isl_aff *obj) { return Aff::enwrapCopy(obj); }
 
 
 
@@ -264,8 +325,7 @@ namespace isl {
   static inline Aff add(Aff aff1, Aff aff2) { return enwrap(isl_aff_add(aff1.take(), aff2.take())); }
   static inline Aff sub(Aff aff1, Aff aff2) { return enwrap(isl_aff_sub(aff1.take(), aff2.take())); }
 
-  static inline Aff floor(Aff &&aff) { return Aff::enwrap(isl_aff_floor(aff.take())); }
-  static inline Aff floor(const Aff &aff) { return Aff::enwrap(isl_aff_floor(aff.takeCopy())); }
+  static inline Aff floor(Aff aff) { return Aff::enwrap(isl_aff_floor(aff.take())); }
 
   BasicSet zeroBasicSet(Aff &&aff);
   BasicSet negBasicSet(Aff &&aff);
@@ -274,22 +334,42 @@ namespace isl {
 
   static inline Aff operator+(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_add(lhs.take(), rhs.take())); }
   static inline Aff operator+(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return add(aff.move(), ls.createConstantAff(v)); }
+  static inline Aff operator+(const Int &lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(ls.createConstantAff(lhs), std::move(rhs)); }
+  static inline Aff operator+(int lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(ls.createConstantAff(lhs), std::move(rhs)); }
   static inline Aff operator-(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_sub(lhs.take(), rhs.take())); }
   static inline Aff operator-(Aff aff, int v) { auto ls = aff.getDomainLocalSpace(); return sub(aff.move(), ls.createConstantAff(v)); }
+  static inline Aff operator-(Aff aff, const Int &v) { auto ls = aff.getDomainLocalSpace(); return sub(std::move(aff), ls.createConstantAff(v)); }
+  static inline Aff operator-(const Int &lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return sub(ls.createConstantAff(lhs), std::move(rhs)); }
+  static inline Aff operator-(int lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return sub(ls.createConstantAff(lhs), std::move(rhs)); }
 
   static inline Aff operator*(Aff lhs, Aff rhs) { return Aff::enwrap(isl_aff_mul(lhs.take(), rhs.take())); }
-  static inline Aff operator*(Aff lhs, signed long v) { auto ls = lhs.getDomainLocalSpace(); return add(lhs.move(), ls.createConstantAff(v)); }
-  static inline Aff operator*(signed long lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(std::move(rhs), ls.createConstantAff(lhs)); }
-  static inline Aff operator*(const Int &lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return add(std::move(rhs), ls.createConstantAff(lhs)); }
+  static inline Aff operator*(Aff lhs, signed long v) { auto ls = lhs.getDomainLocalSpace(); return mul(lhs.move(), ls.createConstantAff(v)); }
+  static inline Aff operator*(signed long lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return mul(std::move(rhs), ls.createConstantAff(lhs)); }
+  static inline Aff operator*(const Int &lhs, Aff rhs) { auto ls = rhs.getDomainLocalSpace(); return mul(std::move(rhs), ls.createConstantAff(lhs)); }
+  static inline Aff operator*(Aff lhs, const Int &rhs) { auto ls = lhs.getDomainLocalSpace(); return mul(std::move(lhs), ls.createConstantAff(rhs)); }
 
 
   static inline Aff operator/(Aff lhs, Aff rhs) { return div(std::move(lhs), std::move(rhs)); }
   static inline Aff operator/(Aff lhs, signed long v) { return div(lhs.move(), v); }
 
-  // Warning: plain only!
-  static inline bool operator==(const Aff &lhs, const Aff &rhs) {
-    return checkBool(isl_aff_plain_is_equal(lhs.keep(), rhs.keep()));
+  static inline Aff floord(Aff divident, const Int &divisor) {
+    auto ls = divident.getDomainLocalSpace();
+    auto denom = ls.createConstantAff(divisor);
+    return Aff::enwrap(isl_aff_floor(isl_aff_div(divident.take(), denom.take())));
   }
+
+  bool isEqual(const Aff &lhs, const Aff &rhs);
+  Tribool plainIsEqual(const Aff &lhs, const Aff &rhs);
+  Tribool isEqual(const Aff &lhs, const Aff &rhs, Accuracy accuracy);
+
+  static inline bool operator==(const Aff &lhs, const Aff &rhs) {
+    return isEqual(lhs,rhs);
+  }
+  static inline bool operator!=(const Aff &lhs, const Aff &rhs) {
+    return !operator==(lhs,rhs);
+  }
+
+  bool tryCombineAff(Set lhsContext, Aff lhsAff, const Set &rhsContext, const Aff &rhsAff, bool tryCoeffs, bool tryDivs, Set &resultContext, Aff &resultAff);
 
 } // namespace isl
 #endif /* ISLPP_AFF_H */

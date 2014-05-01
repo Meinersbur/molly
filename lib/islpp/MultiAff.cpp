@@ -1,10 +1,12 @@
 #include "islpp/MultiAff.h"
 
 #include "islpp/Printer.h"
-#include <isl/map.h>
 #include "islpp/BasicMap.h"
 #include "islpp/Map.h"
 #include "islpp/DimRange.h"
+#include "islpp/Aff.h"
+
+#include <isl/map.h>
 
 using namespace isl;
 
@@ -17,7 +19,7 @@ PwMultiAff Multi<Aff>::toPwMultiAff() const {
 MultiPwAff Multi<Aff>::toMultiPwAff() const {
   auto result = getSpace().createZeroMultiPwAff();
   auto nDims = getOutDimCount();
-  for (auto i = nDims-nDims; i < nDims; i+=1) {
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
     result.setPwAff_inplace(i, getAff(i));
   }
   return result;
@@ -43,8 +45,8 @@ void Multi<Aff>::printProperties(llvm::raw_ostream &out, int depth, int indent) 
 void Multi<Aff>::push_back(Aff &&aff) {
   auto n = dim(isl_dim_out);
 
-  auto list = isl_aff_list_alloc(isl_multi_aff_get_ctx(keep()), n+1);
-  for (auto i = n-n; i < n; i+=1) {
+  auto list = isl_aff_list_alloc(isl_multi_aff_get_ctx(keep()), n + 1);
+  for (auto i = n - n; i < n; i += 1) {
     list = isl_aff_list_set_aff(list, i, isl_multi_aff_get_aff(keep(), i));
   }
   list = isl_aff_list_set_aff(list, n, aff.take());
@@ -86,27 +88,17 @@ Map Multi<Aff>::toMap() const {
 }
 
 
-PwMultiAff Multi<Aff>::restrictDomain(Set &&set) const {
-  return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.take(), takeCopy()));
-}
-
-
-PwMultiAff Multi<Aff>::restrictDomain(const Set &set) const {
-  return PwMultiAff::enwrap(isl_pw_multi_aff_alloc(set.takeCopy(), takeCopy()));
-}
-
-
-void Multi<Aff>::neg_inplace() ISLPP_INPLACE_FUNCTION {
+void Multi<Aff>::neg_inplace() ISLPP_INPLACE_FUNCTION{
   auto size = getOutDimCount();
-  for (auto i = size-size; i < size; i+=1) {
+  for (auto i = size - size; i < size; i += 1) {
     setAff_inplace(i, getAff(i).neg());
   }
 }
 
 
-void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION {
+void Multi<Aff>::subMultiAff_inplace(unsigned first, unsigned count) ISLPP_INPLACE_FUNCTION{
   auto nOutDims = getOutDimCount();
-  removeDims_inplace(isl_dim_out, first+count, nOutDims-first-count);
+  removeDims_inplace(isl_dim_out, first + count, nOutDims - first - count);
   removeDims_inplace(isl_dim_out, 0, first);
 }
 
@@ -116,17 +108,17 @@ void isl::Multi<Aff>::dump() const {
 }
 
 
-ISLPP_CONSUME_ATTRS BasicMap isl::Multi<Aff>::reverse_consume() ISLPP_CONSUME_FUNCTION {
+ISLPP_CONSUME_ATTRS BasicMap isl::Multi<Aff>::reverse_consume() ISLPP_CONSUME_FUNCTION{
   return BasicMap::enwrap(isl_basic_map_reverse(isl_basic_map_from_multi_aff(take())));
 }
 
 
-ISLPP_EXSITU_ATTRS BasicMap isl::Multi<Aff>::reverse() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS BasicMap isl::Multi<Aff>::reverse() ISLPP_EXSITU_FUNCTION{
   return copy().reverse_consume();
 }
 
 
-ISLPP_EXSITU_ATTRS MultiAff isl::Multi<Aff>::embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS MultiAff isl::Multi<Aff>::embedIntoDomain(Space framedomainspace) ISLPP_EXSITU_FUNCTION{
   auto subspace = getDomainSpace();
   auto myspace = getSpace();
   auto range = myspace.findSubspace(isl_dim_in, subspace);
@@ -140,7 +132,19 @@ ISLPP_EXSITU_ATTRS MultiAff isl::Multi<Aff>::embedIntoDomain(Space framedomainsp
 }
 
 
-void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION {
+ISLPP_EXSITU_ATTRS PwMultiAff isl::Multi<Aff>::intersectDomain(Set set) ISLPP_EXSITU_FUNCTION {
+  return copy().intersectDomain_consume(std::move(set));
+}
+
+
+ISLPP_CONSUME_ATTRS PwMultiAff isl::Multi<Aff>::intersectDomain_consume(Set set) ISLPP_CONSUME_FUNCTION{
+  auto pw = isl_pw_multi_aff_from_multi_aff(take());
+  pw = isl_pw_multi_aff_intersect_domain(pw, set.take());
+  return PwMultiAff::enwrap(pw);
+}
+
+
+void MultiAff::sublist_inplace(const Space &subspace) ISLPP_INPLACE_FUNCTION{
   auto range = getSpace().findSubspace(isl_dim_out, subspace);
   assert(range.isValid());
   subMultiAff_inplace(range.getFirst(), range.getCount());
@@ -157,24 +161,24 @@ MultiAff MultiAff::embedAsSubspace(const Space &framespace) const {
 
   auto result = framespace.createIdentityMultiAff();
   auto count = range.getCount();
-  for (auto i = count-count; i < count; i+=1) {
+  for (auto i = count - count; i < count; i += 1) {
     result.setAff_inplace(range.relativePos(i), getAff(i));
   }
   return result;
 }
 
 
-PwMultiAff MultiAff::pullback(PwMultiAff mpa) ISLPP_EXSITU_FUNCTION {
-  return PwMultiAff::enwrap(isl_pw_multi_aff_pullback_pw_multi_aff( isl_pw_multi_aff_from_multi_aff(takeCopy()), mpa.take()  ));
+PwMultiAff MultiAff::pullback(PwMultiAff mpa) ISLPP_EXSITU_FUNCTION{
+  return PwMultiAff::enwrap(isl_pw_multi_aff_pullback_pw_multi_aff(isl_pw_multi_aff_from_multi_aff(takeCopy()), mpa.take()));
 }
 
 
-PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION {
+PwMultiAff MultiAff::applyRange(const PwMultiAff &pma) ISLPP_EXSITU_FUNCTION{
   return pma.pullback(*this);
 }
 
 
-MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
+MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION{
   assert(space.getInDimCount() == this->getInDimCount());
   assert(space.getOutDimCount() == this->getOutDimCount());
 
@@ -186,7 +190,7 @@ MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
   auto result = resultSpace.createZeroMultiAff();
 
   auto nOutDims = getOutDimCount();
-  for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
+  for (auto i = nOutDims - nOutDims; i < nOutDims; i += 1) {
     auto aff = getAff(i);
     auto backpulled = aff.pullback(translate);
     result.setAff_inplace(i, backpulled);
@@ -196,7 +200,7 @@ MultiAff MultiAff::cast(Space space) ISLPP_EXSITU_FUNCTION {
 }
 
 
-ISLPP_INPLACE_ATTRS void MultiAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION {
+ISLPP_INPLACE_ATTRS void MultiAff::castDomain_inplace(Space domainSpace) ISLPP_INPLACE_FUNCTION{
   assert(domainSpace.getSetDimCount() == this->getInDimCount());
 
   auto translateSpace = Space::createMapFromDomainAndRange(domainSpace, getDomainSpace());
@@ -205,26 +209,26 @@ ISLPP_INPLACE_ATTRS void MultiAff::castDomain_inplace(Space domainSpace) ISLPP_I
 }
 
 
-ISLPP_EXSITU_ATTRS MultiAff MultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS MultiAff MultiAff::castRange(Space rangeSpace) ISLPP_EXSITU_FUNCTION{
   assert(rangeSpace.getSetDimCount() == this->getOutDimCount());
 
   auto resultSpace = Space::createMapFromDomainAndRange(getDomainSpace(), rangeSpace);
   auto result = resultSpace.createZeroMultiAff();
 
   auto nOutDims = getOutDimCount();
-  for (auto i = nOutDims-nOutDims; i<nOutDims;i+=1) {
+  for (auto i = nOutDims - nOutDims; i < nOutDims; i += 1) {
     result.setAff_inplace(i, getAff(i));
   }
   return result;
 }
 
 
-ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS BasicSet MultiAff::getDomain() ISLPP_EXSITU_FUNCTION{
   return getDomainSpace().createUniverseBasicSet();
 }
 
 
-ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION {
+ISLPP_EXSITU_ATTRS BasicSet isl::MultiAff::getRange() ISLPP_EXSITU_FUNCTION{
   return toBasicMap().getRange();
 }
 
@@ -233,7 +237,7 @@ ISLPP_PROJECTION_ATTRS uint32_t  isl::MultiAff::getComplexity() ISLPP_PROJECTION
   auto nDims = getOutDimCount();
   uint32_t result = 0;
   for (auto i = nDims - nDims; i < nDims; i += 1) {
-    result+= getAff(i).getComplexity();
+    result += getAff(i).getComplexity();
   }
   return result;
 }
@@ -246,4 +250,38 @@ ISLPP_PROJECTION_ATTRS uint32_t  isl::MultiAff::getOpComplexity() ISLPP_PROJECTI
     result += getAff(i).getOpComplexity();
   }
   return result;
+}
+
+
+bool isl::tryCombineMultiAff(Set lhsContext, MultiAff lhsMAff, Set rhsContext, MultiAff rhsMAff, bool tryCoeffs, bool tryDivs, Set &resultContext, MultiAff &resultAff) {
+  assert(lhsMAff.getOutDimCount() == rhsMAff.getOutDimCount());
+  auto nDims = lhsMAff.getOutDimCount();
+
+  auto rMAff = lhsMAff.getSpace().createZeroMultiAff();
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto lhsAff = lhsMAff.getAff(i);
+    auto rhsAff = rhsMAff.getAff(i);
+    Aff rAff;
+    Set dummy;
+    auto success = isl::tryCombineAff(lhsContext, lhsAff, rhsContext, rhsAff, tryCoeffs, tryDivs, dummy, rAff);
+    if (!success)
+      return false;
+    rMAff.setAff_inplace(i, std::move(rAff));
+  }
+
+  resultAff = rMAff;
+  if (&resultAff) {
+    resultContext = unite(lhsContext, rhsContext);
+  }
+  return true;
+}
+
+
+ISLPP_INPLACE_ATTRS void MultiAff::normalizeDivs_inplace() ISLPP_INPLACE_FUNCTION{
+  auto nDims = getOutDimCount();
+  for (auto i = nDims - nDims; i < nDims; i += 1) {
+    auto aff = getAff(i);
+    aff.normalizeDivs_inplace();
+    setAff_inplace(i, std::move(aff));
+  }
 }

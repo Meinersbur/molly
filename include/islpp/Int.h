@@ -38,6 +38,13 @@ namespace isl {
       print(os);
 #endif
     }
+    void give(isl_int &&val) {
+      isl_int_swap_or_set(this->val, val);
+#ifdef ISLPP_OBJPRINTED
+      llvm::raw_string_ostream os(_printed);
+      print(os);
+#endif
+    }
 
     void updated() {
 #ifdef ISLPP_OBJPRINTED
@@ -47,6 +54,8 @@ namespace isl {
     }
 
     static Int wrap(const isl_int &val) { Int result; result.give(val); return result; }
+    static Int enwrap(const isl_int &val) { Int result; result.give(val); return result; }
+    static Int enwrap(isl_int &&val) { Int result; result.give(static_cast<isl_int&&>(val)); return result; }
 #pragma endregion
 
   public:
@@ -65,8 +74,9 @@ namespace isl {
 #endif
     }
     /* implicit */ Int(Int &&v) {
-      isl_int_init(this->val);
-      isl_int_swap(this->val, v.val);
+      //isl_int_init(this->val);
+      //isl_int_swap_or_set(this->val, v.val);
+      isl_int_move(this->val, *v.change());
 #ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(v._printed);
 #endif
@@ -86,7 +96,7 @@ namespace isl {
       return *this;
     }
     const Int &operator=(Int &&v) {
-      isl_int_swap(this->val, v.keep());
+      isl_int_swap_or_set(this->val, v.keep());
 #ifdef ISLPP_OBJPRINTED
       this->_printed = std::move(v._printed);
 #endif
@@ -183,28 +193,45 @@ namespace isl {
     }
 
 
-    void abs() {
-      isl_int_abs(val, val);
+    ISLPP_INPLACE_ATTRS void abs_inplace() ISLPP_INPLACE_FUNCTION{
+      isl_int_abs(*change(), keep());
+      updated();
+    }
+      ISLPP_INPLACE_ATTRS void neg_inplace() ISLPP_INPLACE_FUNCTION{
+      isl_int_neg(*change(), keep());
+      updated();
     }
 
-    ISLPP_PROJECTION_ATTRS bool isZero() ISLPP_PROJECTION_FUNCTION{
+      ISLPP_EXSITU_ATTRS Int abs() ISLPP_EXSITU_FUNCTION{
+      Int result;
+      isl_int_abs(*result.change(), keep());
+      result.updated();
+      return result;
+    }
+
+      ISLPP_PROJECTION_ATTRS bool isZero() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_zero(val);
     }
 
-      ISLPP_PROJECTION_ATTRS  bool isOne() ISLPP_PROJECTION_FUNCTION{
+      ISLPP_PROJECTION_ATTRS bool isOne() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_one(val);
     }
 
-      ISLPP_PROJECTION_ATTRS   bool isNeg() ISLPP_PROJECTION_FUNCTION{
+      ISLPP_PROJECTION_ATTRS bool isNeg() ISLPP_PROJECTION_FUNCTION{
       return isl_int_is_neg(val);
     }
+      ISLPP_PROJECTION_ATTRS bool isPos() ISLPP_PROJECTION_FUNCTION{
+      return isl_int_is_pos(val);
+    }
 
-      ISLPP_PROJECTION_ATTRS   bool isNegOne() ISLPP_PROJECTION_FUNCTION{
+
+      ISLPP_PROJECTION_ATTRS bool isNegOne() ISLPP_PROJECTION_FUNCTION{
       return checkBool(isl_int_is_negone(val));
     }
 
-      ISLPP_PROJECTION_ATTRS   bool isAbsOne() ISLPP_PROJECTION_FUNCTION{
-      return checkBool(isl_int_cmpabs_ui(val, 1) == 0);
+      ISLPP_PROJECTION_ATTRS bool isAbsOne() ISLPP_PROJECTION_FUNCTION{
+      return checkBool(isl_int_cmp_si(val, 1) == 0) || checkBool(isl_int_cmp_si(val, -1) == 0);
+      //return checkBool(isl_int_cmpabs_ui(val, 1) == 0);
     }
 
       Int &operator+=(const Int &that) {
@@ -225,6 +252,16 @@ namespace isl {
       result.updated();
       return result; // NRVO
     }
+
+      ISLPP_PROJECTION_ATTRS int sgn() ISLPP_PROJECTION_FUNCTION{
+      return isl_int_sgn(keep());
+    }
+
+      ISLPP_INPLACE_ATTRS Int &operator*=(signed long factor)ISLPP_INPLACE_FUNCTION{
+      isl_int_mul_si(this->val, this->val, factor);
+      this->updated();
+      return *this;
+    }
   }; // class Int
 
 
@@ -232,7 +269,7 @@ namespace isl {
     return checkBool(isl_int_eq(lhs.keep(), rhs.keep()));
   }
   static inline bool operator!=(const Int &lhs, const Int &rhs) {
-    return !operator==(lhs,rhs);
+    return !operator==(lhs, rhs);
   }
 
   static inline bool operator==(const Int &lhs, signed long rhs) {
@@ -243,7 +280,7 @@ namespace isl {
   }
 
   static inline bool operator>=(const Int &lhs, signed long rhs) {
-    return isl_int_cmp_si(lhs.keep(), rhs)>=0;
+    return isl_int_cmp_si(lhs.keep(), rhs) >= 0;
   }
 
 
@@ -263,7 +300,12 @@ namespace isl {
   static inline bool operator>(const Int &lhs, const Int &rhs) {
     return isl_int_gt(lhs.keep(), rhs.keep());
   }
-
+  static inline bool operator<=(const Int &lhs, const Int &rhs) {
+    return isl_int_le(lhs.keep(), rhs.keep());
+  }
+  static inline bool operator>=(const Int &lhs, const Int &rhs) {
+    return isl_int_ge(lhs.keep(), rhs.keep());
+  }
 
   static inline Int operator+(const Int &lhs, const Int &rhs) {
     Int result;
@@ -327,12 +369,24 @@ namespace isl {
     result.updated();
     return result; // NRVO
   }
+  static inline Int fdiv_q(const Int &lhs, const Int &rhs) {
+    return floord(lhs, rhs);
+  }
+  static inline Int fdiv_r(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_fdiv_r(*result.change(), lhs.keep(), rhs.keep());
+    result.updated();
+    return result; // NRVO
+  }
 
   static inline Int ceild(const Int &lhs, const Int &rhs) {
     Int result;
     isl_int_cdiv_q(*result.change(), lhs.keep(), rhs.keep());
     result.updated();
     return result; // NRVO
+  }
+  static inline Int cdiv_q(const Int &lhs, const Int &rhs) {
+    return ceild(lhs, rhs);
   }
 
 
@@ -346,7 +400,39 @@ namespace isl {
     return result; // NRVO
   }
 
+  static inline const Int &min(const Int &lhs, const Int &rhs) {
+    if (rhs < lhs)
+      return rhs;
+    return lhs;
+  }
+  static inline Int &min(Int &lhs, Int &rhs) {
+    if (rhs < lhs)
+      return rhs;
+    return lhs;
+  }
+  static inline const Int &max(const Int &lhs, const Int &rhs) {
+    if (rhs > lhs)
+      return rhs;
+    return lhs;
+  }
+  static inline Int &max(Int &lhs, Int &rhs) {
+    if (rhs > lhs)
+      return rhs;
+    return lhs;
+  }
+
+
+  static inline Int lcm(const Int &lhs, const Int &rhs) {
+    Int result;
+    isl_int_lcm(*result.change(), lhs.keep(), rhs.keep());
+    result.updated();
+    return result; // NRVO
+  }
+
+
+  static inline bool isAbsEqual(const Int &lhs, const Int &rhs) {
+    return isl_int_cmpabs(lhs.keep(), rhs.keep())==0;
+  }
 
 } // namespace isl
-
 #endif /* ISLPP_INT_H */

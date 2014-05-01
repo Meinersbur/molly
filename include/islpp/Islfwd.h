@@ -29,6 +29,9 @@ extern "C" {
 
 
 #pragma region Forward declarations for Islpp
+// Tribool.h
+class Tribool;
+
 namespace isl {
 
   // Obj.h
