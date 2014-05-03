@@ -11,16 +11,36 @@
 #include <cmath>
 
 
-#define LX 6
-#define LY 3
-#define ITERATIONS 10
+#if 0 && !defined(LX)
+#define LX 8
+#define LY 8
+
+#define BX 4
+#define BY 8
+
+#define PX 2
+#define PY 1
+#endif
+
+#define _STR(X) #X
+#define STR(X) _STR(X)
+
+#define sBX STR(BX)
+#define sBY STR(BY)
+
+#define sPX STR(PX)
+#define sPY STR(PY)
+
 
 //#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
-#pragma molly transform("{ [x,y] -> [node[px] -> local[x,y]] : px=floor(x/3) }")
+int a = BX;
+const char *s = sBX;
+
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX"),floor(x/" sBY")] -> local[x,y]] }")
 molly::array<double, LX, LY> data;
 
 typedef int64_t coord_t;
-
+ 
 
 
 MOLLY_ATTR(pure) double source(coord_t x, coord_t y) {

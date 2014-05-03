@@ -354,7 +354,7 @@ molly::array<su3matrix_t, LT+1, LX+1, LY+1, LZ+1, 4> gauge;
 #pragma molly transform("{ [t,x,y,z] -> [node[pt,px] -> local[t,x,y,z]] : pt=floor(t/3) and px=floor(x/3) }")
 molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] :  (pt=floor(t/3) and px=floor(x/3)) or (pt=floor((t-1)/3) and px=floor((x-1)/3)) }")
+#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : (pt=floor(t/3) and px=floor(x/3)) or (pt=floor((t-1)/3) and px=floor((x-1)/3)) }")
 molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
 #endif
 
