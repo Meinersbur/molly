@@ -3,7 +3,7 @@
 
 using namespace molly;
 
-#ifndef NDEBUG
+#ifndef NTRACE
 int _debugindention;
 
 

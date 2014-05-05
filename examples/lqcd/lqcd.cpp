@@ -922,7 +922,7 @@ int test(benchstat *result) {
 }
 #endif
 
-
+ 
 void bench() {
    int nTests = 10;
    int nRounds = 10;

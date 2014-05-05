@@ -111,7 +111,7 @@ extern "C" bool __molly_isMaster();
 extern "C" int64_t __molly_cluster_myrank();
 extern "C" int __molly_cluster_mympirank();
 
-#ifndef NDEBUG
+#ifndef NTRACE
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -211,7 +211,7 @@ static void dbgPrintVars(const char *file, int line, const char *varnames, const
 
 
 #pragma region Implementation of out_parampack
-#ifndef NDEBUG
+#ifndef NTRACE
   template<typename... Args>
   struct out_parampack_impl;
 
@@ -335,7 +335,7 @@ static inline out_parampack_impl<Args...> out_parampack(const char *sep, const A
 #define MOLLY_DEBUG_METHOD_ARGS(...)
 #endif
 
-#ifndef NDEBUG
+#ifndef NTRACE
 
 
 
@@ -364,7 +364,7 @@ static std::string extractFuncname(const char *prettyfunc) {
 
 
 #pragma region Implementation of out_printargs
-#ifndef NDEBUG
+#ifndef NTRACE
 template<typename... Args>
 struct out_printargs_impl;
 
