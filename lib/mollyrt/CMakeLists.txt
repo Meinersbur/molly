@@ -1,5 +1,5 @@
 
-set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp combuf.cpp)
+set(MOLLYRT_SOURCES molly.cpp comm.cpp debug.cpp combuf.cpp mypapi.cpp)
 
 
 ### MollyRT, compile using same compiler as we compile mollycc itself
@@ -67,7 +67,9 @@ endforeach ()
 
 
 ### MollyRT-a
+#set(MOLLYRT_COMPILER "clang" CACHE STRING "Compiler to be used to compile MollyRT")
 clang_compile_link("${LLVM_BINARY_DIR}/lib/molly.a" AR
+  COMPILER ${MOLLYCC_COMPILER}
   SOURCES ${MOLLYRT_SOURCES}
   FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYRT_COMMON_FLAGS} ${MOLLYRT_VERBOSE_FLAGS} ${MOLLYRT_DEBUG_FLAGS}
   CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYRT_COMMON_CFLAGS} ${MOLLYRT_VERBOSE_CFLAGS} ${MOLLYRT_DEBUG_CFLAGS}

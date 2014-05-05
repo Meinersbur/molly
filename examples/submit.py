@@ -137,7 +137,7 @@ def genJobname(i):
 	jobbase = os.path.basename(jobfile)
 	jobname = os.path.splitext(jobbase)[0]
 
-	return "{jobname}_{i:03d}".format(i=i,jobname=jobname)
+	return "{i:03d}_{jobname}".format(i=i,jobname=jobname)
 
 
 def findjobdir(jobsdir):
@@ -178,10 +178,11 @@ def configureFile(template_path, target_path):
     jobdir=jobdir,
     outputfilepath=os.path.join(jobdir,'qout$(jobid).txt'))
 	
-  for file in files:
+  for name,file in files.iteritems():
     filebase = os.path.basename(file)
     dstfilename = os.path.join(jobdir, filebase)
     content = content.replace('<file:' + filebase + '>', dstfilename);
+    formatdict[name] = dstfilename
   content = content.format(**formatdict)
   writeCompleteFile(target_path, content)
 
@@ -196,7 +197,7 @@ def buildLLScript():
 
 def copyFiles():
   global jobdir,files
-  for file in files:
+  for file in files.itervalues():
     dstfilename = os.path.join(jobdir, os.path.basename(file))
     shutil.copy2(file, dstfilename)
 
@@ -232,11 +233,19 @@ def main():
   parser = optparse.OptionParser()
   parser.add_option('--jobfile', help="Submission config")
   parser.add_option('--execdir', help="Where to store the jobs")
-  parser.set_defaults(execdir="/work/hch02/hch02d/jobs")
+  parser.add_option('--nosubmit', dest="submit", action="store_false", help="Do not submit job after creation")
+  parser.set_defaults(execdir="/work/hch02/hch02d/jobs",submit=True)
   (options, args) = parser.parse_args()
 
   global files
-  files = args
+  files = dict()
+  for file in args:
+     sfile = file.split('=',1)
+     if len(sfile)==2:
+       files[sfile[0]] = sfile[1]
+     else:
+       bfile = os.path.basename(file)
+       files[bfile] = file
 
   global jobfile
   jobfile=options.jobfile
@@ -252,8 +261,9 @@ def main():
   #  files.append(executable)
 
   prepare()
-  print "Submitting job..."
-  submit()
+  if options.submit:
+    print "Submitting job..."
+    submit()
   print "Done!"
 
 

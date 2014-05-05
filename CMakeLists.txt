@@ -122,11 +122,11 @@ set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
+set(MOLLYRT_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
+set(MOLLYCC_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
 set(MOLLYCC_COMMON_LDLAGS )
 
 
@@ -573,7 +573,7 @@ endfunction ()
 
 
 # Compile and link to molly.a
-set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a")
+set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a")
 if (MOLLYCC_ADD_MPI)
   set(MOLLYCC_A_LIBS ${MOLLYCC_A_LIBS} ${MPI_CXX_LIBRARIES})
 endif ()
