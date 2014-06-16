@@ -107,6 +107,7 @@ namespace molly {
   static inline int64_t mod(int64_t divident, int64_t divisor) {
     return (divisor + divident % divisor) % divisor;
   }
+  
 
 } // namespace molly
 

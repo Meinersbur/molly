@@ -4,6 +4,8 @@
 #include <molly_emulation.h>
 #endif /* WITH_MOLLY */
 
+#include <bench.h>
+
 #include <iostream>
 #include <cassert>
 
@@ -61,6 +63,14 @@ public:
   }
 };
 
+
+// return arg*I
+MOLLY_ATTR(pure) static inline complex imul(complex arg) {
+  // C++ version
+  return complex(-arg.imag(), arg.real());
+}
+
+
 struct su3vector_t {
   complex c[3];
 
@@ -100,6 +110,20 @@ public:
     c[2] += rhs[2];
     return *this;
   }
+  MOLLY_ATTR(pure) const su3vector_t &operator*=(complex coeff) {
+    c[0] *= coeff;
+    c[1] *= coeff;
+    c[2] *= coeff;
+    return *this;
+  }
+  
+  MOLLY_ATTR(pure) su3vector_t imul() const {
+    return su3vector_t(::imul(c[0]), ::imul(c[1]), ::imul(c[2]));
+  }
+  
+  MOLLY_ATTR(pure) su3vector_t operator-() const {
+	return su3vector_t(-c[0], -c[1], -c[2]);
+  }
 };
 
 
@@ -112,6 +136,13 @@ MOLLY_ATTR(pure) std::ostream &operator<<(std::ostream &os, const su3vector_t &r
 MOLLY_ATTR(pure) su3vector_t operator+(su3vector_t lhs, su3vector_t rhs) {
   return su3vector_t(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
 }
+MOLLY_ATTR(pure) su3vector_t operator-(su3vector_t lhs, su3vector_t rhs) {
+  return su3vector_t(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
+}
+MOLLY_ATTR(pure) su3vector_t operator*(complex coeff, su3vector_t val) {
+  return su3vector_t(coeff * val[0], coeff * val[1], coeff * val[2]);  
+}
+
 
 
 class fullspinor_t;
@@ -129,7 +160,19 @@ public:
 
   MOLLY_ATTR(pure) const su3vector_t &operator[](size_t idx) const { return v[idx]; }
   MOLLY_ATTR(pure) su3vector_t &operator[](size_t idx)  { return v[idx]; }
+  
+  MOLLY_ATTR(pure) const halfspinor_t &operator*=(complex coeff) {
+    v[0] *= coeff;
+    v[1] *= coeff;
+    return *this;
+  }
 };
+
+MOLLY_ATTR(pure) halfspinor_t operator*(complex coeff, halfspinor_t val) {
+  return halfspinor_t(coeff * val[0], coeff * val[1]);  
+}
+
+
 struct fullspinor_t {
   su3vector_t v[4];
 
@@ -145,7 +188,7 @@ public:
   static fullspinor_t zero() {
     return fullspinor_t(su3vector_t::zero(), su3vector_t::zero(), su3vector_t::zero(), su3vector_t::zero());
   }
-
+  
   MOLLY_ATTR(pure) const su3vector_t &operator[](size_t idx) const {
     return v[idx];
   }
@@ -227,31 +270,31 @@ MOLLY_ATTR(pure) halfspinor_t project_TUP(fullspinor_t spinor) {
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_TDN(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] - spinor[2], spinor[1] - spinor[3]);
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_XUP(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] + spinor[3].imul(), spinor[1] + spinor[2].imul());
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_XDN(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] - spinor[3].imul(), spinor[1] - spinor[2].imul());
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_YUP(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] + spinor[3], spinor[1] - spinor[2]);
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_YDN(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] - spinor[3], spinor[1] + spinor[2]);
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_ZUP(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] + spinor[2].imul(), spinor[1] - spinor[3].imul());
 }
 
 MOLLY_ATTR(pure) halfspinor_t project_ZDN(fullspinor_t spinor) {
-  return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
+  return halfspinor_t(spinor[0] - spinor[2].imul(), spinor[1] + spinor[3].imul());
 }
 
 
@@ -260,31 +303,31 @@ MOLLY_ATTR(pure) fullspinor_t expand_TUP(halfspinor_t weyl) {
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_TDN(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], -weyl[0], -weyl[1]);
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_XUP(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], -weyl[1].imul(), -weyl[0].imul());
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_XDN(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], weyl[1].imul(), weyl[0].imul());
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_YUP(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], -weyl[1], weyl[0]);
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_YDN(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], weyl[1], -weyl[0]);
 }
  
 MOLLY_ATTR(pure) fullspinor_t expand_ZUP(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], -weyl[0].imul(), weyl[1].imul());
 }
 
 MOLLY_ATTR(pure) fullspinor_t expand_ZDN(halfspinor_t weyl) {
-  return fullspinor_t(weyl[0], weyl[1], weyl[0], weyl[1]);
+  return fullspinor_t(weyl[0], weyl[1], weyl[0].imul(), -weyl[1].imul());
 }
 
 typedef int64_t coord_t;
@@ -326,6 +369,10 @@ typedef int64_t coord_t;
 #define sPY STR(PY)
 #define sPZ STR(PZ)
 
+#ifndef WITH_KAMUL
+#error Must define WITH_KAMUL to 0 or 1!
+#endif
+
 
 
 #pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px,py,pz] -> local[t,x,y,z,d]] : 0<=pt<" sPT" and 0<=px<" sPX" and 0<=py<" sPY" and 0<=pz<" sPZ" and " sBT"pt<=t<=" sBT"*(pt+1) and " sBX"px<=x<=" sBX"*(px+1) and " sBY"py<=y<=" sBY"*(py+1) and " sBZ"pz<=z<=" sBZ"*(pz+1) }")
@@ -359,15 +406,27 @@ molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
 #endif
 
+static complex ka[4] = {0};
+
+
 #if 1
 extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
       for (coord_t y = 0; y < source.length(2); y += 1)
         for (coord_t z = 0; z < source.length(3); z += 1) {
-          
+          fullspinor_t result;
+	  
           // T+
-          auto result = expand_TUP(gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x][y][z]));
+	  {
+	    auto spinor = source[molly::mod(t + 1, LT)][x][y][z];
+	    auto halfspinor = project_TUP(spinor);
+	    halfspinor = gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[0];
+#endif
+            result = expand_TUP(halfspinor);
+	  }
 
           // T-
           result += expand_TDN(gauge[t][x][y][z][DIM_T] * project_TDN( source[molly::mod(t - 1, LT)][x][y][z]));
@@ -516,411 +575,8 @@ extern "C" MOLLY_ATTR(process) double reduce() {
   return 0;
 }
 
-#if 0
-double sqr(double val) { 
-  return val*val; 
-}
-
-typedef struct {
-	double avgtime;
-	double localrmstime;
-	double globalrmstime;
-	double totcycles;
-	double localavgflop;
-
-	ucoord sites_body;
-	ucoord sites_surface;
-	ucoord sites;
-
-	ucoord lup_body;
-	ucoord lup_surface;
-	ucoord lup;
-
-	double error;
-
-	mypapi_counters counters;
-	bgq_hmflags opts;
-	double avgovhtime;
-} benchstat;
 
 
-
-static void print_stats(benchstat *stats) {
-#if PAPI
-	int threads = omp_get_num_threads();
-
-	for (mypapi_interpretations j = 0; j < __pi_COUNT; j+=1) {
-		printf("%10s|", "");
-		char *desc = NULL;
-
-		for (int i3 = 0; i3 < lengthof(flags); i3 += 1) {
-			char str[80];
-			str[0] = '\0';
-			benchstat *stat = &stats[i3];
-			bgq_hmflags opts = stat->opts;
-
-			double avgtime = stat->avgtime;
-			uint64_t lup = stat->lup;
-			uint64_t flop = compute_flop(opts, stat->lup_body, stat->lup_surface);
-			double flops = (double)flop/stat->avgtime;
-			double localrms = stat->localrmstime / stat->avgtime;
-			double globalrms = stat->globalrmstime / stat->avgtime;
-			ucoord sites = stat->sites;
-
-			double nCycles = stats[i3].counters.native[PEVT_CYCLES];
-			double nCoreCycles = stats[i3].counters.corecycles;
-			double nNodeCycles = stats[i3].counters.nodecycles;
-			double nInstructions = stats[i3].counters.native[PEVT_INST_ALL];
-			double nStores = stats[i3].counters.native[PEVT_LSU_COMMIT_STS];
-			double nL1IStalls = stats[i3].counters.native[PEVT_LSU_COMMIT_STS];
-			double nL1IBuffEmpty = stats[i3].counters.native[PEVT_IU_IBUFF_EMPTY_CYC];
-
-			double nIS1Stalls = stats[i3].counters.native[PEVT_IU_IS1_STALL_CYC];
-			double nIS2Stalls = stats[i3].counters.native[PEVT_IU_IS2_STALL_CYC];
-
-			double nCachableLoads = stats[i3].counters.native[PEVT_LSU_COMMIT_CACHEABLE_LDS];
-			double nL1Misses = stats[i3].counters.native[PEVT_LSU_COMMIT_LD_MISSES];
-			double nL1Hits = nCachableLoads - nL1Misses;
-
-			double nL1PMisses = stats[i3].counters.native[PEVT_L1P_BAS_MISS];
-			double nL1PHits = stats[i3].counters.native[PEVT_L1P_BAS_HIT];
-			double nL1PAccesses = nL1PHits + nL1PMisses;
-
-			double nL2Misses = stats[i3].counters.native[PEVT_L2_MISSES];
-			double nL2Hits = stats[i3].counters.native[PEVT_L2_HITS];
-			double nL2Accesses = nL2Misses + nL2Hits;
-
-			double nDcbtHits = stats[i3].counters.native[PEVT_LSU_COMMIT_DCBT_HITS];
-			double nDcbtMisses = stats[i3].counters.native[PEVT_LSU_COMMIT_DCBT_MISSES];
-			double nDcbtAccesses = nDcbtHits + nDcbtMisses;
-
-			double nXUInstr = stats[i3].counters.native[PEVT_INST_XU_ALL];
-			double nAXUInstr = stats[i3].counters.native[PEVT_INST_QFPU_ALL];
-			double nXUAXUInstr = nXUInstr + nAXUInstr;
-
-#if 0
-			double nNecessaryInstr = 0;
-			if (!(opts & hm_nobody))
-			nNecessaryInstr += bodySites * (240/*QFMA*/+ 180/*QMUL+QADD*/+ 180/*LD+ST*/)/2;
-			if (!(opts & hm_noweylsend))
-			nNecessaryInstr += haloSites * (2*3*2/*QMUL+QADD*/+ 4*3/*LD*/+ 2*3/*ST*/)/2;
-			if (!(opts & hm_nosurface))
-			nNecessaryInstr += surfaceSites * (240/*QFMA*/+ 180/*QMUL+QADD*/+ 180/*LD+ST*/- 2*3*2/*QMUL+QADD*/- 4*3/*LD*/+ 2*3/*LD*/)/2;
-			if (!(opts & hm_nokamul))
-			nNecessaryInstr += sites * (8*2*3*1/*QFMA*/+ 8*2*3*1/*QMUL*/)/2;
-#endif
-
-			uint64_t nL1PListStarted = stats[i3].counters.native[PEVT_L1P_LIST_STARTED];
-			uint64_t nL1PListAbandoned= stats[i3].counters.native[PEVT_L1P_LIST_ABANDON];
-			uint64_t nL1PListMismatch= stats[i3].counters.native[PEVT_L1P_LIST_MISMATCH];
-			uint64_t nL1PListSkips = stats[i3].counters.native[PEVT_L1P_LIST_SKIP];
-			uint64_t nL1PListOverruns = stats[i3].counters.native[PEVT_L1P_LIST_CMP_OVRUN_PREFCH];
-
-			double nL1PLatePrefetchStalls = stats[i3].counters.native[PEVT_L1P_BAS_LU_STALL_LIST_RD_CYC];
-
-			uint64_t nStreamDetectedStreams = stats[i3].counters.native[PEVT_L1P_STRM_STRM_ESTB];
-			double nL1PSteamUnusedLines = stats[i3].counters.native[PEVT_L1P_STRM_EVICT_UNUSED];
-			double nL1PStreamPartiallyUsedLines = stats[i3].counters.native[PEVT_L1P_STRM_EVICT_PART_USED];
-			double nL1PStreamLines = stats[i3].counters.native[PEVT_L1P_STRM_LINE_ESTB];
-			double nL1PStreamHits = stats[i3].counters.native[PEVT_L1P_STRM_HIT_LIST];
-
-			double nDdrFetchLine = stats[i3].counters.native[PEVT_L2_FETCH_LINE];
-			double nDdrStoreLine = stats[i3].counters.native[PEVT_L2_STORE_LINE];
-			double nDdrPrefetch = stats[i3].counters.native[PEVT_L2_PREFETCH];
-			double nDdrStorePartial = stats[i3].counters.native[PEVT_L2_STORE_PARTIAL_LINE];
-
-			switch (j) {
-			case pi_correct:
-				desc = "Max error to reference";
-				if (opts & hm_withcheck) {
-					snprintf(str, sizeof(str), "%g", stat->error);
-				}
-				break;
-			case pi_ramfetchrate:
-				desc = "DDR read";
-				snprintf(str, sizeof(str), "%.2f GB/s", 128 * nDdrFetchLine / (avgtime * GIBI));
-				break;
-			case pi_ramstorerate:
-				desc = "DDR write";
-				snprintf(str, sizeof(str), "%.2f GB/s", 128 * nDdrStoreLine / (avgtime * GIBI));
-				break;
-			case pi_ramstorepartial:
-				desc = "DDR partial writes";
-				snprintf(str, sizeof(str), "%.2f %%",  100 * nDdrStorePartial / (nDdrStorePartial+nDdrStoreLine));
-				break;
-			case pi_l2prefetch:
-				desc = "L2 prefetches";
-				snprintf(str, sizeof(str), "%.2f %%",  100 * nDdrPrefetch / nDdrFetchLine);
-				break;
-			case pi_msecs:
-				desc = "Iteration time";
-				snprintf(str, sizeof(str), "%.3f mSecs",stat->avgtime/MILLI);
-				break;
-			case pi_cycpersite:
-				desc = "per site update";
-				snprintf(str, sizeof(str), "%.1f cyc", stat->totcycles / lup);
-				break;
-			case pi_instrpersite:
-				desc = "instr per update";
-				snprintf(str, sizeof(str), "%.1f", nInstructions / lup);
-				break;
-			case pi_fxupersite:
-				desc = "FU instr per update";
-				snprintf(str, sizeof(str), "%.1f", nAXUInstr / lup);
-				break;
-			case pi_flops:
-				desc = "MFlop/s";
-				snprintf(str, sizeof(str), "%.0f MFlop/s", flops/MEGA);
-				break;
-			case pi_flopsref:
-				desc = "Speed";
-				snprintf(str, sizeof(str), "%.0f MFlop/s", stat->localavgflop / (avgtime * MEGA));
-				break;
-			case pi_floppersite:
-				desc = "Flop per site";
-				snprintf(str, sizeof(str), "%.1f Flop", stat->localavgflop / sites);
-				break;
-			case pi_localrms:
-				desc = "Thread RMS";
-				snprintf(str, sizeof(str), "%.1f %%", 100.0*localrms);
-				break;
-			case pi_globalrms:
-				desc = "Node RMS";
-				snprintf(str, sizeof(str), "%.1f %%", 100.0*globalrms);
-				break;
-			case pi_avgovhtime:
-				desc = "Threading overhead";
-				snprintf(str, sizeof(str), "%.1f cyc", stat->avgovhtime);
-				break;
-			case pi_detstreams:
-				desc = "Detected streams";
-				snprintf(str, sizeof(str), "%llu", nStreamDetectedStreams);
-				break;
-			case pi_l1pstreamunusedlines:
-				desc = "Unused (partially) lines";
-				snprintf(str, sizeof(str), "%.2f%% (%.2f%%)", 100.0 * nL1PSteamUnusedLines / nL1PStreamLines, 100.0 * nL1PStreamPartiallyUsedLines / nL1PStreamLines);
-				break;
-			case pi_l1pstreamhitinl1p:
-				desc = "Loads that hit in L1P stream";
-				snprintf(str, sizeof(str), "%.2f %%", 100.0 * nL1PStreamHits / nCachableLoads);
-				break;
-			case pi_cpi:
-				desc = "Cycles per instruction (Thread)";
-				snprintf(str, sizeof(str), "%.3f cpi", nCycles / nInstructions);
-				break;
-			case pi_corecpi:
-				desc = "Cycles per instruction (Core)";
-				snprintf(str, sizeof(str), "%.3f cpi", nCoreCycles / nInstructions);
-				break;
-			case pi_l1istalls:
-				desc = "Empty instr buffer";
-				snprintf(str, sizeof(str), "%.2f %%", nL1IBuffEmpty / nCycles);
-				break;
-			case pi_is1stalls:
-				desc = "IS1 Stalls (dependency)";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nIS1Stalls / nCycles);
-				break;
-			case pi_is2stalls:
-				desc = "IS2 Stalls (func unit)";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nIS2Stalls / nCycles);
-				break;
-			case pi_hitinl1:
-				desc = "Loads that hit in L1";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nL1Hits / nCachableLoads);
-				break;
-			case pi_l1phitrate:
-				desc = "L1P hit rate";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nL1PHits / nL1PAccesses);
-				break;
-				//case pi_overhead:
-				//desc = "Instr overhead";
-				//snprintf(str, sizeof(str), "%.2f %%", 100 * (nInstructions - nNecessaryInstr) / nInstructions);
-				//break;
-			case pi_hitinl1p:
-				desc = "Loads that hit in L1P";
-				snprintf(str, sizeof(str), "%f %%" ,  100 * nL1PHits / nCachableLoads);
-				break;
-			case pi_l2hitrate:
-				desc = "L2 hit rate";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nL2Hits / nL2Accesses);
-				break;
-			case pi_dcbthitrate:
-				desc = "dcbt hit rate";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nDcbtHits / nDcbtAccesses);
-				break;
-			case pi_axufraction:
-				desc = "FXU instrs";
-				snprintf(str, sizeof(str), "%.2f %%", 100 * nAXUInstr / nXUAXUInstr);
-				break;
-			case pi_l1pliststarted:
-				desc = "List prefetch started";
-				snprintf(str, sizeof(str), "%llu", nL1PListStarted);
-				break;
-			case pi_l1plistabandoned:
-				desc = "List prefetch abandoned";
-				snprintf(str, sizeof(str), "%llu", nL1PListAbandoned);
-				break;
-			case pi_l1plistmismatch:
-				desc = "List prefetch mismatch";
-				snprintf(str, sizeof(str), "%llu", nL1PListMismatch);
-				break;
-			case pi_l1plistskips:
-				desc = "List prefetch skip";
-				snprintf(str, sizeof(str), "%llu", nL1PListSkips);
-				break;
-			case pi_l1plistoverruns:
-				desc = "List prefetch overrun";
-				snprintf(str, sizeof(str), "%llu", nL1PListOverruns);
-				break;
-			case pi_l1plistlatestalls:
-				desc = "Stalls list prefetch behind";
-				snprintf(str, sizeof(str), "%.2f", nL1PLatePrefetchStalls / nCoreCycles);
-				break;
-			default:
-				continue;
-			}
-
-			printf("%"SCELLWIDTH"s|", str);
-		}
-
-		printf(" %s\n", desc);
-	}
-#endif
-}
-
-
-static void exec_table(benchfunc_t benchmark, bgq_hmflags additional_opts, bgq_hmflags kill_opts,  int j_max, int k_max) {
-//static void exec_table(bool sloppiness, hm_func_double hm_double, hm_func_float hm_float, bgq_hmflags additional_opts) {
-	benchstat excerpt;
-
-	if (g_proc_id == 0)
-		printf("%10s|", "");
-	for (int i3 = 0; i3 < lengthof(flags); i3 += 1) {
-		if (g_proc_id == 0)
-			printf("%-"SCELLWIDTH"s|", flags_desc[i3]);
-	}
-	if (g_proc_id == 0)
-		printf("\n");
-	print_repeat("-", 10 + 1 + (CELLWIDTH + 1) * lengthof(flags));
-	if (g_proc_id == 0)
-		printf("\n");
-	for (int i2 = 0; i2 < lengthof(omp_threads); i2 += 1) {
-		int threads = omp_threads[i2];
-
-		if (g_proc_id == 0)
-			printf("%-10s|", omp_threads_desc[i2]);
-
-		benchstat stats[lengthof(flags)];
-		for (int i3 = 0; i3 < lengthof(flags); i3 += 1) {
-			bgq_hmflags hmflags = flags[i3];
-			hmflags = (hmflags | additional_opts) & ~kill_opts;
-
-			benchstat result = runbench(benchmark, hmflags, k_max, j_max, threads);
-			stats[i3] = result;
-
-			if (threads == 64 && i3 == 3) {
-				excerpt = result;
-			}
-
-			char str[80] = { 0 };
-			if (result.avgtime == 0)
-				snprintf(str, sizeof(str), "~ %s", (result.error > 0.001) ? "X" : "");
-			else
-				snprintf(str, sizeof(str), "%.2f mlup/s%s", (double) result.lup / (result.avgtime * MEGA), (result.error > 0.001) ? "X" : "");
-			if (g_proc_id == 0)
-				printf("%"SCELLWIDTH"s|", str);
-			if (g_proc_id == 0)
-				fflush(stdout);
-		}
-		if (g_proc_id == 0)
-			printf("\n");
-
-		if (g_proc_id == 0) {
-			print_stats(stats);
-		}
-
-		print_repeat("-", 10 + 1 + (CELLWIDTH + 1) * lengthof(flags));
-		if (g_proc_id == 0)
-			printf("\n");
-	}
-
-	if (g_proc_id == 0) {
-		printf("Hardware counter excerpt (64 threads, nocom):\n");
-		mypapi_print_counters(&excerpt.counters);
-	}
-	if (g_proc_id == 0)
-		printf("\n");
-}
-#endif
-
-#if 0 
-int test(benchstat *result) {
-  MPI_Barrier();
-
-  double duration_sum= 0;
-  double duration_sqsum= 0;
-  for (auto i=0; i<nRounds;i+=1) {
-    double start_time = MPI_Wtime();
-    
-    HoppingMatrix();
-    
-    double stop_time = MPI_Wtime();
-    double duration = stop_time-start_time;
-    duration_sum += duration;
-    duration_sqsum += duration*duration;
-  }
-  
-  
-    double localavgtime = duration_sum / its;
-    double localavgsqtime = sqr(localavgtime);
-    double localrmstime = sqrt((duration_sqsum / its) - localavgsqtime);
-    double localcycles = (double)localsumcycles / (double)its;
-    double localavgflop = (double)localsumflop / (double)its;
-
-    double localtime[] = { localavgtime, localavgsqtime, localrmstime };
-    double sumreduce[3] = { -1, -1, -1 };
-    MPI_Allreduce(&localtime, &sumreduce, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-    double sumtime = sumreduce[0];
-    double sumsqtime = sumreduce[1];
-    double sumrmstime = sumreduce[2];
-
-
-    double avgtime = sumtime / g_nproc;
-    double avglocalrms = sumrmstime / g_nproc;
-    double rmstime = sqrt((sumsqtime / g_nproc) - sqr(avgtime));
-
-    // Assume k_max lattice site updates, even+odd sites
-    ucoord sites = LOCAL_LT * LOCAL_LX * LOCAL_LY * LOCAL_LZ;
-    ucoord sites_body = PHYSICAL_BODY * PHYSICAL_LK * PHYSICAL_LP;
-    ucoord sites_surface = PHYSICAL_SURFACE * PHYSICAL_LK * PHYSICAL_LP;
-    assert(sites == sites_body+sites_surface);
-    assert(sites == VOLUME);
-
-    ucoord lup_body = k_max * sites_body;
-    ucoord lup_surface = k_max * sites_surface;
-    ucoord lup = lup_body + lup_surface;
-    assert(lup == k_max * sites);
-
-    result->avgtime = avgtime;
-    result->localrmstime = avglocalrms;
-    result->globalrmstime = rmstime;
-    result->totcycles = localcycles;
-    result->localavgflop = localavgflop;
-
-    result->sites_surface = sites_surface;
-    result->sites_body = sites_body;
-    result->sites = sites;
-    result->lup_surface = lup_surface;
-    result->lup_body = lup_body;
-    result->lup = lup;
-    //result->flops = flops / avgtime;
-    result->error = err;
-    result->counters = counters;
-    result->opts = opts;
-    result->avgovhtime = avgovhtime;
-    return EXIT_SUCCESS;
-}
-#endif
 
  
 void bench() {
@@ -931,57 +587,7 @@ void bench() {
     for (auto i=0; i<nRounds;i+=1) {
       HoppingMatrix();
     }
-  }, nTests);
-  
-#if 0
-  int nRounds = 10;
-  int nTests = 10;
-  
-
-  
-  for (auto j=0; j<nTests;j+=1) {
-    test();
-  }
-  
-  double duration_avg = duration_sum / nTests;
-  double duration_rms = sqrt( (duration_sqsum / nTests) - sqr(duration_avg) );
-
-  double localtime[] = { duration_avg, duration_avg*duration_avg, duration_rms };
-  double sumreduce[3] = { -1, -1, -1 };
-  MPI_Allreduce(&localtime, &sumreduce, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-  double sumtime = sumreduce[0];
-  double sumsqtime = sumreduce[1];
-  double sumrmstime = sumreduce[2];
-  
-    auto nRanks = PT*PX*PY*PZ;
-    auto nTotalIterations = nRanks * nIterationsPerRank;
-    auto nSitesPerIteration = LT*LX*LY*LZ;
-    auto nTotalSites = nRanks*nIterationsPerRank*nSitesPerIteration;
-  
-    benchstat stats;
-    	benchstat *result = &stats;
-	result->avgtime = avgtime;
-	result->localrmstime = avglocalrms;
-	result->globalrmstime = rmstime;
-	result->totcycles = localcycles;
-	result->localavgflop = localavgflop;
-
-	result->sites_surface = sites_surface;
-	result->sites_body = sites_body;
-	result->sites = sites;
-	result->lup_surface = lup_surface;
-	result->lup_body = lup_body;
-	result->lup = lup;
-	//result->flops = flops / avgtime;
-	result->error = err;
-	result->counters = counters;
-	result->opts = opts;
-	result->avgovhtime = avgovhtime;
-    
-    if (__molly_isMaster()) {
-      std::cout << ;
-    }
-#endif
+  }, nTests, LT*LX*LY*LZ, /*operator+=*/7*(4*3*2) + 8*(/*project*/2*3*2 + /*su3mm*/2*(9*(2+4)+6*2)) );
 }
 
 

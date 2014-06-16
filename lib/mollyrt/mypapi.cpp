@@ -71,6 +71,7 @@ static int threadid() {
 
 #define PAPI_ERROR(cmd)                                                                                      \
 	do {                                                                                                       \
+	  /*fprintf(stderr, "MK_PAPI executing line %d rank %d thread %d: %s\n", __LINE__,  g_proc_id, Kernel_ProcessorID(), TOSTRING(cmd));*/ \
 		int RC = (cmd);                                                                                       \
 		if (RC != PAPI_OK) {                                                                                   \
 			 fprintf(stderr, "MK_PAPI call failed with code %d at line %d on MPI rank %d thread %d: %s\n", RC, __LINE__,  g_proc_id, Kernel_ProcessorID(), TOSTRING(cmd)); \
@@ -80,12 +81,17 @@ static int threadid() {
 
 #define BGPM_ERROR(cmd)                                                                                      \
 	do {                                                                                                       \
+		/*fprintf(stderr, "MK_BGPM executing line %d rank %d thread %d: %s\n", __LINE__,  g_proc_id, Kernel_ProcessorID(), TOSTRING(cmd));*/ \
 		int RC = (cmd);                                                                                       \
 		if (RC) {                                                                                   \
 			 fprintf(stderr, "MK_BGPM call failed with code %d at line %d on MPI rank %d thread %d: %s\n", RC, __LINE__,  g_proc_id, Kernel_ProcessorID(), TOSTRING(cmd)); \
 		}                                                                                                        \
 	} while (0)
-
+	
+#define MK_GUARDED(cmd) \
+  fprintf(stderr, "MK line %d rank %d thread %d: Before %s\n", __LINE__,  g_proc_id, Kernel_ProcessorID(),  TOSTRING(cmd)); \
+  cmd \
+  fprintf(stderr, "MK line %d rank %d thread %d: After %s\n", __LINE__,  g_proc_id, Kernel_ProcessorID(),  TOSTRING(cmd));
 
 //static int PAPI_add_native_event(int EventSet, int EventCode) {
 	// For some strange reason (i.e. unknown to me), the numbers from events.h are off by one
@@ -188,6 +194,7 @@ static int L2EventSet[MYPAPI_SETS] = {0};
 
 
 static mypapi_counters mypapi_bgpm_read(int eventset, int set) {
+  MK_GUARDED()
 	mypapi_counters result = { 0 };
 	result.set = set;
 	result.eventset = eventset;
@@ -278,6 +285,8 @@ void mypapi_init() {
 		int tid = Kernel_ProcessorID();
 		int cid = Kernel_ProcessorCoreID();
 		int sid = Kernel_ProcessorThreadID();
+		tid = 0;
+		
 		for (int i = 0; i < MYPAPI_SETS; i += 1) {
 			PuEventSets[i][tid] = Bgpm_CreateEventSet();
 			assert(PuEventSets[i][tid] >= 0);
@@ -383,6 +392,7 @@ void mypapi_init() {
 		}
 
 		j += 1;
+		assert(j < MYPAPI_SETS);
 		{
 			int pues = PuEventSets[j][tid];
 			BGPM_ERROR(Bgpm_AddEvent(pues, PEVT_CYCLES));
@@ -419,6 +429,7 @@ static void mypapi_start_work(int i) {
 	int tid = Kernel_ProcessorID();
 	int cid = Kernel_ProcessorCoreID();
 	int sid = Kernel_ProcessorThreadID();
+	tid = 0;
 
 	if (tid == 0) {
 		xCyc = GetTimeBase();
@@ -431,6 +442,7 @@ static void mypapi_start_work(int i) {
 		xOmpTime = omp_get_wtime();
 #endif
 
+		assert(activeEventSet==-1);
 		activeEventSet = i;
 	}
 
@@ -485,16 +497,14 @@ void mypapi_print_counters(mypapi_counters *counters) {
 }
 
 
-
-
-void mypapi_stop_work(mypapi_counters *result) {
+static void mypapi_stop_work(mypapi_counters *result) {
 	int ompid = threadid();
 
-	ompid = threadid();
 	int tid = Kernel_ProcessorID();
 	int cid = Kernel_ProcessorCoreID();
 	int sid = Kernel_ProcessorThreadID();
-	int i = activeEventSet;
+	int cookie = 42;
+	const int i = activeEventSet;
 	assert(i >= 0);
 	assert(i < MYPAPI_SETS);
 
@@ -507,8 +517,13 @@ void mypapi_stop_work(mypapi_counters *result) {
 		}
 	}
 
+	//fprintf(stderr, "MK line %d rank %d thread %d: %p[%d]\n", __LINE__,  g_proc_id, Kernel_ProcessorID(), &L2EventSet, i);
 	mypapi_counters local_result = mypapi_bgpm_read(pues, i);
+	assert(cookie==42);
 	if (tid == 0) {
+	        //fprintf(stderr, "MK line %d rank %d thread %d: %p[%d]\n", __LINE__,  g_proc_id, Kernel_ProcessorID(), &L2EventSet, i);
+		assert(i >= 0);
+		assert(i < MYPAPI_SETS);
 		int l2es = L2EventSet[i];
 		if (l2es >= 0) {
 			mypapi_counters local_result_l2 = mypapi_bgpm_read(l2es, i);
@@ -516,10 +531,17 @@ void mypapi_stop_work(mypapi_counters *result) {
 		}
 	}
 
+#ifdef OMP
 #pragma omp critical (mypapi)
+#endif
 	{
 		*result = mypapi_merge_counters(result, &local_result);
 	}
+	
+#ifdef OMP
+#pragma omp barrier
+#endif
+activeEventSet = -1; 
 }
 
 
