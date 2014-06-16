@@ -50,7 +50,7 @@ namespace {
       assert(stmt);
 
       llvm::Value *fptr;
-      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it != end; ++it) {
+      for (auto it = stmt->begin(), end = stmt->end(); it != end; ++it) {
         auto memacc = *it;
         auto acc = Access::fromMemoryAccess(memacc);
 
@@ -527,7 +527,7 @@ namespace {
         //assert(where.domain().isSupersetOf(domain)); // TODO: Where.domain()  may include additional restrictions of some isl_dim_param which renders them not-equal
       }
 
-      for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it != end; ++it) {
+      for (auto it = stmt->begin(), end = stmt->end(); it != end; ++it) {
         auto memacc = *it;
         auto accrel = enwrap(memacc->getAccessRelation());
         assert(accrel.getDomainSpace().matchesSpace(domainSpace));

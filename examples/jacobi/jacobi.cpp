@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <cstdint>
 #include <cmath>
+#include <array>
 
 
 #define LX 8

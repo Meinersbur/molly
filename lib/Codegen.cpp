@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "Codegen.h"
 
 #include "MollyScopStmtProcessor.h"
@@ -33,6 +34,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/ADT/SmallString.h>
 
 using namespace molly;
 using namespace polly;
@@ -1284,7 +1286,7 @@ llvm::CallInst *molly::MollyCodeGenerator::callEndMarker(StringRef str) {
 }
 
 string compatName(StringRef arg) {
-  SmallString<255> result;
+  llvm::SmallString<255> result;
   result.reserve(arg.size());
 
   int pos = 0;

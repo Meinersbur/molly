@@ -49,7 +49,7 @@ void MollyFieldAccess::loadFromMemoryAccess(polly::MemoryAccess *acc, FieldVaria
 void MollyFieldAccess::loadFromScopStmt(polly::ScopStmt *stmt, FieldVariable *fvar) {
   assert(stmt);
   auto found = false;
-  for (auto it = stmt->memacc_begin(), end = stmt->memacc_end(); it!=end; ++it) {
+  for (auto it = stmt->begin(), end = stmt->end(); it!=end; ++it) {
     auto memacc = *it;
     auto acc = polly::Access::fromMemoryAccess(memacc);
     if (!acc.isFieldAccess())

@@ -553,7 +553,7 @@ namespace {
         // nonfield-reuses may occur within a stmt, making it a self-dependency; the problem is that a read access may occur before or after a write access in a scop, with different depedency outcomes
         // Therefore, we refine the schedule to also map the order withing the BasicBlock
         // another solution is to see whether the read dependency is visible from the outside, i.e. overwritten in the same bb before
-        for (auto accIt = stmt->memacc_begin(), accEnd = stmt->memacc_end(); accIt != accEnd; accIt += 1) {
+        for (auto accIt = stmt->begin(), accEnd = stmt->end(); accIt != accEnd; accIt += 1) {
           auto memacc = *accIt;
           auto acc = Access::fromMemoryAccess(memacc);
           auto instr = acc.getInstruction();

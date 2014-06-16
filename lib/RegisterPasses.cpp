@@ -24,6 +24,7 @@
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/FileSystem.h>
 
 using namespace llvm;
 using namespace std;
@@ -90,7 +91,7 @@ static void registerMollyPasses(llvm::PassManagerBase &PM, bool mollyEnabled, in
   PM.add(llvm::createLoopRotatePass());
   PM.add(llvm::createInstructionCombiningPass()); // This may change instructions such that they are not recognized by ScalarEvolution anymore
   //PM.add(llvm::createInstructionSimplifierPass());
-  if (!SCEVCodegen)
+  if (!polly::SCEVCodegen)
     PM.add(polly::createIndVarSimplifyPass());
   PM.add(polly::createCodePreparationPass());
 

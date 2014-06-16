@@ -52,8 +52,8 @@ void molly::collectAllRegions(llvm::RegionInfo *regionInfo, llvm::SmallVectorImp
 void molly::collectAllRegions(llvm::Region *region, llvm::SmallVectorImpl<llvm::Region*> &dstList) {
   dstList.push_back(region);
   for (auto it = region->begin(), end = region->end(); it!=end;++it) {
-    auto subregion = *it;
-    collectAllRegions(subregion, dstList);
+    auto &subregion = *it;
+    collectAllRegions(subregion.get(), dstList);
   }
 }
 

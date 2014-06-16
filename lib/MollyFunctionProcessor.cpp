@@ -1,3 +1,4 @@
+#define DEBUG_TYPE "molly"
 #include "MollyFunctionProcessor.h"
 
 #include "MollyIntrinsics.h"

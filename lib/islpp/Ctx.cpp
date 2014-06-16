@@ -11,12 +11,13 @@
 #include "islpp/Id.h"
 #include "islpp/UnionMap.h"
 
-
 #include <isl/ctx.h>
 #include <isl/options.h>
 #include <isl/space.h>
 #include <isl/set.h>
 #include <isl/printer.h>
+
+#include <llvm/ADT/Twine.h>
 
 using namespace isl;
 using namespace std;
