@@ -11,11 +11,17 @@ endfunction()
 
 
 function (add_example_config src var_exepath var_target)
-  cmake_parse_arguments("ARG" "" "VOLUME;PROC;BLOCK" "" ${ARGN})
+  cmake_parse_arguments("ARG" "" "VOLUME;PROC;BLOCK" "DEFINES" ${ARGN})
   get_filename_component(src_path "${src}" ABSOLUTE)
 
+  set(_defsuffix)
+  foreach (_define IN LISTS ARG_DEFINES)
+    #string(REPLACE "=" "" _define "${_define}")
+    set(_defsuffix "${_defsuffix}_${_define}" )
+  endforeach ()
+  
   get_filename_component(src_we "${src}" NAME_WE)
-  set(target_name ${src_we}_L${ARG_VOLUME}_P${ARG_PROC}_B${ARG_BLOCK}-mollycc-a)
+  set(target_name ${src_we}_L${ARG_VOLUME}_P${ARG_PROC}_B${ARG_BLOCK}${_defsuffix}-mollycc-a)
   get_filename_component(dst_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}${target_name}${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
   string(REPLACE "x" ";" volume_list ${ARG_VOLUME})
   string(REPLACE "x" ";" proc_list ${ARG_PROC})
@@ -39,6 +45,9 @@ function (add_example_config src var_exepath var_target)
     list(APPEND defines "-DP${_dimname}=${_p}")
 
     math(EXPR i "${i}+1")
+  endforeach ()
+  foreach (_define IN LISTS ARG_DEFINES)
+     list(APPEND defines "-D${_define}")
   endforeach ()
 
 

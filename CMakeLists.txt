@@ -117,12 +117,12 @@ option(MOLLYCC_ADD_MPI "Whether to add MPI paramters to mollycc command line" ON
 set(MOLLYCC_TARGET "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 #set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
-set(MOLLY_PLATFORM_FLAGS -target "${MOLLYCC_TARGET}" -fno-exceptions)
+set(MOLLY_PLATFORM_FLAGS -target "${MOLLYCC_TARGET}" -fno-exceptions -DBGQ_SPI)
 set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
+set(MOLLYRT_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init -DPAPI=1)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
@@ -573,7 +573,7 @@ endfunction ()
 
 
 # Compile and link to molly.a
-set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a")
+set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a" "/bgsys/drivers/ppcfloor/bgpm/lib/libbgpm.a")
 if (MOLLYCC_ADD_MPI)
   set(MOLLYCC_A_LIBS ${MOLLYCC_A_LIBS} ${MPI_CXX_LIBRARIES})
 endif ()

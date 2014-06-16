@@ -5,11 +5,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef XLC
+#ifdef BGQ_SPI
 //#include <papi.h>
 #include <upci/events.h>
-#else
-#define UPCI_NUM_EVENTS 5
+//#else
+//#define UPCI_NUM_EVENTS 5
 #endif
 
 #ifndef STRINGIFY
