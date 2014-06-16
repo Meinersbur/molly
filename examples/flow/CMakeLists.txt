@@ -24,9 +24,24 @@ add_custom_target(flow-mollycc-a
 set_target_properties(flow-mollycc-a PROPERTIES FOLDER "Molly")
 
 add_custom_target(run-flow-mollycc-a
-  COMMAND "${MPIEXEC}" ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_POSTFLAGS} "${flow_a_path}"
+  COMMAND "${MPIEXEC}" ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} "${flow_a_path}" ${MPIEXEC_POSTFLAGS} ""
   DEPENDS "${flow_a_path}"
   COMMENT "Running flow-mollycc-a..."
   VERBATIM
 )
 set_target_properties(run-flow-mollycc-a PROPERTIES FOLDER "Molly")
+
+
+
+
+
+add_custom_target(flow-all)
+set(target-all flow-all)
+set(dimnames X Y)
+add_example_config(flow.cpp exe1 target1 VOLUME 8x8 PROC 2x1 BLOCK 4x8)
+add_example_config(flow.cpp exe2 target2 VOLUME 8x8 PROC 2x2 BLOCK 4x4)
+
+add_custom_target(submit-flow1
+  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/flow.cpp" ${exe1} ${exe2} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/flow1.ll" 
+  DEPENDS ${target1} ${target2}
+)

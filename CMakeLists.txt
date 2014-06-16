@@ -89,10 +89,10 @@ endmacro(add_molly_executable)
 option(MOLLYRT_DEBUG "Compile Debug version of MollyRT" ON)
 if (MOLLYRT_DEBUG)
 message("MollyRT Debug build")
-  set(MOLLYRT_DEBUG_FLAGS -O0 -g)
+  set(MOLLYRT_DEBUG_FLAGS -O0 -g -DNTRACE)
 else ()
 message("MollyRT Release build")
-  set(MOLLYRT_DEBUG_FLAGS -O3 -g0 -DNDEBUG)
+  set(MOLLYRT_DEBUG_FLAGS -O3 -g -DNDEBUG -DNTRACE)
 endif ()
 set(MOLLYRT_DEBUG_CFLAGS )
 set(MOLLYRT_DEBUG_LDFLAGS )
@@ -101,16 +101,20 @@ set(MOLLYRT_DEBUG_LDFLAGS )
 option(MOLLYCC_DEBUG "Compile examples with debug info" ON)
 if (MOLLYCC_DEBUG)
 message("Debug examples")
-  set(MOLLYCC_DEBUG_FLAGS -O0 -g)
+  set(MOLLYCC_DEBUG_FLAGS -O0 -g -DNTRACE)
 else ()
 message("Release examples")
-  set(MOLLYCC_DEBUG_FLAGS -O3 -g0 -DNDEBUG)
+  set(MOLLYCC_DEBUG_FLAGS -O3 -g -DNDEBUG -DNTRACE)
 endif ()
 set(MOLLYCC_DEBUG_CFLAGS )
 set(MOLLYCC_DEBUG_LDFLAGS )
 
+set(MOLLYCC_COMPILER "mollycc" CACHE STRING "The mollycc executable to compile examples")
+option(MOLLYCC_ADD_MPI "Whether to add MPI paramters to mollycc command line" ON)
 
-set(MOLLYCC_TARGET "x86_64-unknown-linux-gnu" CACHE STRING "Mollycc compiles to this target")
+
+
+set(MOLLYCC_TARGET "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 #set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
 set(MOLLY_PLATFORM_FLAGS -target "${MOLLYCC_TARGET}" -fno-exceptions)
@@ -118,25 +122,29 @@ set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
 
 set(MOLLYRT_COMMON_FLAGS )
-set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
+set(MOLLYRT_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 set(MOLLYRT_COMMON_LDFLAGS )
 
 set(MOLLYCC_COMMON_FLAGS )
-set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
+set(MOLLYCC_COMMON_CFLAGS -stdlib=libstdc++ -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
 set(MOLLYCC_COMMON_LDLAGS )
 
+
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
+if (MOLLYCC_ADD_MPI)
   list(APPEND MOLLYCC_COMMON_CFLAGS "-I${_include}")
+endif ()
   list(APPEND MOLLYRT_COMMON_CFLAGS "-I${_include}")
 endforeach()
+
 
 set(MOLLYRT_VERBOSE_FLAGS -w -fmax-errors=1)
 set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
-#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev)
+#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev -mllvm -molly-mark-stmts)
 set(MOLLYCC_VERBOSE_FLAGS -v)
-set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report -mllvm -molly-mark-stmts)
+set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 
 option(MOLLYCC_DEBUG_OUTPUT "Debug output while compiling with mollycc" OFF)
@@ -145,6 +153,8 @@ if (MOLLYCC_DEBUG_OUTPUT)
   list(APPEND MOLLYCC_VERBOSE_FLAGS -mllvm -debug -mllvm -debug-only=molly)
 endif ()
 
+set(MOLLYCC_FLAGS "" CACHE STRING "Add flags when compiling Molly examples")
+separate_arguments(MOLLYCC_FLAGS)
 
 
 
@@ -207,7 +217,7 @@ endfunction ()
 
 function (clang_compile_link _outfile)
 #message("   clang_compile_link(${_outfile}, ${ARGN})")
-  cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;LDFLAGS;SOURCES;COMMENT;LIBS" ${ARGN})
+  cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;LDFLAGS;SOURCES;COMMENT;LIBS;DEPENDS" ${ARGN})
   get_filename_component(_outfile "${_outfile}" ABSOLUTE)
   
   if (NOT _COMPILER)
@@ -268,7 +278,7 @@ function (clang_compile_link _outfile)
       OUTPUT "${_outfile}"
 #      COMMAND "${CMAKE_COMMAND}" remove "${_outfile}"
       COMMAND "${CMAKE_AR}" rsc "${_outfile}" ${_intermediates} 
-      DEPENDS ${_intermediates}
+      DEPENDS ${_DEPENDS} ${_intermediates}
       COMMENT "${_COMMENT}"
       VERBATIM
     )
@@ -561,17 +571,22 @@ function (mollycc_compile _outfile)
 endfunction ()
 
 
+
 # Compile and link to molly.a
-set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" ${MPI_CXX_LIBRARIES})
+set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a" "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a")
+if (MOLLYCC_ADD_MPI)
+  set(MOLLYCC_A_LIBS ${MOLLYCC_A_LIBS} ${MPI_CXX_LIBRARIES})
+endif ()
 function (mollycc_a_compile _outfile)
 #message("   mollycc_a_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
   clang_compile_link("${_outfile}" EXE
-    COMPILER mollycc
+    COMPILER ${MOLLYCC_COMPILER}
+    DEPENDS mollycc
     SOURCES ${_SOURCES}
-    FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
-    CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
-    LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
+    FLAGS ${MOLLYCC_FLAGS} ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
+    CFLAGS ${MOLLYCC_CFLAGS} ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
+    LDFLAGS ${MOLLYCC_LDFLAGS} ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
     LIBS ${MOLLYCC_A_LIBS} ${_LIBS}
     COMMENT "${_COMMENT}"
     )
