@@ -370,7 +370,8 @@ typedef int64_t coord_t;
 #define sPZ STR(PZ)
 
 #ifndef WITH_KAMUL
-#error Must define WITH_KAMUL to 0 or 1!
+//#error Must define WITH_KAMUL to 0 or 1!
+#define WITH_KAMUL 1
 #endif
 
 

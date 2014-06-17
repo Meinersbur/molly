@@ -2,7 +2,7 @@
 //#include "config.h"
 
 
-#if PAPI
+#ifdef PAPI
 
 #include <stdio.h>
 #include <stdint.h>

@@ -2,7 +2,9 @@
 #define MOLLY_H
 
 #include "molly_debug.h"
-#include "mypapi.h"
+#ifdef BGQ
+//#include "mypapi.h"
+#endif
 
 #include <functional>
 

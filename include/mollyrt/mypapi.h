@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef BGQ_SPI
+#ifdef BGQ
 //#include <papi.h>
 #include <upci/events.h>
 //#else
@@ -31,10 +31,14 @@ typedef struct {
 	int smtid;
 	int ompid;
 	//long long preset[PAPI_END_idx];
+#ifdef BGQ_SPI
 	uint64_t native[UPCI_NUM_EVENTS];
+#endif
 	uint64_t corecycles;
 	uint64_t nodecycles;
+#ifdef BGQ_SPI
 	bool active[UPCI_NUM_EVENTS];
+#endif 
 	double secs;
 } mypapi_counters;
 

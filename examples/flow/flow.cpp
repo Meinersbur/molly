@@ -11,7 +11,7 @@
 #include <cmath>
 
 
-#if 0 && !defined(LX)
+#if !defined(LX)
 #define LX 8
 #define LY 8
 
@@ -32,9 +32,6 @@
 #define sPY STR(PY)
 
 
-//#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
-int a = BX;
-const char *s = sBX;
 
 #pragma molly transform("{ [x,y] -> [node[floor(x/" sBX"),floor(x/" sBY")] -> local[x,y]] }")
 molly::array<double, LX, LY> data;

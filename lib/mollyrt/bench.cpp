@@ -2,6 +2,7 @@
 #include "bench.h"
 
 #include "molly.h"
+#include "mypapi.h"
 #include <mpi.h>
 
 #ifdef BGQ_SPI
@@ -11,6 +12,9 @@
 #include <l1p/pprefetch.h>
 #include <l1p/sprefetch.h>
 #endif
+
+#include <math.h>
+
 
 
 #ifndef STRINGIFY
@@ -165,8 +169,13 @@ static void benchmark_setup_worker(void *argptr, size_t tid, size_t threads) {
 
 
 static uint64_t bgq_wcycles() {
+#ifdef BGQ_SPI
   return GetTimeBase();
+#else
+  return 0;
+#endif
 }
+
 
 static void donothing(void *arg, size_t tid, size_t threads) {
 #ifdef BGQ_SPI
@@ -198,7 +207,7 @@ static void mypapi_start_worker(void *arg_untyped, size_t tid, size_t threads) {
 
 static void mypapi_stop_worker(void *arg_untyped, size_t tid, size_t threads) {
   mypapi_work_t *arg = (mypapi_work_t *)arg_untyped;
-  arg->result = mypapi_stop();
+    arg->result = mypapi_stop();
 }
 
 static void benchmark_free_worker(void *argptr, size_t tid, size_t threads) {
@@ -375,7 +384,9 @@ static int benchmark_master(void *argptr) {
     }
     if (isPapi) {
       bgq_master_call(mypapi_stop_worker, &mypapi_arg);
+#ifdef PAPI
       counters = mypapi_merge_counters(&counters, &mypapi_arg.result);
+#endif
     }
 
     if (isJMax) {
