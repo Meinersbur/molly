@@ -459,13 +459,12 @@ static benchstat runbench(const benchfunc_t &benchfunc, bgq_hmflags opts, int j_
 #ifdef OMP
   omp_set_num_threads(ompthreads);
 #endif
-  master_args args = {
-          .j_max = j_max,
-          .benchfunc = &benchfunc,
-          .opts = opts,
-	  .nStencilsPerTest = nStencilsPerTest,
-	  .nFlopsPerStencil = nFlopsPerStencil
-  };
+  master_args args;
+  args.j_max = j_max;
+  args.benchfunc = &benchfunc;
+  args.opts = opts;
+  args.nStencilsPerTest = nStencilsPerTest;
+  args.nFlopsPerStencil = nFlopsPerStencil;
   int retcode = bgq_parallel(&benchmark_master, &args);
   assert(retcode == EXIT_SUCCESS);
   if (retcode != EXIT_SUCCESS) {

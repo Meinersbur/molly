@@ -33,7 +33,7 @@
 
 
 
-#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX"),floor(x/" sBY")] -> local[x,y]] }")
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX"),floor(y/" sBY")] -> local[x,y]] }")
 molly::array<double, LX, LY> data;
 
 typedef int64_t coord_t;

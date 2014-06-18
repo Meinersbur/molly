@@ -686,9 +686,9 @@ namespace {
 //extern "C" int main(int argc, char *argv[]);
 
 
-extern "C" void __molly_generated_init();
-extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]);
-extern "C" void __molly_generated_release();
+extern "C" void __molly_generated_init() __attribute__((weak));
+extern "C" int __molly_orig_main(int argc, char *argv[], char *envp[]) __attribute__((weak));
+extern "C" void __molly_generated_release() __attribute__((weak));
 
 
 

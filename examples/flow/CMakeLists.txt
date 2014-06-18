@@ -12,7 +12,7 @@ add_custom_target(run-flow
 get_filename_component(flow_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}flow-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${flow_a_path}"
   SOURCES "flow.cpp"
-  FLAGS -mllvm -shape=2 -mllvm -polly-only-marked
+  FLAGS -mllvm -shape=2x1 -mllvm -polly-only-marked -DLX=8 -DLY=4 -DBX=4 -DBY=4 -DPX=2 -DPY=1
   COMMENT "mollycc molly.a flow.cpp..."
 )
 
