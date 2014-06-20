@@ -5,6 +5,8 @@
 #include <molly_emulation.h>
 #endif /* WITH_MOLLY */
 
+#include <bench.h>
+
 #include <iostream>
 #include <cassert>
 
@@ -16,6 +18,7 @@ typedef std::complex<double> complex;
 #include <math.h>
 #include <complex.h>
 //typedef _Complex double complex; 
+
 
 
 struct su3matrix_t{
@@ -61,6 +64,19 @@ public:
     return result; // NRVO
   }
 };
+
+
+// return arg*I
+MOLLY_ATTR(pure) static inline complex imul(complex arg) {
+  // C++ version
+  return complex(-arg.imag(), arg.real());
+}
+
+
+MOLLY_ATTR(pure) static inline complex conj(complex c) {
+  return std::conj(c);
+}
+
 
 struct su3vector_t {
   complex c[3];
@@ -312,13 +328,49 @@ molly::array<su3matrix_t, LT + 1, LX + 1, 4> gauge;
 extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1) {
+          fullspinor_t result;
+	  
+          // T+
+	  {
+	    auto halfspinor = project_TUP(source[molly::mod(t + 1, LT)][x]);
+	    halfspinor = gauge[GAUGE_MOD(t + 1, LT)][x][DIM_T] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[0];
+#endif
+            result = expand_TUP(halfspinor);
+	  }
 
-      // T+
-      auto result = expand_TUP(gauge[GAUGE_MOD(t + 1, LT)][x][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x]));
+          // T-
+	  {
+	    auto halfspinor = project_TDN(source[molly::mod(t - 1, LT)][x]);
+	    halfspinor = gauge[t][x][DIM_T] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[0]);
+#endif
+            result += expand_TUP(halfspinor);
+	  }
+          
 
-      // T-
-      result += expand_TDN(gauge[t][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
-
+          // X+
+	  {
+	    auto halfspinor = project_XUP(source[t][GAUGE_MOD(x + 1, LX)]);
+	    halfspinor = gauge[t][GAUGE_MOD(x + 1, LX)][DIM_X] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[1];
+#endif
+            result = expand_XUP(halfspinor);
+	  }
+          
+          // X-
+	  {
+	    auto halfspinor = project_XDN(source[t][molly::mod(x - 1, LX)]);
+	    halfspinor = gauge[t][x][DIM_X] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[1]);
+#endif
+            result += expand_XUP(halfspinor);
+	  }
+	  
 
       // Writeback
       sink[t][x] = result;
@@ -378,6 +430,18 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 }
 
 
+static void bench() {
+   int nTests = 10;
+   int nRounds = 10;
+   
+  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
+    for (auto i=0; i<nRounds;i+=1) {
+      HoppingMatrix();
+    }
+  }, nTests, LT*LX, /*operator+=*/3*(4*3*2) + 4*(/*project*/2*3*2 + /*su3mm*/2*(9*(2+4)+6*2)) );
+}
+
+
 int main(int argc, char *argv[]) {
   init();
 
@@ -387,5 +451,7 @@ int main(int argc, char *argv[]) {
   if (__molly_isMaster())
     std::cout << ">>>> Result = " << result << '\n';
 
+  bench();
+  
   return 0;
 }

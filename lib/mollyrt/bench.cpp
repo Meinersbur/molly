@@ -498,6 +498,7 @@ static void print_stats(benchstat *stats) {
 
       double avgtime = stat->avgtime;
       uint64_t lup = stat->lup;
+      double lups = lup / avgtime;
       //uint64_t flop = compute_flop(opts, stat->lup_body, stat->lup_surface);
       uint64_t flop = stat->lup * stat->nStencilsPerTest * stat->nFlopsPerStencil;
       double flops = (double)flop/stat->avgtime;
@@ -568,6 +569,10 @@ static void print_stats(benchstat *stats) {
       double nDdrStorePartial = stats[i3].counters.native[PEVT_L2_STORE_PARTIAL_LINE];
 
       switch (j) {
+	case pi_mlups:
+	  desc = "sites per sec";
+	  snprintf(str, sizeof(str), "%.2f mlup/s", lup / MEGA);
+	  break;
       case pi_correct:
         desc = "Max error to reference";
         if (opts & hm_withcheck) {
@@ -770,7 +775,8 @@ static void exec_table(const benchfunc_t &benchmark, bgq_hmflags additional_opts
       if (result.avgtime == 0)
         snprintf(str, sizeof(str), "~ %s", (result.error > 0.001) ? "X" : "");
       else
-        snprintf(str, sizeof(str), "%.2f mlup/s%s", (double) result.lup / (result.avgtime * MEGA), (result.error > 0.001) ? "X" : "");
+        //snprintf(str, sizeof(str), "%.2f mlup/s%s", (double) result.lup / (result.avgtime * MEGA), (result.error > 0.001) ? "X" : "");
+	snprintf(str, sizeof(str), "%.2f msecs", result.avgtime / MILLI);
       if (g_proc_id == 0)
         printf("%" SCELLWIDTH "s|", str);
       if (g_proc_id == 0)
@@ -798,6 +804,7 @@ static void exec_table(const benchfunc_t &benchmark, bgq_hmflags additional_opts
 
 
 void molly::exec_bench(const benchfunc_t &func, int nTests, uint64_t nStencilsPerTest, uint64_t nFlopsPerStencil) {
+  printf("MK nFlopsPerStencil : %ll\n", nFlopsPerStencil);
   exec_table(func, (bgq_hmflags)0, (bgq_hmflags)0, nTests, nStencilsPerTest, nFlopsPerStencil);
 }
  

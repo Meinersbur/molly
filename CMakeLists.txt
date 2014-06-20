@@ -583,11 +583,11 @@ endfunction ()
 
 # Compile and link to molly.a
 set(MOLLYCC_A_LIBS "${LLVM_BINARY_DIR}/lib/molly.a")
-if (MOLLYCC_BGQ)
+if (MOLLY_BGQ)
   list(APPEND MOLLYCC_A_LIBS "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a" "/bgsys/drivers/ppcfloor/bgpm/lib/libbgpm.a")
 endif ()
 if (MOLLYCC_ADD_MPI)
-  set(MOLLYCC_A_LIBS ${MOLLYCC_A_LIBS} ${MPI_CXX_LIBRARIES})
+  list(APPEND MOLLYCC_A_LIBS ${MPI_CXX_LIBRARIES})
 endif ()
 function (mollycc_a_compile _outfile)
 #message("   mollycc_a_compile(${_outfile}, ${ARGN})")

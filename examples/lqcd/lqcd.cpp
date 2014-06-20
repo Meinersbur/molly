@@ -71,6 +71,11 @@ MOLLY_ATTR(pure) static inline complex imul(complex arg) {
 }
 
 
+MOLLY_ATTR(pure) static inline complex conj(complex c) {
+  return std::conj(c);
+}
+
+
 struct su3vector_t {
   complex c[3];
 
@@ -265,6 +270,10 @@ MOLLY_ATTR(pure) double norm(fullspinor_t spinor) {
 }
 
 
+
+
+
+
 MOLLY_ATTR(pure) halfspinor_t project_TUP(fullspinor_t spinor) {
   return halfspinor_t(spinor[0] + spinor[2], spinor[1] + spinor[3]);
 }
@@ -371,7 +380,7 @@ typedef int64_t coord_t;
 
 #ifndef WITH_KAMUL
 //#error Must define WITH_KAMUL to 0 or 1!
-#define WITH_KAMUL 1
+#define WITH_KAMUL 0
 #endif
 
 
@@ -420,8 +429,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  
           // T+
 	  {
-	    auto spinor = source[molly::mod(t + 1, LT)][x][y][z];
-	    auto halfspinor = project_TUP(spinor);
+	    auto halfspinor = project_TUP(source[molly::mod(t + 1, LT)][x][y][z]);
 	    halfspinor = gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * halfspinor;
 #if WITH_KAMUL
 	    halfspinor *= ka[0];
@@ -430,26 +438,77 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  }
 
           // T-
-          result += expand_TDN(gauge[t][x][y][z][DIM_T] * project_TDN( source[molly::mod(t - 1, LT)][x][y][z]));
-#if 1
-          // X+
-          result += expand_XUP(gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * project_XUP(source[t][molly::mod(x + 1, LX)][y][z]));
+	  {
+	    auto halfspinor = project_TDN(source[molly::mod(t - 1, LT)][x][y][z]);
+	    halfspinor = gauge[t][x][y][z][DIM_T] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[0]);
+#endif
+            result += expand_TUP(halfspinor);
+	  }
+          
 
+          // X+
+	  {
+	    auto halfspinor = project_XUP(source[t][GAUGE_MOD(x + 1, LX)][y][z]);
+	    halfspinor = gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[1];
+#endif
+            result = expand_XUP(halfspinor);
+	  }
+          
           // X-
-          result += expand_XDN(gauge[t][x][y][z][DIM_X] * project_XDN(source[t][molly::mod(x - 1, LX)][y][z]));
+	  {
+	    auto halfspinor = project_XDN(source[t][molly::mod(x - 1, LX)][y][z]);
+	    halfspinor = gauge[t][x][y][z][DIM_X] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[1]);
+#endif
+            result += expand_XUP(halfspinor);
+	  }
+	  
 
           // Y+
-          result += expand_YUP(gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * project_YUP(source[t][x][molly::mod(y + 1, LY)][z]));
-
-          // Y-
-          result += expand_YDN(gauge[t][x][y][z][DIM_Y] * project_YDN(source[t][x][molly::mod(y - 1, LY)][z]));
-
-          // Z+
-          result += expand_ZUP(gauge[t][x][y][GAUGE_MOD(z + 1, LZ)][DIM_Z] * project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]));
-
-          // Z-
-          result += expand_ZDN(gauge[t][x][y][z][DIM_Z] * project_ZDN(source[t][x][y][molly::mod(z + 1, LZ)]));
+	  {
+	    auto halfspinor = project_YUP(source[t][x][GAUGE_MOD(y + 1, LY)][z]);
+	    halfspinor = gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[2];
 #endif
+            result = expand_YUP(halfspinor);
+	  }
+          
+          // Y-
+	  {
+	    auto halfspinor = project_YDN(source[t][x][GAUGE_MOD(y - 1, LY)][z]);
+	    halfspinor = gauge[t][x][y][z][DIM_Y] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[2]);
+#endif
+            result = expand_YDN(halfspinor);
+	  }
+          
+     
+          // Z+
+	  {
+	    auto halfspinor = project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]);
+	    halfspinor = gauge[t][x][y][GAUGE_MOD(z + 1, LZ)][DIM_Z] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= ka[3];
+#endif
+            result = expand_ZUP(halfspinor);
+	  }
+          
+          // Z-
+	  {
+	    auto halfspinor = project_ZDN(source[t][x][y][molly::mod(z - 1, LZ)]);
+	    halfspinor = gauge[t][x][y][z][DIM_Z] * halfspinor;
+#if WITH_KAMUL
+	    halfspinor *= conj(ka[3]);
+#endif
+            result = expand_ZDN(halfspinor);
+	  }
 
           // Writeback
           sink[t][x][y][z] = result;

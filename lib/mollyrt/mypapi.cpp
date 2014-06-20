@@ -78,7 +78,7 @@ static int threadid() {
 		}                                                                                                        \
 	} while (0)
 
-
+ 
 #define BGPM_ERROR(cmd)                                                                                      \
 	do {                                                                                                       \
 		/*fprintf(stderr, "MK_BGPM executing line %d rank %d thread %d: %s\n", __LINE__,  g_proc_id, Kernel_ProcessorID(), TOSTRING(cmd));*/ \
@@ -194,7 +194,7 @@ static int L2EventSet[MYPAPI_SETS] = {0};
 
 
 static mypapi_counters mypapi_bgpm_read(int eventset, int set) {
-  MK_GUARDED()
+  //MK_GUARDED()
 	mypapi_counters result = { 0 };
 	result.set = set;
 	result.eventset = eventset;
