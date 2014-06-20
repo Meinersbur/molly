@@ -449,7 +449,7 @@ static bool isRhsBetter(int nUncovered, const MultiAff &lhs, int lhsComplexity, 
 
 
 
-// exponential in number of (in)equalities (or dimensions)! May mark condistions as used to make each condition appear in just one
+// exponential in number of (in)equalities (or dimensions)! May mark conditions as used to make each condition appear in just one
 //TODO: Instead of such a long parameter list, make a record that contains the params that do not change and pass a pointer to it
 static void inferFromConditions_backtracking(std::vector<MultiAff> &affs, const LocalSpace &ls, Mat &eqs, Mat &ineqs, std::vector<Aff> &stack) {
   auto nParamDims = ls.getParamDimCount();
@@ -819,6 +819,7 @@ ISLPP_EXSITU_ATTRS PwMultiAff Map::anyElement() ISLPP_EXSITU_FUNCTION{
       auto &candidate = candidates[i];
       auto covers = isl::intersect(candidate, *this).domain();
       auto covered = isl::intersect(uncovered, covers);
+      covered.computeDivs_inplace();
       if (covered.isEmpty()) {
         // This candidate is useless; remove it from candidates
         candidates.erase(candidates.begin() + i);

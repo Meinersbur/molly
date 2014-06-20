@@ -450,7 +450,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 
           // X+
 	  {
-	    auto halfspinor = project_XUP(source[t][GAUGE_MOD(x + 1, LX)][y][z]);
+	    auto halfspinor = project_XUP(source[t][molly::mod(x + 1, LX)][y][z]);
 	    halfspinor = gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * halfspinor;
 #if WITH_KAMUL
 	    halfspinor *= ka[1];
@@ -471,7 +471,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 
           // Y+
 	  {
-	    auto halfspinor = project_YUP(source[t][x][GAUGE_MOD(y + 1, LY)][z]);
+	    auto halfspinor = project_YUP(source[t][x][molly::mod(y + 1, LY)][z]);
 	    halfspinor = gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * halfspinor;
 #if WITH_KAMUL
 	    halfspinor *= ka[2];
@@ -481,7 +481,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
           
           // Y-
 	  {
-	    auto halfspinor = project_YDN(source[t][x][GAUGE_MOD(y - 1, LY)][z]);
+	    auto halfspinor = project_YDN(source[t][x][molly::mod(y - 1, LY)][z]);
 	    halfspinor = gauge[t][x][y][z][DIM_Y] * halfspinor;
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[2]);

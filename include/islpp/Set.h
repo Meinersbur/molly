@@ -322,7 +322,7 @@ namespace isl {
       //FIXME: Not part of public isl interface
     ISLPP_EXSITU_ATTRS Set resetSpace(Space dim) ISLPP_EXSITU_FUNCTION{ return Set::enwrap(isl_set_reset_space(takeCopy(), dim.take())); }
     ISLPP_INPLACE_ATTRS void resetSpace_inplace(Space dim) ISLPP_INPLACE_FUNCTION{ give(isl_set_reset_space(take(), dim.take())); }
-    ISLPP_INPLACE_ATTRS Set resetSpace_consume(Space dim) ISLPP_INPLACE_FUNCTION{ return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
+    ISLPP_CONSUME_ATTRS Set resetSpace_consume(Space dim) ISLPP_CONSUME_FUNCTION{ return Set::enwrap(isl_set_reset_space(take(), dim.take())); }
 
 
     void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = true) const;
@@ -352,7 +352,8 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS BasicSet sample() ISLPP_EXSITU_FUNCTION { return BasicSet::enwrap(isl_set_sample(takeCopy())); }
     ISLPP_CONSUME_ATTRS BasicSet sample() ISLPP_CONSUME_FUNCTION { return BasicSet::enwrap(isl_set_sample(take())); }
-
+   
+    ISLPP_INPLACE_ATTRS void computeDivs_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_set_compute_divs(take())); }
   }; // class Set
 
 

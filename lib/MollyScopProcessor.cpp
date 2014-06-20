@@ -1092,7 +1092,7 @@ namespace {
       for (const auto &readAcc : readAccesses.getMaps()) {
         auto id = readAcc.getInTupleId();
         if (id == epilogueId) 
-        continue;
+          continue;
         auto readStmt = getScopStmtContext(id);
         auto where = readStmt->getWhere();
         assert(where.isEmpty()); // Any of those should have been replaced

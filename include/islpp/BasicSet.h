@@ -571,6 +571,8 @@ namespace isl {
     void removeDivsInvolvingDims(isl_dim_type type, unsigned first, unsigned n);
     void removeUnknownDivs();
 
+    ISLPP_EXSITU_ATTRS Set computeDivs() ISLPP_EXSITU_FUNCTION;
+
     /// The number of parameters, input, output or set dimensions can be obtained using the following functions.
     //    unsigned dim(isl_dim_type type) const;
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const;

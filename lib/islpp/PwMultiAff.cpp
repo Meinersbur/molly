@@ -544,7 +544,7 @@ ISLPP_EXSITU_ATTRS PwMultiAff isl::PwMultiAff::simplify() ISLPP_EXSITU_FUNCTION{
     }
 #endif
   }
-#if 1
+#if 0
   if (fromList(affs) != *this) {
     auto ref = fromList(affs);
     auto diff1 = ref - *this;
@@ -581,7 +581,7 @@ ISLPP_EXSITU_ATTRS PwMultiAff isl::PwMultiAff::simplify() ISLPP_EXSITU_FUNCTION{
   for (auto &pair : divmerged) {
     auto &set = pair.first;
     set.coalesce_inplace();
-    auto &aff = pair.second;
+    auto &aff = pair.second; 
     result.unionAdd_inplace(PwMultiAff::create(std::move(set), std::move(aff)));
   }
   assert(*this == result);

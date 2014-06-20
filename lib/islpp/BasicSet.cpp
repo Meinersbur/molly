@@ -305,6 +305,7 @@ static uint32_t complexity(const BasicSet &bset, bool opcount, llvm::SmallBitVec
     return 0;
   if (bset.isEmpty())
     return 0;
+  //bset.computeDivs_inplace();
 
   auto eqMat = Mat::enwrap(isl_basic_set_equalities_matrix(bset.keep(), isl_dim_cst, isl_dim_param, isl_dim_set, isl_dim_div));
   auto ineqMat = Mat::enwrap(isl_basic_set_inequalities_matrix(bset.keep(), isl_dim_cst, isl_dim_param, isl_dim_set, isl_dim_div));
@@ -420,6 +421,12 @@ ISLPP_INPLACE_ATTRS void isl::BasicSet::preimage_inplace(MultiAff maff) ISLPP_IN
 ISLPP_CONSUME_ATTRS BasicSet isl::BasicSet::preimage_consume(MultiAff maff) ISLPP_CONSUME_FUNCTION{
   return BasicSet::enwrap(isl_basic_set_preimage_multi_aff(take(), maff.take()));
 }
+
+
+ISLPP_EXSITU_ATTRS Set isl::BasicSet::computeDivs() ISLPP_EXSITU_FUNCTION {
+  return Set::enwrap(isl_basic_set_compute_divs(takeCopy()));
+}
+
 
 
 
