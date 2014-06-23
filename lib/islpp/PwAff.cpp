@@ -526,6 +526,11 @@ ISLPP_EXSITU_ATTRS PwAff isl::Pw<Aff>::simplify() ISLPP_EXSITU_FUNCTION{
 }
 
 
+ISLPP_PROJECTION_ATTRS size_t isl::Pw<Aff>::nPieces() ISLPP_PROJECTION_FUNCTION{
+  return isl_pw_aff_n_piece(keep());
+}
+
+
 ISLPP_PROJECTION_ATTRS uint64_t PwAff::getComplexity() ISLPP_PROJECTION_FUNCTION{
   uint32_t nBsets = 0;
   uint32_t affComplexity = 0;

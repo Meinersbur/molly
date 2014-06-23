@@ -71,8 +71,9 @@ MOLLY_ATTR(pure) static inline complex imul(complex arg) {
 }
 
 
-MOLLY_ATTR(pure) static inline complex conj(complex c) {
-  return std::conj(c);
+MOLLY_ATTR(pure) static inline complex conj(complex arg) {
+  //return std::conj(c);
+  return complex(arg.real(), -arg.imag());
 }
 
 
@@ -342,20 +343,19 @@ MOLLY_ATTR(pure) fullspinor_t expand_ZDN(halfspinor_t weyl) {
 typedef int64_t coord_t;
 
 
-#if 1
-#if 1
+
 
 #define _STR(X) #X
 #define STR(X) _STR(X)
 
 #ifndef LT
-#define L  16
+#define L  2
 #define LT L
-#define LX L
-#define LY L
-#define LZ L
+#define LX 1
+#define LY 1
+#define LZ 1
  
-#define B 8
+#define B 1
 #define BT B
 #define BX B
 #define BY B
@@ -363,9 +363,9 @@ typedef int64_t coord_t;
 
 #define P 2
 #define PT P
-#define PX P
-#define PY P
-#define PZ P
+#define PX 1
+#define PY 1
+#define PZ 1
 #endif
 
 #define sBT STR(BT)
@@ -396,30 +396,12 @@ molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 
 
 
-#if 0
-// cheating, no wraparound
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt] -> local[t,x,y,z,d]] : pt=floor(t/4) or (pt<8 and pt=floor((t+1)/4)) }")
-molly::array<su3matrix_t, LT+1, LX+1, LY+1, LZ+1, 4> gauge;
-#endif
-
-#else
-
-#define LT 6
-#define LX 6
-#define LY 1
-#define LZ 1
-
-#pragma molly transform("{ [t,x,y,z] -> [node[pt,px] -> local[t,x,y,z]] : pt=floor(t/3) and px=floor(x/3) }")
-molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-
-#pragma molly transform("{ [t,x,y,z,d] -> [node[pt,px] -> local[t,x,y,z,d]] : (pt=floor(t/3) and px=floor(x/3)) or (pt=floor((t-1)/3) and px=floor((x-1)/3)) }")
-molly::array<su3matrix_t, LT, LX, LY, LZ, 4> gauge;
-#endif
-
-static complex ka[4] = {0};
 
 
-#if 1
+complex ka[4] = {1};
+
+
+
 extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
@@ -437,6 +419,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
             result = expand_TUP(halfspinor);
 	  }
 
+
           // T-
 	  {
 	    auto halfspinor = project_TDN(source[molly::mod(t - 1, LT)][x][y][z]);
@@ -444,7 +427,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[0]);
 #endif
-            result += expand_TUP(halfspinor);
+            result += expand_TDN(halfspinor);
 	  }
           
 
@@ -455,7 +438,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= ka[1];
 #endif
-            result = expand_XUP(halfspinor);
+            result += expand_XUP(halfspinor);
 	  }
           
           // X-
@@ -465,7 +448,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[1]);
 #endif
-            result += expand_XUP(halfspinor);
+            result += expand_XDN(halfspinor);
 	  }
 	  
 
@@ -476,7 +459,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= ka[2];
 #endif
-            result = expand_YUP(halfspinor);
+            result += expand_YUP(halfspinor);
 	  }
           
           // Y-
@@ -486,7 +469,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[2]);
 #endif
-            result = expand_YDN(halfspinor);
+            result += expand_YDN(halfspinor);
 	  }
           
      
@@ -497,7 +480,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= ka[3];
 #endif
-            result = expand_ZUP(halfspinor);
+      result += expand_ZUP(halfspinor);
 	  }
           
           // Z-
@@ -507,46 +490,27 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[3]);
 #endif
-            result = expand_ZDN(halfspinor);
+      result += expand_ZDN(halfspinor);
 	  }
+
+
 
           // Writeback
           sink[t][x][y][z] = result;
         }
 } // void HoppingMatrix()
-#endif
-#else
 
-#define LT 6
-#define LX 4
 
-#pragma molly transform("{ [t,x] -> [node[pt] -> local[t,x]] : pt=floor(t/3) }")
-molly::array<spinor_t, LT, LX> source, sink;
-
-#pragma molly transform("{ [t,x,d] -> [node[pt] -> local[t,x,d]] : pt=floor(t/3) or pt=floor((t-1)/3) }")
-molly::array<su3matrix_t, LT, LX, 2> gauge;
-
-extern "C" void HoppingMatrix() {
-  for (coord_t t = 0; t < source.length(0); t += 1)
-    for (coord_t x = 0; x < source.length(1); x += 1) {
-
-      // T+
-      auto result = expand_TUP(gauge[t][x][DIM_T] * project_TUP(source[molly::mod(t + 1, LT)][x]));
-
-      // T-
-      result += expand_TDN(gauge[molly::mod(t - 1, LT)][x][DIM_T] * project_TDN(source[molly::mod(t - 1, LT)][x]));
-
-      // Writeback
-      sink[t][x] = result;
-    }
-} // void HoppingMatrix()
-
-#endif
 
 
 
 MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x, coord_t y, coord_t z) {
   //return spinor_t(su3vector_t(t+2, 1, t+2), su3vector_t(x+2, x+2, 1), su3vector_t(y+2, 1, y+2), su3vector_t(z+2, z+2, 1));
+  
+  ka[0] = 1;
+  ka[1] = 1;
+  ka[2] = 1;
+  ka[3] = 1;
   
   if (t==0&&x==0&&y==0&&z==0)
     return spinor_t(su3vector_t::one_b(), su3vector_t::zero(), su3vector_t::zero(), su3vector_t::zero());

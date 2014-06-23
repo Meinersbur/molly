@@ -69,10 +69,10 @@ namespace isl {
 
 
   // Or Pw<BasicMap>
-  class Map : public Obj<Map, isl_map>, public Spacelike<Map>, public MapSpacelike<Map> {
+  class Map : public Obj<Map, isl_map>, public Spacelike<Map>, public MapSpacelike < Map > {
 
 #pragma region isl::Obj
-    friend class isl::Obj<ObjTy, StructTy>;
+    friend class isl::Obj < ObjTy, StructTy > ;
   protected:
     void release() { isl_map_free(takeOrNull()); }
     StructTy *addref() const { return isl_map_copy(keepOrNull()); }
@@ -92,7 +92,7 @@ namespace isl {
 
 
 #pragma region isl::Spacelike
-    friend class isl::Spacelike<ObjTy>;
+    friend class isl::Spacelike < ObjTy > ;
   public:
     ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION{ return MapSpace::enwrap(isl_map_get_space(keep())); }
     ISLPP_PROJECTION_ATTRS MapSpace getSpacelike() ISLPP_PROJECTION_FUNCTION{ return getSpace(); }
@@ -484,9 +484,9 @@ namespace isl {
     void uncurry_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_map_uncurry(take())); }
     Map uncurry() const { return Map::enwrap(isl_map_uncurry(takeCopy())); }
 
-    ISLPP_EXSITU_ATTRS  Map makeDisjoint() ISLPP_EXSITU_FUNCTION{ return Map::enwrap(isl_map_make_disjoint(takeCopy())); }
-    ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION{ give(isl_map_make_disjoint(take())); }
-    ISLPP_CONSUME_ATTRS  Map makeDisjoint_consume() ISLPP_CONSUME_FUNCTION{ return Map::enwrap(isl_map_make_disjoint(take())); }
+    ISLPP_EXSITU_ATTRS Map makeDisjoint() ISLPP_EXSITU_FUNCTION;
+    ISLPP_INPLACE_ATTRS void makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION;
+    ISLPP_CONSUME_ATTRS Map makeDisjoint_consume() ISLPP_CONSUME_FUNCTION{ return Map::enwrap(isl_map_make_disjoint(take())); }
 #if ISLPP_HAS_RVALUE_REFERENCE_THIS
     Map makeDisjoint_consume() && { return Map::enwrap(isl_map_make_disjoint(take()));}
 #endif
@@ -529,8 +529,11 @@ namespace isl {
 
     bool foreachBasicMap(std::function<bool(BasicMap&&)> func) const;
     std::vector<BasicMap> getBasicMaps() const;
-    size_t nBasicMap() const { return checkInt(isl_set_n_basic_set( reinterpret_cast<isl_set*>(keep()) )); /* use the fact that internally, isl_map and isl_set are the same */ }
-    size_t getBasicMapCount() const{ return nBasicMap(); }
+    ISLPP_PROJECTION_ATTRS size_t nBasicMap() ISLPP_PROJECTION_FUNCTION{ return checkInt(isl_set_n_basic_set(reinterpret_cast<isl_set*>(keep()))); /* use the fact that internally, isl_map and isl_set are the same */ }
+    ISLPP_PROJECTION_ATTRS size_t getBasicMapCount() ISLPP_PROJECTION_FUNCTION{ return nBasicMap(); }
+    ISLPP_PROJECTION_ATTRS size_t nPieces() ISLPP_PROJECTION_FUNCTION;
+
+    BasicMap &debug_getBasicMap(int i);
 
     void fixedPower(const Int &exp) { give(isl_map_fixed_power(take(), exp.keep())); }
     void power(const Int &exp, bool &exact) {

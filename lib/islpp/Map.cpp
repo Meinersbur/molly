@@ -393,13 +393,40 @@ ISLPP_EXSITU_ATTRS Map isl::Map::intersectRange(UnionSet uset) ISLPP_EXSITU_FUNC
   return Map::enwrap(isl_map_intersect_range(takeCopy(), set.take()));
 }
 
+
 isl::Set isl::Map::map(Set set) const {
   return Set::enwrap(isl_set_apply(set.take(), takeCopy()));
 }
 
+
 isl::Set isl::Map::map(Vec vec) const {
   return map(vec.toBasicSet());
 }
+
+
+#ifndef NDEBUG
+BasicMap &isl::Map::debug_getBasicMap(int i) {
+  static BasicMap bmap;
+  bmap = getBasicMaps()[i];
+  return bmap;
+}
+#endif
+
+
+ISLPP_EXSITU_ATTRS Map isl::Map::makeDisjoint() ISLPP_EXSITU_FUNCTION{
+  return Map::enwrap(isl_map_make_disjoint(takeCopy()));
+}
+
+
+ISLPP_INPLACE_ATTRS void isl::Map::makeDisjoint_inplace() ISLPP_INPLACE_FUNCTION {
+  give(isl_map_make_disjoint(take()));
+}
+
+
+ISLPP_PROJECTION_ATTRS size_t isl::Map::nPieces() ISLPP_PROJECTION_FUNCTION{
+  return nBasicMap();
+}
+
 
 
 static bool isRhsBetter(int nUncovered, const MultiAff &lhs, int lhsComplexity, int lhsRemainingBSets, int lhsCoverBSets, const MultiAff &rhs, int rhsComplexity, int rhsRemainingBSets, int rhsCoverBSets) {

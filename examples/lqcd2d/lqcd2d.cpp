@@ -73,8 +73,9 @@ MOLLY_ATTR(pure) static inline complex imul(complex arg) {
 }
 
 
-MOLLY_ATTR(pure) static inline complex conj(complex c) {
-  return std::conj(c);
+MOLLY_ATTR(pure) static inline complex conj(complex arg) {
+  //return std::conj(c);
+  return complex(arg.real(), -arg.imag());
 }
 
 
@@ -360,7 +361,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= ka[0];
 #endif
-            result = expand_TUP(halfspinor);
+            result += expand_TUP(halfspinor);
 	  }
 
           // T-
@@ -370,7 +371,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[0]);
 #endif
-            result += expand_TUP(halfspinor);
+            result += expand_TDN(halfspinor);
 	  }
           
 
@@ -381,7 +382,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= ka[1];
 #endif
-            result = expand_XUP(halfspinor);
+            result += expand_XUP(halfspinor);
 	  }
           
           // X-
@@ -391,7 +392,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 #if WITH_KAMUL
 	    halfspinor *= conj(ka[1]);
 #endif
-            result += expand_XUP(halfspinor);
+            result += expand_XDN(halfspinor);
 	  }
 	  
 

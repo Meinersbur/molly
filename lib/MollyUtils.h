@@ -7,6 +7,7 @@
 #include "Pollyfwd.h"
 #include "LLVMfwd.h"
 #include "llvm/IR/GlobalValue.h"
+#include <islpp/Islfwd.h>
 
 namespace llvm {
   class Function;
@@ -108,5 +109,7 @@ void viewRegion(const llvm::Function *f);
 void viewRegion(llvm::RegionInfo *RI);
 void viewRegionOnly(const llvm::Function *f);
 void viewRegionOnly(llvm::RegionInfo *RI);
+
+void viewRelation(const isl::UnionMap &umap);
 
 #endif /* MOLLY_MOLLYUTILS_H */

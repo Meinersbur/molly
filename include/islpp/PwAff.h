@@ -175,6 +175,7 @@ namespace isl {
     //void pullback_inplace(const MultiPwAff &mpa) ISLPP_INPLACE_QUALIFIER;
 
     int nPiece() const;
+    ISLPP_PROJECTION_ATTRS size_t nPieces() ISLPP_PROJECTION_FUNCTION;
     bool foreachPiece(std::function<bool(Set, Aff)> fn) const;
     std::vector<std::pair<Set, Aff>> getPieces() const;
 

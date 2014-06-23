@@ -10,6 +10,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/RegionPrinter.h"
+#include "llvm/Support/FileSystem.h"
+#include <islpp/UnionMap.h>
+#include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
 using namespace polly;
@@ -20,7 +23,7 @@ using namespace molly;
 /// Should be more effective if we filter useful instructions first (lambda?)
 void molly::collectInstructionList(Function *func, SmallVectorImpl<Instruction*> &list) {
   auto bbList = &func->getBasicBlockList();
-  for (auto it = bbList->begin(), end = bbList->end(); it!=end; ++it) {
+  for (auto it = bbList->begin(), end = bbList->end(); it != end; ++it) {
     auto bb = &*it;
     collectInstructionList(bb, list);
   }
@@ -29,7 +32,7 @@ void molly::collectInstructionList(Function *func, SmallVectorImpl<Instruction*>
 
 void molly::collectInstructionList(llvm::BasicBlock *bb, llvm::SmallVectorImpl<llvm::Instruction*> &list) {
   auto instList = &bb->getInstList();
-  for (auto it = instList->begin(), end = instList->end(); it!=end; ++it) {
+  for (auto it = instList->begin(), end = instList->end(); it != end; ++it) {
     auto *inst = &*it;
     list.push_back(inst);
   }
@@ -37,7 +40,7 @@ void molly::collectInstructionList(llvm::BasicBlock *bb, llvm::SmallVectorImpl<l
 
 
 void molly::collectScopStmts(polly::Scop *scop, llvm::SmallVectorImpl<polly::ScopStmt*> &list) {
-  for (auto it = scop->begin(), end = scop->end(); it!=end; ++it) {
+  for (auto it = scop->begin(), end = scop->end(); it != end; ++it) {
     ScopStmt* stmt = *it;
     list.push_back(stmt);
   }
@@ -51,7 +54,7 @@ void molly::collectAllRegions(llvm::RegionInfo *regionInfo, llvm::SmallVectorImp
 
 void molly::collectAllRegions(llvm::Region *region, llvm::SmallVectorImpl<llvm::Region*> &dstList) {
   dstList.push_back(region);
-  for (auto it = region->begin(), end = region->end(); it!=end;++it) {
+  for (auto it = region->begin(), end = region->end(); it != end; ++it) {
     auto &subregion = *it;
     collectAllRegions(subregion.get(), dstList);
   }
@@ -68,17 +71,17 @@ llvm::Pass *molly::createPassFromId(const void *passId) {
 }
 
 
-llvm::Function *molly::getFunctionOf(llvm::Function *func) { 
+llvm::Function *molly::getFunctionOf(llvm::Function *func) {
   return func;
 }
 llvm::Function *molly::getFunctionOf(const llvm::Region *region) {
-  return region->getEntry()->getParent(); 
+  return region->getEntry()->getParent();
 }
-llvm::Function *molly::getFunctionOf(llvm::BasicBlock *bb) { 
-  return bb->getParent(); 
+llvm::Function *molly::getFunctionOf(llvm::BasicBlock *bb) {
+  return bb->getParent();
 }
-llvm::Function *molly::getFunctionOf(const polly::Scop *scop) { 
-  return getFunctionOf(&scop->getRegion()); 
+llvm::Function *molly::getFunctionOf(const polly::Scop *scop) {
+  return getFunctionOf(&scop->getRegion());
 }
 llvm::Function *molly::getFunctionOf(const polly::ScopStmt *stmt) {
   return getFunctionOf(stmt->getParent());
@@ -136,25 +139,25 @@ llvm::Region *molly::getRegionOf(polly::ScopStmt *scopStmt) {
 }
 
 
-llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
+llvm::Function *molly::createFunction(llvm::Type *rtnTy, llvm::ArrayRef<llvm::Type*> argTys, llvm::Module *module, GlobalValue::LinkageTypes linkage, llvm::StringRef name) {
   if (!rtnTy) {
     auto &llvmContext = module->getContext();
     rtnTy = Type::getVoidTy(llvmContext);
   }
 
   auto funcTy = FunctionType::get(rtnTy, argTys, false);
- return Function::Create(funcTy, linkage, name, module);
+  return Function::Create(funcTy, linkage, name, module);
 }
 
 
-llvm::Function *molly::createFunction( llvm::Type *rtnTy, llvm::Module *module, GlobalValue::LinkageTypes linkage ,llvm::StringRef name) {
+llvm::Function *molly::createFunction(llvm::Type *rtnTy, llvm::Module *module, GlobalValue::LinkageTypes linkage, llvm::StringRef name) {
   if (!rtnTy) {
     auto &llvmContext = module->getContext();
     rtnTy = Type::getVoidTy(llvmContext);
   }
 
   auto funcTy = FunctionType::get(rtnTy, false);
- return Function::Create(funcTy, linkage, name, module);
+  return Function::Create(funcTy, linkage, name, module);
 }
 
 
@@ -188,7 +191,7 @@ void viewRegion(const Function *f) {
 
 
 void viewRegion(RegionInfo *RI) {
- auto F = RI->getTopLevelRegion()->getEntry()->getParent();
+  auto F = RI->getTopLevelRegion()->getEntry()->getParent();
   auto viewer = createRegionViewerPass();
   viewer->setResolver(RI->getResolver());
   viewer->runOnFunction(*F);
@@ -215,4 +218,38 @@ void viewRegionOnly(RegionInfo *RI) {
   viewer->setResolver(RI->getResolver());
   viewer->runOnFunction(*F);
   delete viewer;
+}
+
+
+void viewRelation(const isl::UnionMap &umap) {
+  //GraphT Graph = AnalysisGraphTraitsT::getGraph(&getAnalysis<AnalysisT>());
+  auto Name = "isl";
+  std::string Filename = std::string(Name) + ".dot";
+  std::string ErrorInfo;
+
+  errs() << "Writing '" << Filename << "'...";
+
+  {
+    raw_fd_ostream File(Filename.c_str(), ErrorInfo, sys::fs::F_Text);
+    File << "/*\n";
+    umap.print(File);
+    File << "\n*/\n";
+    File << "digraph {\n";
+    auto &maps = umap.getMaps();
+    for (auto &map : maps) {
+      auto domainSpace = map.getInTupleIdOrNull();
+      auto domainDims = map.getInDimCount();
+      auto domainName = map.getInTupleName();
+      auto rangeSpace = map.getOutTupleIdOrNull();
+      auto rangeDims = map.getOutDimCount();
+      auto rangeName = map.getOutTupleName();
+
+      File << "  " << domainName << " -> " << rangeName << ";\n";
+    }
+    File << "}\n";
+    //File.flush();
+    //File.close();
+  }
+
+  DisplayGraph(Filename, false);
 }

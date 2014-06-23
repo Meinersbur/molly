@@ -38,10 +38,10 @@ namespace isl {
 
 
 namespace isl {
-  class BasicMap : public Obj<BasicMap, struct isl_basic_map>, public SetSpacelike<BasicMap>, public Spacelike<BasicMap> {
+  class BasicMap : public Obj<BasicMap, struct isl_basic_map>, public SetSpacelike<BasicMap>, public Spacelike < BasicMap > {
 
 #pragma region isl::Obj
-    friend class isl::Obj<ObjTy, StructTy>;
+    friend class isl::Obj < ObjTy, StructTy > ;
   protected:
     void release() { isl_basic_map_free(takeOrNull()); }
     StructTy *addref() const { return isl_basic_map_copy(keepOrNull()); }
@@ -62,7 +62,7 @@ namespace isl {
 
 
 #pragma region isl::Spacelike
-    friend class isl::Spacelike<ObjTy>;
+    friend class isl::Spacelike < ObjTy > ;
   public:
     ISLPP_PROJECTION_ATTRS MapSpace getSpace() ISLPP_PROJECTION_FUNCTION{ return MapSpace::enwrap(isl_basic_map_get_space(keep())); }
     ISLPP_PROJECTION_ATTRS LocalSpace getSpacelike() ISLPP_PROJECTION_FUNCTION{ return getLocalSpace(); }
@@ -260,7 +260,7 @@ namespace isl {
     bool involvesDims(isl_dim_type type, unsigned first, unsigned n) const { return isl_basic_map_involves_dims(keep(), type, first, n); }
 
     ISLPP_EXSITU_ATTRS Mat equalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5)ISLPP_EXSITU_FUNCTION{ return Mat::enwrap(isl_basic_map_equalities_matrix(keep(), c1, c2, c3, c4, c5)); }
-    ISLPP_EXSITU_ATTRS Mat equalitiesMatrix() ISLPP_EXSITU_FUNCTION { return equalitiesMatrix(isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div); }
+    ISLPP_EXSITU_ATTRS Mat equalitiesMatrix() ISLPP_EXSITU_FUNCTION{ return equalitiesMatrix(isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div); }
     ISLPP_EXSITU_ATTRS Mat inequalitiesMatrix(isl_dim_type c1, isl_dim_type c2, isl_dim_type c3, isl_dim_type c4, isl_dim_type c5) ISLPP_EXSITU_FUNCTION{ return Mat::enwrap(isl_basic_map_inequalities_matrix(keep(), c1, c2, c3, c4, c5)); }
     ISLPP_EXSITU_ATTRS Mat inequalitiesMatrix() ISLPP_EXSITU_FUNCTION{ return inequalitiesMatrix(isl_dim_cst, isl_dim_param, isl_dim_in, isl_dim_out, isl_dim_div); }
 
@@ -317,7 +317,15 @@ namespace isl {
 
     ISLPP_EXSITU_ATTRS  BasicSet      wrap()ISLPP_EXSITU_ATTRS{ return BasicSet::enwrap(isl_basic_map_wrap(takeCopy())); }
 
-      ISLPP_PROJECTION_ATTRS  int getComplexity() ISLPP_PROJECTION_FUNCTION;
+    ISLPP_PROJECTION_ATTRS  int getComplexity() ISLPP_PROJECTION_FUNCTION;
+
+    void printExplicit(llvm::raw_ostream &os, int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = false) const;
+    void dumpExplicit(int maxElts, bool newlines = false, bool formatted = false, bool sorted = false) const;
+    void dumpExplicit() const;
+    std::string toStringExplicit(int maxElts = 8, bool newlines = false, bool formatted = false, bool sorted = false);
+
+
+
   }; // class BasicMap
 
 

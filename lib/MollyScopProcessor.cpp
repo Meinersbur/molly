@@ -763,7 +763,7 @@ namespace {
       }
       isl::Approximation approx2;
       auto dataFlowClosure = dataFlow.transitiveClosure(approx2);
-
+      //viewRelation(dataFlow);
 
 #pragma region Flow for nonfield accesses
       //auto universeAccessEverything = emptyMap; // { epilogue[] -> [indexset] }
@@ -831,6 +831,7 @@ namespace {
       auto nonfieldDataFlowClosure = nonfieldDataFlow.transitiveClosure(approx); // { [domain] -> [domain] }
       assert(!possiblyFalseNegatives(approx));
       auto nonfieldDataFlowClosureRev = nonfieldDataFlowClosure.reverse();
+      //viewRelation(nonfieldDataFlow);
 #pragma endregion
 
       /////////////////////////////////////////////////
@@ -902,6 +903,7 @@ namespace {
 
       //auto tmp = overviewWhere();
 
+#if 0
       // "source computes": execute statements that read data from before the SCoP at the home location of that data
       for (auto input : inputFlow.getSets()) {
         auto stmtCtx = getScopStmtContext(input);
@@ -916,6 +918,7 @@ namespace {
         notyetExecuted.substract_inplace(accessedButNotyetExecuted.domain());
         localizeNonfieldFlowDeps(notyetExecuted, nonfieldDataFlowClosure);
       }
+#endif
 
       //tmp = overviewWhere();
 
