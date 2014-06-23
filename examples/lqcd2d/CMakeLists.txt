@@ -46,6 +46,6 @@ add_example_config(lqcd2d.cpp exe1 target1 VOLUME 8x8 PROC 2x2 BLOCK 4x4 DEFINES
 add_example_config(lqcd2d.cpp exe2 target2 VOLUME 8x8 PROC 2x2 BLOCK 4x4 DEFINES "WITH_KAMUL=0")
 
 add_custom_target(submit-lqcd2d1
-  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/lqcd2d.cpp" exe1=${exe1} exe2=${exe2} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/lqcd2d.ll" 
+  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/lqcd2d.cpp" exe1=${exe1} exe2=${exe2} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/lqcd2d1.ll" 
   DEPENDS ${target1} ${target2}
 )

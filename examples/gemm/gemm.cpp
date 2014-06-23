@@ -8,17 +8,39 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdint>
+#include <bench.h>
+
+#ifndef LY
+#define L  16
+#define LY L
+#define LX L
+#define LZ L
+
+  
+#define B 8
+#define BY B
+
+#define P 2
+#define PY P
+#endif
 
 
-#define LX 3
-#define LY 6
-#define LZ 3
+#define sBY STR(BY)
 
-#pragma molly transform("{ [x,y] -> [node[py] -> local[x,y]] : py=floor(y/3) }")
+#define sPY STR(PY)
+
+
+
+
+
+
+
+
+#pragma molly transform("{ [x,y] -> [rank[floor(y/" sBY ")] -> local[x,y]] }")
 molly::array<double, LX, LY> A;
-#pragma molly transform("{ [y,z] -> [node[py] -> local[y,z]] : py=floor(y/3) }")
+#pragma molly transform("{ [y,z] -> [rank[floor(y/" sBY ")] -> local[y,z]] }")
 molly::array<double, LY, LZ> B;
-#pragma molly transform("{ [x,z] -> [node[0] -> local[x,z]] }")
+#pragma molly transform("{ [x,z] -> [rank[0] -> local[x,z]] }")
 molly::array<double, LX, LZ> C;
 
 typedef int64_t coord_t;
@@ -90,6 +112,18 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 }
 
 
+static void bench() {
+   int nTests = 10;
+   int nRounds = 10;
+   
+  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
+    for (auto i=0; i<nRounds;i+=1) {
+      gemm();
+    }
+  }, nTests, LX*LZ, /*muls*/LY + /*adds*/LY-1 );
+}
+
+
 
 int main(int argc, char *argv[]) {
   //waitToAttach();
@@ -102,5 +136,7 @@ int main(int argc, char *argv[]) {
   if (__molly_isMaster())
     std::cout << ">>>> Result = " << sum << '\n';
 
+  bench();
+  
   return 0;
 }

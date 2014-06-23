@@ -10,14 +10,36 @@
 #include <cstdint>
 #include <cmath>
 #include <array>
+#include <bench.h>
 
 
-#define LX 8
-#define LY 8
 #define ITERATIONS 3
+#ifndef LX
+#define L  2
+#define LX 1
+#define LY 1
 
-#pragma molly transform("{ [x,y] -> [node[px,py] -> local[x,y]] : px=floor(x/4) and py=floor(y/4) }")
-//#pragma molly transform("{ [x,y] -> [node[px] -> local[x,y]] : px=floor(x/3) }")
+ 
+#define B 1
+#define BX B
+#define BY B
+
+#define P 2
+#define PX 1
+#define PY 1
+#endif
+
+#define sBX STR(BX)
+#define sBY STR(BY)
+
+#define sPX STR(PX)
+#define sPY STR(PY)
+
+
+
+
+
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX "),floor(y/" sBY ")] -> local[x,y]] }")
 molly::array<double, LX, LY> source, sink;
 
 typedef int64_t coord_t;
@@ -122,6 +144,18 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 }
 
 
+void bench() {
+   int nTests = 10;
+   int nRounds = 10;
+   
+  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
+    for (auto i=0; i<nRounds;i+=1) {
+      Jacobi();
+    }
+  }, nTests, LX*LY, 1/*TODO: Make exec_bench more flexible*/);
+}
+
+
 int main(int argc, char *argv[]) {
   //waitToAttach();
   Jacobi();
@@ -129,5 +163,7 @@ int main(int argc, char *argv[]) {
   if (__molly_isMaster())
     std::cout << ">>>> Result = " << sum << '\n';
 
+  bench();
+  
   return 0;
 }
