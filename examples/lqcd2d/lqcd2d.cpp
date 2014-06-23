@@ -314,7 +314,7 @@ typedef int64_t coord_t;
 #define L  16
 #define LT L
 #define LX L
- 
+  
 #define B 8
 #define BT B
 #define BX B
