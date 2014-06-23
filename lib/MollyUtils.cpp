@@ -235,7 +235,7 @@ void viewRelation(const isl::UnionMap &umap) {
     umap.print(File);
     File << "\n*/\n";
     File << "digraph {\n";
-    auto &maps = umap.getMaps();
+    const auto &maps = umap.getMaps();
     for (auto &map : maps) {
       auto domainSpace = map.getInTupleIdOrNull();
       auto domainDims = map.getInDimCount();
