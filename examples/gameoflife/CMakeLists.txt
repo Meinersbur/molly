@@ -48,3 +48,14 @@ add_dependencies(gameoflife-mollycc-a MollyRT-a)
 
 
 
+add_custom_target(gameoflife-all)
+
+set(target-all gameoflife-all)
+set(dimnames X Y)
+add_example_config(gameoflife.cpp exe1 target1 VOLUME 8x8 PROC 2x2 BLOCK 4x4)
+
+add_custom_target(submit-gameoflife1
+  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/gameoflife.cpp" exe1=${exe1} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/gameoflife1.ll" 
+  DEPENDS ${target1} ${target2}
+)
+

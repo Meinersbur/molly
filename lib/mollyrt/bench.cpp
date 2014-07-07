@@ -1288,7 +1288,7 @@ static void print_stats(const std::vector<bench_global_result_t> &stats, const s
 
 
 static int omp_threads[] = { 1 };
-static char *omp_threads_desc[] = { "1" };
+static const char *omp_threads_desc[] = { "1" };
 
 void bench_exec(const std::vector<bench_exec_info_t> &configs) {
   auto worldRanks = benchWorldRanks();

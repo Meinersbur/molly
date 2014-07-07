@@ -39,17 +39,17 @@ namespace isl {
 
   // Thanks to Lord Odin (http://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class#answer-17771358)
 #define ENUM_FLAGS_EX_NO_FLAGS_FUNC(T,INT_T) \
-  enum class T;	\
-  static inline T	operator	&	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) & static_cast<INT_T>(y));	}; \
-  static inline T	operator	|	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) | static_cast<INT_T>(y));	}; \
-  static inline T	operator	^	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) ^ static_cast<INT_T>(y));	}; \
-  static inline T	operator	~	(T x)			{	return static_cast<T>	(~static_cast<INT_T>(x));							}; \
-  static inline T&	operator	&=	(T& x, T y)		{	x = x & y;	return x;	}; \
-  static inline T&	operator	|=	(T& x, T y)		{	x = x | y;	return x;	}; \
-  static inline T&	operator	^=	(T& x, T y)		{	x = x ^ y;	return x;	};
+  enum class T;					\
+  static inline T	operator	&	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) & static_cast<INT_T>(y));	} \
+  static inline T	operator	|	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) | static_cast<INT_T>(y));	} \
+  static inline T	operator	^	(T x, T y)		{	return static_cast<T>	(static_cast<INT_T>(x) ^ static_cast<INT_T>(y));	} \
+  static inline T	operator	~	(T x)			{	return static_cast<T>	(~static_cast<INT_T>(x));				} \
+  static inline T&	operator	&=	(T& x, T y)		{	x = x & y;	return x;	} \
+  static inline T&	operator	|=	(T& x, T y)		{	x = x | y;	return x;	} \
+  static inline T&	operator	^=	(T& x, T y)		{	x = x ^ y;	return x;	}
 #define ENUM_FLAGS_EX(T,INT_T) \
   ENUM_FLAGS_EX_NO_FLAGS_FUNC(T,INT_T) \
-  static inline bool			flags(T x)			{	return static_cast<INT_T>(x) != 0;} \
+  static inline bool			flags(T x)			{	return static_cast<INT_T>(x) != 0; } \
   static inline bool hasFlag(T x, T flag) { return (static_cast<INT_T>(x) & static_cast<INT_T>(flag)) == static_cast<INT_T>(flag); }
 #define ENUM_FLAGS(T) ENUM_FLAGS_EX(T,intptr_t)
 

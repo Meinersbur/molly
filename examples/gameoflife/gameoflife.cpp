@@ -1,99 +1,93 @@
+
+#ifdef WITH_MOLLY
 #include <molly.h>
-
-#define LENGTH (64*8)
-#define ITERATIONS 100
-#define TESTS 3
-#pragma molly transform ("{ [x,y] -> (rank[px, py] -> local[lx, ly]) : px=floor(x/3) and py=floor(y/3) and 3px+lx=x and 3py+ly+y }", 2)
-molly::array<bool,LENGTH,LENGTH> habitat1;
-molly::array<bool,LENGTH,LENGTH> habitat2;
-
-#include <iostream>
-#include <mpi.h>
-
-uint64_t counter = 0;
+#else
+#include <molly_emulation.h>
+#endif
+#include <bench.h>
 
 
-
-[[molly::pure]] static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_SCOPE
-  counter += 1;
+MOLLY_ATTR(pure) static bool hasLife(bool prevHasLife, int neighbors) { MOLLY_DEBUG_FUNCTION_SCOPE
   if (prevHasLife)
     return 2 <= neighbors && neighbors <= 3;
   return neighbors == 3;
 }
 
-#if 0
-extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE
-  for (auto i = 0; i < 100; i+=1) {
-    for (int x = 1, width = habitat1.length(0); x < width-1; x+=1) {
-      for (int y = 1, height = habitat1.length(1); y < height-1; y+=1) {
-        //auto neighbors = habitat1[x-1][y-1] + habitat1[x-1][y] + habitat1[x-1][y+1] + habitat1[x][y+1] + habitat1[x+1][y+1] + habitat1[x+1][y] + habitat1[x+1][y-1] + habitat1[x][y-1];
-        auto neighbors = habitat1[x-1][y] + habitat1[x][y+1] + habitat1[x+1][y] + habitat1[x][y-1];
-        habitat2[x][y] = hasLife(habitat1[x][y], neighbors);
-      }
-    }
-     for (int x = 1, width = habitat1.length(0); x < width-1; x+=1)
-       for (int y = 1, height = habitat1.length(1); y < height-1; y+=1)
-         habitat1[x][y] = habitat2[x][y];
-  }
-}
+
+#define ITERATIONS 3
+#ifndef LX
+#define L  2
+#define LX 1
+#define LY 1
+
+#define B 1
+#define BX B
+#define BY B
+
+#define P 2
+#define PX 1
+#define PY 1
 #endif
 
-extern "C" void test() { MOLLY_DEBUG_FUNCTION_SCOPE 
-  for (auto i = 0; i < ITERATIONS; i+=1) {
-    for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
-      for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
-      
-        // TODO: This is user-unfriendly, it refers to the normalized, step 1, 0-based loops! How is the user supposed to know?
-        // We need to store what the expressions i,x,y mean. In metadata? As intrinsic?
-#pragma molly where("{ [i,x,y] -> [px,py] : px=[(x+1)/256] and py=[(y+1)/256] }")
-      //{
-        auto n1 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x), (uint64_t)(y+1));
+#define sBX STR(BX)
+#define sBY STR(BY)
 
-        auto n2 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y+2));
+#define sPX STR(PX)
+#define sPY STR(PY)
 
-        auto n3 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+2), (uint64_t)(y+1));
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX "),floor(y/" sBY ")] -> local[x,y]] }")
+molly::array<bool,LX,LY> source,sink;
 
-        auto n4 = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y));
 
-        auto n = *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y+1));
 
-        auto r = hasLife(n, n1+n2+n3+n4);
 
-        *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y+1)) = r;
-      //}
+MOLLY_ATTR(process) void GameOfLife() { 
+    for (int i = 0; i < ITERATIONS; i+=1) {
+    for (int x = 1, width = source.length(0); x < width-2; x+=1) {
+      for (int y = 1, height = source.length(1); y < height-2; y+=1) {
+	auto n = source[x][y];
+	
+	auto n1 = source[x-1][y-1];
+	auto n2 = source[x][y-1];
+	auto n3 = source[x+1][y-1];
+	auto n4 = source[x+1][y];
+	auto n5 = source[x+1][y+1];
+	auto n6 = source[x][y+1];
+	auto n7 = source[x-1][y+1];
+	auto n8 = source[x-1][y];
+	
+	auto r = hasLife(n, n1+n2+n3+n4+n5+n6+n7+n8);
+	
+	sink[x][y] = r;
       }
     }
-    for (int x = 0, width = habitat1.length(0); x < width-2; x+=1) {
-      for (int y = 0, height = habitat1.length(1); y < height-2; y+=1) {
-
-        auto r = *(bool*)__builtin_molly_ptr(&habitat2, (uint64_t)(x+1), (uint64_t)(y+1));
-
-        *(bool*)__builtin_molly_ptr(&habitat1, (uint64_t)(x+1), (uint64_t)(y+1)) = r;
+    
+    if (i < ITERATIONS-1)
+        for (int x = 1, width = source.length(0); x < width-2; x+=1) {
+      for (int y = 1, height = source.length(1); y < height-2; y+=1) {
+	source[x][y] = sink[x][y];
       }
+	}
     }
-  }
+}
+
+
+void bench() {
+   int nTests = 10;
+   int nRounds = 10;
+   
+  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
+    for (auto i=0; i<nRounds;i+=1) {
+      GameOfLife();
+    }
+  }, nTests, LX*LY, 1/*TODO: Make exec_bench more flexible*/);
 }
 
 
 int main(int argc, char *argv[], char *envp[]) { MOLLY_DEBUG_FUNCTION_SCOPE
-
-  test(); // Warmup
+  GameOfLife();
   
-  auto starttime = MPI_Wtime();
-  for (auto i = 0; i < TESTS; i+=1) {
-    test();
-  }
-  auto stoptime = MPI_Wtime();
-  auto duration = stoptime - starttime;
-  
-   std::cerr << "Stencils on this rank: " << counter << std::endl;
-  
-  if (__molly_cluster_mympirank()==PRINTRANK) {
-      auto lup = 1.0*(LENGTH-2)*(LENGTH-2)*ITERATIONS*TESTS;
-      std::cout << "Fieldsize " << LENGTH << "x" << LENGTH << ", " << ITERATIONS << " iterations, " << TESTS << " tests (" << lup << " lattice updates)\n";
-      std::cout << "Time " <<  duration << "s total, " << (duration/TESTS) << "s per test, " << (duration/(TESTS*ITERATIONS)) << "s per iterations, " << (duration/lup) << "s per lup\n";
-      std::cout <<  ((lup*1e6) / duration) << " mlups" << std::endl;
-  }
+  bench();
   
   return EXIT_SUCCESS;
 }

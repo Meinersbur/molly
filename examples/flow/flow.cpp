@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <cstdint>
 #include <cmath>
+#include <bench.h>
 
 
 #if !defined(LX)
@@ -72,10 +73,22 @@ extern "C" MOLLY_ATTR(process) void flow() {
 } // void flow()
 
 
+static void bench() {
+   int nTests = 10;
+   int nRounds = 10;
+   
+  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
+    for (auto i=0; i<nRounds;i+=1) {
+      flow();
+    }
+  }, nTests, 1, 1);
+}
 
 
 int main(int argc, char *argv[]) {
   flow();
+  
+  bench();
 
   return 0;
 }
