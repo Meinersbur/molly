@@ -90,7 +90,7 @@ typedef enum {
 	pi_l1plistlatestalls
 } mypapi_interpretations;
 
-#define MYPAPI_SETS 6
+
 void mypapi_init();
 void mypapi_start(int i);
 mypapi_counters mypapi_stop();

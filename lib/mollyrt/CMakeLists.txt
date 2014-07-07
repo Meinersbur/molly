@@ -1,4 +1,5 @@
 
+add_definitions(-DBENCH_MPI=1)
 set(MOLLYRT_SOURCES mypapi.cpp molly.cpp bench.cpp comm.cpp combuf.cpp debug.cpp)
 
 

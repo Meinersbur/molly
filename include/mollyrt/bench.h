@@ -1,8 +1,50 @@
 #ifndef BENCH_H
 #define BENCH_H
 
+#include <vector>
+#include <functional>
+#include <cstdint>
+
+enum prefetch_stream_mode_t {
+  prefetch_default,
+  prefetch_disable,
+  prefetch_confirmed,
+  prefetch_optimistic
+};
+
+
+
+struct bench_exec_info_t {
+  const char *desc;
+  std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> preparefunc;
+  std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> func;
+  std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> reffunc;
+  std::function<double(size_t/*thread idx*/, size_t /*tot threads*/)> comparefunc;
+  uint64_t nStencilsPerCall;
+  uint64_t nFlopsPerCall;
+  uint64_t nLoadedBytesPerCall;
+  uint64_t nStoredBytesPerCall;
+  uint64_t nWorkingSet;
+
+  prefetch_stream_mode_t prefetch;
+  bool pprefetch;
+
+  bench_exec_info_t();
+};
+
+
+void bench_exec(const std::vector<bench_exec_info_t> &configs);
+
+
+
+#if 0
+
 #include "mypapi.h"
 #include <functional>
+
+
+
+
 
 namespace molly {
   
@@ -67,5 +109,6 @@ extern "C" void exec_bench(const benchfunc_t &func, int nTests, uint64_t nStenci
 
   
 } // namespace molly
+#endif
 
 #endif /* BENCH_H */
