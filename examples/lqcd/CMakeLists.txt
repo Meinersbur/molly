@@ -44,10 +44,18 @@ add_custom_target(lqcd-all)
 
 set(target-all lqcd-all)
 set(dimnames T X Y Z)
-add_example_config(lqcd.cpp exe1 target1 VOLUME 8x8x8x8 PROC 2x2x2x2 BLOCK 4x4x4x4 DEFINES "WITH_KAMUL=1")
-add_example_config(lqcd.cpp exe2 target2 VOLUME 8x8x8x8 PROC 2x2x2x2 BLOCK 4x4x4x4 DEFINES "WITH_KAMUL=0")
+
+add_example_config(lqcd.cpp exe1 target1 VOLUME 8x8x8x8 PROC 2x2x2x2 BLOCK 4x4x4x4 DEFINES "WITH_KAMUL=0")
+add_example_config(lqcd.cpp exe2 target2 VOLUME 16x16x16x16 PROC 2x2x2x2 BLOCK 8x8x8x8 DEFINES "WITH_KAMUL=0")
+add_example_config(lqcd.cpp exe3 target3 VOLUME 64x32x32x32 PROC 8x4x4x4 BLOCK 8x8x8x8 DEFINES "WITH_KAMUL=0")
+add_example_config(lqcd.cpp exe4 target4 VOLUME 64x64x64x32 PROC 8x8x8x4 BLOCK 8x8x8x8 DEFINES "WITH_KAMUL=0")
+
+#add_example_config(lqcd.cpp exe3 target3 VOLUME 8x8x8x8 PROC 2x2x2x2 BLOCK 4x4x4x4 DEFINES "WITH_KAMUL=1")
+
+
+
 
 add_custom_target(submit-lqcd1
-  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/lqcd.cpp" exe1=${exe1} exe2=${exe2} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/lqcd1.ll" 
+  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/lqcd.cpp" exe1=${exe1} exe2=${exe2}  exe3=${exe1} exe4=${exe2}  --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/lqcd1.ll" 
   DEPENDS ${target1} ${target2}
 )

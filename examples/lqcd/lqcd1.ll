@@ -25,5 +25,8 @@ export ESD_BUFFER_SIZE=200000
 
 runjob -n 16 --ranks-per-node 1 --env-all $MAPPING : {exe1}
 runjob -n 16 --ranks-per-node 1 --env-all $MAPPING : {exe2}
+runjob -n 32 --ranks-per-node 16 --env-all $MAPPING : {exe3}
+runjob -n 32 --ranks-per-node 64 --env-all $MAPPING : {exe4}
+
 
 echo "END  " : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`

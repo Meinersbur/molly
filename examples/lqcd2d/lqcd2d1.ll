@@ -23,7 +23,7 @@ MAPPING="--mapping ABCDET"
 # For Scalasca; Because of "ESD buffer full - definitions being lost!" messages
 export ESD_BUFFER_SIZE=200000
 
-runjob -n 16 --ranks-per-node 1 --env-all $MAPPING : {exe1}
-runjob -n 16 --ranks-per-node 1 --env-all $MAPPING : {exe2}
+runjob -n 4 --ranks-per-node 1 --env-all $MAPPING : {exe1}
+runjob -n 4 --ranks-per-node 1 --env-all $MAPPING : {exe2}
 
 echo "END  " : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`

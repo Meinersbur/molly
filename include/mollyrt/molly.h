@@ -1197,4 +1197,6 @@ LLVM_ATTRIBUTE_USED MOLLYATTR(fieldmember) MOLLYATTR(get_broadcast) void molly::
 
 extern "C" void waitToAttach();
 
+void printArgs(int argc, char *argv[]);
+
 #endif /* MOLLY_H */

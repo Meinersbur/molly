@@ -804,6 +804,6 @@ static void exec_table(const benchfunc_t &benchmark, bgq_hmflags additional_opts
 
 
 void molly::exec_bench(const benchfunc_t &func, int nTests, uint64_t nStencilsPerTest, uint64_t nFlopsPerStencil) {
-  printf("MK nFlopsPerStencil : %llu\n", nFlopsPerStencil);
+  //printf("MK nFlopsPerStencil : %llu\n", nFlopsPerStencil);
   exec_table(func, (bgq_hmflags)0, (bgq_hmflags)0, nTests, nStencilsPerTest, nFlopsPerStencil);
 }

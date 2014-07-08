@@ -73,6 +73,8 @@ MOLLY_ATTR(process) void GameOfLife() {
 
 
 void bench() {
+  printArgs(argc, argv);
+  
    int nTests = 10;
    int nRounds = 10;
    

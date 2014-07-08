@@ -1024,7 +1024,14 @@ extern "C" void *__molly_combuf_local_dataptr(void *combuf_local) { MOLLY_DEBUG_
 
 
 
-
+void printArgs(int argc, char *argv[]) {
+  if (!__molly_isMaster())
+    return;
+  
+  for (int i = 0; i<argc; i+=1) 
+    std::cout << argv[i] << " ";
+  std::cout << "\n";
+}
 
 
 #pragma endregion
