@@ -265,17 +265,44 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 
 
 
+#ifndef WITH_MOLLY
+// Only to satisfy MollyRT
+extern "C" void __molly_generated_init() {
+}
+extern "C" int __molly_orig_main(int argc, char *argv[]) {
+  return EXIT_SUCCESS;
+}
+extern "C" void __molly_generated_release() {
+}
+#endif
 
  
 void bench() {
-   int nTests = 10;
-   int nRounds = 10;
-   
-  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
-    for (auto i=0; i<nRounds;i+=1) {
-      HoppingMatrix();
-    }
-  }, nTests, LT*LX*LY*LZ, /*operator+=*/7*(4*3*2) + 8*(/*project*/2*3*2 + /*su3mm*/2*(9*(2+4)+6*2)) );
+const int spinorsize = 4 * 3 * 2 * 8;
+const int su3size = 3 * 3 * 2 * 8;
+
+  std::vector<bench_exec_info_t> configs;
+
+  {
+    int rounds = 10;
+    bench_exec_info_t benchinfo;
+    benchinfo.desc = "Dslash";
+    benchinfo.func = [rounds](size_t tid, size_t nThreads) {
+      assert(tid==0);
+      assert(nThreads == 1);
+      for (auto i = 0; i < rounds; i += 1) {
+        HoppingMatrix();
+      }
+    };
+    benchinfo.nStencilsPerCall = rounds * LT*LX*LY*LZ;
+    benchinfo.nFlopsPerCall =  benchinfo.nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
+    benchinfo.nStoredBytesPerCall = benchinfo.nStencilsPerCall * spinorsize;
+    benchinfo.nLoadedBytesPerCall = benchinfo.nStencilsPerCall * (8 * spinorsize + 8 * su3size);
+    benchinfo.nWorkingSet = LT*LX*LY*LZ *spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
+    configs.push_back(benchinfo);
+  }
+
+  bench_exec(configs);
 }
 
 
