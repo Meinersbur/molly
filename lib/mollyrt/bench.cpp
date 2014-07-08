@@ -1,7 +1,9 @@
 #define __MOLLYRT
 #include "bench.h"
 
-#include <cassert>
+#include <cassert> // assert()
+#include <cstdlib> // abort()
+#include <cmath>   // sqrt()
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -54,28 +56,28 @@ struct bench_iteration_result_t;
                             }                                           \
               } while (0)
 
-int benchSelfRank() {
+static inline int benchSelfRank() {
   int myrank;
   MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myrank));
   return myrank;
 }
 
-int benchWorldRanks() {
+static inline int benchWorldRanks() {
   int worldranks;
   MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &worldranks));
   return worldranks;
 }
 
-double benchTime() {
+static inline double benchTime() {
   return MPI_Wtime();
 }
 
-void benchBarrier() {
+static inline void benchBarrier() {
   MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
 }
 
-
 #else
+#error Please define BENCH_MPI (and the other macros)
 #endif
 
 bool isPrintingRank() {
@@ -565,114 +567,6 @@ struct bench_global_result_t {
   }
 };
 
-
-#if 0
-struct bench_single_result_t {
-  int itId;
-  int threadId;
-  int rankId;
-
-  // per thread
-  double duration;
-  uint64_t cycles;
-  uint64_t native[UPCI_NUM_EVENTS <= 0 ? 1 : UPCI_NUM_EVENTS];
-
-  // per node
-  double rankDuration;
-
-  // per cluster
-  double globalDuration;
-
-
-  bench_single_result_t() : itId(-1), threadId(-1), rankId(-1) {}
-
-
-};
-
-struct bench_multi_result_t {
-  uint64_t count; // 0 if nothing added yet
-  int itId;     // -1 if multiple/no iterations
-  int threadId; // -1 if multiple/no threads
-  int rankId;   // -1 if multiple/no ranks
-
-  bench_statistics duration;
-  bench_statistics cycles;
-  bench_statistics native[UPCI_NUM_EVENTS <= 0 ? 1 : UPCI_NUM_EVENTS];
-
-  bench_statistics rankDuration;
-  bench_statistics globalDuration; 
-
-
-  void push(const bench_single_result_t &single) {
-    if (count == 0) {
-      itId = single.itId;
-      threadId = single.threadId;
-      rankId = single.rankId;
-      assert(itId != -1);
-      assert(threadId != -1);
-      assert(rankId != -1);
-    } else {
-      if (itId != single.itId) {
-        itId = -1;
-      }
-      if (threadId != single.threadId) {
-        threadId = -1;
-      }
-      if (rankId!= single.threadId) {
-        rankId = -1;
-      }
-    }
-
-    duration.push(single.duration);
-    cycles.push(single.cycles);
-    for (auto i = 0; i < UPCI_NUM_EVENTS; i+=1) {
-      native[i].push(single.native[i]);
-    }
-    rankDuration.push(single.rankDuration);
-    globalDuration.push(single.globalDuration);
-    count += 1;
-  }
-
-  void pushAvg(const bench_multi_result_t &other) {
-    if (count == 0) {
-      itId = other.itId;
-      threadId = other.threadId;
-      rankId = other.rankId;
-    } else {
-      if (itId != other.itId) {
-        itId = -1;
-      }
-      if (threadId != other.threadId) {
-        threadId = -1;
-      }
-      if (rankId != other.threadId) {
-        rankId = -1;
-      }
-    }
-
-    duration.push(other.duration.avg());
-    cycles.push(other.cycles.avg());
-    for (auto i = 0; i < UPCI_NUM_EVENTS; i += 1) {
-      native[i].push(other.native[i].avg());
-    }
-    rankDuration.push(other.rankDuration.avg());
-    globalDuration.push(other.globalDuration.avg());
-    count += 1;
-  }
-
-  bench_multi_result_t() : count(0),  itId(-1), threadId(-1), rankId(-1) {}
-};
-
-
-struct bench_result_t {
-  double error;
-
-  bench_single_result_t excerpt; // Single thread, single iteration
-  bench_multi_result_t global;
-
-  bench_result_t() : error(0) {}
-};
-#endif
 
 
 struct bench_exec_config_setup {

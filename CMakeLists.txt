@@ -118,12 +118,16 @@ set(MOLLYCC_TARGET "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 #set(MOLLY_PLATFORM_FLAGS -target "i686-pc-mingw32" -fno-exceptions)
 set(MOLLY_PLATFORM_FLAGS -target "${MOLLYCC_TARGET}" -fno-exceptions)
-if (MOLLY_BGQ)
-  list(APPEND MOLLY_PLATFORM_FLAGS -DBGQ_SPI -DBGQ -DPAPI)
-endif ()
 set(MOLLY_PLATFORM_CFLAGS )
 set(MOLLY_PLATFORM_LDFLAGS )
+set(MOLLY_PLATFORM_DEFS -DBENCH_MPI=1 -DBENCH_BGQ_DISPATCH=0)
+if (MOLLY_BGQ)  
+  list(APPEND MOLLY_PLATFORM_DEFS -DBGQ_SPI -DBGQ -DPAPI -DBENCH_BGQ=1)
+else ()
+  list(APPEND MOLLY_PLATFORM_DEFS -DBENCH_BGQ=0)
+endif ()
 
+# For compiling MollyRT (using clang)
 set(MOLLYRT_COMMON_FLAGS -ferror-limit=1)
 set(MOLLYRT_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -Wno-error=gnu-array-member-paren-init)
 if (MOLLY_BGQ)
@@ -131,6 +135,7 @@ if (MOLLY_BGQ)
 endif ()
 set(MOLLYRT_COMMON_LDFLAGS )
 
+# For compiling with mollycc
 set(MOLLYCC_COMMON_FLAGS )
 set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
 if (MOLLY_BGQ)
@@ -172,7 +177,7 @@ separate_arguments(MOLLYCC_FLAGS)
 # Needs to be clang in order to match the ABI
 function (clang_compile _outfile)
 #message("   clang_compile(${_outfile}, ${ARGN})")
-  cmake_parse_arguments("" "OBJ;LL;BC;ASM;II;EXE" "COMPILER" "COMMENT;SOURCES;FLAGS;CFLAGS;LDFLAGS;LIBS" ${ARGN})
+  cmake_parse_arguments("" "OBJ;LL;BC;ASM;II;EXE" "COMPILER" "COMMENT;SOURCES;FLAGS;CFLAGS;DEFS;LDFLAGS;LIBS" ${ARGN})
   get_filename_component(_outfile "${_outfile}" ABSOLUTE)
 
   if (NOT _COMPILER)
@@ -194,26 +199,26 @@ function (clang_compile _outfile)
   set(_libs)
   if (_OBJ)
     set(_kindflags "-c")
-    set(_flags ${_FLAGS} ${_CFLAGS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS})
   elseif (_LL)
     set(_kindflags "-S -emit-llvm")
-    set(_flags ${_FLAGS} ${_CFLAGS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS})
   elseif (_BC)
     set(_kindflags "-c -emit-llvm")
-    set(_flags ${_FLAGS} ${_CFLAGS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS})
   elseif (_ASM)
     set(_kindflags "-S")
-    set(_flags ${_FLAGS} ${_CFLAGS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS})
   elseif (_II)
     set(_kindflags "-E")
-    set(_flags ${_FLAGS} ${_CFLAGS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS})
   else () # EXE
     set(_kindflags)
-    set(_flags ${_FLAGS} ${_CFLAGS} ${_LDFLAGS} ${_LIBS})
+    set(_flags ${_FLAGS} ${_CFLAGS} ${_DEFS} ${_LDFLAGS} ${_LIBS})
     set(_libs ${_LIBS})
   endif ()
   
-#message("add_custom_command(${_outfile}, ${_COMPILER} ${MOLLYCC_VERBOSE_FLAGS} -o ${_outfile} ${_kindflags} ${_realsources} ${_FLAGS}  ${_CFLAGS} ${_LDFLAGS} ${_LIBS})")
+#message("add_custom_command(${_outfile}, ${_COMPILER} ${MOLLYCC_VERBOSE_FLAGS} -o ${_outfile} ${_kindflags} ${_realsources} ${_flags} ${_libs})")
   add_custom_command(
     OUTPUT "${_outfile}"
     COMMAND "${_COMPILER}" -o "${_outfile}" ${_kindflags} ${_realsources} ${_flags} ${_libs}
@@ -226,7 +231,7 @@ endfunction ()
 
 function (clang_compile_link _outfile)
 #message("   clang_compile_link(${_outfile}, ${ARGN})")
-  cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;LDFLAGS;SOURCES;COMMENT;LIBS;DEPENDS" ${ARGN})
+  cmake_parse_arguments("" "OBJ;LL;BC;AR;EXE" "COMPILER" "FLAGS;CFLAGS;DEFS;LDFLAGS;SOURCES;COMMENT;LIBS;DEPENDS" ${ARGN})
   get_filename_component(_outfile "${_outfile}" ABSOLUTE)
   
   if (NOT _COMPILER)
@@ -278,6 +283,7 @@ function (clang_compile_link _outfile)
         SOURCES "${_src}"
         COMPILER "${_COMPILER}"
         FLAGS ${_FLAGS} 
+        DEFS ${_DEFS}
         CFLAGS ${_CFLAGS}
       )
       list(APPEND _intermediates "${_intermediatefilename}")
@@ -301,6 +307,7 @@ function (clang_compile_link _outfile)
       COMPILER "${_COMPILER}"
       FLAGS ${_FLAGS} 
       CFLAGS ${_CFLAGS}
+      DEFS ${_DEFS}
       LDFLAGS ${_LDFLAGS}
       LIBS ${_LIBS}
     )
@@ -315,6 +322,7 @@ function (clang_compile_link _outfile)
         SOURCES ${_SOURCES}
         COMPILER "${_COMPILER}"
         FLAGS ${_FLAGS} 
+        DEFS ${_DEFS}
         CFLAGS ${_CFLAGS}
       )
       list(APPEND _intermediates "${_intermediatefilename}")
@@ -349,6 +357,7 @@ function (clang_compile_link _outfile)
         SOURCES "${_outfile}.bc"
         FLAGS ${_FLAGS} 
         CFLAGS ${_CFLAGS}
+        DEFS ${_DEFS}
         LDFLAGS ${_LDFLAGS}
         LIBS ${_LIBS}
         COMMENT "${_COMMENT}"
@@ -565,13 +574,14 @@ endmacro()
 # Compile and link to MollyRT that CMake is responsible to compile
 function (mollycc_compile _outfile)
 #message("   mollycc_compile(${_outfile}, ${ARGN})")
-  cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
+  cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;DEFS;LDFLAGS;COMMENT;LIBS" ${ARGN})
   get_property(_MollyRT_location TARGET MollyRT PROPERTY LOCATION)
   clang_compile_link("${_outfile}" EXE
     COMPILER mollycc
     SOURCES ${_SOURCES}
     FLAGS ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
     CFLAGS ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
+    DEFS ${MOLLY_PLATFORM_DEFS}  ${MOLLYCC_COMMON_DEFS} ${MOLLYCC_VERBOSE_DEFS} ${MOLLYCC_DEBUG_DEFS} ${_DEFS}
     LDFLAGS ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
 #    LIBS $<TARGET_FILE:MollyRT> ${MPI_CXX_LIBRARIES} ${_LIBS}
     LIBS "${_MollyRT_location}" ${MPI_CXX_LIBRARIES} ${_LIBS}
@@ -598,11 +608,13 @@ function (mollycc_a_compile _outfile)
     SOURCES ${_SOURCES}
     FLAGS ${MOLLYCC_FLAGS} ${MOLLY_PLATFORM_FLAGS} ${MOLLYCC_COMMON_FLAGS} ${MOLLYCC_VERBOSE_FLAGS} ${MOLLYCC_DEBUG_FLAGS} ${_FLAGS} 
     CFLAGS ${MOLLYCC_CFLAGS} ${MOLLY_PLATFORM_CFLAGS} ${MOLLYCC_COMMON_CFLAGS} ${MOLLYCC_VERBOSE_CFLAGS} ${MOLLYCC_DEBUG_CFLAGS} ${_CFLAGS}
+    DEFS ${MOLLY_PLATFORM_DEFS} ${MOLLYCC_COMMON_DEFS} ${MOLLYCC_VERBOSE_DEFS} ${MOLLYCC_DEBUG_DEFS} ${_DEFS}
     LDFLAGS ${MOLLYCC_LDFLAGS} ${MOLLY_PLATFORM_LDFLAGS} ${MOLLYCC_COMMON_LDFLAGS} ${MOLLYCC_VERBOSE_LDFLAGS} ${MOLLYCC_DEBUG_LDFLAGS} ${_LDFLAGS}
     LIBS ${MOLLYCC_A_LIBS} ${_LIBS}
     COMMENT "${_COMMENT}"
     )
 endfunction ()
+
 
 
 

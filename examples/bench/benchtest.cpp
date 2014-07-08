@@ -1,6 +1,7 @@
 
 #include <bench.h>
 #include <mpi.h>
+#include <cstdlib> // EXIT_SUCCESS
 
 void benchme(size_t tid, size_t nThreads) {
   auto start = MPI_Wtime();
