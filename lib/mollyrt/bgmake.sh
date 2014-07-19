@@ -8,7 +8,4 @@ ${CC} ${CXXFLAGS} molly.cpp   -o molly.cpp.o
 ${CC} ${CXXFLAGS} combuf.cpp  -o combuf.cpp.o 
 ${CC} ${CXXFLAGS} debug.cpp   -o debug.cpp.o 
 
-
-
 ar cr molly.a molly.cpp.o comm.cpp.o debug.cpp.o combuf.cpp.o
-

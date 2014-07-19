@@ -3,25 +3,25 @@
 
 // C++ std::complex
 #include <complex>
-typedef std::complex<double> complex;
+typedef std::complex<double> complex_t;
 
 // C99 complex
 #include <math.h>
 #include <complex.h>
-//typedef _Complex double complex;  
+//typedef _Complex double complex_t;  
 
 
 
 struct su3matrix_t{
-  complex c[3][3];
+  complex_t c[3][3];
 
 public:
   su3matrix_t() {}
 
-  MOLLY_ATTR(pure) complex *operator[](size_t idx) {
+  MOLLY_ATTR(pure) complex_t *operator[](size_t idx) {
     return c[idx];
   }
-  MOLLY_ATTR(pure) const complex *operator[](size_t idx) const {
+  MOLLY_ATTR(pure) const complex_t *operator[](size_t idx) const {
     return c[idx];
   }
 
@@ -58,24 +58,24 @@ public:
 
 
 // return arg*I
-MOLLY_ATTR(pure) static inline complex imul(complex arg) {
+MOLLY_ATTR(pure) static inline complex_t imul(complex_t arg) {
   // C++ version
-  return complex(-arg.imag(), arg.real());
+  return complex_t(-arg.imag(), arg.real());
 }
 
 
-MOLLY_ATTR(pure) static inline complex conj(complex arg) {
+MOLLY_ATTR(pure) static inline complex_t conj(complex_t arg) {
   //return std::conj(c);
-  return complex(arg.real(), -arg.imag());
+  return complex_t(arg.real(), -arg.imag());
 }
 
 
 struct su3vector_t {
-  complex c[3];
+  complex_t c[3];
 
 public:
   MOLLY_ATTR(pure) su3vector_t() /*: c({ 0, 0, 0 })*/ {}
-  MOLLY_ATTR(pure) su3vector_t(complex c0, complex c1, complex c2)  {
+  MOLLY_ATTR(pure) su3vector_t(complex_t c0, complex_t c1, complex_t c2)  {
     c[0] = c0;
     c[1] = c1;
     c[2] = c2;
@@ -94,11 +94,11 @@ public:
     return su3vector_t(0, 0, 1);
   }
 
-  MOLLY_ATTR(pure) const complex &operator[](size_t idx) const {
+  MOLLY_ATTR(pure) const complex_t &operator[](size_t idx) const {
     assert(0 <= idx && idx < 3);
     return c[idx];
   }
-  MOLLY_ATTR(pure) complex &operator[](size_t idx)  {
+  MOLLY_ATTR(pure) complex_t &operator[](size_t idx)  {
     assert(0 <= idx && idx < 3);
     return c[idx];
   }
@@ -109,7 +109,7 @@ public:
     c[2] += rhs[2];
     return *this;
   }
-  MOLLY_ATTR(pure) const su3vector_t &operator*=(complex coeff) {
+  MOLLY_ATTR(pure) const su3vector_t &operator*=(complex_t coeff) {
     c[0] *= coeff;
     c[1] *= coeff;
     c[2] *= coeff;
@@ -138,7 +138,7 @@ MOLLY_ATTR(pure) su3vector_t operator+(su3vector_t lhs, su3vector_t rhs) {
 MOLLY_ATTR(pure) su3vector_t operator-(su3vector_t lhs, su3vector_t rhs) {
   return su3vector_t(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
 }
-MOLLY_ATTR(pure) su3vector_t operator*(complex coeff, su3vector_t val) {
+MOLLY_ATTR(pure) su3vector_t operator*(complex_t coeff, su3vector_t val) {
   return su3vector_t(coeff * val[0], coeff * val[1], coeff * val[2]);  
 }
 
@@ -160,14 +160,14 @@ public:
   MOLLY_ATTR(pure) const su3vector_t &operator[](size_t idx) const { return v[idx]; }
   MOLLY_ATTR(pure) su3vector_t &operator[](size_t idx)  { return v[idx]; }
   
-  MOLLY_ATTR(pure) const halfspinor_t &operator*=(complex coeff) {
+  MOLLY_ATTR(pure) const halfspinor_t &operator*=(complex_t coeff) {
     v[0] *= coeff;
     v[1] *= coeff;
     return *this;
   }
 };
 
-MOLLY_ATTR(pure) halfspinor_t operator*(complex coeff, halfspinor_t val) {
+MOLLY_ATTR(pure) halfspinor_t operator*(complex_t coeff, halfspinor_t val) {
   return halfspinor_t(coeff * val[0], coeff * val[1]);  
 }
 

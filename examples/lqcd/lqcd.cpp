@@ -62,7 +62,7 @@ molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
 
 
 
-complex ka[4] = {1};
+complex_t ka[4] = {1};
 
 
 
@@ -202,19 +202,19 @@ MOLLY_ATTR(pure) void checkSpinorVal(coord_t t, coord_t x, coord_t y, coord_t z,
   return;
 
   auto c = val[0][0];
-  if (c != complex(t)) {
+  if (c != complex_t(t)) {
     std::cerr << "Wrong t (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
   }
    c = val[1][0];
-  if (c != complex(x)) {
+  if (c != complex_t(x)) {
     std::cerr << "Wrong x (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
   }
    c = val[2][0];
-  if (c != complex(y)) {
+  if (c != complex_t(y)) {
     std::cerr << "Wrong y (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
   }
    c = val[3][0];
-  if (c != complex(z)) {
+  if (c != complex_t(z)) {
     std::cerr << "Wrong z (" << c << ") at (" << t << "," << x << "," << y << "," << z << ")\n";
   }
 }
@@ -278,31 +278,40 @@ extern "C" void __molly_generated_release() {
 
  
 void bench() {
-const int spinorsize = 4 * 3 * 2 * 8;
-const int su3size = 3 * 3 * 2 * 8;
-
-  std::vector<bench_exec_info_t> configs;
-
+  bench_exec_info_cxx_t a;
+  bench_exec_info_cxx_t b;
+  b = a;
+  
+  const uint64_t nSites = LT*LX*LY*LZ;
+  const int spinorsize = 4 * 3 * 2 * 8;
+  const int su3size = 3 * 3 * 2 * 8;
+  std::vector<bench_exec_info_cxx_t> configs;
+  const int rounds = 1;
+  const uint64_t nStencilsPerCall = nSites * rounds;
+  
   {
-    int rounds = 10;
-    bench_exec_info_t benchinfo;
-    benchinfo.desc = "Dslash";
-    benchinfo.func = [rounds](size_t tid, size_t nThreads) {
+    configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = "Dslash dbl";
+    benchinfo.func = [](size_t tid, size_t nThreads) {
       assert(tid==0);
       assert(nThreads == 1);
       for (auto i = 0; i < rounds; i += 1) {
         HoppingMatrix();
       }
     };
-    benchinfo.nStencilsPerCall = rounds * LT*LX*LY*LZ;
-    benchinfo.nFlopsPerCall =  benchinfo.nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
-    benchinfo.nStoredBytesPerCall = benchinfo.nStencilsPerCall * spinorsize;
-    benchinfo.nLoadedBytesPerCall = benchinfo.nStencilsPerCall * (8 * spinorsize + 8 * su3size);
-    benchinfo.nWorkingSet = LT*LX*LY*LZ *spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
-    configs.push_back(benchinfo);
+    benchinfo.nStencilsPerCall = nStencilsPerCall;
+    benchinfo.nFlopsPerCall =  nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
+    benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
+    benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
+    benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
+    //configs.push_back(benchinfo);
   }
 
-  bench_exec(configs);
+  bench_exec_cxx(1, configs);
 }
 
 

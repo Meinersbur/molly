@@ -1,7 +1,7 @@
 
 
 
-set(MOLLYRT_SOURCES mypapi.cpp molly.cpp bench.cpp comm.cpp combuf.cpp debug.cpp)
+set(MOLLYRT_SOURCES molly.cpp comm.cpp combuf.cpp debug.cpp bench.c bgq_dispatch.c)
 
 
 ### MollyRT, compile using same compiler as we compile mollycc itself

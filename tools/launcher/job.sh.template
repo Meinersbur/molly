@@ -1,0 +1,46 @@
+#! /usr/bin/bash
+#@ error  = {launcheroutputfilepath}
+#@ output = {launcheroutputfilepath}
+# jobid = {jobid}
+
+echo "START" : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`
+echo "CURDIR" : `pwd`
+echo "ENV"
+env
+
+export OMP_NUM_THREADS={threads_per_rank}
+export BG_COREDUMPDISABLED=0
+
+# Well-distributed procs
+#export PROCS=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,2,6,10,14,18,22,26,30,34,38,42,46,50,54,58,62,1,5,9,13,17,21,25,29,33,37,41,45,49,53,57,61,3,7,11,15,19,23,27,31,35,39,43,47,51,55,59,63
+
+# Close procs for 64 threads
+#export PROCS=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63
+
+# Close procs for 32 threads
+export PROCS=0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63
+
+
+export XLSMPOPTS="procs=$PROCS"
+MAPPING="--mapping ABCDET"
+
+# For Scalasca; Because of "ESD buffer full - definitions being lost!" messages
+export ESD_BUFFER_SIZE=200000
+
+# Always create core dumps
+#export BG_COREDUMPONEXIT=1
+
+
+export BG_COREDUMP_PERS=1
+
+export MUSPI_NUMINJFIFOS=8 
+export MUSPI_NUMRECFIFOS=8
+export MUSPI_NUMBATIDS=2
+
+echo "###############################################################################"
+
+# -h disables initialization of legacy SPI (otherwise initializes MUSPI multiple times)
+{prep}{mpiexec} --ranks-per-node {ranks_per_node} --env-all $MAPPING : {executable} -h -f {inputfilepath}
+
+echo "###############################################################################"
+echo "END  " : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`

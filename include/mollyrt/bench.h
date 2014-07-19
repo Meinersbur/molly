@@ -1,20 +1,66 @@
 #ifndef BENCH_H
 #define BENCH_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <stdint.h> // uint64_t
+#include <stddef.h> // size_t
+#include <stdbool.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+  typedef enum {
+    prefetch_default,
+    prefetch_disable,
+    prefetch_confirmed,
+    prefetch_optimistic
+  } prefetch_stream_mode_t;
+  
+  typedef enum {
+    omp_single,   // No multithreading, tid=0, nThreads=1
+    omp_plain,    // Client creates and releases threads itself (pthread_create or #pragma omp parallel [for]); called with tid=0
+    omp_parallel, // Client expects #pragma omp parallel environment, and uses #pragma omp for; called with tid=0
+    omp_dispatch  // Client is called on every thread
+  } omp_mode_t;
+  
+  typedef void(*bench_exec_func_t)(void*, size_t, size_t);
+  typedef double(*bench_exec_comparefunc_t)(void*, size_t, size_t);
+
+  typedef struct {
+    const char *desc;
+
+    void *data;
+    bench_exec_func_t preparefunc;
+    bench_exec_func_t func;
+    bench_exec_func_t reffunc;
+    bench_exec_comparefunc_t comparefunc;
+    uint64_t nStencilsPerCall;
+    uint64_t nFlopsPerCall;
+    uint64_t nLoadedBytesPerCall;
+    uint64_t nStoredBytesPerCall;
+    uint64_t nWorkingSet;
+
+    prefetch_stream_mode_t prefetch;
+    bool pprefetch;
+    omp_mode_t ompmode;
+  } bench_exec_info_t;
+
+  void bench_exec(size_t max_threads, const bench_exec_info_t *configs, size_t nConfigs);
+
+#if defined(__cplusplus)
+}
+#endif
+
+
+#if defined(__cplusplus)
 #include <vector>
 #include <functional>
-#include <cstdint>
 
-enum prefetch_stream_mode_t {
-  prefetch_default,
-  prefetch_disable,
-  prefetch_confirmed,
-  prefetch_optimistic
-};
-
-
-
-struct bench_exec_info_t {
+struct bench_exec_info_cxx_t {
   const char *desc;
   std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> preparefunc;
   std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> func;
@@ -28,87 +74,22 @@ struct bench_exec_info_t {
 
   prefetch_stream_mode_t prefetch;
   bool pprefetch;
+  omp_mode_t ompmode;
 
-  bench_exec_info_t();
+  bench_exec_info_cxx_t() : desc(NULL), nStencilsPerCall(0), nFlopsPerCall(0), nLoadedBytesPerCall(0), nStoredBytesPerCall(0), nWorkingSet(0), prefetch(prefetch_default) , pprefetch(false), ompmode(omp_single) {}
+  //bench_exec_info_cxx_t(bench_exec_info_cxx_t &&obj) {} 
+  //const bench_exec_info_cxx_t &operator=(bench_exec_info_cxx_t &&obj) {}
 };
 
+void bench_exec_cxx(size_t max_threads, const std::vector<bench_exec_info_cxx_t> &configs);
 
-void bench_exec(const std::vector<bench_exec_info_t> &configs);
+template<size_t N>
+static inline void bench_exec_cxx(size_t max_threads, const bench_exec_info_cxx_t (&configs)[N]) {
+  std::vector<bench_exec_info_cxx_t> vec(configs, configs+N);
+  bench_exec_cxx(max_threads, vec);
+}
 
-
-
-#if 0
-
-#include "mypapi.h"
-#include <functional>
-
-
-
-
-
-namespace molly {
-  
-typedef enum {
-	hm_nocom = 1 << 0,
-	hm_nooverlap = 1 << 1,
-	hm_nokamul = 1 << 2,
-	hm_fixedoddness = 1 << 3, // obsolete
-
-	hm_noprefetchexplicit = 1 << 4, // obsolete
-	hm_prefetchlist = 1 << 5,
-	hm_noprefetchstream = 1 << 6,
-
-	hm_noweylsend = 1 << 7, // obsolete
-	hm_nobody = 1 << 8,
-	hm_nosurface = 1 << 9, // obsolete (->hm_nodistribute)
-
-	hm_l1pnonstoprecord = 1 << 10,
-	hm_experimental = 1 << 11, // obsolete
-
-	hm_prefetchimplicitdisable = 1 << 12,
-	hm_prefetchimplicitoptimistic = 2 << 12,
-	hm_prefetchimplicitconfirmed = 3 << 12,
-
-	hm_withcheck = 1 << 14,
-	hm_nodistribute = 1 << 15,
-	hm_nodatamove = 1 << 16,
-	hm_nospi = 1 << 17,
-	hm_floatprecision = 1 << 18,
-	hm_forcefull = 1 << 19,
-	hm_forceweyl = 1 << 20
-} bgq_hmflags;
-typedef uint64_t ucoord;
-typedef struct {
-	double avgtime;
-	double localrmstime;
-	double globalrmstime;
-	double totcycles;
-	double localavgflop;
-
-	ucoord sites_body;
-	ucoord sites_surface;
-	ucoord sites;
-
-	ucoord lup_body;
-	ucoord lup_surface;
-	ucoord lup;
-	//double flops;
-
-	uint64_t nStencilsPerTest;
-	uint64_t nFlopsPerStencil;
-	
-	double error;
-
-	mypapi_counters counters;
-	bgq_hmflags opts;
-	double avgovhtime;
-} benchstat;
-typedef std::function<void(int /*k*/,  molly::bgq_hmflags /* flags */)> benchfunc_t;
-extern "C" void exec_bench(const benchfunc_t &func, int nTests, uint64_t nStencilsPerTest, uint64_t nFlopsPerStencil);
-//void __molly_add_flops(uint64_t flops);
-
-  
-} // namespace molly
 #endif
+
 
 #endif /* BENCH_H */
