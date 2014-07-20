@@ -28,24 +28,24 @@ extern "C" void __molly_generated_release() {
 
 
 int main(int argc, char *argv[]) {
-  std::vector<bench_exec_info_t> configs;
+  std::vector<bench_exec_info_cxx_t> configs;
 
   {
-    bench_exec_info_t benchinfo;
+    bench_exec_info_cxx_t benchinfo;
     benchinfo.desc = "nothing";
     benchinfo.func = donothing;
     configs.push_back(benchinfo);
   }
 
   {
-    bench_exec_info_t benchinfo;
+    bench_exec_info_cxx_t benchinfo;
     benchinfo.desc = "benchme";
     benchinfo.func = benchme;
     configs.push_back(benchinfo);
   }
 
   MPI_Init(&argc, &argv);
-  bench_exec(configs);
+  bench_exec_cxx(configs);
   MPI_Finalize();
 
   return EXIT_SUCCESS;

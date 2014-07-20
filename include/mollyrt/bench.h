@@ -10,8 +10,13 @@
 #include <stdbool.h>
 
 #if defined(__cplusplus)
-extern "C" {
+#include <vector>
+#include <functional>
 #endif
+
+#if defined(__cplusplus)
+extern "C" {
+#endif // __cplusplus
 
   typedef enum {
     prefetch_default,
@@ -57,9 +62,6 @@ extern "C" {
 
 
 #if defined(__cplusplus)
-#include <vector>
-#include <functional>
-
 struct bench_exec_info_cxx_t {
   const char *desc;
   std::function<void(size_t/*thread idx*/, size_t /*tot threads*/)> preparefunc;
@@ -88,8 +90,7 @@ static inline void bench_exec_cxx(size_t max_threads, const bench_exec_info_cxx_
   std::vector<bench_exec_info_cxx_t> vec(configs, configs+N);
   bench_exec_cxx(max_threads, vec);
 }
-
-#endif
+#endif // __cplusplus
 
 
 #endif /* BENCH_H */

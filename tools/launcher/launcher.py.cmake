@@ -169,6 +169,7 @@ def main():
   shape = parseShape(os.environ['LOADL_BG_SHAPE'])
   nodes = prod(shape)
 
+  print "jobsdir:",jobsdir
   while True:
     jobdirsname = os.listdir(jobsdir)
     jobdirs = [os.path.abspath(os.path.join(jobsdir,item)) for item in jobdirsname]
