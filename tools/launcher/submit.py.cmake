@@ -14,6 +14,7 @@ import stat
 import math  # Use sqrt, floor
 import time
 import datetime
+import shlex
 
 
 def gcd(a,b):
@@ -85,67 +86,6 @@ def prod(factors):
   return reduce(operator.mul, factors)
 
 
-
-
-ON=True
-OFF=False
-
-executable_bgqbench='''@EXECUTABLE_BGQBENCH@'''
-executable_benchmark='''@EXECUTABLE_BENCHMARK@'''
-executable_invert='''@EXECUTABLE_INVERT@'''
-executable_hmc_tm='''@EXECUTABLE_HMC_TM@'''
-executable_ctest='''@EXECUTABLE_CTEST@'''
-scalasca_program='''@SCALASCA_PROGRAM@'''
-git_executable='''@GIT_EXECUTABLE@'''
-
-scalasca_enabled = @SCALASCA_ENABLED@
-SRCDIR='''@TMLQCD_SOURCE_DIR@'''
-BINDIR='''@TMLQCD_BINARY_DIR@'''
-
-
-def getExecutable():
-  global program
-  if program=='bgqbench':
-    return '''@EXECUTABLE_BGQBENCH@'''
-  elif program=='benchmark':
-    return '''@EXECUTABLE_BENCHMARK@'''
-  elif program=='invert':
-    return '''@EXECUTABLE_INVERT@'''
-  elif program=='hmc_tm':
-    return '''@EXECUTABLE_HMC_TM@'''
-  elif program=='ctest':
-    return '''@EXECUTABLE_CTEST@'''
-
-
-inputtemplatefilepath=None
-def getInputTemplatePath():
-  global program,inputtemplatefilepath
-  if inputtemplatefilepath:
-    return inputtemplatefilepath
-  if program=='bgqbench':
-    return os.path.join(SRCDIR, 'benchmark.input.template')
-  elif program=='benchmark':
-    return os.path.join(SRCDIR, 'benchmark.input.template')
-  elif program=='invert':
-    return os.path.join(SRCDIR, 'invert.input.template')
-  elif program=='hmc_tm':
-    return os.path.join(SRCDIR, 'hmc.input.template')
-  return None
-
-
-def isBench():
-  global program
-  return program=='bgqbench' or program=='benchmark'
-
-def isInvert():
-  global program
-  return program=='invert'
-
-def isHmcTm():
-  global program
-  return program=='hmc_tm'
-
-
 def parseShape(str, extendLast=False, extendDefault=False):
   str = str.strip()
   result = []
@@ -191,6 +131,112 @@ def makestrDuration(td):
   else:
     result = "{m:02d}:{s:02d}".format(m=secs//60,s=secs%60)
   return result
+
+
+
+
+
+
+ON=True
+OFF=False
+
+executable_bgqbench='''@EXECUTABLE_BGQBENCH@'''
+executable_benchmark='''@EXECUTABLE_BENCHMARK@'''
+executable_invert='''@EXECUTABLE_INVERT@'''
+executable_hmc_tm='''@EXECUTABLE_HMC_TM@'''
+executable_ctest='''@EXECUTABLE_CTEST@'''
+
+git_executable='''@GIT_EXECUTABLE@'''
+cmake_executable='''@CMAKE_COMMAND@'''
+launcher_executable='''@CMAKE_BINARY_DIR@/bin/launcher.py'''
+#submit_executable='''@CMAKE_BINARY_DIR@/bin/launcher.py''' # Determined from command line
+
+ll_template='''@LAUNCHER_SOURCE_DIR@/job.ll.template'''
+sh_template='''@LAUNCHER_SOURCE_DIR@/job.sh.template'''
+examples_source_dir='''@MOLLY_SOURCE_DIR@/examples'''
+
+SRCDIR='''@GIT_SOURCE_DIR@''' # For calling git diff
+BINDIR='''@CMAKE_BINARY_DIR@'''  # For rebuilding
+JOBSDIR='''/work/hch02/hch02d/jobs'''
+#JOBSDIR='''@CMAKE_BINARY_DIR@/jobs'''
+
+git_sha1='''@GIT_SHA1@'''  # For making a diff file that remembers what the executable actually contains
+
+
+
+
+def isMollyExample():
+  global program
+  if program in ('bgqbench', 'benchmark','invert','hmc_tm','ctest'):
+    return False
+  return True
+
+
+def getBuildTarget():
+  global program
+  if isMollyExample():
+    return program + '-mollycc-a'
+  else:
+    return program
+
+
+def getExecutable():
+  global program
+  if program=='bgqbench' and executable_bgqbench:
+    return executable_bgqbench
+  elif program=='benchmark' and executable_benchmark:
+    return executable_benchmark
+  elif program=='invert' and executable_invert:
+    return executable_invert
+  elif program=='hmc_tm' and executable_hmc_tm:
+    return executable_hmc_tm
+  elif program=='ctest' and executable_ctest:
+    return executable_ctest
+  if isMollyExample():
+    exename = program + '_V' + shapeToStr(volume) + '_P' + shapeToStr(logical_shape) + ''.join(['_'+d for d in defs])
+    return os.path.join(BINDIR,'examples',exename)
+  return os.path.abspath(program)
+
+
+def getSourceFile():
+  return os.path.join(examples_source_dir, program, program+'.cpp')
+
+
+inputtemplatefilepath=None
+def getInputTemplatePath():
+  global program,inputtemplatefilepath
+  if inputtemplatefilepath:
+    return inputtemplatefilepath
+  if program=='bgqbench':
+    return os.path.join(SRCDIR, 'benchmark.input.template')
+  elif program=='benchmark':
+    return os.path.join(SRCDIR, 'benchmark.input.template')
+  elif program=='invert':
+    return os.path.join(SRCDIR, 'invert.input.template')
+  elif program=='hmc_tm':
+    return os.path.join(SRCDIR, 'hmc.input.template')
+  return None
+
+
+def getProgramDims():
+  return ['T','X','Y','Z']
+
+def getDimCount():
+  return len(getProgramDims())
+
+
+def isBench():
+  global program
+  return program=='bgqbench' or program=='benchmark'
+
+def isInvert():
+  global program
+  return program=='invert'
+
+def isHmcTm():
+  global program
+  return program=='hmc_tm'
+
 
 
 def check_output(*popenargs, **kwargs):
@@ -292,7 +338,7 @@ def writeCompleteFile(filepath, content, setExecutableBit=False):
 def configureFile(template_path, target_path):
   global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,jobid,jobscriptfile
   global jobname,executable,jobdir,program
-  global scalasca_enabled,inputfilepath
+  global inputfilepath
 
   shape_machine_str = ''
   if shape_in_midplanes is not None:
@@ -301,8 +347,6 @@ def configureFile(template_path, target_path):
     shape_machine_str = 'bg_size = ' + str(nodes)
 
   prep=''
-  if scalasca_enabled:
-    prep = '''@SCALASCA_PROGRAM@ -analyze '''
 
   launcheroutputfilepath = os.path.join(jobdir,'yout.txt')
   if jobid:
@@ -324,7 +368,8 @@ def configureFile(template_path, target_path):
     jobscript=jobscriptfile,
     launchercmd=os.path.join(BINDIR,'bin/launcher.py'),
     jobid=jobid,
-    prep=prep)
+    prep=prep,
+    compilecmdline=' '.join(pipes.quote(s) for s in compilecmdline))
   if program!='ctest':
     formatdict.update(dict(LT=volume[0],LX=volume[1],LY=volume[2],LZ=volume[3]))
   content = template.format(**formatdict)
@@ -332,15 +377,6 @@ def configureFile(template_path, target_path):
 
 
 def buildInput():
-  global BINDIR,jobdir,inputfilepath,SRCDIR
-  if isBench():
-    inputfilepath = os.path.join(jobdir, 'benchmark.input')
-  elif isInvert():
-    inputfilepath = os.path.join(jobdir, 'invert.input')
-  elif isHmcTm():
-    inputfilepath = os.path.join(jobdir, 'hmc.input')
-  else:
-    inputfilepath = os.path.join(jobdir, 'input')
   templatepath = getInputTemplatePath()
   if templatepath:
     configureFile(templatepath, inputfilepath)
@@ -350,7 +386,7 @@ def buildInput():
 
 def buildLLScript():
   global SRCDIR,jobdir
-  configureFile(os.path.join(SRCDIR, 'job.ll.template'), os.path.join(jobdir, 'job.ll'))
+  configureFile(ll_template, os.path.join(jobdir, 'job.ll'))
 
 
 def buildJobScript():
@@ -358,7 +394,7 @@ def buildJobScript():
   if not jobscriptfile:
     jobscriptfilename = 'job_{nodes}_{shape}.sh'.format(nodes=nodes,shape=shapeToStr(shape_in_nodes))
     jobscriptfile = os.path.join(jobdir, jobscriptfilename)
-  configureFile(os.path.join(SRCDIR, 'job.sh.template'), jobscriptfile)
+  configureFile(sh_template, jobscriptfile)
 
 
 def copyExecutable():
@@ -369,9 +405,70 @@ def copyExecutable():
   #shutil.copy2(os.path.join(SRCDIR,'corestack.py'), os.path.join(jobdir,'corestack.py'))
 
 
+mollycc_executable = '''@MOLLYCC_COMPILER@'''
+mollycc_flags = ([] + 
+  '''@MOLLYCC_FLAGS@'''.split(';') +
+  '''@MOLLY_PLATFORM_FLAGS@'''.split(';') +
+  '''@MOLLYCC_COMMON_FLAGS@'''.split(';') +
+  '''@MOLLYCC_VERBOSE_FLAGS@'''.split(';') +
+  '''@MOLLYCC_DEBUG_FLAGS@'''.split(';') +
+  '''@MOLLYCC_CFLAGS@'''.split(';') +
+  '''@MOLLY_PLATFORM_CFLAGS@'''.split(';') +
+  '''@MOLLYCC_COMMON_CFLAGS@'''.split(';') +
+  '''@MOLLYCC_VERBOSE_CFLAGS@'''.split(';') +
+  '''@MOLLYCC_DEBUG_CFLAGS@'''.split(';') +
+  '''@MOLLY_PLATFORM_DEFS@'''.split(';') +
+  '''@MOLLYCC_COMMON_DEFS@'''.split(';') +
+  '''@MOLLYCC_VERBOSE_DEFS@'''.split(';') +
+  '''@MOLLYCC_DEBUG_DEFS@'''.split(';') +
+  '''@MOLLYCC_LDFLAGS@'''.split(';') +
+  '''@MOLLY_PLATFORM_LDFLAGS@'''.split(';') +
+  '''@MOLLYCC_COMMON_LDFLAGS@'''.split(';') +
+  '''@MOLLYCC_VERBOSE_LDFLAGS@'''.split(';') +
+  '''@MOLLYCC_DEBUG_LDFLAGS@'''.split(';') +
+  '''@MOLLYCC_A_LIBS@'''.split(';') +
+  ['-mllvm','-polly-only-marked '])
+
+
+compilecmdline=None
 def makeProgram():
   global program,BINDIR
-  subprocess.check_call(['''@CMAKE_COMMAND@''','--build',BINDIR,'--target',program,'--','-j32'])
+  if isMollyExample():
+    # Make the mollycc compiler executable
+    print "Updating mollycc and MollyRT..."
+    subprocess.check_call([cmake_executable,'--build',BINDIR,'--target','mollycc','--target','MollyRT-a','--','-j32'])
+
+    print "Compiling", os.path.basename(getExecutable()) ,"with Molly..."
+    cmdline = [mollycc_executable]
+    cmdline += ['-o', getExecutable()]
+    cmdline += [getSourceFile()]
+
+    for flag in mollycc_flags:
+      flag = flag.strip()
+      if len(flag)>0:
+        cmdline.append(flag)
+    
+    dims = getProgramDims()
+    assert len(dims)==len(volume)
+    for i in range(len(dims)):
+      cmdline += ['-DL' + dims[i] + '=' + str(volume[i])]
+    assert len(dims)==len(logical_shape)
+    for i in range(len(dims)):
+      cmdline += ['-DP' + dims[i] + '=' + str(logical_shape[i])]
+    assert len(dims)==len(volume_per_rank)
+    for i in range(len(dims)):
+      cmdline += ['-DB' + dims[i] + '=' + str(volume_per_rank[i])]
+    cmdline += ['-mllvm','-shape=' + shapeToStr(logical_shape)]
+
+    cmdline += ['-D' + d for d in defs]
+
+    global compilecmdline
+    compilecmdline = cmdline
+    print ' '.join(cmdline)
+    subprocess.check_call(cmdline,cwd=BINDIR)
+
+  else:
+    subprocess.check_call([cmake_executable,'--build',BINDIR,'--target',getBuildTarget(),'--','-j32'])
 
 
 def copySource():
@@ -385,14 +482,14 @@ def copySource():
   if git_executable:
     difffilepath = os.path.join(jobdir,'src.diff')
     with open(difffilepath, 'w') as diff_file:
-      subprocess.check_call([git_executable,'diff','--patch-with-stat','--src-prefix=@GIT_SHA1@/','--dst-prefix=workingset/','HEAD'], cwd=SRCDIR, stdout=diff_file)
+      subprocess.check_call([git_executable,'diff','--patch-with-stat','--src-prefix=' +git_sha1+ '/','--dst-prefix=workingset/', git_sha1], cwd=SRCDIR, stdout=diff_file)
 
     rematerialize_script = """#! /bin/sh
-{git} clone "@TMLQCD_SOURCE_DIR@" "{srctargetdir}"
+{git} clone "{projectsrcdir}" "{srctargetdir}"
 cd "{srctargetdir}"
-{git} checkout @GIT_SHA1@ # @GIT_REFSPEC@
+{git} checkout {git_sha1} # @GIT_REFSPEC@
 {git} apply --whitespace=nowarn "{difffilepath}"
-""".format(jobdir=jobdir,difffilepath=difffilepath,git=git_executable,srctargetdir=srctargetdir)
+""".format(jobdir=jobdir,difffilepath=difffilepath,git=git_executable,srctargetdir=srctargetdir,git_sha1=git_sha1,projectsrcdir=SRCDIR)
     writeCompleteFile(os.path.join(jobdir,'getsrc.sh'), rematerialize_script, setExecutableBit=True)
   else:
     shutil.copytree(SRCDIR, srctargetdir, symlinks=True)
@@ -400,20 +497,21 @@ cd "{srctargetdir}"
 
 def prepare():
   global jobdir,jobname,programupdate
-  jobdir,jobname = findjobdir('/work/hch02/hch02d/jobs')
 
   if programupdate:
-    print "Compiling",program,"..."
+    print "Compiling",getBuildTarget(),"..."
     makeProgram()
     
-  print "Create job directory..."
+  jobdir,jobname = findjobdir(JOBSDIR)
+  print "Create job directory...", jobdir
   os.makedirs(jobdir)
   print "Copying executable..."
   copyExecutable()
   print "Copying sources..."
   copySource()
-  print "Configure input..."
-  buildInput()
+  if not isMollyExample():
+    print "Configure input..."
+    buildInput()
   print "Configure job and LL script..."
   buildJobScript()
   buildLLScript()
@@ -437,8 +535,10 @@ timelimit=None
 dims=None
 logical_shape=None
 
+defs = []
 jobid = None
 jobscriptfile = None
+inputfilepath = None
 
 def checkCondition(cond):
   global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
@@ -733,6 +833,8 @@ def computeShape():
   print "Using",str(nodes),"nodes,",ranks_per_node,"ranks per node and",threads_per_rank,"threads per rank up to " + makestrDuration(timelimit) + " time units"
 
 
+
+
 def main():
   global scriptpath,BINDIR
   global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_node,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,dims,logical_shape
@@ -745,15 +847,19 @@ def main():
   parser = optparse.OptionParser()
   parser.add_option('--noselfupdate', dest="selfupdate", action="store_false", help="Do not try update itself")
   parser.add_option('--noprogramupdate', dest="programupdate", action="store_false", help="Do not run make before running")
+  parser.add_option('--nosubmit', dest="submission", action="store_false", help="Prepare, but do not submit job")
 
-  parser.add_option('--program', choices=['bgqbench', 'benchmark', 'invert', 'hmc_tm', 'ctest'], help="Program to run")
+  parser.add_option('--program', help="Program to run")
   parser.add_option('--ctest', dest='program', action='store_const', const='ctest', help="Run ctest program")
   parser.add_option('--bgqbench', dest='program', action='store_const', const='bgqbench', help="Run bgqbench program")
   parser.add_option('--benchmark', dest='program', action='store_const', const='benchmark', help="Run benchmark program")
   parser.add_option('--invert', dest='program', action='store_const', const='invert', help="Run invert program")
   parser.add_option('--hmc', dest='program', action='store_const', const='hmc_tm', help="Run hmc_tm program")
+  parser.add_option('--lqcd', dest='program', action='store_const', const='lqcd', help="Run lqcd example")
+  parser.add_option('--lqcd2d', dest='program', action='store_const', const='lqcd2d', help="Run lqcd2d example")
 
   parser.add_option('--input', help="Configuration template file")
+  parser.add_option('--defs', action='append', help="Addition preprocessor defintions")
 
   parser.add_option('--volume', help="Global shape size")
   parser.add_option('--volume_per_rank', help="Local shape size")
@@ -773,14 +879,14 @@ def main():
   parser.add_option('--logical_shape')
 
   parser.add_option('--timelimit', help="Format is hh::mm:ss")
-  parser.set_defaults(selfupdate=True,programupdate=True)
+  parser.set_defaults(selfupdate=True,programupdate=True,submission=True)
 
   global options
   (options, args) = parser.parse_args()
   
 
   if options.selfupdate:
-    subprocess.check_call(['''@CMAKE_COMMAND@''','--build',BINDIR,'--target','buildsystemupdate'])
+    subprocess.check_call([cmake_executable,'--build',BINDIR,'--target','buildsystemupdate'])
     rtn = subprocess.call(['python', scriptpath, '--noselfupdate'] + sys.argv[1:])
     exit(rtn)
 
@@ -792,6 +898,9 @@ def main():
   if program is None:
     raise Exception("Which program to run?")
 
+  global defs
+  if options.defs is not None:
+    defs=options.defs
   if options.volume:
     volume=parseShape(options.volume,extendLast=True)
   if options.volume_per_rank:
@@ -825,8 +934,9 @@ def main():
 
   computeShape()
   prepare()
-  print "Submitting job..."
-  submit()
+  if options.submission:
+    print "Submitting job..."
+    submit()
   print "Done!"
 
 

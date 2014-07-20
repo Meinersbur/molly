@@ -30,17 +30,3 @@ add_custom_target(run-jacobi-mollycc-a
   VERBATIM
 )
 set_target_properties(run-jacobi-mollycc-a PROPERTIES FOLDER "Molly")
-
-
-
-
-add_custom_target(jacobi-all)
-
-set(target-all jacobi-all)
-set(dimnames X Y)
-add_example_config(jacobi.cpp exe1 target1 VOLUME 8x8 PROC 2x2 BLOCK 4x4)
-
-add_custom_target(submit-jacobi1
-  COMMAND "${MOLLY_SOURCE_DIR}/examples/submit.py" "${CMAKE_CURRENT_SOURCE_DIR}/jacobi.cpp" exe1=${exe1} --jobfile "${CMAKE_CURRENT_SOURCE_DIR}/jacobi1.ll" 
-  DEPENDS ${target1} ${target2}
-)

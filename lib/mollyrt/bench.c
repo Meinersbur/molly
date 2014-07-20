@@ -1728,11 +1728,11 @@ void bench_exec(size_t max_threads, const bench_exec_info_t *configs, size_t nCo
     printf("\n");
   }
   bench_global_result_t excerpt;
-   bench_node_result_t nodeExcerpt;
-  for (int i2 = 0; i2 < lengthof(omp_threads); i2 += 1) {
+  bench_node_result_t nodeExcerpt;
+  for (int i2 = lengthof(omp_threads)-1; i2 >=0 ; i2 -= 1) {
     int threads = omp_threads[i2];
     if (max_threads>0 && max_threads > threads)
-	break;
+      continue;
     
     if (printing)
       printf("%-10s|", omp_threads_desc[i2]);

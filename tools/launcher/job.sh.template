@@ -39,8 +39,8 @@ export MUSPI_NUMBATIDS=2
 
 echo "###############################################################################"
 
-# -h disables initialization of legacy SPI (otherwise initializes MUSPI multiple times)
-{prep}{mpiexec} --ranks-per-node {ranks_per_node} --env-all $MAPPING : {executable} -h -f {inputfilepath}
+# {compilecmdline}
+{prep}{mpiexec} --ranks-per-node {ranks_per_node} --env-all $MAPPING : {executable}
 
 echo "###############################################################################"
 echo "END  " : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`

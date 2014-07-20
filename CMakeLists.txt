@@ -169,7 +169,7 @@ set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
 #set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev -mllvm -molly-mark-stmts)
-set(MOLLYCC_VERBOSE_FLAGS -v)
+set(MOLLYCC_VERBOSE_FLAGS )
 set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 
@@ -612,7 +612,6 @@ if (MOLLYCC_ADD_MPI)
   list(APPEND MOLLYCC_A_LIBS ${MPI_CXX_LIBRARIES})
 endif ()
 function (mollycc_a_compile _outfile)
-#message("   mollycc_a_compile(${_outfile}, ${ARGN})")
   cmake_parse_arguments("" "" "" "SOURCES;FLAGS;CFLAGS;LDFLAGS;COMMENT;LIBS" ${ARGN})
   clang_compile_link("${_outfile}" EXE
     COMPILER ${MOLLYCC_COMPILER}
