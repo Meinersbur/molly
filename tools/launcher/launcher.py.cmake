@@ -129,9 +129,10 @@ def execjobcommand(filepath, cancel=True):
   
   # Cancel old job (if existing and not this job)
   if cancel and (jobid is not None):
-    print "Canceling old job ", jobid
+    cmdline = 'LD_LIBRARY_PATH= llcancel ' + jobid
+    print "Canceling old job ", jobid, "with command", cmdline
     sys.stdout.flush()
-    os.system('llcancel ' + jobid)
+    os.system(cmdline)
     sys.stdout.flush()
   
   # Launch job
@@ -175,6 +176,8 @@ def main():
     jobdirs = [os.path.abspath(os.path.join(jobsdir,item)) for item in jobdirsname]
     jobdirs.append(jobsdir) # Add root dir itself we may put files in there
     for jobdir in jobdirs:
+      if not os.path.isdir(jobdir):
+        continue
       for filename in os.listdir(jobdir):
         m = jobdescre.match(filename)
         if not m:

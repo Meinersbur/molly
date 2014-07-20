@@ -6,10 +6,6 @@
 #define __MOLLYRT
 #include "molly.h"
 
-#ifdef PAPI
-#include "mypapi.h"
-#endif 
-
 #include <malloc.h>
 #include <cstdio>
 #include <mpi.h> 

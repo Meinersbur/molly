@@ -42,10 +42,6 @@
 #define sPY STR(PY)
 #define sPZ STR(PZ)
 
-#ifndef WITH_KAMUL
-//#error Must define WITH_KAMUL to 0 or 1!
-#define WITH_KAMUL 0
-#endif
 
 
 
@@ -66,7 +62,7 @@ complex_t ka[4] = {1};
 
 
 
-extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
+extern "C" MOLLY_ATTR(process) void HoppingMatrix_noka() {
   for (coord_t t = 0; t < source.length(0); t += 1)
     for (coord_t x = 0; x < source.length(1); x += 1)
       for (coord_t y = 0; y < source.length(2); y += 1)
@@ -77,10 +73,7 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_TUP(source[molly::mod(t + 1, LT)][x][y][z]);
 	    halfspinor = gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= ka[0];
-#endif
-            result = expand_TUP(halfspinor);
+        result = expand_TUP(halfspinor);
 	  }
 
 
@@ -88,9 +81,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_TDN(source[molly::mod(t - 1, LT)][x][y][z]);
 	    halfspinor = gauge[t][x][y][z][DIM_T] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= conj(ka[0]);
-#endif
             result += expand_TDN(halfspinor);
 	  }
           
@@ -99,9 +89,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_XUP(source[t][molly::mod(x + 1, LX)][y][z]);
 	    halfspinor = gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= ka[1];
-#endif
             result += expand_XUP(halfspinor);
 	  }
           
@@ -109,9 +96,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_XDN(source[t][molly::mod(x - 1, LX)][y][z]);
 	    halfspinor = gauge[t][x][y][z][DIM_X] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= conj(ka[1]);
-#endif
             result += expand_XDN(halfspinor);
 	  }
 	  
@@ -120,9 +104,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_YUP(source[t][x][molly::mod(y + 1, LY)][z]);
 	    halfspinor = gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= ka[2];
-#endif
             result += expand_YUP(halfspinor);
 	  }
           
@@ -130,9 +111,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_YDN(source[t][x][molly::mod(y - 1, LY)][z]);
 	    halfspinor = gauge[t][x][y][z][DIM_Y] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= conj(ka[2]);
-#endif
             result += expand_YDN(halfspinor);
 	  }
           
@@ -141,9 +119,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]);
 	    halfspinor = gauge[t][x][y][GAUGE_MOD(z + 1, LZ)][DIM_Z] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= ka[3];
-#endif
       result += expand_ZUP(halfspinor);
 	  }
           
@@ -151,11 +126,89 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
 	  {
 	    auto halfspinor = project_ZDN(source[t][x][y][molly::mod(z - 1, LZ)]);
 	    halfspinor = gauge[t][x][y][z][DIM_Z] * halfspinor;
-#if WITH_KAMUL
-	    halfspinor *= conj(ka[3]);
-#endif
       result += expand_ZDN(halfspinor);
 	  }
+
+          // Writeback
+          sink[t][x][y][z] = result;
+        }
+} // void HoppingMatrix()
+
+
+extern "C" MOLLY_ATTR(process) void HoppingMatrix_kamul() {
+  for (coord_t t = 0; t < source.length(0); t += 1)
+    for (coord_t x = 0; x < source.length(1); x += 1)
+      for (coord_t y = 0; y < source.length(2); y += 1)
+        for (coord_t z = 0; z < source.length(3); z += 1) {
+          fullspinor_t result;
+      
+          // T+
+      {
+        auto halfspinor = project_TUP(source[molly::mod(t + 1, LT)][x][y][z]);
+        halfspinor = gauge[GAUGE_MOD(t + 1, LT)][x][y][z][DIM_T] * halfspinor;
+        halfspinor *= ka[0];
+            result = expand_TUP(halfspinor);
+      }
+
+
+          // T-
+      {
+        auto halfspinor = project_TDN(source[molly::mod(t - 1, LT)][x][y][z]);
+        halfspinor = gauge[t][x][y][z][DIM_T] * halfspinor;
+        halfspinor *= conj(ka[0]);
+            result += expand_TDN(halfspinor);
+      }
+          
+
+          // X+
+      {
+        auto halfspinor = project_XUP(source[t][molly::mod(x + 1, LX)][y][z]);
+        halfspinor = gauge[t][GAUGE_MOD(x + 1, LX)][y][z][DIM_X] * halfspinor;
+        halfspinor *= ka[1];
+            result += expand_XUP(halfspinor);
+      }
+          
+          // X-
+      {
+        auto halfspinor = project_XDN(source[t][molly::mod(x - 1, LX)][y][z]);
+        halfspinor = gauge[t][x][y][z][DIM_X] * halfspinor;
+        halfspinor *= conj(ka[1]);
+            result += expand_XDN(halfspinor);
+      }
+      
+
+          // Y+
+      {
+        auto halfspinor = project_YUP(source[t][x][molly::mod(y + 1, LY)][z]);
+        halfspinor = gauge[t][x][GAUGE_MOD(y + 1, LY)][z][DIM_Y] * halfspinor;
+        halfspinor *= ka[2];
+            result += expand_YUP(halfspinor);
+      }
+          
+          // Y-
+      {
+        auto halfspinor = project_YDN(source[t][x][molly::mod(y - 1, LY)][z]);
+        halfspinor = gauge[t][x][y][z][DIM_Y] * halfspinor;
+        halfspinor *= conj(ka[2]);
+        result += expand_YDN(halfspinor);
+      }
+          
+     
+          // Z+
+      {
+        auto halfspinor = project_ZUP(source[t][x][y][molly::mod(z + 1, LZ)]);
+        halfspinor = gauge[t][x][y][GAUGE_MOD(z + 1, LZ)][DIM_Z] * halfspinor;
+        halfspinor *= ka[3];
+        result += expand_ZUP(halfspinor);
+      }
+          
+          // Z-
+      {
+        auto halfspinor = project_ZDN(source[t][x][y][molly::mod(z - 1, LZ)]);
+        halfspinor = gauge[t][x][y][z][DIM_Z] * halfspinor;
+        halfspinor *= conj(ka[3]);
+        result += expand_ZDN(halfspinor);
+      }
 
 
 
@@ -163,7 +216,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix() {
           sink[t][x][y][z] = result;
         }
 } // void HoppingMatrix()
-
 
 
 
@@ -278,10 +330,6 @@ extern "C" void __molly_generated_release() {
 
  
 void bench() {
-  bench_exec_info_cxx_t a;
-  bench_exec_info_cxx_t b;
-  b = a;
-  
   const uint64_t nSites = LT*LX*LY*LZ;
   const int spinorsize = 4 * 3 * 2 * 8;
   const int su3size = 3 * 3 * 2 * 8;
@@ -292,12 +340,12 @@ void bench() {
   {
     configs.emplace_back();
     auto &benchinfo = configs.back();
-    benchinfo.desc = "Dslash dbl";
+    benchinfo.desc = "Dslash dbl noka";
     benchinfo.func = [](size_t tid, size_t nThreads) {
       assert(tid==0);
       assert(nThreads == 1);
       for (auto i = 0; i < rounds; i += 1) {
-        HoppingMatrix();
+        HoppingMatrix_noka();
       }
     };
     benchinfo.nStencilsPerCall = nStencilsPerCall;
@@ -308,7 +356,27 @@ void bench() {
     benchinfo.prefetch = prefetch_confirmed;
     benchinfo.pprefetch = false;
     benchinfo.ompmode = omp_single;
-    //configs.push_back(benchinfo);
+  }
+  
+  {
+    configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = "Dslash dbl kamul";
+    benchinfo.func = [](size_t tid, size_t nThreads) {
+      assert(tid==0);
+      assert(nThreads == 1);
+      for (auto i = 0; i < rounds; i += 1) {
+        HoppingMatrix_kamul();
+      }
+    };
+    benchinfo.nStencilsPerCall = nStencilsPerCall;
+    benchinfo.nFlopsPerCall =  nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 +  2*/*kamul*/3*(2/*add*/ + 4/*mul*/) + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
+    benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
+    benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
+    benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
   }
 
   bench_exec_cxx(1, configs);
@@ -316,17 +384,22 @@ void bench() {
 
 
 int main(int argc, char *argv[]) {
-    printArgs(argc, argv);
-  
-  
+
+  {
   init();
-
-  // Warmup+ check result
-  HoppingMatrix();
-
+  HoppingMatrix_kamul();
   auto result = reduce();
   if (__molly_isMaster())
-    std::cout << ">>>> Result = " << result << '\n';
+    std::cout << ">>>> Result (kamul) = " << result << '\n';
+  }
+  
+  { 
+  init();
+    HoppingMatrix_noka();
+  auto result = reduce();
+  if (__molly_isMaster())
+    std::cout << ">>>> Result (noka) = " << result << '\n';
+  }
 
   bench();
   

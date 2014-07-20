@@ -86,7 +86,7 @@ def prod(factors):
   return reduce(operator.mul, factors)
 
 
-def parseShape(str, extendLast=False, extendDefault=False):
+def parseShape(str, nDims, extendLast=False, extendDefault=False):
   str = str.strip()
   result = []
   if not str:
@@ -94,10 +94,10 @@ def parseShape(str, extendLast=False, extendDefault=False):
   for l in str.split('x'):
     result.append(int(l))
   if extendLast:
-    while len(result) < 4:
+    while len(result) < nDims:
       result.append(result[-1])
   if not extendDefault is False:
-    while len(result) < 4:
+    while len(result) < nDims:
       result.append(extendDefault)
   return tuple(x for x in result) # Convert to tuple
 
@@ -138,7 +138,11 @@ def makestrDuration(td):
 
 
 ON=True
+TRUE=True
 OFF=False
+FALSE=False
+
+is_molly=@LAUNCHER_MOLLY@
 
 executable_bgqbench='''@EXECUTABLE_BGQBENCH@'''
 executable_benchmark='''@EXECUTABLE_BENCHMARK@'''
@@ -169,6 +173,8 @@ def isMollyExample():
   global program
   if program in ('bgqbench', 'benchmark','invert','hmc_tm','ctest'):
     return False
+  if program=='benchtest':
+    return is_molly
   return True
 
 
@@ -219,6 +225,8 @@ def getInputTemplatePath():
 
 
 def getProgramDims():
+  if program=='lqcd2d':
+    return ['T','X']
   return ['T','X','Y','Z']
 
 def getDimCount():
@@ -267,7 +275,9 @@ def submit():
     print "Not submitting job as it was taken by another launcher"
     return
 
-  out = subprocess.check_output(['llsubmit', os.path.join(jobdir,'job.ll')], cwd=jobdir)
+  myenv = os.environ.copy()
+  del myenv['LD_LIBRARY_PATH']
+  out = subprocess.check_output(['llsubmit', os.path.join(jobdir,'job.ll')], cwd=jobdir, env=myenv)
   m = jobidre.search(out)
   if m:
     jobid = m.group('jobid')
@@ -602,13 +612,15 @@ def completeShape():
 
 
     if volume is not None:
-      checkCondition(len(volume) == 4)
+      checkCondition(len(volume) == getDimCount())
     if shape_in_nodes is not None:
       checkCondition(len(shape_in_nodes) == 5)
     if shape_in_ranks is not None:
       checkCondition(len(shape_in_ranks) == 6)
     if logical_shape is not None:
-      checkCondition(len(logical_shape) == 4)
+      checkCondition(len(logical_shape) == getDimCount())
+    if shape_in_midplanes is not None:
+      checkCondition(len(shape_in_midplanes) == 4)
 
     # nodes = midplanes*512
     if (nodes is None) and (midplanes is not None):
@@ -711,8 +723,9 @@ def completeShape():
     if (logical_shape is None) and (shape_in_ranks is not None):
       # Mimic MPI_Dims_create; it is too big to be rewritten here, we just make an approximation
       # TODO: Adapt for number of dimensions, this is only for 4 dimensions
-      logical_shape = list(shape_in_ranks[i] for i in range(4))
-      facts = factors(prod(shape_in_ranks[4:]))
+      nDims=getDimCount()
+      logical_shape = list(shape_in_ranks[i] for i in range(nDims))
+      facts = factors(prod(shape_in_ranks[nDims:]))
       facts.sort()
       facts.reverse() # largest factors first
       while len(facts)>=1:
@@ -726,10 +739,10 @@ def completeShape():
 
     # volume = volume_per_rank * logical_shape
     if (volume is None) and (volume_per_rank is not None) and (logical_shape is not None):
-      volume = tuple(logical_shape[i]*volume_per_rank[i] for i in range(4))
+      volume = tuple(logical_shape[i]*volume_per_rank[i] for i in range(getDimCount()))
       continue
     if (volume is not None) and (volume_per_rank is not None) and (logical_shape is not None):
-      checkCondition(tuple(logical_shape[i]*volume_per_rank[i] for i in range(4)) == volume)
+      checkCondition(tuple(logical_shape[i]*volume_per_rank[i] for i in range(getDimCount())) == volume)
 
 
     ###################
@@ -787,12 +800,6 @@ def completeShape():
       nodes = 32
       continue
 
-    #if volume is None:
-    #  volume = parseShape('''@SUBMIT_VOLUME_SHAPE@''', extendLast=True)
-    #  continue
-    #if (shape_in_nodes is None) and (nodes is None):
-    #  shape_in_nodes = parseShape('''@SUBMIT_MACHINE_SHAPE@''', extendDefault=1)
-    #  continue
     if timelimit is None and nodes is not None:
       if nodes <= 64:
         timelimit = datetime.timedelta(minutes=30)
@@ -822,8 +829,8 @@ def computeShape():
   if program!='ctest':
     checkCondition(volume is not None)
     checkCondition(volume_per_rank is not None)
-    checkCondition(volume_per_rank[0]>=8 and volume_per_rank[1]>=2 and volume_per_rank[2]>=2 and volume_per_rank[3]>=2)
-    checkCondition(volume_per_rank[0]%4==0 and volume_per_rank[1]%2==0 and volume_per_rank[2]%2==0 and volume_per_rank[3]%2==0)
+    #checkCondition(volume_per_rank[0]>=8 and volume_per_rank[1]>=2 and volume_per_rank[2]>=2 and volume_per_rank[3]>=2)
+    #checkCondition(volume_per_rank[0]%4==0 and volume_per_rank[1]%2==0 and volume_per_rank[2]%2==0 and volume_per_rank[3]%2==0)
 
   if program!='ctest':
     print "Volume is",'x'.join([str(v) for v in volume])
@@ -857,6 +864,7 @@ def main():
   parser.add_option('--hmc', dest='program', action='store_const', const='hmc_tm', help="Run hmc_tm program")
   parser.add_option('--lqcd', dest='program', action='store_const', const='lqcd', help="Run lqcd example")
   parser.add_option('--lqcd2d', dest='program', action='store_const', const='lqcd2d', help="Run lqcd2d example")
+  parser.add_option('--benchtest', dest='program', action='store_const', const='benchtest', help="Run benchtest example")
 
   parser.add_option('--input', help="Configuration template file")
   parser.add_option('--defs', action='append', help="Addition preprocessor defintions")
@@ -901,10 +909,6 @@ def main():
   global defs
   if options.defs is not None:
     defs=options.defs
-  if options.volume:
-    volume=parseShape(options.volume,extendLast=True)
-  if options.volume_per_rank:
-    volume_per_rank=parseShape(options.volume_per_rank,extendLast=True)
   if options.threads:
     threads=int(options.threads)
   if options.ranks:
@@ -918,15 +922,19 @@ def main():
   if options.threads_per_node:
     threads_per_node=options.threads_per_node
   if options.shape_in_midplanes:
-    shape_in_midplanes=parseShape(options.shape_in_midplanes,extendDefault=1)
+    shape_in_midplanes=parseShape(options.shape_in_midplanes,4,extendDefault=1)
   if options.shape_in_nodes:
-    shape_in_nodes=parseShape(options.shape_in_nodes,extendDefault=1)
+    shape_in_nodes=parseShape(options.shape_in_nodes,5,extendDefault=1)
   if options.shape_in_ranks:
-    shape_in_ranks=parseShape(options.shape_in_ranks,extendDefault=1)
+    shape_in_ranks=parseShape(options.shape_in_ranks,6,extendDefault=1)
   if options.dims is not None:
     dims=int(options.dims)
   if options.logical_shape is not None:
-    logical_shape = options.logical_shape
+    logical_shape = parseShape(options.logical_shape,getDimCount())
+  if options.volume:
+    volume=parseShape(options.volume,getDimCount(),extendLast=True)
+  if options.volume_per_rank:
+    volume_per_rank=parseShape(options.volume_per_rank,getDimCount(),extendLast=True)
 
   if options.timelimit:
     timelimit=parseDuration(options.timelimit)

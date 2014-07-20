@@ -10,7 +10,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MOLLY_SOURCE_DIR}/cmake" "${POLLY_
 
 
 find_package(Gmp REQUIRED)
-INCLUDE_DIRECTORIES( ${GMP_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${GMP_INCLUDE_DIRS} )
+# Workaround: cmake removes /usr/include from include_directories(...)
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${GMP_INCLUDE_DIR}")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${GMP_INCLUDE_DIR}")
 
 add_llvm_external_project(isl)
 if (NOT LLVM_EXTERNAL_ISL_BUILD)
@@ -45,6 +48,7 @@ include_directories(
 
 if (CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wno-unknown-pragmas")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wno-unknown-pragmas")
 endif (CMAKE_COMPILER_IS_GNUCXX)
 
 
@@ -139,21 +143,29 @@ set(MOLLYRT_COMMON_LDFLAGS )
 set(MOLLYCC_COMMON_FLAGS )
 set(MOLLYCC_COMMON_CFLAGS -std=gnu++11 -D__mollycc__ "-I${MOLLY_SOURCE_DIR}/include/mollyrt" -DWITH_MOLLY -Wno-error=gnu-array-member-paren-init -mllvm -molly -mllvm -polly-ignore-aliasing -mllvm -polly-dependences-computeout=0)
 if (MOLLY_BGQ)
-  list(APPEND MOLLYRT_COMMON_CFLAGS -stdlib=libstdc++)
+  list(APPEND MOLLYCC_COMMON_CFLAGS -stdlib=libstdc++)
 endif ()
 set(MOLLYCC_COMMON_LDLAGS )
 
 
 if (MOLLY_BGQ)
   # use news libstdc++ libraries that support C++11 (instead of version 4.4.7)
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1/powerpc64-bgq-linux")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1/backward")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/lib/gcc/powerpc64-bgq-linux/4.8.1/include")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/lib/gcc/powerpc64-bgq-linux/4.8.1/include-fixed")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/sys-include")
-  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1/powerpc64-bgq-linux")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include/c++/4.8.1/backward")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/lib/gcc/powerpc64-bgq-linux/4.8.1/include")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/lib/gcc/powerpc64-bgq-linux/4.8.1/include-fixed")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/sys-include")
+  #list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.8.1/powerpc64-bgq-linux/include")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/include/c++/4.9.0")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/include/c++/4.9.0")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/include/c++/4.9.0/powerpc64-bgq-linux")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/include/c++/4.9.0/backward")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/lib/gcc/powerpc64-bgq-linux/4.9.0/include")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/lib/gcc/powerpc64-bgq-linux/4.9.0/include-fixed")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/sys-include")
+  list(APPEND MOLLYCC_COMMON_CFLAGS "-I/usr/local/bg_soft/gcc/4.9.0/powerpc64-bgq-linux/include")
 endif ()
 
 foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
@@ -164,12 +176,12 @@ foreach(_include IN LISTS MPI_CXX_INCLUDE_PATH)
 endforeach()
 
 
-set(MOLLYRT_VERBOSE_FLAGS -w -fmax-errors=1)
+set(MOLLYRT_VERBOSE_FLAGS )
 set(MOLLYRT_VERBOSE_CFLAGS )
 set(MOLLYRT_VERBOSE_LDFLAGS )
 
-#set(MOLLYCC_VERBOSE_FLAGS -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev -mllvm -molly-mark-stmts)
-set(MOLLYCC_VERBOSE_FLAGS )
+#set(MOLLYCC_VERBOSE_FLAGS -w -fmax-errors=1 -save-temps -v -mllvm -debug -mllvm -debug-only=molly -mllvm -verify-region-info -mllvm -verify-dom-info -mllvm -verify-loop-info -mllvm -verify-scev -mllvm -molly-mark-stmts)
+set(MOLLYCC_VERBOSE_FLAGS -v -w -fmax-errors=1)
 set(MOLLYCC_VERBOSE_CFLAGS -mllvm -polly-report)
 set(MOLLYCC_VERBOSE_LDFLAGS )
 

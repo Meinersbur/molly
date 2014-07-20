@@ -8,8 +8,13 @@
 #ifndef BGQ_DISPATCH_H_
 #define BGQ_DISPATCH_H_
 
+#if defined(__cplusplus)
+#include <cstring>
+#include <cstdbool>
+#else
 #include <string.h>
 #include <stdbool.h>
+#endif
 
 #if defined(__cplusplus)
 extern "C" {

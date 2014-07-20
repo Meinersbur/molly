@@ -1,7 +1,10 @@
 #include "bgq_dispatch.h"
 
+#if defined(__cplusplus)
+#include <cstdlib> // abort()
+#else
 #include <stdlib.h> // abort()
-
+#endif
 
 bool g_bgq_dispatch_inparallel =false;
 int g_bgq_dispatch_threads;

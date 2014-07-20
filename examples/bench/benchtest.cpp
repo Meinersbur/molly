@@ -3,19 +3,6 @@
 #include <mpi.h>
 #include <cstdlib> // EXIT_SUCCESS
 
-void benchme(size_t tid, size_t nThreads) {
-  auto start = MPI_Wtime();
-  while (true) {
-    auto now = MPI_Wtime();
-    auto duration = now - start;
-    if (duration >= 1)
-      break;
-  }
-}
-
-void donothing(size_t tid, size_t nThreads) {
-}
-
 
 // Only to satisfy MollyRT
 extern "C" void __molly_generated_init() {
@@ -31,21 +18,46 @@ int main(int argc, char *argv[]) {
   std::vector<bench_exec_info_cxx_t> configs;
 
   {
-    bench_exec_info_cxx_t benchinfo;
-    benchinfo.desc = "nothing";
-    benchinfo.func = donothing;
-    configs.push_back(benchinfo);
+    configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = "1 sec";
+    benchinfo.func = [](size_t tid, size_t nThreads) {
+  auto start = MPI_Wtime();
+  while (true) {
+    auto now = MPI_Wtime();
+    auto duration = now - start;
+    if (duration >= 1)
+      break;
+  }
+    };
+    benchinfo.nStencilsPerCall = 0;
+    benchinfo.nFlopsPerCall =  0;
+    benchinfo.nStoredBytesPerCall = 0;
+    benchinfo.nLoadedBytesPerCall = 0;
+    benchinfo.nWorkingSet = 0;
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
   }
 
-  {
-    bench_exec_info_cxx_t benchinfo;
-    benchinfo.desc = "benchme";
-    benchinfo.func = benchme;
-    configs.push_back(benchinfo);
+    {
+    configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = "donothing";
+    benchinfo.func = [](size_t tid, size_t nThreads) {
+    };
+    benchinfo.nStencilsPerCall = 0;
+    benchinfo.nFlopsPerCall =  0;
+    benchinfo.nStoredBytesPerCall = 0;
+    benchinfo.nLoadedBytesPerCall = 0;
+    benchinfo.nWorkingSet = 0;
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
   }
-
+  
   MPI_Init(&argc, &argv);
-  bench_exec_cxx(configs);
+  bench_exec_cxx(1, configs);
   MPI_Finalize();
 
   return EXIT_SUCCESS;

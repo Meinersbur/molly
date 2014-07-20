@@ -5,13 +5,19 @@
 #include "config.h"
 #endif
 
+
+
+#if defined(__cplusplus)
+#include <cstdint> // uint64_t
+#include <cstddef> // size_t
+#include <cstdbool>
+
+#include <vector>
+#include <functional>
+#else
 #include <stdint.h> // uint64_t
 #include <stddef.h> // size_t
 #include <stdbool.h>
-
-#if defined(__cplusplus)
-#include <vector>
-#include <functional>
 #endif
 
 #if defined(__cplusplus)

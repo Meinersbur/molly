@@ -1,7 +1,7 @@
 
 
 
-set(MOLLYRT_SOURCES molly.cpp comm.cpp combuf.cpp debug.cpp bench.c bgq_dispatch.c)
+set(MOLLYRT_SOURCES molly.cpp comm.cpp combuf.cpp debug.cpp bench.c bgq_dispatch.c bench.cpp)
 
 
 ### MollyRT, compile using same compiler as we compile mollycc itself
@@ -15,6 +15,9 @@ foreach (_flag IN LISTS MOLLYRT_DEBUG_FLAGS MOLLY_PLATFORM_DEFS)
   set_property(TARGET MollyRT APPEND_STRING PROPERTY COMPILE_FLAGS " ${_flag}")
 endforeach ()
 
+if (MOLLY_BGQ)
+  target_link_libraries(MollyRT ${MPI_CXX_LIBRARIES} "/bgsys/drivers/ppcfloor/spi/lib/libSPI_l1p.a" "/bgsys/drivers/ppcfloor/bgpm/lib/libbgpm.a") 
+endif ()
 
 
 ### MollyRT-ll
