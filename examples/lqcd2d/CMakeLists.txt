@@ -15,8 +15,8 @@ set_target_properties(run-lqcd2d PROPERTIES FOLDER "Molly")
 get_filename_component(lqcd2d_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}lqcd2d-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${lqcd2d_a_path}"
   SOURCES "lqcd2d.cpp"
-  FLAGS -mllvm -shape=2x2 -mllvm -polly-only-marked
-  COMMENT "mollycc molly.a lqcd.cpp..."
+  FLAGS -mllvm -polly-only-marked  -mllvm -shape=8x4 -DLT=64 -DLX=32 -DPT=8 -DPX=4 -DBT=8 -DBX=8
+  COMMENT "mollycc molly.a lqcd2d.cpp..."
 ) 
 
 add_custom_target(lqcd2d-mollycc-a
