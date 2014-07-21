@@ -473,7 +473,7 @@ namespace {
       DEBUG(llvm::dbgs() << "GenCommunication in " << funcName <<  " on SCoP " << scop->getNameStr() << "\n");
       if (funcName == "test") {
         int a = 0;
-      } else if (funcName == "HoppingMatrix") {
+      } else if (funcName == "HoppingMatrix" || funcName == "HoppingMatrix_noka" || funcName == "HoppingMatrix_kamul") {
         int b = 0;
       } else if (funcName == "Jacobi") {
         int c = 0;
