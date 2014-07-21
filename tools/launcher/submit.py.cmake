@@ -370,6 +370,10 @@ def configureFile(template_path, target_path):
   launcheroutputfilepath = os.path.join(jobdir,'yout.txt')
   if jobid:
     launcheroutputfilepath = os.path.join(jobdir,'yout' + jobid + '.txt')
+  
+  compilecmdlinestr = ''
+  if compilecmdline is not None:
+    compilecmdlinestr = ' '.join(pipes.quote(s) for s in compilecmdline)
 
   template = readCompleteFile(template_path)
   formatdict = dict(
@@ -388,7 +392,7 @@ def configureFile(template_path, target_path):
     launchercmd=os.path.join(BINDIR,'bin/launcher.py'),
     jobid=jobid,
     prep=prep,
-    compilecmdline=' '.join(pipes.quote(s) for s in compilecmdline))
+    compilecmdline=compilecmdlinestr)
   dimnames = getProgramDims()
   for i in range(len(dimnames)):
     formatdict['L' + dimnames[i]] = volume[i]
@@ -398,6 +402,16 @@ def configureFile(template_path, target_path):
 
 def buildInput():
   templatepath = getInputTemplatePath()
+  global BINDIR,jobdir,inputfilepath,SRCDIR
+  if isBench():
+    inputfilepath = os.path.join(jobdir, 'benchmark.input')
+  elif isInvert():
+    inputfilepath = os.path.join(jobdir, 'invert.input')
+  elif isHmcTm():
+    inputfilepath = os.path.join(jobdir, 'hmc.input')
+  else:
+    inputfilepath = os.path.join(jobdir, 'input')
+
   if templatepath:
     configureFile(templatepath, inputfilepath)
   else:
