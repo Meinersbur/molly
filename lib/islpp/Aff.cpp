@@ -813,7 +813,7 @@ static bool analyzeDiv(const Aff &div, isl_dim_type &type, pos_t &pos, Int &slop
     if (coeff.isZero())
       continue;
     slope = coeff;
-    type = isl_dim_param;
+    type = isl_dim_div;
     pos = k;
     coeffs += 1;
   }
@@ -963,13 +963,15 @@ static bool isDivLinearOnRange(const Int &divSlope, const Int &divOffset, const 
   assert(lowerBound <= upperBound);
 
   auto offsetAtLowerBound = fdiv_q(divOffset + divSlope*lowerBound, divDenom);
-
+  auto offsetAtUpperBound = fdiv_q(divOffset + divSlope*upperBound, divDenom);
+  auto boundLen = upperBound - lowerBound;
   if (lowerBound + 1 == upperBound) {
     // Two elements only: simple
-    slope = fdiv_q(divOffset + divSlope*upperBound, divDenom) - offsetAtLowerBound;
+    slope = offsetAtUpperBound - offsetAtLowerBound;
     return true;
   }
 
+#if 0
   // normalize div
   assert(divDenom > 0);
   auto integerSlope = fdiv_q(divSlope, divDenom);
@@ -986,17 +988,58 @@ static bool isDivLinearOnRange(const Int &divSlope, const Int &divOffset, const 
     auto fractionValueAtUpperBound = fdiv_q(divOffset + fractionalSlope*upperBound, divDenom);
     return fractionValueAtLowerBound == fractionValueAtUpperBound;
   }
+#endif
 
+  // Formula: floor((divOffset + divSlope*x)/divDenom); 1<divDenom
+
+  // 0. Step: Normalize lowerBound to zero
+  auto normOffset = divOffset + divSlope*lowerBound;
+  // Formula: floor((normOffset + divSlope*(x-lowerBound)) / divDenom); 1<divDenom
+  assert(offsetAtLowerBound == fdiv_q(normOffset, divDenom));
+  assert(offsetAtUpperBound == fdiv_q(normOffset + divSlope*(upperBound-lowerBound), divDenom));
+
+
+  // 1. Step: ensure 0<=normOffset<divDenom
+  auto normIntOffset = fdiv_q(normOffset, divDenom);
+  auto normFracOffset = fdiv_r(normOffset, divDenom);
+  // Formula: floor((normFracOffset + divSlope*(x-lowerBound)) / divDenom) + normIntOffset; 1<divDenom; 0<=fractionalOffset<divDenom
+  assert(offsetAtLowerBound == (fdiv_q(normFracOffset, divDenom) + normIntOffset));
+  assert(offsetAtUpperBound == (fdiv_q(normFracOffset + divSlope*(upperBound - lowerBound), divDenom) + normIntOffset));
+
+  // 2. Step: ensure 1<=divSlope<divDenom
+  auto normIntSlope = fdiv_q(divSlope, divDenom);
+  auto normFracSlope = fdiv_r(divSlope, divDenom);
+  // Formula: floor((normFracOffset + normFracSlope*(x-lowerBound)) / divDenom) + normIntOffset + normIntSlope*(x-lowerBound)
+  assert(offsetAtLowerBound == (fdiv_q(normFracOffset, divDenom) + normIntOffset));
+  assert(offsetAtUpperBound == (fdiv_q(normFracOffset + normFracSlope*(upperBound - lowerBound), divDenom) + normIntOffset + normIntSlope*(upperBound - lowerBound)));
+
+  if (normFracOffset + boundLen*normFracSlope < divDenom) {
+   slope = 0;
+   assert(offsetAtLowerBound == offsetAtUpperBound);
+   return true;
+  }
+
+  auto revSlope = divDenom - normFracSlope;
+  auto revOffset = divDenom - normFracOffset;
+  if (revSlope*boundLen + revOffset-1 < divDenom) {
+    slope = normIntSlope + 1;
+    auto residue = offsetAtLowerBound - slope*lowerBound;
+    assert(offsetAtUpperBound == slope*(upperBound - lowerBound) + residue);
+    return true;
+  }
+  return false;
+
+
+#if 0
   auto integerOffset = fdiv_q(divOffset, divDenom);
-  auto fractionalOffset = fdiv_r(divOffset, divDenom); // fractionalOffset \in [0 .. divDenom-1]
-
+  auto fractionalOffset = fdiv_r(divOffset, divDenom);
 
   auto reverseSlope = divDenom - fractionalSlope; // [1 .. divDenom-1]
   auto offsetMod = fdiv_r(divOffset, divDenom);
   slope = integerSlope;
   slope += fractionalSlope.sgn(); // always 1
 
-  // first overflow happend when divOffset(mod divDenom) + reverseSlope * s >= divDenom with smalles s possible
+  // first overflow happend when divOffset(mod divDenom) + reverseSlope * s >= divDenom with smallest s possible
   // i.e. s = ceil((divDenom - offsetMod)/reverseSlope)
   auto firstPeriodEnd = cdiv_q(divDenom - offsetMod, reverseSlope);
 
@@ -1030,6 +1073,7 @@ static bool isDivLinearOnRange(const Int &divSlope, const Int &divOffset, const 
 
   //return s == t;
   return samePeriod;
+#endif
 }
 
 
@@ -1877,6 +1921,22 @@ static bool tryConstantCombine(Set &mset, Aff &maff, const BasicSet &bset, Aff b
 
 
 bool isl::tryCombineAff(Set lhsContext, Aff lhsAff, const Set &rhsContext, const Aff &rhsAff, bool tryCoeffs, bool tryDivs, Set &resultContext, Aff &resultAff) {
+#ifndef NDEBUG
+  static bool donetest = false;
+  if (!donetest) {
+  Int slope1;
+  auto test1 = isDivLinearOnRange(-1, -1, 3, 0, 2, slope1);
+  assert(test1 && (slope1 == 0));
+
+  Int slope2;
+  auto test2 = isDivLinearOnRange(5, 3, 3,   1, 2,   slope2);
+  assert(test2 && (slope2 == 2));
+
+  donetest = true;
+}
+#endif
+
+  
   bool success = tryConstantCombine(lhsContext, lhsAff, rhsContext, rhsAff, tryCoeffs, tryDivs);
   if (&resultContext) { // Compiler may assume that references are never NULL
     resultContext = lhsContext;
