@@ -198,6 +198,8 @@ def getExecutable():
     return executable_hmc_tm
   elif program=='ctest' and executable_ctest:
     return executable_ctest
+  elif program=='benchtest':
+    return os.path.join(BINDIR,'examples','benchtest')
   if isMollyExample():
     exename = program + '_V' + shapeToStr(volume) + '_P' + shapeToStr(logical_shape) + ''.join(['_'+d for d in defs])
     return os.path.join(BINDIR,'examples',exename)
@@ -225,12 +227,19 @@ def getInputTemplatePath():
 
 
 def getProgramDims():
+  if program=='benchtest':
+    return []
   if program=='lqcd2d':
     return ['T','X']
+  if program=='jacobi':
+    return ['X','Y']
   return ['T','X','Y','Z']
 
 def getDimCount():
   return len(getProgramDims())
+
+def hasDims():
+  return getDimCount()>0
 
 
 def isBench():
@@ -380,8 +389,9 @@ def configureFile(template_path, target_path):
     jobid=jobid,
     prep=prep,
     compilecmdline=' '.join(pipes.quote(s) for s in compilecmdline))
-  if program!='ctest':
-    formatdict.update(dict(LT=volume[0],LX=volume[1],LY=volume[2],LZ=volume[3]))
+  dimnames = getProgramDims()
+  for i in range(len(dimnames)):
+    formatdict['L' + dimnames[i]] = volume[i]
   content = template.format(**formatdict)
   writeCompleteFile(target_path, content)
 
@@ -456,19 +466,23 @@ def makeProgram():
     for flag in mollycc_flags:
       flag = flag.strip()
       if len(flag)>0:
-        cmdline.append(flag)
+        if not hasDims() and flag=='-molly':
+          cmdline.append('-molly=False') # Switch off Molly
+        else:
+          cmdline.append(flag)
     
-    dims = getProgramDims()
-    assert len(dims)==len(volume)
-    for i in range(len(dims)):
-      cmdline += ['-DL' + dims[i] + '=' + str(volume[i])]
-    assert len(dims)==len(logical_shape)
-    for i in range(len(dims)):
-      cmdline += ['-DP' + dims[i] + '=' + str(logical_shape[i])]
-    assert len(dims)==len(volume_per_rank)
-    for i in range(len(dims)):
-      cmdline += ['-DB' + dims[i] + '=' + str(volume_per_rank[i])]
-    cmdline += ['-mllvm','-shape=' + shapeToStr(logical_shape)]
+    if hasDims():
+      dims = getProgramDims()
+      assert len(dims)==len(volume)
+      for i in range(len(dims)):
+        cmdline += ['-DL' + dims[i] + '=' + str(volume[i])]
+      assert len(dims)==len(logical_shape)
+      for i in range(len(dims)):
+        cmdline += ['-DP' + dims[i] + '=' + str(logical_shape[i])]
+      assert len(dims)==len(volume_per_rank)
+      for i in range(len(dims)):
+        cmdline += ['-DB' + dims[i] + '=' + str(volume_per_rank[i])]
+      cmdline += ['-mllvm','-shape=' + shapeToStr(logical_shape)]
 
     cmdline += ['-D' + d for d in defs]
 
@@ -720,7 +734,7 @@ def completeShape():
     if (timelimit is not None):
       checkCondition(timelimit >= datetime.timedelta(minutes=30))
 
-    if (logical_shape is None) and (shape_in_ranks is not None):
+    if hasDims() and (logical_shape is None) and (shape_in_ranks is not None):
       # Mimic MPI_Dims_create; it is too big to be rewritten here, we just make an approximation
       # TODO: Adapt for number of dimensions, this is only for 4 dimensions
       nDims=getDimCount()
@@ -826,13 +840,16 @@ def computeShape():
   if nodes >= 512:
     checkCondition(shape_in_midplanes is not None)
     checkCondition(len(shape_in_midplanes)==4)
-  if program!='ctest':
+  if hasDims():
     checkCondition(volume is not None)
     checkCondition(volume_per_rank is not None)
     #checkCondition(volume_per_rank[0]>=8 and volume_per_rank[1]>=2 and volume_per_rank[2]>=2 and volume_per_rank[3]>=2)
     #checkCondition(volume_per_rank[0]%4==0 and volume_per_rank[1]%2==0 and volume_per_rank[2]%2==0 and volume_per_rank[3]%2==0)
+  else:
+    checkCondition(volume is None)
+    checkCondition(volume_per_rank is None)
 
-  if program!='ctest':
+  if hasDims():
     print "Volume is",'x'.join([str(v) for v in volume])
   print "Shape is",'x'.join([str(v) for v in shape_in_nodes])
   if  shape_in_midplanes is not None:
@@ -864,7 +881,8 @@ def main():
   parser.add_option('--hmc', dest='program', action='store_const', const='hmc_tm', help="Run hmc_tm program")
   parser.add_option('--lqcd', dest='program', action='store_const', const='lqcd', help="Run lqcd example")
   parser.add_option('--lqcd2d', dest='program', action='store_const', const='lqcd2d', help="Run lqcd2d example")
-  parser.add_option('--benchtest', dest='program', action='store_const', const='benchtest', help="Run benchtest example")
+  parser.add_option('--jacobi', dest='program', action='store_const', const='jacobi', help="Run jacobi example")  
+  parser.add_option('--benchtest', dest='program', action='store_const', const='benchtest', help="Test bench.c")  
 
   parser.add_option('--input', help="Configuration template file")
   parser.add_option('--defs', action='append', help="Addition preprocessor defintions")
@@ -939,7 +957,6 @@ def main():
   if options.timelimit:
     timelimit=parseDuration(options.timelimit)
     
-
   computeShape()
   prepare()
   if options.submission:

@@ -145,14 +145,41 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 
 
 void bench() {
-   int nTests = 10;
-   int nRounds = 10;
-   
-  molly::exec_bench([nRounds] (int k, molly::bgq_hmflags flags) {
-    for (auto i=0; i<nRounds;i+=1) {
-      Jacobi();
-    }
-  }, nTests, LX*LY, 1/*TODO: Make exec_bench more flexible*/);
+  const uint64_t nSites = LX*LY;
+  std::vector<bench_exec_info_cxx_t> configs;
+  const int rounds = 1;
+  const uint64_t nStencilsPerCall = nSites * rounds;
+  const uint64_t nSizePoints =       
+      (LX-1)*(LY) +
+      (LX-1)*(LY) +
+      (LX)*(LY-1) +
+      (LX)*(LY-1);
+  
+  {
+    configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = "jacobi dbl";
+    benchinfo.func = [](size_t tid, size_t nThreads) {
+      assert(tid==0);
+      assert(nThreads == 1);
+      for (auto i = 0; i < rounds; i += 1) {
+        Jacobi();
+      }
+    };
+    benchinfo.nStencilsPerCall = nStencilsPerCall;
+    benchinfo.nFlopsPerCall = rounds * (
+      nSizePoints + /*add*/
+      LX*LY /*const div*/
+    );
+    benchinfo.nStoredBytesPerCall = nStencilsPerCall * sizeof(double);
+    benchinfo.nLoadedBytesPerCall = rounds * (nSizePoints + nSites) * sizeof(double);
+    benchinfo.nWorkingSet = nSites*sizeof(double);
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
+  }
+  
+  bench_exec_cxx(1, configs);
 }
 
 

@@ -169,19 +169,8 @@ static bool isPrintingRank() {
 }
 
 
-static int mypapi_threadid() {
-#if BENCH_BGQ
-  return Kernel_ProcessorID();
-#elif defined(OMP)
-  return omp_get_thread_num();
-#else
-  return 0;
-#endif
-}
-
-
 static bool isPrintingThread() {
-  return isPrintingRank() && (mypapi_threadid()==0);
+  return (Kernel_ProcessorID()==0) && isPrintingRank();
 }
 
 
@@ -244,6 +233,17 @@ static double now2(){
    return f_t;
 }
 
+static int mypapi_threadid() {
+#ifdef OMP
+	return omp_get_thread_num();
+#else
+	return -1;
+#endif
+}
+
+static unsigned long int mypapi_getthreadid() {
+	return Kernel_ProcessorID();
+}
 
 static double mypapi_wtime() {
 	Personality_t personality;
@@ -934,13 +934,8 @@ void bench_iteration_enter(void *argptr, size_t tid, size_t threads) {
   //fprintf(stderr, "MK_enter it=%d / rankId=%d benchSelfRank=%d / tid=%d Kernel_ProcessorID=%d\n", iteration, rankId, benchSelfRank(), tid, Kernel_ProcessorID());
   bench_iteration_result_t *measure = &results[tid];
   measure->itId = iteration;
-#if BENCH_BGQ
   measure->threadId = Kernel_ProcessorID();
   measure->coreId = Kernel_ProcessorCoreID();
-#else
-  measure->threadId = mypapi_threadid();
-  measure->coreId = 0;
-#endif
   measure->rankId = rankId;
 
   if (exec->preparefunc) (*exec->preparefunc)(exec->data, tid, threads);
@@ -1354,11 +1349,7 @@ static const char *print_stat(const bench_global_result_t *stats, const bench_no
     int nThreads = nRanks * nThreadsPerRank;
     int nCores = nRanks * nCoresPerRank;
     assert(nRanks % Kernel_ProcessCount() == 0);
-#if BENCH_BGQ
     int nNodes = nRanks / Kernel_ProcessCount();
-#else
-    int nNodes = nRanks;
-#endif
     
     double avgtime = bench_statistics_avg(&stat->durationAvgAvg);
     
@@ -1658,11 +1649,7 @@ static void bench_threadinfo_worker(void *argptr, size_t tid, size_t nThreads) {
   int selfRank = benchSelfRank();
 
   if (isPrintingRank())  {
-#if BENCH_BGQ
     printf("MK This is rank %d thread %llu (ompid=%d, procid=%d,coreid=%d,smtid=%d)\n", selfRank, tid, mypapi_threadid(), Kernel_ProcessorID(), Kernel_ProcessorCoreID(), Kernel_ProcessorThreadID());
-#else
-    printf("MK This is rank %d thread %llu (ompid=%d)\n", selfRank, tid, mypapi_threadid());
-#endif
   }
 }
 
@@ -1736,7 +1723,7 @@ void bench_exec(size_t max_threads, const bench_exec_info_t *configs, size_t nCo
   bench_node_result_t nodeExcerpt;
   for (int i2 = lengthof(omp_threads)-1; i2 >=0 ; i2 -= 1) {
     int threads = omp_threads[i2];
-    if (max_threads>0 && max_threads > threads)
+    if (max_threads>0 && threads > max_threads)
       continue;
     
     if (printing)

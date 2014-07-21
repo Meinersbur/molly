@@ -12,7 +12,7 @@ add_custom_target(run-jacobi
 get_filename_component(jacobi_a_path "${LLVM_EXAMPLES_BINARY_DIR}/${CMAKE_EXECUTABLE_PREFIX}jacobi-mollycc-a${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 mollycc_a_compile("${jacobi_a_path}"
   SOURCES "jacobi.cpp"
-  FLAGS -mllvm -shape=2x2 -mllvm -polly-only-marked
+  FLAGS -mllvm -polly-only-marked -mllvm -shape=8x4 -D LX=64 -D LY=32 -D PX=8 -D PY=4 -D BX=8 -D BY=8
   COMMENT "mollycc molly.a jacobi.cpp..."
 )
 
