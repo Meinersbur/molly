@@ -143,6 +143,7 @@ OFF=False
 FALSE=False
 
 is_molly=@LAUNCHER_MOLLY@
+project_prefix='''@LAUNCHER_PREFIX@'''
 
 executable_bgqbench='''@EXECUTABLE_BGQBENCH@'''
 executable_benchmark='''@EXECUTABLE_BENCHMARK@'''
@@ -297,27 +298,30 @@ def submit():
   
 
 def genJobname(i):
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
   global program
 
-  prefix = "{i:03d}_{program}".format(i=i,program=program)
-  suffix = "".format(i=i,program=program)
+  if customjobname is None:
+    prefix = "{i:03d}_{program}".format(i=i,program=project_prefix+program)
+  else:
+    prefix = "{i:03d}_{jobname}".format(i=i,jobname=customjobname)
+  suffix = ""
 
   if volume:
     prefix = prefix + "_v" + "x".join([str(d) for d in volume])
 
   if nodes and shape_in_nodes:
-    suffix = suffix + "_{nodes}n{shape}".format(nodes=nodes,shape="x".join([str(d) for d in shape_in_nodes]))
+    suffix = suffix + "_{nodes}n{shape}".format(nodes=nodes,shape="x".join([str(d) for d in logical_shape]))
   elif nodes:
     suffix = suffix + "_{nodes}n".format(nodes=nodes)  
-  elif shape_in_nodes:
-    suffix = suffix + "_n" + "x".join([str(d) for d in shape_in_nodes])
+  elif logical_shape:
+    suffix = suffix + "_n" + "x".join([str(d) for d in logical_shape])
+
+  if volume_per_rank is not None:
+    suffix = suffix + "_s" + "x".join([str(d) for d in volume_per_rank])
 
   if ranks_per_node:
-    suffix = suffix + "r{ranks_per_node}".format(ranks_per_node=ranks_per_node) 
-
-  if threads_per_rank:
-    suffix = suffix + "t{threads_per_rank}".format(threads_per_rank=threads_per_rank)
+    suffix = suffix + "_r{ranks_per_node}".format(ranks_per_node=ranks_per_node) 
 
   return prefix + suffix
 
@@ -355,7 +359,7 @@ def writeCompleteFile(filepath, content, setExecutableBit=False):
 
 
 def configureFile(template_path, target_path):
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,jobid,jobscriptfile
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,jobid,jobscriptfile
   global jobname,executable,jobdir,program
   global inputfilepath
 
@@ -377,7 +381,6 @@ def configureFile(template_path, target_path):
 
   template = readCompleteFile(template_path)
   formatdict = dict(
-    RanksT=shape_in_ranks[0],RanksX=shape_in_ranks[1],RanksY=shape_in_ranks[2],RanksZ=shape_in_ranks[3],
     timelimit=makestrDuration(timelimit),
     jobname=jobname,
     outputfilepath=os.path.join(jobdir,'qout$(jobid).txt'),
@@ -392,10 +395,13 @@ def configureFile(template_path, target_path):
     launchercmd=os.path.join(BINDIR,'bin/launcher.py'),
     jobid=jobid,
     prep=prep,
-    compilecmdline=compilecmdlinestr)
+    compilecmdline=compilecmdlinestr,
+    nodes=nodes,
+    ranks=ranks)
   dimnames = getProgramDims()
   for i in range(len(dimnames)):
     formatdict['L' + dimnames[i]] = volume[i]
+    formatdict['Ranks' + dimnames[i]] = logical_shape[i]
   content = template.format(**formatdict)
   writeCompleteFile(target_path, content)
 
@@ -517,7 +523,7 @@ def copySource():
   srctargetdir = os.path.join(jobdir,'src')
   shutil.copy2(os.path.join(BINDIR,'CMakeCache.txt'), os.path.join(jobdir,'CMakeCache.txt'))
 
-  if git_executable:
+  if git_executable and git_sha1 and git_sha1!='GITDIR-NOTFOUND':
     difffilepath = os.path.join(jobdir,'src.diff')
     with open(difffilepath, 'w') as diff_file:
       subprocess.check_call([git_executable,'diff','--patch-with-stat','--src-prefix=' +git_sha1+ '/','--dst-prefix=workingset/', git_sha1], cwd=SRCDIR, stdout=diff_file)
@@ -565,7 +571,6 @@ nodes=None
 midplanes=None
 ranks_per_node=None
 threads_per_rank=None
-threads_per_node=None
 shape_in_midplanes=None
 shape_in_nodes=None
 shape_in_ranks=None
@@ -577,9 +582,10 @@ defs = []
 jobid = None
 jobscriptfile = None
 inputfilepath = None
+customjobname = None
 
 def checkCondition(cond):
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
 
   if not cond:
     print "Parameter consistency check failed!"
@@ -591,7 +597,6 @@ def checkCondition(cond):
     print "midplanes = ",midplanes
     print "ranks_per_node = ",ranks_per_node
     print "threads_per_rank = ",threads_per_rank
-    #print "threads_per_node = ",threads_per_node
     print "shape_in_midplanes = ",shapeToStr(shape_in_midplanes)
     print "shape_in_nodes = ",shapeToStr(shape_in_nodes)
     print "shape_in_ranks = ",shapeToStr(shape_in_ranks)
@@ -601,8 +606,24 @@ def checkCondition(cond):
 def argmin(seq):
   return seq.index(min(seq))
 
+def ceilNodes(nodes):
+  if nodes <= 32:
+    return 32
+  elif nodes <= 64:
+    return 64
+  elif nodes <= 128:
+    return 128
+  elif nodes <= 256:
+    return 256
+  elif nodes <= 512:
+    return 512
+  else:
+    return(nodes + 511) & ~512
+
+
 def completeShape():
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,dims,logical_shape
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,dims,logical_shape
+  nDims=getDimCount()
 
   while True:
     if True:
@@ -623,8 +644,6 @@ def completeShape():
         print "ranks_per_node =",ranks_per_node
       if threads_per_rank is not None:
         print "threads_per_rank =",threads_per_rank
-      if threads_per_node is not None:
-        print "threads_per_node =",threads_per_node
       if shape_in_midplanes is not None:
         print "shape_in_midplanes =",shapeToStr(shape_in_midplanes)
       if shape_in_nodes is not None:
@@ -712,8 +731,6 @@ def completeShape():
       continue
     if (nodes is not None) and (shape_in_nodes is not None):
       checkCondition(nodes == prod(shape_in_nodes))
-    if (nodes is not None):
-      checkCondition(nodes==32 or nodes==64 or nodes==128 or nodes==256 or (nodes%512)==0)
 
     # ranks = prod(shape_in_ranks)
     if (ranks is None) and (shape_in_ranks is not None):
@@ -722,28 +739,15 @@ def completeShape():
     if (ranks is not None) and (shape_in_ranks is not None):
       checkCondition(ranks == prod(shape_in_ranks))
 
-    if (shape_in_ranks is None) and (shape_in_nodes is not None) and (ranks_per_node is not None):
-      shape_in_ranks = (shape_in_nodes[0],shape_in_nodes[1],shape_in_nodes[2],shape_in_nodes[3],shape_in_nodes[4],ranks_per_node)
-      continue
+    #if (shape_in_ranks is None) and (shape_in_nodes is not None) and (ranks_per_node is not None):
+    #  shape_in_ranks = (shape_in_nodes[0],shape_in_nodes[1],shape_in_nodes[2],shape_in_nodes[3],shape_in_nodes[4],ranks_per_node)
+    #  continue
     if (shape_in_nodes is None) and (shape_in_ranks is not None):
       shape_in_nodes = (shape_in_ranks[0],shape_in_ranks[1],shape_in_ranks[2],shape_in_ranks[3],shape_in_ranks[4])
       continue
     if (ranks_per_node is None) and (shape_in_ranks is not None):
       ranks_per_node = shape_in_ranks[5]
       continue
-
-    # threads_per_node = threads_per_rank * ranks_per_node
-    if (threads_per_node is None) and (threads_per_rank is not None) and (ranks_per_node is not None):
-      threads_per_node = threads_per_rank * ranks_per_node
-      continue
-    if (threads_per_rank is None) and (threads_per_node is not None) and (ranks_per_node is not None) and (threads_per_node % ranks_per_node==0):
-      threads_per_rank = threads_per_node / ranks_per_node
-      continue
-    if (ranks_per_node is None) and (threads_per_rank is not None) and (threads_per_node is not None) and (threads_per_node % threads_per_rank ==0):
-      ranks_per_node = threads_per_node / threads_per_rank
-      continue
-    if (threads_per_node is not None) and (threads_per_rank is not None) and (ranks_per_node is not None):
-      checkCondition(threads_per_node == threads_per_rank * ranks_per_node)
 
     if (timelimit is not None):
       checkCondition(timelimit >= datetime.timedelta(minutes=30))
@@ -772,9 +776,43 @@ def completeShape():
     if (volume is not None) and (volume_per_rank is not None) and (logical_shape is not None):
       checkCondition(tuple(logical_shape[i]*volume_per_rank[i] for i in range(getDimCount())) == volume)
 
+    if hasDims() and (logical_shape is None) and (ranks is not None):
+      facts = factors(ranks)
+      facts.sort()
+      facts.reverse() # largest factors first
+      logical_shape = list(1 for i in range(nDims))
+      while len(facts)>=1:
+        i = argmin(logical_shape)
+        logical_shape[i] *= facts[0]
+        del facts[0]
+      logical_shape = tuple(logical_shape)
+      continue
+
+    # volume[] = logical_shape[] * volume_per_rank[]
+    if (volume is None) and (logical_shape is not None) and (volume_per_rank is not None):
+      volume = tuple(logical_shape[i]*volume_per_rank[i] for i in range(nDims))
+      continue
+    if (volume_per_rank is None) and (logical_shape is not None) and (volume is not None):
+      volume_per_rank = tuple(volume[i]/logical_shape[i] for i in range(nDims))
+      continue
+    if (logical_shape is None) and (volume is not None) and (volume_per_rank is not None): # TODO: Divisibility
+      logical_shape = tuple(volume[i]/volume_per_rank[i] for i in range(nDims))
+      continue
+    if (volume is not None) and (logical_shape is not None) and (volume_per_rank is not None):
+      checkCondition(volume == tuple(logical_shape[i]*volume_per_rank[i] for i in range(nDims)))
 
     ###################
     # Recommandations, default values
+
+    # threads_per_rank * ranks_per_node <= 64
+    if (threads_per_rank is None) and (ranks_per_node is not None):
+      threads_per_rank = 64/ranks_per_node
+      continue
+    if (ranks_per_node is None) and (threads_per_rank is not None):
+      ranks_per_node = 64/threads_per_rank
+      continue
+    if (threads_per_rank is not None) and (ranks_per_node is not None):
+      checkCondition(threads_per_rank * ranks_per_node <= 64) 
 
     # Only vertain node counts are allowed
     if (nodes is not None):
@@ -794,6 +832,8 @@ def completeShape():
       if nodes != alignedNodes:
         nodes = alignedNodes
         continue
+    if (nodes is not None):
+      checkCondition(nodes==32 or nodes==64 or nodes==128 or nodes==256 or (nodes%512)==0)
 
     # Native node shape
     if (shape_in_nodes is None) and (nodes is not None):
@@ -812,13 +852,9 @@ def completeShape():
       if nodes==512: # One midplane
         shape_in_nodes = (4,4,4,4,2)
         continue
-      if (shape_in_nodes is not None) and (nodes is not None):
-        checkCondition(nodes == prod(shape_in_nodes))
-
-    # Use all 64 threads
-    if threads_per_node is None:
-      threads_per_node = 64
-      continue
+    if (shape_in_nodes is not None) and (nodes is not None):
+      checkCondition(nodes == prod(shape_in_nodes))
+      checkCondition(5 == len(shape_in_nodes))
 
     if ranks_per_node is None:
       ranks_per_node = 1
@@ -840,17 +876,19 @@ def completeShape():
 
 
 def computeShape():
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
 
   completeShape()
 
+  print ">> Shape computed, checking for completeness"
   checkCondition(shape_in_nodes is not None)
   checkCondition(len(shape_in_nodes)==5)
-  checkCondition(shape_in_ranks is not None)
-  checkCondition(len(shape_in_ranks)==6)
+  #checkCondition(shape_in_ranks is not None)
+  #checkCondition(len(shape_in_ranks)==6)
   checkCondition(ranks_per_node is not None)
   checkCondition(threads_per_rank is not None)
   checkCondition(nodes is not None)
+  checkCondition(ranks is not None)
   if nodes >= 512:
     checkCondition(shape_in_midplanes is not None)
     checkCondition(len(shape_in_midplanes)==4)
@@ -875,7 +913,7 @@ def computeShape():
 
 def main():
   global scriptpath,BINDIR
-  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_node,threads_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,dims,logical_shape
+  global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit,dims,logical_shape
 
   if sys.argv[0]:
     scriptpath = os.path.abspath(sys.argv[0])
@@ -900,22 +938,22 @@ def main():
 
   parser.add_option('--input', help="Configuration template file")
   parser.add_option('--defs', action='append', help="Addition preprocessor defintions")
+  parser.add_option('--series', help="Used to append to job name")
 
   parser.add_option('--volume', help="Global shape size")
   parser.add_option('--volume_per_rank', help="Local shape size")
 
-  parser.add_option('--threads', help="Total number of threads in whole system")
-  parser.add_option('--ranks', help="Number of ranks (=nodes * ranks_per_node)")
-  parser.add_option('--nodes', help="Number of nodes")
-  parser.add_option('--midplanes')
+  parser.add_option('--threads', type='int', help="Total number of threads in whole system")
+  parser.add_option('--ranks', type='int', help="Number of ranks (=nodes * ranks_per_node)")
+  parser.add_option('--nodes', type='int', help="Number of nodes")
+  parser.add_option('--midplanes', type='int')
   
-  parser.add_option('--ranks_per_node')
-  parser.add_option('--threads_per_rank')
-  parser.add_option('--threads_per_node')
+  parser.add_option('--ranks_per_node', type="int")
+  parser.add_option('--threads_per_rank', type='int')
   parser.add_option('--shape_in_midplanes')
   parser.add_option('--shape_in_nodes')
   parser.add_option('--shape_in_ranks')
-  parser.add_option('--dims', help="MPI dimensions")
+  parser.add_option('--dims', type='int', help="MPI dimensions")
   parser.add_option('--logical_shape')
 
   parser.add_option('--timelimit', help="Format is hh::mm:ss")
@@ -938,7 +976,11 @@ def main():
   if program is None:
     raise Exception("Which program to run?")
 
-  global defs
+  global defs,customjobname,ranks_per_node
+  if options.ranks_per_node is not None:
+    ranks_per_node=int(options.ranks_per_node)
+  if options.series is not None:
+    customjobname=options.series
   if options.defs is not None:
     defs=options.defs
   if options.threads:
@@ -951,8 +993,6 @@ def main():
     midplanes=options.midplanes
   if options.threads_per_rank:
     threads_per_rank=options.threads_per_rank
-  if options.threads_per_node:
-    threads_per_node=options.threads_per_node
   if options.shape_in_midplanes:
     shape_in_midplanes=parseShape(options.shape_in_midplanes,4,extendDefault=1)
   if options.shape_in_nodes:

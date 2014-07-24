@@ -88,6 +88,7 @@ __INLINE__ int Kernel_Upci_GetCNKCounts( Upci_CNKCtrType_t ctrType, PerfCountIte
 #define GIBI (1024.0*1024.0*1024.0)
 #define TEBI (1024.0*1024.0*1024.0*1024.0)
 
+//extern int g_proc_id; // for master_print
               
 typedef enum {
   per_none,
@@ -131,6 +132,7 @@ typedef struct bench_iteration_result_t {
     abort(); \
               } while (0)
 
+#ifndef MPI_CHECK
 #define MPI_CHECK(CALL)                                         \
   do {                                                          \
 /*    MOLLY_DEBUG(#CALL);              */                       \
@@ -139,26 +141,25 @@ typedef struct bench_iteration_result_t {
       ERROREXIT("MPI fail: %s\nReturned: %d\n", #CALL, retval); \
                                     }                                           \
                   } while (0)
+#endif
 
-static inline int benchSelfRank() {
+static int benchSelfRank() {
   int myrank;
   MPI_CHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myrank));
   return myrank;
 }
 
-static inline int benchWorldRanks() {
+static int benchWorldRanks() {
   int worldranks;
   MPI_CHECK(MPI_Comm_size(MPI_COMM_WORLD, &worldranks));
   return worldranks;
 }
 
-static inline double benchTime() {
+static double benchTime() {
   return MPI_Wtime();
 }
 
-static inline void benchBarrier() {
-  MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
-}
+
 
 #else
 #error Please define BENCH_MPI (and the other macros)
@@ -189,6 +190,7 @@ static bool isPrintingThread() {
 
 
 #pragma region BG/Q Support
+#ifndef L1P_CHECK
 #define L1P_CHECK(RTNCODE)                                                                 \
   do {                                                                                   \
       int mpi_rtncode = (RTNCODE);                                                       \
@@ -197,7 +199,8 @@ static bool isPrintingThread() {
         abort(); \
       }                                                                                  \
    } while (0)
-
+#endif
+   
 #define KERNEL_CHECK(RTNCODE)                                                                 \
   do {                                                                                   \
       int mpi_rtncode = (RTNCODE);                                                       \
@@ -215,6 +218,21 @@ static bool isPrintingThread() {
 			 abort(); \
                                     		}                                                                                                        \
               } while (0)
+
+
+#if BENCH_GIBARRIER
+void global_barrier(); // DirectPut.c
+static inline void benchBarrier() {
+  global_barrier();
+}
+#elif BENCH_MPI
+static inline void benchBarrier() {
+  MPI_CHECK(MPI_Barrier(MPI_COMM_WORLD));
+}
+#else
+static inline void benchBarrier() {
+}
+#endif
 
 
               
@@ -245,6 +263,10 @@ static double now2(){
 }
 
 
+static unsigned long int mypapi_getthreadid() {
+	return Kernel_ProcessorID();
+}
+
 static double mypapi_wtime() {
 	Personality_t personality;
 	BGPM_ERROR(Kernel_GetPersonality(&personality, sizeof(Personality_t)));
@@ -262,10 +284,18 @@ static double mypapi_omp_wtime() {
 }
 
 
+static bool mypapi_bgpm_enabled() {
+// Do not support multiple processes per node
+  return Kernel_ProcessCount()==1;
+}
+
 static int PuEventSets[MYPAPI_SETS][64] = {0};
 static int L2EventSet[MYPAPI_SETS] = {0};
 
-void mypapi_init() {
+static void mypapi_init() {
+  if (!mypapi_bgpm_enabled())
+    return;
+  
   // Call in each thread
   // Setups which performance counters to query
  //if (isPrintingRank()) fprintf(stderr, "MK mypapi_init()\n");
@@ -400,6 +430,9 @@ void mypapi_init() {
 
 
 static void mypapi_free() {
+    if (!mypapi_bgpm_enabled())
+    return;
+  
   BGPM_ERROR(Bgpm_Disable());
 }
 
@@ -407,6 +440,9 @@ static void mypapi_free() {
 static int activeEventSet = -1;
 
 static void mypapi_start(int i) {
+    if (!mypapi_bgpm_enabled())
+    return;
+  
   // Start performance counting of the given event set
 	int tid = Kernel_ProcessorID();
 	int cid = Kernel_ProcessorCoreID();
@@ -430,6 +466,9 @@ static void mypapi_start(int i) {
 
 
 static void mypapi_stop(void) {
+    if (!mypapi_bgpm_enabled())
+    return;
+  
 	int tid = Kernel_ProcessorID();
 	int cid = Kernel_ProcessorCoreID();
 	int sid = Kernel_ProcessorThreadID();
@@ -513,6 +552,9 @@ static void mypapi_bgpm_read(bench_iteration_result_t *result, int eventset, int
 
 
 static void mypapi_fetch(bench_iteration_result_t *result) {
+    if (!mypapi_bgpm_enabled())
+    return;
+  
 	int tid = Kernel_ProcessorID();
 	int cid = Kernel_ProcessorCoreID();
 	int sid = Kernel_ProcessorThreadID();
@@ -559,7 +601,6 @@ static void mypapi_print_counters(const bench_iteration_result_t *result) {
       Bgpm_EventInfo_t info;
       BGPM_ERROR(Bgpm_GetEventIdInfo(i, &info));
 
-   
       printf("%10llu = %-30s (%s%s)\n", val, info.label, info.desc, per);
   }
   printf("*******************************************************************************\n");
@@ -580,6 +621,7 @@ static void mypapi_fetch(bench_iteration_result_t *result) {}
 
 static void mypapi_print_counters(const bench_iteration_result_t *result) {}
 #endif
+
 
 
 
@@ -669,7 +711,7 @@ void pushGlobal() {
 
 //double sum() const { return sum; }
 double bench_statistics_avg(const bench_statistics *stat)  { return stat->sum / stat->count; }
-double bench_statistics_rms(const bench_statistics *stat)  { return sqrt(stat->sqrsum / stat->count); }
+double bench_statistics_rms(const bench_statistics *stat)  { return sqrt(stat->sqrsum / stat->count); } // root mean square
 double bench_statistics_variance(const bench_statistics *stat)  { return (stat->sqrsum / stat->count) - sqr(bench_statistics_avg(stat)); } // mean squared error / variance
 double bench_statistics_stddeviation(const bench_statistics *stat)  { return sqrt(bench_statistics_variance(stat)); }
 
@@ -883,6 +925,7 @@ switch(prefetch) {
 }
 
   if (pprefetch) {
+    //master_print("MK_warning: l1pprfetch untested\n");
     L1P_PatternConfigure(1024 * 1024); //TODO: what length ?
   }
 #endif
@@ -946,6 +989,7 @@ void bench_iteration_enter(void *argptr, size_t tid, size_t threads) {
   if (exec->preparefunc) (*exec->preparefunc)(exec->data, tid, threads);
  
   if (l1pmode) {
+    //master_print("MK_warning: l1pprfetch untested\n");
 #if BENCH_BGQ
     L1P_PatternStart(l1pmode &l1p_learn);
     L1P_PatternPause();
@@ -1010,13 +1054,22 @@ void bench_iteration_exit(void *argptr, size_t tid, size_t threads) {
 }
 
 
-void bench_iteration(void *argptr, size_t tid, size_t threads) {
+static void bench_iteration(void *argptr, size_t tid, size_t threads) {
   bench_iteration_arg_t* arg = (bench_iteration_arg_t*)argptr;
    const bench_exec_info_t *exec = arg->exec;
 
   bench_iteration_enter(argptr, tid, threads);
   (*exec->func)(exec->data, tid, threads);
   bench_iteration_exit(argptr, tid, threads);
+}
+
+
+static void bench_prepare_iteration(void *argptr, size_t tid, size_t threads) {
+  bench_iteration_arg_t* arg = (bench_iteration_arg_t*)argptr;
+   const bench_exec_info_t *exec = arg->exec;
+
+   assert(exec->preparefunc);
+  (*exec->preparefunc)(exec->data, tid, threads);
 }
 
 
@@ -1139,7 +1192,7 @@ static int bench_exec_config_master(void *uarg) {
     bool benching = iterconfig->benching;
     pprefetch_mode l1pmode = iterconfig->l1pmode;
 
-    // setup
+    // setup & prepare
     bench_iteration_result_t iterResults[MAX_THREADS];
     bench_iteration_arg_t iter;
     iter.results = &iterResults[0];
@@ -1148,6 +1201,31 @@ static int bench_exec_config_master(void *uarg) {
     iter.bgpmSet = bgpmset;
     iter.l1pmode = l1pmode;
     iter.rankId = rankId;
+    if (*exec->preparefunc) {
+    switch(exec->ompmode) {
+    case omp_single:
+      bench_iteration_enter(&iter, 0, 1);
+      (*exec->preparefunc)(exec->data, 0, 1);
+      bench_iteration_exit(&iter, 0, 1);
+      break;
+    
+    case omp_plain:{
+      bgq_adhoc_call(&bench_iteration_enter, (void*)&iter);
+      (*exec->preparefunc)(exec->data, 0, nThreads);
+      bgq_adhoc_call(&bench_iteration_exit, (void*)&iter);
+    } break;
+    
+    case omp_parallel:
+      bgq_master_call(&bench_iteration_enter, &iter);
+      (*exec->preparefunc)(exec->data, 0, nThreads);
+      bgq_master_call(&bench_iteration_exit, &iter);
+      break;
+
+    case omp_dispatch:
+      bgq_master_call(bench_prepare_iteration, &iter);
+      break;
+    }
+    }
 
     // execute
     assert(exec);
@@ -1182,6 +1260,7 @@ static int bench_exec_config_master(void *uarg) {
     double stop_time_node = benchTime();
     benchBarrier();
     double stop_time_global = benchTime();
+        //master_print("MK actual node time: %.1f msec global: %.1f\n", (stop_time_node-start_time)/MILLI, (stop_time_global-start_time)/MILLI);
 
     if (benching) {
       double nodeDuration = stop_time_node - start_time;
@@ -1272,13 +1351,23 @@ typedef enum {
   pi_cores,
   pi_ws,
   pi_flopPerStencil,
+  pi_nNodes,
+  pi_nRanks,
+  pi_nCores,
   
+  pi_nodestddev,
+ 
   pi_mlups,
+  pi_lupsPerNode,
+  
   pi_mflops,
   pi_flopsPerNode,
   pi_flopsPerRank,
   pi_flopsPerCore,
   pi_flopsPerThread,
+  
+  pi_percentOfPeak,
+
   pi_readbw,
   pi_writebw,
   __pi_COUNT,
@@ -1342,7 +1431,9 @@ static const char *print_stat(const bench_global_result_t *stats, const bench_no
     const bench_node_result_t *nodeStat = &nodeStats[i3];
 
     uint64_t lup = config->nStencilsPerCall;
+    uint64_t nStencilsPerCall = config->nStencilsPerCall;
     uint64_t flop = config->nFlopsPerCall;
+    uint64_t nFlopsPerCall = config->nFlopsPerCall;
     uint64_t nLoadedBytes = config->nLoadedBytesPerCall;
     uint64_t nStoredBytes = config->nStoredBytesPerCall;
     uint64_t nWorkingSet = config->nWorkingSet;
@@ -1361,6 +1452,7 @@ static const char *print_stat(const bench_global_result_t *stats, const bench_no
 #endif
     
     double avgtime = bench_statistics_avg(&stat->durationAvgAvg);
+    double nodeStddev = bench_statistics_stddeviation(&stat->durationAvgAvg);
     
     double lups = lup / avgtime;
     
@@ -1441,9 +1533,36 @@ static const char *print_stat(const bench_global_result_t *stats, const bench_no
       snprintf(str, sizeof(str), "%.1f MB", nWorkingSet / MEGA);
       break;
       
+    case pi_nNodes:
+      desc = "World nodes";
+      snprintf(str, sizeof(str), "%d", nNodes);
+      break;
+    case pi_nRanks:
+      desc = "World ranks";
+      snprintf(str, sizeof(str), "%d", nRanks);
+      break;
+    case pi_nCores:
+      desc = "World cores";
+      snprintf(str, sizeof(str), "%d", nCores);
+      break;
+      
+    case pi_nodestddev:
+      desc = "Node time stddev";
+      snprintf(str, sizeof(str), "%.2f%%", (100*nodeStddev) / avgtime);
+      break;
+
     case pi_mlups:
       desc = "Stencils per sec";
-      snprintf(str, sizeof(str), "%.2f mlup/s", lup / MEGA);
+      snprintf(str, sizeof(str), "%.2f mlup/s", nStencilsPerCall / (avgtime * MEGA));
+      break;
+    case pi_lupsPerNode:
+      desc = "Stencils per node and sec";
+      snprintf(str, sizeof(str), "%.2f mlup/s", nStencilsPerCall / (avgtime * nNodes * MEGA));
+      break;
+      
+    case pi_percentOfPeak:
+      desc = "of peak";
+      snprintf(str, sizeof(str), "%.1f %%",  (100 * flops) / ((double)nCores * 1600000000 * 8)  );
       break;
       
     case pi_mflops:

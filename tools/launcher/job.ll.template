@@ -14,7 +14,7 @@
 echo "STARTLAUNCHER" : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`
 echo "CURDIR" : `pwd`
 echo "ENV"
-env
+env | sort
 echo "###############################################################################"
 
 {launchercmd} --jobscript {jobscript}

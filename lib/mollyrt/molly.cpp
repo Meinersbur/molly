@@ -33,6 +33,7 @@ using namespace molly;
 #define MOLLY_COMMUNICATOR_MPI
 
 extern "C" void test_mollyrt() {}
+bool molly_com_enabled = true;
 
  //class MPICommunicator;
 
@@ -444,6 +445,7 @@ namespace {
 
       this->sending = false;
       auto dstMpiRank = communicator->getMPICommRank(nClusterDims, dstCoords);
+
       MPI_CHECK(MPI_Send_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rsend_init ???
 
       this->initialized = true;
@@ -460,7 +462,9 @@ namespace {
       dump();
 
       assert(!sending);
+      if (molly_com_enabled) {
       MPI_CHECK(MPI_Start(&request));
+      }
       this->sending = true;
     }
 
@@ -471,7 +475,9 @@ namespace {
   return; // May happen before the very first send; Molly always waits before sending the next chunk
       
       MPI_Status status;
+      if (molly_com_enabled) {
       MPI_CHECK(MPI_Wait(&request, &status));
+      }
       this->sending = false;
 
 #ifndef NDEBUG
@@ -596,7 +602,9 @@ namespace {
       MPI_CHECK(MPI_Recv_init(buf, elts*eltSize, MPI_BYTE, dstMpiRank, tag, communicator->_cart_comm, &request));// MPI_Rrecv_init ???
     
       // Get to ready state immediately
+      if (molly_com_enabled) {
       MPI_CHECK(MPI_Start(&request));
+      }
       dump();
     }
 
@@ -610,14 +618,18 @@ namespace {
     void recv() { MOLLY_DEBUG_FUNCTION_SCOPE
       dump();
       
+      if (molly_com_enabled) {
       MPI_CHECK(MPI_Start(&request));
+      }
     }
 
     void wait() { MOLLY_DEBUG_FUNCTION_SCOPE
       dump();
       
       MPI_Status status;
+      if (molly_com_enabled) {
       MPI_CHECK(MPI_Wait(&request, &status));
+      }
 
 #ifndef NDEBUG
       int count = -1;

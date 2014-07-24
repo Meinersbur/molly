@@ -1199,4 +1199,6 @@ extern "C" void waitToAttach();
 
 void printArgs(int argc, char *argv[]);
 
+extern bool molly_com_enabled; // For testing; switsching it off to determine how long it waits for communication
+
 #endif /* MOLLY_H */

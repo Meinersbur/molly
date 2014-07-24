@@ -51,9 +51,7 @@ molly::array<su3matrix_t, LT + 1, LX + 1, LY + 1, LZ + 1, 4> gauge;
 
 
 #pragma molly transform("{ [t,x,y,z] -> [node[floor(t/" sBT"),floor(x/" sBX"),floor(y/" sBY"),floor(z/" sBZ")] -> local[floor(t/2),x,y,z,t%2]] }")
-molly::array<spinor_t, LT, LX, LY, LZ> source, sink;
-
-
+molly::array<fullspinor_t, LT, LX, LY, LZ> source, sink;
 
 
 
@@ -219,7 +217,6 @@ extern "C" MOLLY_ATTR(process) void HoppingMatrix_kamul() {
 
 
 
-
 MOLLY_ATTR(pure) spinor_t initSpinorVal(coord_t t, coord_t x, coord_t y, coord_t z) {
   //return spinor_t(su3vector_t(t+2, 1, t+2), su3vector_t(x+2, x+2, 1), su3vector_t(y+2, 1, y+2), su3vector_t(z+2, z+2, 1));
   
@@ -329,6 +326,41 @@ extern "C" void __molly_generated_release() {
 #endif
 
  
+
+static void addConfig(std::vector<bench_exec_info_cxx_t> &configs, const char *desc, bool kamul, bool nocom) {
+  const uint64_t nSites = LT*LX*LY*LZ;
+  const int spinorsize = 4 * 3 * 2 * 8;
+  const int su3size = 3 * 3 * 2 * 8;
+  const int rounds = 1;
+  const uint64_t nStencilsPerCall = nSites * rounds;
+  
+      configs.emplace_back();
+    auto &benchinfo = configs.back();
+    benchinfo.desc = desc;
+    benchinfo.func = [kamul,nocom](size_t tid, size_t nThreads) {
+      molly_com_enabled = !nocom;
+      assert(tid==0);
+      assert(nThreads == 1);
+      for (auto i = 0; i < rounds; i += 1) {
+        if (kamul) {
+          HoppingMatrix_kamul();
+        } else {
+          HoppingMatrix_noka();
+        }
+      }
+      molly_com_enabled = true;
+    };
+    benchinfo.nStencilsPerCall = nStencilsPerCall;
+    benchinfo.nFlopsPerCall = nStencilsPerCall * (/*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 +  2*/*kamul*/3*(2/*add*/ + 4/*mul*/) + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2)));
+    benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
+    benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
+    benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
+    benchinfo.prefetch = prefetch_confirmed;
+    benchinfo.pprefetch = false;
+    benchinfo.ompmode = omp_single;
+}
+
+ 
 void bench() {
   const uint64_t nSites = LT*LX*LY*LZ;
   const int spinorsize = 4 * 3 * 2 * 8;
@@ -337,48 +369,12 @@ void bench() {
   const int rounds = 1;
   const uint64_t nStencilsPerCall = nSites * rounds;
   
-  {
-    configs.emplace_back();
-    auto &benchinfo = configs.back();
-    benchinfo.desc = "Dslash dbl noka";
-    benchinfo.func = [](size_t tid, size_t nThreads) {
-      assert(tid==0);
-      assert(nThreads == 1);
-      for (auto i = 0; i < rounds; i += 1) {
-        HoppingMatrix_noka();
-      }
-    };
-    benchinfo.nStencilsPerCall = nStencilsPerCall;
-    benchinfo.nFlopsPerCall =  nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
-    benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
-    benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
-    benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
-    benchinfo.prefetch = prefetch_confirmed;
-    benchinfo.pprefetch = false;
-    benchinfo.ompmode = omp_single;
-  }
+ addConfig(configs, "dslash dbl ka", true, false);
+ addConfig(configs, "dslash dbl noka", false, false);
   
-  {
-    configs.emplace_back();
-    auto &benchinfo = configs.back();
-    benchinfo.desc = "Dslash dbl kamul";
-    benchinfo.func = [](size_t tid, size_t nThreads) {
-      assert(tid==0);
-      assert(nThreads == 1);
-      for (auto i = 0; i < rounds; i += 1) {
-        HoppingMatrix_kamul();
-      }
-    };
-    benchinfo.nStencilsPerCall = nStencilsPerCall;
-    benchinfo.nFlopsPerCall =  nStencilsPerCall * /*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 +  2*/*kamul*/3*(2/*add*/ + 4/*mul*/) + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2));
-    benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
-    benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
-    benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
-    benchinfo.prefetch = prefetch_confirmed;
-    benchinfo.pprefetch = false;
-    benchinfo.ompmode = omp_single;
-  }
-
+  addConfig(configs, "nocom dbl ka", true, true);
+  addConfig(configs, "nocom dbl noka", false, true);
+  
   bench_exec_cxx(1, configs);
 }
 
