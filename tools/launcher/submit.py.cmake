@@ -178,6 +178,8 @@ def isMollyExample():
     return is_molly
   return True
 
+def isLauncherOnly():
+  return program=='launcher'
 
 def getBuildTarget():
   global program
@@ -202,7 +204,7 @@ def getExecutable():
   elif program=='benchtest':
     return os.path.join(BINDIR,'examples','benchtest')
   if isMollyExample():
-    exename = program + '_V' + shapeToStr(volume) + '_P' + shapeToStr(logical_shape) + ''.join(['_'+d for d in defs])
+    exename = "{program}_{nodes}p{logical_shape}_v{volume}{defs}".format(program=program,nodes=nodes,logical_shape=shapeToStr(logical_shape),volume=shapeToStr(volume),defs=''.join(['_'+d for d in defs]))
     return os.path.join(BINDIR,'examples',exename)
   return os.path.abspath(program)
 
@@ -228,12 +230,14 @@ def getInputTemplatePath():
 
 
 def getProgramDims():
-  if program=='benchtest':
+  if program=='benchtest' or program=='launcher':
     return []
   if program=='lqcd2d':
     return ['T','X']
   if program=='jacobi':
     return ['X','Y']
+  if program=='gemm':
+    return ['Y']
   return ['T','X','Y','Z']
 
 def getDimCount():
@@ -280,10 +284,11 @@ def submit():
   global jobdir,jobid
 
   # Wait a bit; maybe some launcher picks up the job so we don't have to create a new job
-  time.sleep(2)
-  if not os.path.isfile(jobscriptfile):
-    print "Not submitting job as it was taken by another launcher"
-    return
+  if not isLauncherOnly():
+    time.sleep(2)
+    if not os.path.isfile(jobscriptfile):
+      print "Not submitting job as it was taken by another launcher"
+      return
 
   myenv = os.environ.copy()
   del myenv['LD_LIBRARY_PATH']
@@ -310,7 +315,7 @@ def genJobname(i):
   if volume:
     prefix = prefix + "_v" + "x".join([str(d) for d in volume])
 
-  if nodes and shape_in_nodes:
+  if (nodes is not None) and (logical_shape is not None):
     suffix = suffix + "_{nodes}n{shape}".format(nodes=nodes,shape="x".join([str(d) for d in logical_shape]))
   elif nodes:
     suffix = suffix + "_{nodes}n".format(nodes=nodes)  
@@ -365,7 +370,7 @@ def configureFile(template_path, target_path):
 
   shape_machine_str = ''
   if shape_in_midplanes is not None:
-    shape_machine_str = 'bg_shape = ' + string.join([str(l) for l in shape_machine],'x')
+    shape_machine_str = 'bg_shape = ' + 'x'.join([str(l) for l in shape_in_midplanes])
   elif nodes is not None:
     shape_machine_str = 'bg_size = ' + str(nodes)
 
@@ -389,7 +394,7 @@ def configureFile(template_path, target_path):
     ranks_per_node=str(ranks_per_node),
     threads_per_rank=str(threads_per_rank),
     inputfilepath=inputfilepath,
-    executable=executable,
+    executable=executable or '',
     mpiexec='''@MPIEXEC@''',
     jobscript=jobscriptfile,
     launchercmd=os.path.join(BINDIR,'bin/launcher.py'),
@@ -542,22 +547,24 @@ cd "{srctargetdir}"
 def prepare():
   global jobdir,jobname,programupdate
 
-  if programupdate:
+  if programupdate and not isLauncherOnly():
     print "Compiling",getBuildTarget(),"..."
     makeProgram()
     
   jobdir,jobname = findjobdir(JOBSDIR)
   print "Create job directory...", jobdir
   os.makedirs(jobdir)
-  print "Copying executable..."
-  copyExecutable()
-  print "Copying sources..."
-  copySource()
-  if not isMollyExample():
-    print "Configure input..."
-    buildInput()
+  if not isLauncherOnly():
+    print "Copying executable..."
+    copyExecutable()
+    print "Copying sources..."
+    copySource()
+    if not isMollyExample():
+      print "Configure input..."
+      buildInput()
   print "Configure job and LL script..."
-  buildJobScript()
+  if not isLauncherOnly():
+    buildJobScript()
   buildLLScript()
   print "Job sucessfully prepared at ",jobdir
 
@@ -583,6 +590,7 @@ jobid = None
 jobscriptfile = None
 inputfilepath = None
 customjobname = None
+executable = None
 
 def checkCondition(cond):
   global volume,volume_per_rank,threads,ranks,nodes,midplanes,ranks_per_node,threads_per_rank,shape_in_midplanes,shape_in_nodes,shape_in_ranks,timelimit
@@ -749,9 +757,6 @@ def completeShape():
       ranks_per_node = shape_in_ranks[5]
       continue
 
-    if (timelimit is not None):
-      checkCondition(timelimit >= datetime.timedelta(minutes=30))
-
     if hasDims() and (logical_shape is None) and (shape_in_ranks is not None):
       # Mimic MPI_Dims_create; it is too big to be rewritten here, we just make an approximation
       # TODO: Adapt for number of dimensions, this is only for 4 dimensions
@@ -800,6 +805,11 @@ def completeShape():
       continue
     if (volume is not None) and (logical_shape is not None) and (volume_per_rank is not None):
       checkCondition(volume == tuple(logical_shape[i]*volume_per_rank[i] for i in range(nDims)))
+
+    if (shape_in_midplanes is None) and (nodes==512):
+      shape_in_midplanes=(1,1,1,1)
+      continue
+
 
     ###################
     # Recommandations, default values
@@ -864,11 +874,8 @@ def completeShape():
       nodes = 32
       continue
 
-    if timelimit is None and nodes is not None:
-      if nodes <= 64:
-        timelimit = datetime.timedelta(minutes=30)
-      else:
-        timelimit = datetime.timedelta(hours=2)
+    if timelimit is None:
+      timelimit = datetime.timedelta(minutes=30)
       continue
 
     # All found
@@ -935,6 +942,8 @@ def main():
   parser.add_option('--lqcd2d', dest='program', action='store_const', const='lqcd2d', help="Run lqcd2d example")
   parser.add_option('--jacobi', dest='program', action='store_const', const='jacobi', help="Run jacobi example")  
   parser.add_option('--benchtest', dest='program', action='store_const', const='benchtest', help="Test bench.c")  
+  parser.add_option('--gemm', dest='program', action='store_const', const='gemm', help="Run gemm example")  
+  parser.add_option('--launcher', dest='program', action='store_const', const='launcher', help="Just start the launcher")  
 
   parser.add_option('--input', help="Configuration template file")
   parser.add_option('--defs', action='append', help="Addition preprocessor defintions")

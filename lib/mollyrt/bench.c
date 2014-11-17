@@ -1438,18 +1438,19 @@ static const char *print_stat(const bench_global_result_t *stats, const bench_no
     uint64_t nStoredBytes = config->nStoredBytesPerCall;
     uint64_t nWorkingSet = config->nWorkingSet;
     
-    int nRanks = benchWorldRanks();
-    int nThreadsPerRank = nodeStat->nThreads;
+    uint64_t nCoresPerRank = nodeStat->nCores;
+    uint64_t nRanks = benchWorldRanks();
+    uint64_t nThreadsPerRank = nodeStat->nThreads;
     //assert(nThreadsPerRank == Kernel_ProcessorCount());
-    int nCoresPerRank = nodeStat->nCores;
-    int nThreads = nRanks * nThreadsPerRank;
-    int nCores = nRanks * nCoresPerRank;
+    uint64_t nThreads = nRanks * nThreadsPerRank;
+    uint64_t nRanksPerNode = Kernel_ProcessCount();
     assert(nRanks % Kernel_ProcessCount() == 0);
 #if BENCH_BGQ
-    int nNodes = nRanks / Kernel_ProcessCount();
+    uint64_t nNodes = nRanks / Kernel_ProcessCount();
 #else
-    int nNodes = nRanks;
+    uint64_t nNodes = nRanks;
 #endif
+    uint64_t nCores = nNodes * (nRanksPerNode>=16 ? 16 : nRanksPerNode);
     
     double avgtime = bench_statistics_avg(&stat->durationAvgAvg);
     double nodeStddev = bench_statistics_stddeviation(&stat->durationAvgAvg);

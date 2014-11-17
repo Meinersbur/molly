@@ -39,10 +39,10 @@
 
 
 
-#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX "),floor(y/" sBY ")] -> local[x,y]] }")
-molly::array<double, LX, LY> source, sink;
+
 
 typedef int64_t coord_t;
+
 
 
 MOLLY_ATTR(pure) double initVal(coord_t x, coord_t y) {
@@ -56,6 +56,10 @@ MOLLY_ATTR(pure) int getNumStencilPoints(coord_t x, coord_t y) {
   return 1 + (x - 1 >= 0 ? 1 : 0) + (x + 1 < LX ? 1 : 0) + (y - 1 >= 0 ? 1 : 0) + (y + 1 < LY ? 1 : 0);
 }
 
+#if 1
+
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX "),floor(y/" sBY ")] -> local[x,y]] }")
+molly::array<double, LX, LY> source, sink;
 
 extern "C" MOLLY_ATTR(process) void Jacobi() {
   // Init
@@ -94,6 +98,55 @@ extern "C" MOLLY_ATTR(process) void Jacobi() {
           source[x][y] = sink[x][y];
   }
 } // void Jacobi()
+#endif
+
+
+#if 1
+
+
+#pragma molly transform("{ [x,y] -> [node[floor(x/" sBX "),floor(y/" sBY ")] -> local[x,y]] }")
+molly::array<float, LX, LY> source_float, sink_float;
+
+
+
+extern "C" MOLLY_ATTR(process) void Jacobi_float() {
+  // Init
+  for (coord_t x = 0; x < LX; x += 1)
+    for (coord_t y = 0; y < LY; y += 1) {
+      source_float[x][y] = initVal(x, y);
+    }
+
+  // Compute
+  for (auto i = 0; i < ITERATIONS; i += 1) {
+    for (coord_t x = 0; x < LX; x += 1)
+      for (coord_t y = 0; y < LY; y += 1) {
+        auto sum = source_float[x][y];
+
+        if (x - 1 >= 0)
+          sum += source_float[x - 1][y];
+
+        if (x + 1 < LX)
+          sum += source_float[x + 1][y];
+
+        if (y - 1 >= 0)
+          sum += source_float[x][y - 1];
+
+        if (y + 1 < LY)
+          sum += source_float[x][y + 1];
+
+        float avg = sum / (float)getNumStencilPoints(x, y);
+
+        // Writeback
+        sink_float[x][y] = avg;
+      }
+
+    if (i + 1 < ITERATIONS)
+      for (coord_t x = 0; x < LX; x += 1)
+        for (coord_t y = 0; y < LY; y += 1)
+          source_float[x][y] = sink_float[x][y];
+  }
+} // void Jacobi_float()
+#endif
 
 
 MOLLY_ATTR(pure) void checkResult(double val, coord_t x, coord_t y) {
@@ -144,40 +197,62 @@ extern "C" MOLLY_ATTR(process) double reduce() {
 }
 
 
-void bench() {
-  const uint64_t nSites = LX*LY;
-  std::vector<bench_exec_info_cxx_t> configs;
-  const int rounds = 1;
-  const uint64_t nStencilsPerCall = nSites * rounds;
-  const uint64_t nSizePoints =       
+
+
+
+
+
+
+
+static void addConfig(std::vector<bench_exec_info_cxx_t> &configs, const char *desc, bool sloppyprec, bool nocom) {
+    const size_t eltsize = sloppyprec ? sizeof(float) : sizeof(double);  
+    const auto rounds = 1;
+    const auto nSites = LX*LY;
+    const auto nStencilsPerCall = rounds* ITERATIONS *nSites;
+    const auto nSidePoints =       
       (LX-1)*(LY) +
       (LX-1)*(LY) +
       (LX)*(LY-1) +
       (LX)*(LY-1);
-  
-  {
+
     configs.emplace_back();
     auto &benchinfo = configs.back();
-    benchinfo.desc = "jacobi dbl";
-    benchinfo.func = [](size_t tid, size_t nThreads) {
+    
+    benchinfo.desc = desc;
+    benchinfo.func = [nocom,sloppyprec](size_t tid, size_t nThreads) {
       assert(tid==0);
       assert(nThreads == 1);
+      molly_com_enabled = !nocom;
       for (auto i = 0; i < rounds; i += 1) {
-        Jacobi();
+        if (sloppyprec)
+        Jacobi_float();
+          else
+            Jacobi();
       }
+      molly_com_enabled = true;
     };
     benchinfo.nStencilsPerCall = nStencilsPerCall;
     benchinfo.nFlopsPerCall = rounds * (
-      nSizePoints + /*add*/
+      nSidePoints + /*add*/
       LX*LY /*const div*/
     );
-    benchinfo.nStoredBytesPerCall = nStencilsPerCall * sizeof(double);
-    benchinfo.nLoadedBytesPerCall = rounds * (nSizePoints + nSites) * sizeof(double);
-    benchinfo.nWorkingSet = nSites*sizeof(double);
+    benchinfo.nStoredBytesPerCall = nStencilsPerCall * eltsize;
+    benchinfo.nLoadedBytesPerCall = rounds * ITERATIONS * (nSidePoints + nSites) * eltsize;
+    benchinfo.nWorkingSet = nSites*eltsize;
     benchinfo.prefetch = prefetch_confirmed;
     benchinfo.pprefetch = false;
     benchinfo.ompmode = omp_single;
-  }
+}
+
+ 
+void bench() {  
+    std::vector<bench_exec_info_cxx_t> configs;
+  
+ addConfig(configs, "jacobi dbl", false, false);
+ addConfig(configs, "jacobi sgl", true, false);
+  
+  addConfig(configs, "nocom dbl", false, true);
+  addConfig(configs, "nocom sgl", true, true);
   
   bench_exec_cxx(1, configs);
 }

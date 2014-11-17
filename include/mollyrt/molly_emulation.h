@@ -118,4 +118,8 @@ static inline bool __molly_isMaster() {
 static inline void waitToAttach() {
 }
 
+void printArgs(int argc, char *argv[]);
+
+extern bool molly_com_enabled; 
+
 #endif /* MOLLY_EMULATION_H */

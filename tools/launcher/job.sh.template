@@ -44,7 +44,7 @@ export BG_COREDUMP_PERS=1
 echo "###############################################################################"
 
 # {compilecmdline}
-{prep}{mpiexec} --ranks-per-node {ranks_per_node} --env-all $MAPPING : {executable}
+{prep}{mpiexec} -n {ranks} --ranks-per-node {ranks_per_node} --env-all $MAPPING : {executable}
 
 echo "###############################################################################"
 echo "END  " : `date +"%Y-%m-%d %H:%M:%S.%N%z (%s.%N)"`

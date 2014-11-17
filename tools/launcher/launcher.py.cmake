@@ -196,7 +196,7 @@ def main():
         if jobnodes > nodes:
           continue
         duration = datetime.datetime.utcnow() - starttime
-        if nodes <= 128 and duration <= datetime.timedelta(minutes=29):
+        if nodes <= 256 or duration <= datetime.timedelta(minutes=29):
           if not isShapeSubset(jobshape,shape):        
             print "Rejecting job reason A"
             sys.stdout.flush()

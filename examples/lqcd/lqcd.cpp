@@ -351,7 +351,7 @@ static void addConfig(std::vector<bench_exec_info_cxx_t> &configs, const char *d
       molly_com_enabled = true;
     };
     benchinfo.nStencilsPerCall = nStencilsPerCall;
-    benchinfo.nFlopsPerCall = nStencilsPerCall * (/*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 +  2*/*kamul*/3*(2/*add*/ + 4/*mul*/) + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2)));
+    benchinfo.nFlopsPerCall = nStencilsPerCall * (/*operator+=*/7 * (4 * 3 * 2) + 8 * (/*project*/2 * 3 * 2 + (kamul ? 2*/*kamul*/3*(2/*add*/ + 4/*mul*/) : 0) + /*su3mm*/2 * (9 * (2 + 4) + 6 * 2)));
     benchinfo.nStoredBytesPerCall = nStencilsPerCall * spinorsize;
     benchinfo.nLoadedBytesPerCall = nStencilsPerCall * (8 * spinorsize + 8 * su3size);
     benchinfo.nWorkingSet = nSites*spinorsize + (LT + 1)*(LX + 1)*(LY + 1)*(LZ + 1) *su3size;
